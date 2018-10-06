@@ -1,0 +1,6 @@
+binary(
+    name = 'tinyswiss',
+    srcs = [
+        'main.c',
+    ],
+)

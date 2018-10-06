@@ -1,4 +1,7 @@
 *.o
 *.d
-/build/
+.*.sw?
+build/
 Session.vim
+tinyx32.stage1
+tinyx32.stage1.bak
