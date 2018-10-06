@@ -20,13 +20,13 @@ NINJA_TEMPLATE = r'''
 {name}cc = {cc}
 {name}cxx = {cxx}
 {name}cppflags = -DTX32_PREFERRED_STACK_BOUNDARY=5 -I{tinyx32_dir}
-{name}commonflags = -O2 -march=native -mx32 -mpreferred-stack-boundary=5 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants
+{name}commonflags = -O2 -march=native -mx32 -mpreferred-stack-boundary=5 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always
 {name}cflags = -std=gnu11
 {name}cxxflags = -fno-exceptions -fno-rtti -std=gnu++17
 {name}ldflags = -nostdlib -static -fuse-linker-plugin -Wl,--gc-sections
 {name}libs = -lgcc
 {name}builddir = {builddir}
-{name}dst = ${name}builddir/{name}
+{name}instdir = {instdir}
 
 rule {name}cc
   command = ${name}cc -c -MD -MF $out.d ${name}cppflags ${name}commonflags ${name}cflags -o $out $in
@@ -39,8 +39,35 @@ rule {name}cxx
 rule {name}ld
   command = ! test -f $out || mv -f $out $out.bak; ${name}cxx ${name}commonflags ${name}cxxflags ${name}ldflags -o $out $in ${name}libs
 
-build ${name}dst: {name}ld {objs}
-default ${name}dst
+rule {name}strip
+  command = strip --strip-unneeded -R .comment -R .GCC.command.line -o $out $in
+rule {name}install
+  command = install -m755 -C -T -v $in $out
+rule {name}size
+  command = {tinyx32_dir}/../scripts/detailed_size ${name}instdir/{name} ${name}builddir/{name}.out
+rule {name}bincmp
+  command = {tinyx32_dir}/../scripts/bincmp ${name}instdir/{name} ${name}builddir/{name}.out
+  pool = console
+rule {name}un
+  command = {tinyx32_dir}/../scripts/unassembly ${name}builddir/{name}.n.out
+  pool = console
+
+build ${name}builddir/{name}.n.out: {name}ld {objs}
+build ${name}builddir/{name}.out: {name}strip ${name}builddir/{name}.n.out
+default ${name}builddir/{name}.out
+
+build ${name}instdir/{name}: {name}install ${name}builddir/{name}.out
+build install-{name}: phony ${name}instdir/{name}
+build install: phony install-{name}
+
+build size-{name}: {name}size ${name}builddir/{name}.out
+build size: phony size-{name}
+
+build bincmp-{name}: {name}bincmp ${name}builddir/{name}.out
+build bincmp: phony bincmp-{name}
+
+build un-{name}: {name}un ${name}builddir/{name}.n.out
+build un: phony un-{name}
 
 {rules}
 '''
@@ -89,6 +116,7 @@ class BuildFile:
     def gen_ninja(self):
         cc, cxx = find_compilers()
         tinyx32_dir = os.path.dirname(os.path.realpath(__file__))
+        instdir = os.path.expanduser('~/bin')
 
         ninja_content = NINJA_HEADER
 
@@ -116,7 +144,7 @@ class BuildFile:
                     rules += f'build {obj}: {name}cxx {src} | {extra_deps}\n'
 
             ninja_content += NINJA_TEMPLATE.format(
-                tinyx32_dir=tinyx32_dir,
+                tinyx32_dir=tinyx32_dir, instdir=instdir,
                 name=binary.name, cc=cc, cxx=cxx, builddir=builddir,
                 objs=' '.join(sorted(objs)), rules=rules)
 
@@ -149,6 +177,8 @@ def main():
     parser.add_argument('-f', default='TINYX32BUILD')
     parser.add_argument('--print-ninja', action='store_true', default=False,
                         help='Print generated ninja build file')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('ninja_arg', nargs='*')
     args = parser.parse_args()
 
     build = BuildFile(args.f)
@@ -164,7 +194,12 @@ def main():
     ninja_filename = 'build.ninja'
     safe_replace(ninja_filename, ninja_content)
 
-    os.execvp('ninja', ['ninja', '-v', '-f', ninja_filename])
+    ninja_args = ['ninja',
+                  args.verbose and '-v',
+                  '-f', ninja_filename
+        ] + args.ninja_arg
+    ninja_args = list(filter(None, ninja_args))
+    os.execvp('ninja', ninja_args)
 
 
 if __name__ == '__main__':
