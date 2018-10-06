@@ -1,6 +1,7 @@
 binary(
-    name = 'tinyswiss',
+    name = 'TS',
     srcs = [
-        'main.c',
+        'main.cpp',
+        'mvln.cpp',
     ],
 )

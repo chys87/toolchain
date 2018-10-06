@@ -13,6 +13,10 @@ BUILD_FILE = 'TINYX32BUILD'
 
 
 NINJA_HEADER = r'''
+pool lto_link
+    depth = 1
+
+argv0 = {argv0}
 '''
 
 
@@ -23,7 +27,7 @@ NINJA_TEMPLATE = r'''
 {name}commonflags = -O2 -march=native -mx32 -mpreferred-stack-boundary=5 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always
 {name}cflags = -std=gnu11
 {name}cxxflags = -fno-exceptions -fno-rtti -std=gnu++17
-{name}ldflags = -nostdlib -static -fuse-linker-plugin -Wl,--gc-sections
+{name}ldflags = -nostdlib -static -fuse-linker-plugin -flto-partition=none -Wl,--gc-sections
 {name}libs = -lgcc
 {name}builddir = {builddir}
 {name}instdir = {instdir}
@@ -38,6 +42,7 @@ rule {name}cxx
 
 rule {name}ld
   command = ! test -f $out || mv -f $out $out.bak; ${name}cxx ${name}commonflags ${name}cxxflags ${name}ldflags -o $out $in ${name}libs
+  pool = lto_link
 
 rule {name}strip
   command = strip --strip-unneeded -R .comment -R .GCC.command.line -o $out $in
@@ -93,6 +98,9 @@ def find_compilers():
 class Binary:
     __slots__ = 'name', 'srcs'
 
+    def build_hash(self):
+        return '0'
+
 
 class BuildFile:
     __slots__ = 'binaries'
@@ -118,11 +126,14 @@ class BuildFile:
         tinyx32_dir = os.path.dirname(os.path.realpath(__file__))
         instdir = os.path.expanduser('~/bin')
 
-        ninja_content = NINJA_HEADER
+        ninja_content = NINJA_HEADER.format(
+            argv0=os.path.realpath(sys.argv[0])
+        )
 
         for binary in self.binaries:
             name = binary.name
             builddir = os.path.realpath(os.path.join('build', name))
+            safe_replace(os.path.join(builddir, '__hash'), binary.build_hash())
 
             # obj: src
             objs = {}
@@ -135,7 +146,7 @@ class BuildFile:
                     relsrc = os.path.relpath(src, tinyx32_dir)
                     objs[f'${name}builddir/__tinyx32/{relsrc}.o'] = src
 
-            extra_deps = f'{os.path.realpath(sys.argv[0])}'
+            extra_deps = f'$argv0 ${name}builddir/__hash'
             rules = ''
             for obj, src in sorted(objs.items()):
                 if src.endswith(('.c', '.S')):
