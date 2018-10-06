@@ -1,0 +1,239 @@
+#!/usr/bin/python3
+
+import argparse
+import locale
+import os
+import re
+import signal
+import subprocess
+import sys
+
+def iterwrapper(f):
+    '''
+    The purpose of this wrapper is to fix the iteration problem in Python 3:
+    "for f in pipe" causes write syscall to be used with 1 as the third argument,
+    which is extremely slow.
+    '''
+    if not hasattr(f, 'read'):
+        return f
+
+    def generator(f):
+        txt = b''
+        while True:
+            newtxt = f.read(8192)
+            if not newtxt:
+                break
+            txt += newtxt
+            i = txt.rfind(b'\n')
+            if i >= 0:
+                i += 1
+                yield txt[:i]
+                txt = txt[i:]
+        if txt:
+            f = None
+            yield txt
+
+    return generator(f)
+
+def get_lines(it, count):
+    '''
+    Try to get count lines from an iterator.
+    Note than count is only a hint, and that we may return fewer or more lines.
+    We assume the iterator may generate multiple lines at one iteration
+    (Some of my own iterators do so to achieve better performance)
+    '''
+    txt = b''
+    try:
+        while txt.count(b'\n') < count:
+            txt += next(it)
+    except StopIteration:
+        pass
+    return txt
+
+def cppfilter(fi):
+    simple_replaces = ( # Don't use a dict. We want orders.
+            (b'(anonymous namespace)', b'(a)'),
+            (b'unsigned int', b'uint'),
+            (b'unsigned long', b'ulong'),
+            (b'unsigned short', b'ushort'),
+            (b'unsigned char', b'uchar'),
+            (b'> >', b'>>'),
+            (b'> >', b'>>'), # Do it again so "> > > >", etc. are substituted properly
+
+            (b'::basic_string<char, std::char_traits<char>, std::allocator<char>>', b'::string'),
+            (b'::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>>', b'::wstring'),
+            (b'::less<void>', b'::less<>'),
+            (b'::greater<void>', b'::greater<>'),
+            (b'::equal_to<void>', b'::equal_to<>'),
+        )
+    pattern_replaces = (
+            (re.compile(br' \[clone ([.\w]+)]'),
+                br'\1'),
+            (re.compile(br'::unique_ptr<(.+), std::default_delete<\1>>'),
+                br'::unique_ptr<\1>'),
+            (re.compile(br'::(vector|list|deque|forward_list|_List_base|_Vector_base)<(.+), std::allocator<\2>>'),
+                br'::\1<\2>'),
+            (re.compile(br'::(multimap|map)<(.+), (.+), std::less<\2>, std::allocator<std::pair<\2 const, \3>>>'),
+                br'::\1<\2, \3>'),
+            (re.compile(br'::(multimap|map)<(.+), (.+), std::locale, std::allocator<std::pair<\2 const, \3>>>'),
+                br'::\1<\2, \3, std::locale>'),
+            (re.compile(br'::set<(.+), std::less<\1>, std::allocator<\1>>'),
+                br'::set<\1>'),
+            (re.compile(br'::set<(.+), std::locale, std::allocator<\1>>'),
+                br'::set<\1, std::locale>'),
+            (re.compile(br'::unordered_set<(.+), ([^<>]+), std::equal_to<\1>, std::allocator<\1>>'),
+                br'::unordered_set<\1, \2>'),
+            (re.compile(br'::unordered_set<(.+), std::hash<\1>, std::equal_to<\1>, std::allocator<\1>>'),
+                br'::unordered_set<\1>'),
+            (re.compile(br'::unordered_set<(.+), std::hash<\1 const&>, std::equal_to<\1>, std::allocator<\1>>'),
+                br'::unordered_set<\1, std::hash<\1 const\&>>'),
+            (re.compile(br'::unordered_map<(.+), (.+), std::hash<\1>, std::equal_to<\1>, std::allocator<std::pair<\1 const, \2>>>'),
+                br'::unordered_map<\1, \2>'),
+            (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\2>, std::less<\1>, std::allocator<\2>>'),
+                br'::_Rb_tree<\1, std::pair<\1, \2>>'),
+            (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\1>, std::less<\1>, std::allocator<\1>>'),
+                br'::_Rb_tree<\1, \1>'),
+            (re.compile(br'::unordered_map<(.+), (.+), std::hash<\1 const&>, std::equal_to<\1>, std::allocator<std::pair<\1 const, \2>>>'),
+                br'::unordered_map<\1, \2, std::hash<\1 const\&>>'),
+            (re.compile(br'::(basic_[io]stream|endl|__copy_streambufs|__ostream_insert|[io]streambuf_iterator|basic_(?:stream|file)buf|basic_ios|operator>>|operator<< )<(.+), std::char_traits<\2>>'),
+                br'::\1<\2>'),
+            (re.compile(br'::(basic_stringbuf)<(.*), std::char_traits<\2>, std::allocator<\2>>'),
+                br'::\1<\2>'),
+            (re.compile(br'\{lambda\([^()]*\)'),
+                br'{lambda'),
+            (re.compile(br'float __vector\(4\)'),
+                br'__m128'),
+            (re.compile(br'long long __vector\(2\)'),
+                br'__m128i'),
+            (re.compile(br'char __vector\(16\)'),
+                br'__v16qi'),
+            (re.compile(br'long long __vector\(4\)'),
+                br'__m256i'),
+        )
+
+    def do_replace(data):
+        for old, new in simple_replaces:
+            data = data.replace(old, new)
+        for pattern,replace in pattern_replaces:
+            data = pattern.sub(replace, data)
+        return data
+
+    data = b''
+    for txt in iterwrapper(fi):
+        data += txt
+        if len(data) >= 8192: # An arbitrary threshold
+            yield do_replace(data)
+            data = b''
+    if data:
+        fi = None
+        yield do_replace(data)
+
+def syscall_replace(fi):
+    data = get_lines(fi, 3) # In cases of static libraries, we need 3 lines
+
+    if b'x86-64' not in data: # If not x86-64, skip the expensive steps
+        yield data
+        while True:
+            yield next(fi)
+        return
+
+    # x86-64 LP64 syscalls
+    pattern = re.compile(br'^#define\s+__NR_(\w+)\s+(\d+)$', re.M)
+    with open(b'/usr/include/asm/unistd_64.h', 'rb') as f:
+        table = { int(m.group(2)) : m.group(1) for m in pattern.finditer(f.read()) }
+
+    # x86-64 LP32 (x32 ABI) syscalls
+    pattern = re.compile(br'^#define\s+__NR_([_a-z\d]+)\s+\(__X32_SYSCALL_BIT \+ (\d+)\)$', re.M)
+    with open(b'/usr/include/asm/unistd_x32.h', 'rb') as f:
+        table.update((int(m.group(2)) + 0x40000000, m.group(1)) for m in pattern.finditer(f.read()))
+
+    pattern = re.compile(br'(mov\s+\$0x)([a-f\d]+)(,%[er]?a[xl])\s*(?=\n.+syscall)')
+
+    def sub(match):
+        no = int(match.group(2), 16)
+        res = match.group(0)
+        try:
+            res += b'\t\t  # ' + table[no]
+        except KeyError:
+            pass
+        return res
+
+    while fi is not None:
+        newdata = get_lines(fi, 100) # An arbitrary threshold
+        if newdata.count(b'\n') < 100:
+            fi = None
+        if not newdata:
+            break
+        data += newdata
+        data = pattern.sub(sub, data)
+
+        # Yield all lines except the last one
+        i = data.rfind(b'\n', 0, -1)
+        if i >= 0:
+            i += 1
+            yield data[:i]
+            data = data[i:]
+    # Yield remaining things
+    if data:
+        data = pattern.sub(sub, data)
+        yield data
+
+
+def safe_write(f,data): # Safe against broken pipe
+    try:
+        f.write(data)
+        return True
+    except BrokenPipeError: # Broken pipe
+        return False
+
+
+def main():
+    locale.setlocale(locale.LC_ALL, 'C')
+
+    parser = argparse.ArgumentParser(description='Unassembly a program in a friendly way.')
+    parser.add_argument('filename', help='File to unassembly')
+    args = parser.parse_args()
+
+    objdump = subprocess.Popen(['objdump', '-C', '-r', '-d', args.filename],
+                               close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    fi = objdump.stdout
+    fi = cppfilter(fi)
+    fi = syscall_replace(fi)
+
+    if not os.isatty(sys.stdout.fileno()):
+        # Write to a pipe, whatever.
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL) # Prevents message at SIGPIPE
+        data = b''
+        for txt in iterwrapper(fi):
+            data += txt
+            if len(data) >= 8192: # An arbitrary threshold
+                sys.stdout.buffer.write(data)
+                data = b''
+        fi = None
+        sys.stdout.buffer.write(data)
+    else:
+        # We call less ourselves. In this case, we should exit with 0 rather than SIGPIPE if we get it.
+        pager = subprocess.Popen(['less'], close_fds=True, stdin=subprocess.PIPE)
+        fo = pager.stdin
+        data = b''
+        for txt in iterwrapper(fi):
+            data += txt
+            if len(data) >= 8192: # An arbitrary threshold
+                if not safe_write(fo, data):
+                    break
+                data = b''
+        else:
+            if data:
+                safe_write(fo, data)
+        try:
+            fo.close()
+        except BrokenPipeError:  # Broken pipe
+            pass
+        sys.exit(pager.wait())
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(128 + signal.SIGINT)
