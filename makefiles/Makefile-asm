@@ -1,0 +1,36 @@
+PROJNAME:=$(notdir $(shell pwd))
+BITS:=
+ifeq "$(BITS)" "64"
+    CFLAGS:=-m64 -Wa,--noexecstack
+    LDFLAGS:=-melf_x86_64 -s
+else
+    ifeq "$(BITS)" "32"
+    CFLAGS:=-m32 -Wa,--noexecstack
+    LDFLAGS:=-melf_i386 -s
+else
+    CFLAGS:= -Wa,--noexecstack
+    LDFLAGS:=-s
+endif
+endif
+
+SRCS:=$(wildcard *.S)
+OBJS:=$(SRCS:.S=.o)
+
+ifneq "$(wildcard Makefile-spec)" ""
+include Makefile-spec
+endif
+
+BIN := $(PROJNAME).out
+INSTALL ?= install -m755 -C -T -v
+INSTDIR ?= /usr/local/bin
+LD ?= ld
+
+all:	$(BIN)
+$(BIN):	$(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^
+.S.o:
+	gcc $(CFLAGS) -c -o $@ $^
+clean:
+	rm -f *.out *.o
+install:$(BIN)
+	$(INSTALL) $(BIN) $(INSTDIR)/$(PROJNAME)

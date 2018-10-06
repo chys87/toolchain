@@ -1,0 +1,393 @@
+ifeq "$(origin V)" "command line"
+ Q =
+else
+ Q = @$(if $(NAME),printf '[%-5s] $@\n' '$(NAME)'; )
+endif
+
+#SHELL = /bin/bash
+load ~/bin/egmake.so
+
+.SUFFIXES:
+.DELETE_ON_ERROR:
+.SECONDEXPANSION:
+
+BUILDDIR := build
+
+ifeq "$(wildcard src/)" ""
+ DIR := .
+else
+ DIR := $(EGM.readlink src)
+endif
+
+ifneq "$(wildcard $(DIR)/srcdirs)" ""
+ SRCDIRS := $(foreach x, $(EGM.cat $(DIR)/srcdirs), $(subst $(DIR)/.,$(DIR),$(DIR)/$(x)))
+else
+ SRCDIRS := $(DIR)
+endif
+
+define strip_src
+$(patsubst $(DIR)/%,%,$(patsubst $(BUILDDIR)/%,%,$(1)))
+endef
+
+# First handle automatically generated sources
+AUTO_GENERATOR_PYTHON := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.*.py))
+AUTO_GENERATED_PYTHON := $(AUTO_GENERATOR_PYTHON:$(DIR)/%.py=$(BUILDDIR)/%)
+AUTO_GENERATED_PYTHON_DEPS := $(AUTO_GENERATOR_PYTHON:$(DIR)/%.py=$(BUILDDIR)/%.py.P)
+
+AUTO_GENERATOR := $(AUTO_GENERATOR_PYTHON)
+AUTO_GENERATED := $(AUTO_GENERATED_PYTHON)
+AUTO_GENERATED_DEPS := $(AUTO_GENERATED_PYTHON_DEPS)
+AUTO_GENERATED_SRCS := $(filter %.c %.cc %.cpp %.C %.cxx %.S, $(AUTO_GENERATED))
+AUTO_GENERATED_HEADERS := $(filter %.h %.hpp, $(AUTO_GENERATED))
+
+HANDWRITTEN_HEADERS := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.h $(x)/*.hpp $(x)/*.h++ $(x)/%.hh $(x)/%.H))
+HANDWRITTEN_SRCS := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.c $(x)/*.cc $(x)/*.cpp $(x)/*.C $(x)/*.cxx $(x)/*.S))
+
+SRCS := $(HANDWRITTEN_SRCS) $(AUTO_GENERATED_SRCS)
+
+ifeq "$(SRCS)" ""
+$(error No source file.)
+endif
+
+# For each source, define SRC-filename := filename (or $(BUILDDIR)/filename for generated sources)
+# This allows uniform handling of handwritten and generated files
+$(foreach x,$(SRCS),$(eval SRC-$(call strip_src,$(x)) := $(x)))
+
+# Source files
+CSRCS   := $(filter %.c, $(SRCS))
+CXXSRCS := $(filter %.cc %.cpp %.C %.cxx, $(SRCS))
+ASMSRCS := $(filter %.S, $(SRCS))
+
+# Object files
+COBJS   := $(foreach x,$(CSRCS),$(BUILDDIR)/$(call strip_src,$(x)).o)
+CXXOBJS := $(foreach x,$(CXXSRCS),$(BUILDDIR)/$(call strip_src,$(x)).o)
+ASMOBJS := $(foreach x,$(ASMSRCS),$(BUILDDIR)/$(call strip_src,$(x)).o)
+OBJS    := $(COBJS) $(CXXOBJS) $(ASMOBJS)
+
+# Dependency files
+CDEPS   := $(COBJS:%.o=%.P)
+CXXDEPS := $(CXXOBJS:%.o=%.P)
+ASMDEPS := $(ASMOBJS:%.o=%.P)
+DEPS    := $(sort $(CDEPS) $(CXXDEPS) $(ASMDEPS))
+
+CC := gcc
+CXX := g++
+
+INCLUDES := $(foreach x,$(AUTO_GENERATED_HEADERS),-iquote $(dir $(x)))
+LIBS :=
+DEFS := -D _GNU_SOURCE -D NDEBUG \
+	-D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS \
+	-D __NO_MATH_INLINES
+
+AR := ar
+STRIP := strip --strip-unneeded -R .comment -R .GCC.command.line
+INSTALL := install -m755 -C -T -v
+INSTDIR := /usr/local/bin
+
+CSTD ?= -std=gnu99
+CXXSTD ?=
+# -pipe does more harm than good since we mount /tmp as a tmpfs
+OPTIMIZEFLAGS ?= -O2 \
+				 -fmerge-all-constants -fno-common \
+				 -fno-ident \
+				 -ffunction-sections -fdata-sections \
+				 -Qn
+#				 -ftree-vectorize \
+#				 -fgcse-sm -fgcse-lm -fgcse-las \
+#				 -frename-registers -fpredictive-commoning -fgcse-after-reload \
+#				 -fweb -funsafe-loop-optimizations \
+# -Wunsafe-loop-optimizations
+COPTIMIZEFLAGS ?=
+CXXOPTIMIZEFLAGS ?= -fstrict-enums -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0
+ARCHFLAGS := -march=native
+# -Wabi
+GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings \
+	-Wno-unused-parameter -Wno-missing-field-initializers \
+	-Wno-sign-compare -Wno-clobbered \
+	-Wformat -Wformat-security -Wmissing-include-dirs -Wfloat-equal \
+	-Wmissing-declarations \
+	-Wlogical-op \
+	-Wunused-macros \
+	-Wunused-local-typedefs \
+	-Werror=address \
+	-Werror=endif-labels \
+	-Werror=comment \
+	-Werror=multichar \
+	-Werror=pointer-arith \
+	-Werror=char-subscripts \
+	-Werror=format \
+	-Werror=format-extra-args \
+	-Wno-format-zero-length \
+	-Werror=return-type \
+	-Werror=overflow \
+	-Werror=parentheses \
+	-Werror=trigraphs \
+	-Werror=pragmas -Wunknown-pragmas \
+	-Werror=parentheses \
+	-Werror=strict-aliasing \
+	-Werror=trampolines \
+	-Werror=switch \
+	-Wswitch-enum \
+	-Werror=address \
+	-Werror=enum-compare \
+	-Wdisabled-optimization \
+	-Wsuggest-attribute=noreturn \
+	-Wdisabled-optimization \
+	-Werror=date-time \
+	-fmax-errors=5
+# TBA when newer GCC is made default:
+#	-Wsuggest-attribute=format
+CWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
+	-Wmissing-prototypes \
+	-Werror=implicit-int \
+	-Werror=implicit-function-declaration \
+	-Werror=old-style-declaration -Werror=old-style-definition \
+	-Werror=missing-parameter-type \
+	-Werror=strict-prototypes \
+	-Werror=jump-misses-init
+CXXWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
+	-Werror=reorder \
+	-Werror=conversion-null \
+	-Werror=delete-non-virtual-dtor \
+	-Werror=terminate \
+	-Woverloaded-virtual -Wnon-virtual-dtor \
+	-Werror=delete-incomplete
+PIE := 0
+NOPLT := 0
+LTO := 0
+
+# TARGETS: Raw target names
+# NBIN: List of unstripped targets (.n.out)
+# BIN: List of stripped targets (.out)
+TARGETS :=
+NBIN :=
+BIN :=
+
+# $(1): Target name; $(2): Dependencies (without .o)
+# Must set INSTDIR/CC/CXX etc before using define_target
+define define_target_impl
+TARGETS += $(1)
+NBIN += $(BUILDDIR)/$(1).n.out
+BIN  += $(BUILDDIR)/$(1).out
+SRCS-$(1) := $(sort $(foreach c,$(2),$(call strip_src,$(c:%.py=%))))
+all:	$(BUILDDIR)/$(1).out
+install:$(INSTDIR)/$(1)
+$(INSTDIR)/$(1):$(BUILDDIR)/$(1).out
+	$(INSTALL) $$< $$@
+ifeq "$(filter %.c %.S,$(2))" "$(2)"
+$(BUILDDIR)/$(1).n.out: private CLINKER = $(CC)
+else
+$(BUILDDIR)/$(1).n.out: private CLINKER = $(CXX)
+endif
+$(BUILDDIR)/$(1).n.out: private NAME := LD
+$(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(AUTO_GENERATED_HEADERS)
+	$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(LIBS)
+endef
+
+define define_target
+$(call define_target_impl,$(1),$(patsubst %.py,%,$(2)))
+endef
+
+# Make sure headers are generated earlier than everything else
+ifneq "$(AUTO_GENERATED_HEADERS)" ""
+$(OBJS) $(DEPS): | $(AUTO_GENERATED_HEADERS)
+endif
+
+.PHONY:	all install size bincmp purge clean clobber un compare
+.DEFAULT_GOAL := all
+
+-include Makefile-spec
+
+IS_CLANG := 0
+ifneq "$(subst clang,,$(CC))" "$(CC)"
+ IS_CLANG := 1
+endif
+
+ifeq "$(TARGETS)" ""
+$(eval $(call define_target,$(notdir $(EGM.realpath $(DIR))),$(OBJS:$(BUILDDIR)/%.o=%)))
+endif
+
+ifeq "$(CXXSRCS)" ""
+ NOEXCEPTIONS := 1
+endif
+
+ifeq "$(NOEXCEPTIONS)" "1"
+ OPTIMIZEFLAGS += -fno-exceptions
+ OPTIMIZEFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables
+endif
+ifeq "$(LTO)" "1"
+ EXTRA_CFLAGS += -flto
+ EXTRA_CXXFLAGS += -flto
+ EXTRA_LDFLAGS += -flto -fuse-linker-plugin
+ ifeq "$(IS_CLANG)" "0"
+ EXTRA_LDFLAGS += -flto-partition=none
+ endif
+ OPTIMIZEFLAGS := $(subst -ffunction-sections,,$(OPTIMIZEFLAGS))
+ OPTIMIZEFLAGS := $(subst -fdata-sections,,$(OPTIMIZEFLAGS))
+endif
+ifeq "$(PIE)" "1"
+ OPTIMIZEFLAGS += -fpie -pie
+endif
+ifeq "$(NOPLT)" "1"
+ OPTIMIZEFLAGS += -fno-plt
+ ifeq "$(PIE)" "1"
+  OPTIMIZEFLAGS += -fvisibility=hidden
+ endif
+endif
+ifeq "$(NOEXCEPTION)" "1"
+ OPTIMIZEFLAGS += -fno-exceptions
+endif
+
+CFLAGS := $(OPTIMIZEFLAGS) $(COPTIMIZEFLAGS) $(ARCHFLAGS) $(CWARNINGFLAGS) $(CSTD) $(INCLUDES) $(DEFS) $(EXTRA_CFLAGS)
+CXXFLAGS := $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS)
+BASE_LDFLAGS := -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed -Wl,-z,relro -Wl,-z,noexecstack
+LDFLAGS := $(ARCHFLAGS) $(OPTIMIZEFLAGS) $(BASE_LDFLAGS) $(EXTRA_LDFLAGS)
+
+ifeq "$(DIR)" "."
+ ifeq "$(BUILDDIR)" "build"
+  TAGSFILE ?= tags
+ endif
+endif
+
+ifneq "$(TAGSFILE)" ""
+ CTAGS := ctags -Idecltype -Inoexcept #--c++-kinds=+p --fields=+iaS --extra=+q
+endif
+
+all:	$(TAGSFILE)
+
+SIZE_COMMANDS :=
+UN_COMMANDS :=
+BINCMP_COMMANDS :=
+size:
+	$(Q)$(SIZE_COMMANDS)
+un:
+	$(Q)$(UN_COMMANDS)
+bincmp:
+	$(Q)$(BINCMP_COMMANDS)
+
+# $(1) = binname
+define define_size_unassembly_bincmp
+size-$(1):
+	$(Q)detailed_size $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out
+SIZE_COMMANDS += detailed_size $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out;
+un-$(1):
+	$(Q)unassembly $(BUILDDIR)/$(1).n.out
+UN_COMMANDS += unassembly $(BUILDDIR)/$(1).n.out;
+bincmp-$(1):
+	$(Q)bincmp $(INSTDIR)/$(1) $(BUILDDIR)/$(1).out
+BINCMP_COMMANDS += bincmp $(INSTDIR)/$(1) $(BUILDDIR)/$(1).out;
+endef
+
+$(foreach x,$(TARGETS),$(eval $(call define_size_unassembly_bincmp,$(x))))
+
+ifneq "$(filter $(MAKECMDGOALS),purge)" ""
+purge:
+	rm -f $(filter-out $(AUTO_GENERATED) $(AUTO_GENERATED_DEPS) $(BIN) $(NBIN) $(OBJS) $(DEPS),\
+		$(shell find $(BUILDDIR) '!' -type d))
+	[ -d $(BUILDDIR) ] && find $(BUILDDIR) -depth -mindepth 1 -type d -empty -print -delete
+endif
+
+ifneq "$(filter $(MAKECMDGOALS),clean)" ""
+clean:
+	rm -f $(wildcard *.bak *.out *.nstrip) $(shell find $(BUILDDIR) '!' -type d)
+	[ -d $(BUILDDIR) ] && find $(BUILDDIR) -depth -mindepth 1 -type d -empty -print -delete
+endif
+
+clobber:
+	find $(BUILDDIR) -name '*.[os]' -print -delete
+
+ifeq "$(STRIP)" ""
+$(BIN): private NAME := COPY
+$(BIN): %.out:%.n.out
+	$(Q)cp --reflink=auto $< $@
+else
+$(BIN): private NAME := STRIP
+$(BIN): %.out:%.n.out
+	$(Q)$(STRIP) -o $@ $<
+endif
+
+# These target-specific flags, set on *.o, will be herited by *.s
+$(COBJS):   COMPILER := $(CC)
+$(COBJS):   FLAGS    := $(CFLAGS)
+$(COBJS):   NAME     := CC
+$(CXXOBJS): COMPILER := $(CXX)
+$(CXXOBJS): FLAGS    := $(CXXFLAGS)
+$(CXXOBJS): NAME     := CXX
+$(ASMOBJS): COMPILER := $(CC)
+$(ASMOBJS): FLAGS    := -Wa,--noexecstack $(CFLAGS)
+$(ASMOBJS): NAME     := ASM
+
+# We'll have to set it separately for *.P
+$(CDEPS) $(ASMDEPS): private COMPILER := $(CC)
+$(CDEPS) $(ASMDEPS): private FLAGS    := $(CFLAGS)
+$(CXXDEPS):          private COMPILER := $(CXX)
+$(CXXDEPS):          private FLAGS    := $(CXXFLAGS)
+
+# If a dep file is missing, also remove the corresponding .s/.o file
+EXISTING_DEPS := $(wildcard $(DEPS))
+MISSING_DEPS := $(filter-out $(EXISTING_DEPS),$(DEPS))
+ifneq "$(MISSING_DEPS)" ""
+	ignore_var := $(shell rm -f $(MISSING_DEPS:%.P=%.[os]))
+endif
+
+$(OBJS): $$(SRC-$$(basename $$(call strip_src,$$@)))
+	$(Q)mkdir -p $(dir $@) && $(COMPILER) -MD -MP -MF '$(@:%.o=%.P)' -frandom-seed=$(<F) -c $(FLAGS) $(FLAGS-$(<F)) -o $@ $< \
+		|| (rm -f $(@:%.o=%.P); exit 1)
+
+relpath = $(shell python -c 'import os; print(os.path.relpath("$(1)", "$(2)"));')
+
+# The python scripts takes at least 2 arguments:
+#  argv1: Relative directory to find source files from current directory
+#  argv2: Relative directory to find source files from $(BUILDDIR) (where generated file is put)
+#  argv3...: Arguments (Format: VAR=VAL)
+# Auto code generators
+$(AUTO_GENERATED_PYTHON): private NAME := PYGEN
+$(AUTO_GENERATED_PYTHON): $(BUILDDIR)/%:$(DIR)/%.py
+	$(Q)mkdir -p $(dir $@) && if [ -f $@ ]; then mv -f $@ $@.bak; fi; { \
+		echo '# /* DO NOT EDIT!! Automatically generated by $< */'; \
+		echo; \
+		./$< $(dir $<) $(call relpath,$(dir $<),$(dir $@)) CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS)' CXXFLAGS='$(CXXFLAGS)'; } > $@
+
+# Add extra dependency of Python generators introduced by "import"
+$(AUTO_GENERATED_PYTHON_DEPS): private NAME := PYDEP
+$(AUTO_GENERATED_PYTHON_DEPS): $(BUILDDIR)/%.py.P: $(DIR)/%.py
+	$(Q)mkdir -p $(dir $@) && pythondep -t '$@ $(@:%.py.P=%)' $< > $@
+
+$(AUTO_GENERATED_PYTHON): $(BUILDDIR)/%: | $(BUILDDIR)/%.py.P
+
+ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
+ -include $(AUTO_GENERATED_PYTHON_DEPS)
+endif
+
+# Update ctags
+ifeq "$(TAGSFILE)" "tags"
+tags: private NAME := CTAGS
+tags: $(HANDWRITTEN_SRCS) $(HANDWRITTEN_HEADERS)
+	$(Q)$(CTAGS) $(HANDWRITTEN_SRCS:./%=%) $(HANDWRITTEN_HEADERS:./%=%)
+endif
+
+# compare
+AUTO_GENERATED_EXIST := $(wildcard $(AUTO_GENERATED))
+AUTO_GENERATED_EXIST_BAK := $(wildcard $(AUTO_GENERATED_EXIST:%=%.bak))
+AUTO_GENERATED_COMPARE := $(AUTO_GENERATED_EXIST_BAK:%.bak=%)
+
+compare:
+	$(Q)for x in $(AUTO_GENERATED); do \
+		if [ -f $$x -a -f $$x.bak ] && ! cmp -s $$x.bak $$x; then \
+			colordiff -up $$x.bak $$x | less -R; \
+		fi \
+	done
+
+# For "make clean", don't include dependency files
+# For "make .xxx.o", include only ".xxx.P"
+# Otherwise, include all dependency files
+
+ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
+ ifneq "$(filter $(MAKECMDGOALS),$(OBJS))" ""
+  TMPFILENAME := $(filter $(MAKECMDGOALS),$(OBJS))
+  TMPFILENAME := $(TMPFILENAME:$(BUILDDIR)/%.o=$(BUILDDIR)/%.P)
+  -include $(TMPFILENAME)
+ else
+  -include $(DEPS)
+ endif
+endif

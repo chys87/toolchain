@@ -1,0 +1,193 @@
+ifeq "$(origin V)" "command line"
+ Q =
+else
+ Q = @
+endif
+
+CSRCS := $(wildcard *.c)
+CXXSRCS := $(wildcard *.cc *.cpp *.C *.cxx)
+COBJS_32 := $(CSRCS:%=.%.32.o)
+CXXOBJS_32 := $(CXXSRCS:%=.%.32.o)
+OBJS_32 := $(sort $(COBJS_32) $(CXXOBJS_32))
+COBJS_64 := $(CSRCS:%=.%.64.o)
+CXXOBJS_64 := $(CXXSRCS:%=.%.64.o)
+OBJS_64 := $(sort $(COBJS_64) $(CXXOBJS_64))
+CDEPS := $(CSRCS:%=.%.d)
+CXXDEPS := $(CXXSRCS:%=.%.d)
+
+ifeq "$(shell uname -m)" "x86_64"
+ NATIVE := 64
+ CROSS := 32
+else
+ NATIVE := 32
+ CROSS := 64
+endif
+
+CC_$(NATIVE) := gcc
+CXX_$(NATIVE) := g++
+ifeq "$(NATIVE)" "32"
+ CC_64 := x86_64-pc-linux-gnu-gcc
+ CXX_64 := x86_64-pc-linux-gnu-g++
+else
+ CC_32 := gcc -m32
+ CXX_32 := g++ -m32
+endif
+
+INCLUDES :=
+LIBS :=
+DEFS := -D_GNU_SOURCE -DNDEBUG
+
+# Variables that can be set in Makefile-spec:
+# PROJNAME
+# INCLUDES, LIBS, DEFS (+=)
+# OPTIMIZEFLAGS, DEBUGFLAGS, WARNINGFLAGS
+# ARCHFLAGS_32, ARCHFLAGS_64
+# EXTRA_{C,CXX}FLAGS_32, EXTRA_{C,CXX}FLAGS_64
+# CSTD, CXXSTD
+# LDFLAGS_32
+# LDFLAGS_64
+# EXTRA_LDFLAGS
+# CLINKER_32, CLINKER_64, STRIP, INSTALL
+# INSTDIR
+# NOCROSS
+include $(wildcard Makefile-spec)
+
+AR ?= ar
+STRIP ?= strip
+INSTALL ?= install -m755 -C -T -v
+INSTDIR ?= /usr/local/bin
+
+CSTD ?= -std=gnu99
+CXXSTD ?=
+OPTIMIZEFLAGS ?= -O2 -pipe \
+				 -ffast-math -fmerge-all-constants -fno-common \
+				 -fweb -funsafe-loop-optimizations -Wunsafe-loop-optimizations \
+				 -frename-registers -fpredictive-commoning -fgcse-after-reload \
+				 -ftree-vectorize -frerun-cse-after-loop \
+				 -fgcse-sm -fgcse-lm -fgcse-las \
+				 -fno-ident \
+				 -Qn
+ifeq "$(NATIVE)" "32"
+ ARCHFLAGS_32 ?= -march=native -fomit-frame-pointer
+ ARCHFLAGS_64 ?= -march=core2 -msse4
+else
+ ARCHFLAGS_32 ?= -march=native -fomit-frame-pointer
+ ARCHFLAGS_64 ?= -march=native
+endif
+DEBUGFLAGS ?=
+WARNINGFLAGS ?= -Wall
+LDFLAGS_32 ?= -Wl,-O1 $(EXTRA_LDFLAGS) $(ARCHFLAGS_32) $(OPTIMIZEFLAGS)
+LDFLAGS_64 ?= -Wl,-O1 $(EXTRA_LDFLAGS) $(ARCHFLAGS_64) $(OPTIMIZEFLAGS)
+ifeq "$(CXXSRCS)" ""
+ CLINKER_32 ?= $(CC_32)
+ CLINKER_64 ?= $(CC_64)
+else
+ CLINKER_32 ?= $(CXX_32)
+ CLINKER_64 ?= $(CXX_64)
+endif
+
+PROJNAME ?= $(notdir $(shell pwd))
+# Make it static
+PROJNAME := $(PROJNAME)
+BIN_32 := $(PROJNAME).32.out
+NBIN_32 := $(PROJNAME).32.nstrip
+BIN_64 := $(PROJNAME).64.out
+NBIN_64 := $(PROJNAME).64.nstrip
+ifeq "$(NOCROSS)" "1"
+ BIN_$(CROSS) :=
+ NBIN_$(CROSS) :=
+ COJBS_$(CROSS) :=
+ CXXOBJS_$(CROSS) :=
+endif
+
+CFLAGS_32 := $(OPTIMIZEFLAGS) $(ARCHFLAGS_32) $(WARNINGFLAGS) $(DEBUGFLAGS) $(CSTD) $(INCLUDES) $(DEFS) $(EXTRA_CFLAGS_32)
+CXXFLAGS_32 := $(OPTIMIZEFLAGS) $(ARCHFLAGS_32) $(WARNINGFLAGS) $(DEBUGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS_32)
+CFLAGS_64 := $(OPTIMIZEFLAGS) $(ARCHFLAGS_64) $(WARNINGFLAGS) $(DEBUGFLAGS) $(CSTD) $(INCLUDES) $(DEFS) $(EXTRA_CFLAGS_64)
+CXXFLAGS_64 := $(OPTIMIZEFLAGS) $(ARCHFLAGS_64) $(WARNINGFLAGS) $(DEBUGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS_64)
+
+.PHONY:	all install purge clean
+
+all:	$(BIN_32) $(BIN_64)
+install:$(INSTDIR)/$(PROJNAME)
+$(INSTDIR)/$(PROJNAME):$(BIN_$(NATIVE))
+	$(INSTALL) $(BIN_$(NATIVE)) $(INSTDIR)/$(PROJNAME)
+PURGEFILES := $(filter-out $(OBJS_32) $(OBJS_64),$(wildcard .*.o *.o))
+PURGEFILES += $(filter-out $(CDEPS) $(CXXDEPS),$(wildcard .*.d *.d))
+PURGEFILES += $(filter-out $(BIN_32) $(BIN_64),$(wildcard *.out))
+PURGEFILES += $(filter-out $(NBIN_32) $(NBIN_64),$(wildcard *.nstrip))
+purge:
+ifneq "$(strip $(PURGEFILES))" ""
+	rm -f $(PURGEFILES)
+endif
+CLEANFILES := $(wildcard *.out *.nstrip .*.o .*.d *.o *.d)
+clean:
+ifneq "$(strip $(CLEANFILES))" ""
+	rm -f $(CLEANFILES)
+endif
+
+ifeq "$(Q)" "@"
+ PRINT = @printf '[%-5s] $@\n' $(1)
+else
+ PRINT =
+endif
+
+$(BIN_32) $(BIN_64):%.out:%.nstrip
+	$(call PRINT,STRIP)
+	$(Q)$(STRIP) -o $@ $<
+ifneq "$(NBIN_32)" ""
+$(NBIN_32):$(OBJS_32)
+	$(call PRINT,LD)
+	$(Q)$(CLINKER_32) $(LDFLAGS_32) -o $@ $^ $(LIBS)
+endif
+ifneq "$(NBIN_64)" ""
+$(NBIN_64):$(OBJS_64)
+	$(call PRINT,LD)
+	$(Q)$(CLINKER_64) $(LDFLAGS_64) -o $@ $^ $(LIBS)
+endif
+
+.SUFFIXES:
+.SUFFIXES:	.d .o
+
+DEPFILEFILTERS = \
+	s:/usr/include/[A-Za-z0-9./]*::g; \
+	s/[ \t]\+/ /g; \
+	/^ *[:\\]/d;
+
+$(CDEPS): .%.d:%
+	$(call PRINT,DEP)
+	$(Q)$(CC_$(NATIVE)) -MT '$@ .$<.32.o .$<.64.o' -MM -MP -MF $@ $(CFLAGS_$(NATIVE)) $(FLAGS-$<) $< && \
+		sed -i -e '$(DEPFILEFILTERS)' $@ && echo '$<:' >>$@ || (rm -f $@; exit 1)
+$(CXXDEPS): .%.d:%
+	$(call PRINT,DEP)
+	$(Q)$(CXX_$(NATIVE)) -MT '$@ .$<.32.o .$<.64.o' -MM -MP -MF $@ $(CXXFLAGS_$(NATIVE)) $(FLAGS-$<) $< && \
+		sed -i -e '$(DEPFILEFILTERS)' $@ && echo '$<:' >>$@ || (rm -f $@; exit 1)
+
+$(COBJS_32): .%.32.o:%
+	$(call PRINT,CC)
+	$(Q)$(CC_32) -c $(CFLAGS_32) $(FLAGS-$<) -o $@ $<
+$(CXXOBJS_32): .%.32.o:%
+	$(call PRINT,CXX)
+	$(Q)$(CXX_32) -c $(CXXFLAGS_32) $(FLAGS-$<) -o $@ $<
+$(COBJS_64): .%.64.o:%
+	$(call PRINT,CC)
+	$(Q)$(CC_64) -c $(CFLAGS_64) $(FLAGS-$<) -o $@ $<
+$(CXXOBJS_64): .%.64.o:%
+	$(call PRINT,CXX)
+	$(Q)$(CXX_64) -c $(CXXFLAGS_64) $(FLAGS-$<) -o $@ $<
+
+# For "make clean", don't include dependency files
+# For "make .xxx.{32.64}.o", include only ".xxx.d"
+# Otherwise, include all dependency files
+
+ifneq "$(MAKECMDGOALS)" "clean"
+ ifneq "$(MAKECMDGOALS)" "purge"
+  ifneq "$(findstring $(MAKECMDGOALS),$(OBJS_32) $(OBJS_64))" ""
+   TMPFILENAME := $(MAKECMDGOALS)
+   TMPFILENAME := $(TMPFILENAME:%.32.o=%.d)
+   TMPFILENAME := $(TMPFILENAME:%.64.o=%.d)
+   include $(TMPFILENAME)
+  else
+   include $(CDEPS) $(CXXDEPS)
+  endif
+ endif
+endif
