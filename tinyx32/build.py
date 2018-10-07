@@ -8,7 +8,7 @@ import os
 import sys
 
 
-COMPILER_PATTERNS = ['{}-svn', 'x86_64-linux-gnux32-{}', '{}']
+COMPILER_PATTERNS = ['{}-svn-opt', '{}-svn', 'x86_64-linux-gnux32-{}', '{}']
 BUILD_FILE = 'TINYX32BUILD'
 
 
