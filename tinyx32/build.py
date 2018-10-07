@@ -108,12 +108,22 @@ class BuildFile:
     def __init__(self, filename):
         self.binaries = []
 
-        with open(filename) as f:
-            build_content = f.read()
+        try:
+            with open(filename) as f:
+                build_content = f.read()
+        except FileNotFoundError as e:
+            sys.exit(str(e))
 
-        exec(build_content, {
-            'binary': self.__callback_binary,
-        })
+        try:
+            exec(build_content, {
+                'binary': self.__callback_binary,
+                '__builtin__': {},
+            })
+        except Exception as e:
+            sys.exit(f'Failed to parse {filename}: {e}')
+
+        if not self.binaries:
+            sys.exit(f'No target is specified in {filename}')
 
     def __callback_binary(self, *, name, srcs):
         binary = Binary()
