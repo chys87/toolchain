@@ -24,7 +24,7 @@ NINJA_TEMPLATE = r'''
 {name}cc = {cc}
 {name}cxx = {cxx}
 {name}cppflags = -DTX32_PREFERRED_STACK_BOUNDARY=5 -I{tinyx32_dir}
-{name}commonflags = -O2 -march=native -mx32 -mpreferred-stack-boundary=5 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always
+{name}commonflags = -O2 -march=native -mx32 -mpreferred-stack-boundary=5 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always -funsigned-char
 {name}cflags = -std=gnu11
 {name}cxxflags = -fno-exceptions -fno-rtti -std=gnu++17
 {name}ldflags = -nostdlib -static -fuse-linker-plugin -flto-partition=none -Wl,--gc-sections
