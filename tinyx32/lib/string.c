@@ -2,18 +2,17 @@
 #include <x86intrin.h>
 
 void *memset(void *dst, int ch, size_t n) {
-    asm volatile ("rep stosb" : "+D"(dst), "+c"(n) : "a"(ch) : "memory", "cc");
+    asm volatile ("addr32 rep stosb" : "+D"(dst), "+c"(n) : "a"(ch) : "memory", "cc");
     return dst;
 }
 
 void *memcpy(void *dst, const void *src, size_t n) {
-    void *ret = dst;
-    asm volatile ("rep movsb" : "+D"(dst), "+S"(src), "+c"(n) :: "memory");
-    return ret;
+    mempcpy(dst, src, n);
+    return dst;
 }
 
 void *mempcpy(void *dst, const void *src, size_t n) {
-    asm volatile ("rep movsb" : "+D"(dst), "+S"(src), "+c"(n) :: "memory");
+    asm volatile ("addr32 rep movsb" : "+D"(dst), "+S"(src), "+c"(n) :: "memory");
     return dst;
 }
 
@@ -22,7 +21,7 @@ void *memmove(void *dst, const void *src, size_t n) {
         void *ret = dst;
         dst = (void *)((uintptr_t)dst + n - 1);
         src = (void *)((uintptr_t)src + n - 1);
-        asm volatile ("std; rep movsb; cld" : "+D"(dst), "+S"(src), "+c"(n) :: "memory");
+        asm volatile ("std; addr32 rep movsb; cld" : "+D"(dst), "+S"(src), "+c"(n) :: "memory");
         return ret;
     } else {
         return memcpy(dst, src, n);
@@ -97,6 +96,21 @@ void *rawmemchr(const void *s, int c) {
     return (void *)p;
 }
 
+char *strchr(const char *s, int c) {
+    for (const char *p = s; *p; ++p) {
+        if (*p == (char)c)
+            return (char *)p;
+    }
+    return NULL;
+}
+
+char *strchrnul(const char *s, int c) {
+    const char *p = s;
+    while (*p && *p != (char)c)
+        ++p;
+    return (char *)p;
+}
+
 int strcmp(const char *a, const char *b) {
     while (*a && *b) {
         if (*a != *b)
@@ -104,6 +118,19 @@ int strcmp(const char *a, const char *b) {
         ++a;
         ++b;
     }
+    return (int)(unsigned char)*a - (int)(unsigned char *)b;
+}
+
+int strncmp(const char *a, const char *b, size_t n) {
+    while (n > 0 && *a && *b) {
+        if (*a != *b)
+            return (int)(unsigned char)*a - (int)(unsigned char *)b;
+        ++a;
+        ++b;
+        --n;
+    }
+    if (n == 0)
+        return 0;
     return (int)(unsigned char)*a - (int)(unsigned char *)b;
 }
 

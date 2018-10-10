@@ -1,23 +1,23 @@
 #include <tinyx32.h>
 
-int mvln_main(char **argv);
+int j_main(size_t argc, char **argv, char **);
+int mvln_main(size_t argc, char **argv, char **);
 
 namespace {
 
 struct Dispatch {
     const char *name;
     size_t name_len;
-    int (*func)(char **);
+    int (*func)(size_t argc, char **, char **);
 };
 
 static const Dispatch dispatch[] = {
     {STR_LEN("mvln"), mvln_main},
+    {STR_LEN("j"), j_main},
 };
 
-void unknown_subcommand() __attribute__((noreturn));
 void unknown_subcommand() {
     fsys_write(2, STR_LEN("Unknown subcommand\n"));
-    exit(1);
 }
 
 void print_subcommands() {
@@ -41,12 +41,15 @@ const char *basename(const char *s) {
 
 } // namespace
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv, char **envp) {
     const char *name = argv[0];
-    if (name == NULL)
+    if (name == NULL) {
         unknown_subcommand();
+        return 1;
+    }
     const char *bname = basename(name);
     if (strcmp(bname, "TS") == 0) {
+        --argc;
         ++argv;
         name = *argv;
         if (name == NULL) {
@@ -56,11 +59,12 @@ int main(int argc, char **argv) {
         bname = basename(name);
     }
 
+    size_t bname_len = strlen(bname);
     for (const Dispatch &disp: dispatch) {
-        if (strcmp(disp.name, bname) == 0) {
-            return disp.func(argv + 1);
-        }
+        if (disp.name_len == bname_len && memcmp(disp.name, bname, bname_len) == 0)
+            return disp.func(argc - 1, argv + 1, envp);
     }
 
-    return 0;
+    unknown_subcommand();
+    return 1;
 }

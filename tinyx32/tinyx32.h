@@ -63,11 +63,17 @@ int memcmp(const void *, const void *, size_t) __attribute__((__pure__, __nonnul
 void *memchr(const void *, int, size_t) __attribute__((__pure__, __nonnull__(1)));
 void *memrchr(const void *, int, size_t) __attribute__((__pure__, __nonnull__(1)));
 void *rawmemchr(const void *, int) __attribute__((__pure__, __nonnull__(1)));
+char *strchr(const char *, int) __attribute__((__pure__, __nonnull__(1)));
+char *strchrnul(const char *, int) __attribute__((__pure__, __nonnull__(1)));
 int strcmp(const char *, const char *) __attribute__((__pure__, __nonnull__(1, 2)));
+int strncmp(const char *, const char *, size_t) __attribute__((__pure__, __nonnull__(1, 2)));
 
 // Non-standard string.c
 char *utoa10(unsigned value, char *str);
 char *itoa10(int value, char *str);
+
+// unistd.c
+int execvpe(const char *exe, char *const *args, char *const *envp);
 
 // Macros
 #define STR_LEN(s) (s), sizeof(s) - 1
