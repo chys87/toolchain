@@ -124,3 +124,7 @@ TX32_INLINE TX32_CONSTEXPR __m256i _mm256_cmpgt_epi8(__m256i a, __m256i b) {
 #ifdef __cplusplus
 } // extern "C"
 #endif
+
+#ifdef __cplusplus
+# include "tinyx32-cxx.h"
+#endif

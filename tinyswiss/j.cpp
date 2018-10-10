@@ -9,19 +9,22 @@ namespace {
 int invoke(const char *exe, std::initializer_list<const char*>base_args, size_t argc, char **argv, char **envp) {
     char *real_args[base_args.size() + argc + 1];
     char **pra = real_args;
-    pra = (char **)mempcpy(pra, base_args.begin(), base_args.size() * sizeof(char *));
-    pra = (char **)mempcpy(pra, argv, argc * sizeof(char *));
+    pra = Mempcpy(pra, base_args.begin(), base_args.size() * sizeof(char *));
+    pra = Mempcpy(pra, argv, argc * sizeof(char *));
     *pra = nullptr;
 
     execvpe(exe, real_args, envp);
 
     {
-        struct iovec vec[3] = {
-            {(char *)STR_LEN("Failed to execute command ")},
-            {const_cast<char *>(exe), strlen(exe)},
-            {(char *)STR_LEN("\n")},
-        };
-        fsys_writev(2, vec, 3);
+        const char *prefix = "Failed to execute command ";
+        const char *suffix = "\n";
+        size_t exe_len = strlen(exe);
+        char buf[strlen(prefix) + exe_len + strlen(suffix)];
+
+        char *p = Mempcpy(buf, prefix, strlen(prefix));
+        p = Mempcpy(p, exe, exe_len);
+        p = Mempcpy(p, suffix, strlen(suffix));
+        fsys_write(2, buf, p - buf);
     }
 
     return 127;

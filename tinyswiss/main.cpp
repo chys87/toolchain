@@ -5,9 +5,11 @@ int mvln_main(size_t argc, char **argv, char **);
 
 namespace {
 
+constexpr size_t kMaxSubCommandNameLen = 6;
+
 struct Dispatch {
-    const char *name;
-    size_t name_len;
+    char name[kMaxSubCommandNameLen + 1];
+    uint8_t name_len;
     int (*func)(size_t argc, char **, char **);
 };
 
@@ -23,7 +25,7 @@ void unknown_subcommand() {
 void print_subcommands() {
     fsys_write(1, STR_LEN("Available subcommands:\n"));
     for (const Dispatch &disp: dispatch) {
-        char buf[disp.name_len + 1];
+        char buf[kMaxSubCommandNameLen + 1];
         memcpy(mempcpy(buf, disp.name, disp.name_len), "\n", 1);
         fsys_write(1, buf, disp.name_len + 1);
     }
@@ -52,7 +54,7 @@ int main(int argc, char **argv, char **envp) {
         --argc;
         ++argv;
         name = *argv;
-        if (name == NULL) {
+        if (name == NULL || strcmp(name, "--help") == 0) {
             print_subcommands();
             return 0;
         }
