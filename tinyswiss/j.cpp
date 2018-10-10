@@ -6,10 +6,28 @@
 
 namespace {
 
+void print_cmd(const char *const *args, size_t n) {
+    size_t lens[n];
+    size_t total_len = 0;
+    for (size_t i = 0; i < n; ++i)
+        total_len += lens[i] = strlen(args[i]);
+
+    char buf[total_len + n];
+
+    ChainMemcpy cm(buf);
+
+    for (size_t i = 0; i < n; ++i)
+        cm << pair{args[i], lens[i]} << (i == n - 1 ? "\n" : " ");
+
+    fsys_write(2, buf, total_len + n);
+}
+
 int invoke(const char *exe, std::initializer_list<const char*>base_args, size_t argc, char **argv, char **envp) {
     const char *real_args[base_args.size() + argc + 1];
 
     ChainMemcpy(real_args) << pair{base_args.begin(), base_args.size()} << pair{argv, argc} << nullptr;
+
+    print_cmd(real_args, base_args.size() + argc);
 
     execvpe(exe, const_cast<char *const *>(real_args), envp);
 
@@ -36,7 +54,7 @@ int j_main(size_t argc, char **argv, char **envp) {
         fsys_dup2(fd_null, 0);
 
     if (fsys_access("build.py", X_OK) == 0)
-        return invoke("./build.py", {"build.py", "-v"}, argc, argv, envp);
+        return invoke("./build.py", {"./build.py", "-v"}, argc, argv, envp);
 
     if (fsys_access("build.ninja", R_OK) == 0)
         return invoke("ninja", {"ninja", "-v"}, argc, argv, envp);
