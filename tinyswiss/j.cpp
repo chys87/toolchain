@@ -7,13 +7,11 @@
 namespace {
 
 int invoke(const char *exe, std::initializer_list<const char*>base_args, size_t argc, char **argv, char **envp) {
-    char *real_args[base_args.size() + argc + 1];
-    char **pra = real_args;
-    pra = Mempcpy(pra, base_args.begin(), base_args.size() * sizeof(char *));
-    pra = Mempcpy(pra, argv, argc * sizeof(char *));
-    *pra = nullptr;
+    const char *real_args[base_args.size() + argc + 1];
 
-    execvpe(exe, real_args, envp);
+    ChainMemcpy(real_args) << pair{base_args.begin(), base_args.size()} << pair{argv, argc} << nullptr;
+
+    execvpe(exe, const_cast<char *const *>(real_args), envp);
 
     {
         const char *prefix = "Failed to execute command ";
@@ -21,10 +19,9 @@ int invoke(const char *exe, std::initializer_list<const char*>base_args, size_t 
         size_t exe_len = strlen(exe);
         char buf[strlen(prefix) + exe_len + strlen(suffix)];
 
-        char *p = Mempcpy(buf, prefix, strlen(prefix));
-        p = Mempcpy(p, exe, exe_len);
-        p = Mempcpy(p, suffix, strlen(suffix));
-        fsys_write(2, buf, p - buf);
+        ChainMemcpy(buf) << pair{prefix, strlen(prefix)} << pair{exe, exe_len} << pair{suffix, strlen(suffix)};
+
+        fsys_write(2, buf, strlen(prefix) + exe_len + strlen(suffix));
     }
 
     return 127;
