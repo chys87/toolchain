@@ -18,12 +18,12 @@
 # endif
 #endif
 
-template <typename T>
+template <typename T> requires std::is_trivially_copyable<T>::value
 inline T *Memcpy(T *dst, const void *src, size_t n) {
     return static_cast<T *>(memcpy(dst, src, n));
 }
 
-template <typename T>
+template <typename T> requires std::is_trivially_copyable<T>::value
 inline T *Mempcpy(T *dst, const void *src, size_t n) {
     return static_cast<T *>(mempcpy(dst, src, n));
 }
@@ -37,12 +37,12 @@ struct pair {
 template <typename A, typename B>
 pair(A, B) -> pair<A, B>;
 
-template <typename T>
+template <typename T> requires std::is_trivially_copyable<T>::value
 class ChainMemcpy {
 public:
     explicit ChainMemcpy(T *p) : p_(p) {}
 
-    template <typename U, typename = std::enable_if_t<sizeof(U) == sizeof(T) and std::is_convertible<U, T>::value, void>>
+    template <typename U> requires sizeof(U) == sizeof(T) and std::is_convertible<U, T>::value
     ChainMemcpy &operator << (pair<U *, size_t> s) {
         p_ = Mempcpy(p_, s.first, s.second * sizeof(T));
         return *this;
@@ -50,6 +50,11 @@ public:
 
     ChainMemcpy &operator << (T v) {
         *p_++ = v;
+        return *this;
+    }
+
+    ChainMemcpy &operator << (const char *s) requires sizeof(T) == 1 {
+        p_ = Mempcpy(p_, s, strlen(s));
         return *this;
     }
 

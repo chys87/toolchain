@@ -19,7 +19,7 @@ int invoke(const char *exe, std::initializer_list<const char*>base_args, size_t 
         size_t exe_len = strlen(exe);
         char buf[strlen(prefix) + exe_len + strlen(suffix)];
 
-        ChainMemcpy(buf) << pair{prefix, strlen(prefix)} << pair{exe, exe_len} << pair{suffix, strlen(suffix)};
+        ChainMemcpy(buf) << prefix << pair{exe, exe_len} << suffix;
 
         fsys_write(2, buf, strlen(prefix) + exe_len + strlen(suffix));
     }
