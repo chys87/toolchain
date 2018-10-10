@@ -15,7 +15,9 @@ int execvpe(const char *exe, char *const *args, char *const *envp) {
 
     int ret = -ENOENT;
     size_t exe_base_len = strlen(exe);
-    for (const char *p = path; *p; ) {
+
+    const char *p = path;
+    for (;;) {
         const char *sep = strchrnul(p, ':');
         size_t l = sep - p;
         char real_exe[l + 1 + exe_base_len + 2];
@@ -28,6 +30,9 @@ int execvpe(const char *exe, char *const *args, char *const *envp) {
         w = (char *)mempcpy(w, exe, exe_base_len);
         *w++ = '\0';
         ret = fsys_execve(real_exe, args, envp);
+        if (*sep == '\0')
+            break;
+        p = sep + 1;
     }
     return ret;
 }
