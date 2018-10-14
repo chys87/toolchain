@@ -1,8 +1,13 @@
 #include "tinyx32.h"
 #include <x86intrin.h>
 
+// Make GCC think the assembler sequence is longer, so that it tends to use its own builtin version instead
+#define DUMMY_ASM "\n\
+;;;;;;;;;;;\n\
+"
+
 void *memset(void *dst, int ch, size_t n) {
-    asm volatile ("addr32 rep stosb" : "+D"(dst), "+c"(n) : "a"(ch) : "memory", "cc");
+    asm volatile ("addr32 rep stosb" DUMMY_ASM : "+D"(dst), "+c"(n) : "a"(ch) : "memory", "cc");
     return dst;
 }
 
@@ -12,7 +17,7 @@ void *memcpy(void *dst, const void *src, size_t n) {
 }
 
 void *mempcpy(void *dst, const void *src, size_t n) {
-    asm volatile ("addr32 rep movsb" : "+D"(dst), "+S"(src), "+c"(n) :: "memory");
+    asm volatile ("addr32 rep movsb" DUMMY_ASM : "+D"(dst), "+S"(src), "+c"(n) :: "memory");
     return dst;
 }
 
@@ -21,7 +26,7 @@ void *memmove(void *dst, const void *src, size_t n) {
         void *ret = dst;
         dst = (void *)((uintptr_t)dst + n - 1);
         src = (void *)((uintptr_t)src + n - 1);
-        asm volatile ("std; addr32 rep movsb; cld" : "+D"(dst), "+S"(src), "+c"(n) :: "memory");
+        asm volatile ("std; addr32 rep movsb; cld" DUMMY_ASM : "+D"(dst), "+S"(src), "+c"(n) :: "memory");
         return ret;
     } else {
         return memcpy(dst, src, n);
