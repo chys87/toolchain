@@ -72,8 +72,21 @@ int strncmp(const char *, const char *, size_t) __attribute__((__pure__, __nonnu
 char *utoa10(unsigned value, char *str);
 char *itoa10(int value, char *str);
 
+typedef struct Strtou {
+    unsigned val;
+    char *endptr;
+} Strtou;
+Strtou strtou_ex(const char *s) __attribute__((__pure__, __nonnull__(1)));
+unsigned strtou(const char *s, char **endptr);
+
 // unistd.c
 int execvpe(const char *exe, char *const *args, char *const *envp);
+
+// ctype.c
+TX32_INLINE int isdigit(int c) { return (c >= '0' && c <= '9'); }
+
+// sysinfo.c
+unsigned get_nprocs();
 
 // Macros
 #define STR_LEN(s) (s), sizeof(s) - 1

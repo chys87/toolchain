@@ -59,6 +59,16 @@ int j_main(size_t argc, char **argv, char **envp) {
     if (fsys_access("build.ninja", R_OK) == 0)
         return invoke("ninja", {"ninja", "-v"}, argc, argv, envp);
 
-    // TODO: Compute the number of available processors
-    return invoke("make", {"make", "-j4", "-l5"}, argc, argv, envp);
+    // Make - we need to determine the number of processors ourselves
+    unsigned nprocs = get_nprocs();
+    if (nprocs == 0)
+        nprocs = 1;
+
+    char j_buf[16];
+    *utoa10(nprocs, Mempcpy(j_buf, "-j", 2)) = '\0';
+
+    char l_buf[16];
+    *utoa10(nprocs + 1, Mempcpy(l_buf, "-l", 2)) = '\0';
+
+    return invoke("make", {"make", j_buf, l_buf}, argc, argv, envp);
 }

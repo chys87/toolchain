@@ -162,3 +162,17 @@ char *itoa10(int value, char *str) {
     }
     return utoa10(value, str);
 }
+
+Strtou strtou_ex(const char *s) {
+    unsigned r = 0;
+    while (isdigit(*s))
+        r = r * 10 + (*s++ - '0');
+    return (Strtou){r, (char *)s};
+}
+
+unsigned strtou(const char *s, char **endptr) {
+    Strtou r = strtou_ex(s);
+    if (endptr)
+        *endptr = r.endptr;
+    return r.val;
+}
