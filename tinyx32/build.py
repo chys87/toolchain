@@ -56,6 +56,8 @@ rule {name}bincmp
 rule {name}un
   command = {tinyx32_dir}/../scripts/unassembly ${name}builddir/{name}.n.out
   pool = console
+rule {name}clean
+  command = rm -rfv ${name}builddir/{name}.n.out ${name}builddir/{name}.out {objs}
 
 build ${name}builddir/{name}.n.out: {name}ld {objs}
 build ${name}builddir/{name}.out: {name}strip ${name}builddir/{name}.n.out
@@ -73,6 +75,9 @@ build bincmp: phony bincmp-{name}
 
 build un-{name}: {name}un ${name}builddir/{name}.n.out
 build un: phony un-{name}
+
+build clean-{name}: {name}clean
+build clean: phony clean-{name}
 
 {rules}
 '''
