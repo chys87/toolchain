@@ -28,6 +28,17 @@ inline T *Mempcpy(T *dst, const void *src, size_t n) {
     return static_cast<T *>(mempcpy(dst, src, n));
 }
 
+template <typename T> requires std::is_trivially_copyable<T>::value and sizeof(T) == 1
+inline T *Mempset(T *dst, T value, size_t n) {
+    union {
+        T t_value;
+        char c_value;
+    };
+    t_value = value;
+    dst = static_cast<T *>(memset(dst, c_value, n));
+    return (dst + n);
+}
+
 template <typename A, typename B>
 struct pair {
     TX32_NO_UNIQUE_ADDRESS A first;
