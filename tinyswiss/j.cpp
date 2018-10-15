@@ -65,10 +65,10 @@ int j_main(size_t argc, char **argv, char **envp) {
         nprocs = 1;
 
     char j_buf[16];
-    *utoa10(nprocs, Mempcpy(j_buf, "-j", 2)) = '\0';
+    ChainMemcpy(j_buf) << "-j" << nprocs << '\0';
 
     char l_buf[16];
-    *utoa10(nprocs + 1, Mempcpy(l_buf, "-l", 2)) = '\0';
+    ChainMemcpy(l_buf) << "-l" << nprocs + 1 << '\0';
 
     return invoke("make", {"make", j_buf, l_buf}, argc, argv, envp);
 }

@@ -53,15 +53,48 @@ public:
         return *this;
     }
 
-    ChainMemcpy &operator << (const char *s) requires sizeof(T) == 1 {
-        p_ = Mempcpy(p_, s, strlen(s));
-        return *this;
-    }
-
     void operator >> (T *&p) const {
         p = p_;
     }
 
 private:
     T *p_;
+};
+
+template <>
+class ChainMemcpy<char> {
+public:
+    explicit ChainMemcpy(char *p) : p_(p) {}
+
+    ChainMemcpy &operator << (pair<const char *, size_t> s) {
+        p_ = Mempcpy(p_, s.first, s.second);
+        return *this;
+    }
+
+    ChainMemcpy &operator << (char v) {
+        *p_++ = v;
+        return *this;
+    }
+
+    ChainMemcpy &operator << (const char *s) {
+        p_ = Mempcpy(p_, s, strlen(s));
+        return *this;
+    }
+
+    ChainMemcpy &operator << (unsigned v) {
+        p_ = utoa10(v, p_);
+        return *this;
+    }
+
+    ChainMemcpy &operator << (int v) {
+        p_ = itoa10(v, p_);
+        return *this;
+    }
+
+    void operator >> (char *&p) const {
+        p = p_;
+    }
+
+private:
+    char *p_;
 };

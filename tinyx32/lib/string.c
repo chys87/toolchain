@@ -140,19 +140,18 @@ int strncmp(const char *a, const char *b, size_t n) {
 }
 
 char *utoa10(unsigned v, char *str) {
-    char *p = str;
-    do {
-        *p++ = '0' + (v % 10);
-        v /= 10;
-    } while (v);
-
-    for (char *lo = str, *hi = p - 1; lo < hi; ++lo, --hi) {
-        char tmp = *lo;
-        *lo = *hi;
-        *hi = tmp;
+    if (v == 0) {
+        *str++ = '\0';
+        return str;
     }
 
-    return p;
+    unsigned digits = fast_ilog10(v) + 1;
+    for (unsigned i = digits; i; --i) {
+        str[i - 1] = '0' + (v % 10);
+        v /= 10;
+    }
+
+    return (str + digits);
 }
 
 char *itoa10(int value, char *str) {

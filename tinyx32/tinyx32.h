@@ -88,6 +88,10 @@ TX32_INLINE int isdigit(int c) { return (c >= '0' && c <= '9'); }
 // sysinfo.c
 unsigned get_nprocs();
 
+// math.c
+extern const uint32_t g_fast_ipow10[10];
+unsigned fast_ilog10(uint32_t x) __attribute__((__const__));
+
 // Macros
 #define STR_LEN(s) (s), sizeof(s) - 1
 
