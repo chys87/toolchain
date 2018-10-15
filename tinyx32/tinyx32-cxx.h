@@ -37,64 +37,71 @@ struct pair {
 template <typename A, typename B>
 pair(A, B) -> pair<A, B>;
 
-template <typename T> requires std::is_trivially_copyable<T>::value
-class ChainMemcpy {
-public:
-    explicit ChainMemcpy(T *p) : p_(p) {}
+namespace detail {
 
-    template <typename U> requires sizeof(U) == sizeof(T) and std::is_convertible<U, T>::value
-    ChainMemcpy &operator << (pair<U *, size_t> s) {
-        p_ = Mempcpy(p_, s.first, s.second * sizeof(T));
-        return *this;
-    }
+template <typename T, typename ChainMemcpy>
+class ChainMemcpyBase {
+public:
+    explicit constexpr ChainMemcpyBase(T *p) : p_(p) {}
 
     ChainMemcpy &operator << (T v) {
         *p_++ = v;
-        return *this;
+        return static_cast<ChainMemcpy &>(*this);
     }
 
     void operator >> (T *&p) const {
         p = p_;
     }
 
-private:
+    T *endptr() const { return p_; }
+
+protected:
     T *p_;
 };
 
-template <>
-class ChainMemcpy<char> {
-public:
-    explicit ChainMemcpy(char *p) : p_(p) {}
+} // namespace detail
 
-    ChainMemcpy &operator << (pair<const char *, size_t> s) {
-        p_ = Mempcpy(p_, s.first, s.second);
+template <typename T> requires std::is_trivially_copyable<T>::value
+class ChainMemcpy : public detail::ChainMemcpyBase<T, ChainMemcpy<T>> {
+public:
+    using Base = detail::ChainMemcpyBase<T, ChainMemcpy>;
+    using Base::Base;
+    using Base::operator <<;
+
+    template <typename U> requires sizeof(U) == sizeof(T) and std::is_convertible<U, T>::value
+    ChainMemcpy &operator << (pair<U *, size_t> s) {
+        this->p_ = Mempcpy(this->p_, s.first, s.second * sizeof(T));
         return *this;
     }
+};
 
-    ChainMemcpy &operator << (char v) {
-        *p_++ = v;
+template <>
+class ChainMemcpy<char> : public detail::ChainMemcpyBase<char, ChainMemcpy<char>> {
+public:
+    using Base = detail::ChainMemcpyBase<char, ChainMemcpy>;
+    using Base::Base;
+    using Base::operator <<;
+
+    ChainMemcpy &operator << (pair<const char *, size_t> s) {
+        this->p_ = Mempcpy(this->p_, s.first, s.second);
         return *this;
     }
 
     ChainMemcpy &operator << (const char *s) {
-        p_ = Mempcpy(p_, s, strlen(s));
+        this->p_ = Mempcpy(this->p_, s, strlen(s));
         return *this;
     }
 
     ChainMemcpy &operator << (unsigned v) {
-        p_ = utoa10(v, p_);
+        this->p_ = utoa10(v, this->p_);
         return *this;
     }
 
     ChainMemcpy &operator << (int v) {
-        p_ = itoa10(v, p_);
+        this->p_ = itoa10(v, this->p_);
         return *this;
     }
-
-    void operator >> (char *&p) const {
-        p = p_;
-    }
-
-private:
-    char *p_;
 };
+
+template <typename T>
+ChainMemcpy(T *) -> ChainMemcpy<T>;
