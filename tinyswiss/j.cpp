@@ -19,7 +19,7 @@ void print_cmd(const char *const *args, size_t n) {
     for (size_t i = 0; i < n; ++i)
         cm << pair{args[i], lens[i]} << (i == n - 1 ? "\n" : " ");
 
-    fsys_write(2, buf, total_len + n);
+    fsys_write(2, buf, cm.endptr() - buf);
 }
 
 int invoke(const char *exe, std::initializer_list<const char*>base_args, size_t argc, char **argv, char **envp) {
