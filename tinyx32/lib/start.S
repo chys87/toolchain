@@ -10,10 +10,10 @@
 _start:
     mov     (%rsp), %edi # argc
     lea     4(%rsp), %esi # argv
-    lea     8(%rsp, %rdi, 4), %edx # environ
 #if defined TX32_PREFERRED_STACK_BOUNDARY && TX32_PREFERRED_STACK_BOUNDARY > 3
     and     $-(1 << TX32_PREFERRED_STACK_BOUNDARY), %esp
 #endif
+    lea     4(%rsi, %rdi, 4), %edx # environ
     call    main
     mov     %eax, %edi
     .align  16,,3

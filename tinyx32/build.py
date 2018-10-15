@@ -23,8 +23,8 @@ argv0 = {argv0}
 NINJA_TEMPLATE = r'''
 {name}cc = {cc}
 {name}cxx = {cxx}
-{name}cppflags = -DTX32_PREFERRED_STACK_BOUNDARY=5 -I{tinyx32_dir} -D _GNU_SOURCE -D NDEBUG -D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS -D __NO_MATH_INLINES -U _FORTIFY_SOURCE
-{name}commonflags = -O2 -march=native -mx32 -mpreferred-stack-boundary=5 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-vzeroupper
+{name}cppflags = -DTX32_PREFERRED_STACK_BOUNDARY={stack_alignment} -I{tinyx32_dir} -D _GNU_SOURCE -D NDEBUG -D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS -D __NO_MATH_INLINES -U _FORTIFY_SOURCE
+{name}commonflags = -O2 -march=native -mx32 -mpreferred-stack-boundary={stack_alignment} -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-vzeroupper
 {name}cflags = -std=gnu11
 {name}cxxflags = -fno-exceptions -fno-rtti -std=gnu++17 -fconcepts
 {name}ldflags = -nostdlib -static -fuse-linker-plugin -flto-partition=none -Wl,--gc-sections
@@ -101,10 +101,10 @@ def find_compilers():
 
 
 class Binary:
-    __slots__ = 'name', 'srcs'
+    __slots__ = 'name', 'srcs', 'stack_alignment'
 
     def build_hash(self):
-        return '0'
+        return f'{self.stack_alignment}'
 
 
 class BuildFile:
@@ -130,10 +130,11 @@ class BuildFile:
         if not self.binaries:
             sys.exit(f'No target is specified in {filename}')
 
-    def __callback_binary(self, *, name, srcs):
+    def __callback_binary(self, *, name, srcs, stack_alignment=4):
         binary = Binary()
         binary.name = name
         binary.srcs = srcs
+        binary.stack_alignment = stack_alignment
         self.binaries.append(binary)
 
     def gen_ninja(self):
@@ -172,6 +173,7 @@ class BuildFile:
             ninja_content += NINJA_TEMPLATE.format(
                 tinyx32_dir=tinyx32_dir, instdir=instdir,
                 name=binary.name, cc=cc, cxx=cxx, builddir=builddir,
+                stack_alignment=binary.stack_alignment,
                 objs=' '.join(sorted(objs)), rules=rules)
 
         return ninja_content
