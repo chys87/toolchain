@@ -2,10 +2,12 @@
 
 int j_main(size_t argc, char **argv, char **);
 int mvln_main(size_t argc, char **argv, char **);
+int python3_latest_main(size_t, char **, char **);
+int python_latest_main(size_t, char **, char **);
 
 namespace {
 
-constexpr size_t kMaxSubCommandNameLen = 6;
+constexpr size_t kMaxSubCommandNameLen = 14;
 
 struct Dispatch {
     char name[kMaxSubCommandNameLen + 1];
@@ -16,6 +18,8 @@ struct Dispatch {
 static const Dispatch dispatch[] = {
     {STR_LEN("mvln"), mvln_main},
     {STR_LEN("j"), j_main},
+    {STR_LEN("python3-latest"), python3_latest_main},
+    {STR_LEN("python-latest"), python_latest_main},
 };
 
 void unknown_subcommand() {

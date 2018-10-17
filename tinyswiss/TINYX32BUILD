@@ -4,5 +4,6 @@ binary(
         'main.cpp',
         'j.cpp',
         'mvln.cpp',
+        'latest.cpp',
     ],
 )

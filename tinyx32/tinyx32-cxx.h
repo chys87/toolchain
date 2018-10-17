@@ -93,6 +93,12 @@ public:
     using Base::Base;
     using Base::operator <<;
 
+    template <typename T> requires requires(const T &s) { { s.data() } -> const char *; { s.length() } -> size_t; }
+    ChainMemcpy &operator << (const T &s) {
+        this->p_ = Mempcpy(this->p_, s.data(), s.length());
+        return *this;
+    }
+
     ChainMemcpy &operator << (pair<const char *, size_t> s) {
         this->p_ = Mempcpy(this->p_, s.first, s.second);
         return *this;
