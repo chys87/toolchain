@@ -216,7 +216,6 @@ def main():
         print(ninja_content)
         return
 
-    os.environ['NINJA_STATUS'] = '[%u/%r/%f/%t]'
     os.chdir('build')
 
     ninja_filename = 'build.ninja'
