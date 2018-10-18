@@ -59,16 +59,25 @@ int j_main(size_t argc, char **argv, char **envp) {
     if (fsys_access("build.ninja", R_OK) == 0)
         return invoke("ninja", {"ninja", "-v"}, argc, argv, envp);
 
-    // Make - we need to determine the number of processors ourselves
-    unsigned nprocs = get_nprocs();
-    if (nprocs == 0)
-        nprocs = 1;
+    // Make: the documented order is GNUmakefile, makefile, Makefile, but we
+    // test Makefile first since it's the most common
+    for (const char *filename: {"Makefile", "GNUmakefile", "makefile"}) {
+        if (fsys_access(filename, R_OK) == 0) {
+            // Make - we need to determine the number of processors ourselves
+            unsigned nprocs = get_nprocs();
+            if (nprocs == 0)
+                nprocs = 1;
 
-    char j_buf[16];
-    ChainMemcpy(j_buf) << "-j" << nprocs << '\0';
+            char j_buf[16];
+            ChainMemcpy(j_buf) << "-j" << nprocs << '\0';
 
-    char l_buf[16];
-    ChainMemcpy(l_buf) << "-l" << nprocs + 1 << '\0';
+            char l_buf[16];
+            ChainMemcpy(l_buf) << "-l" << nprocs + 1 << '\0';
 
-    return invoke("make", {"make", j_buf, l_buf}, argc, argv, envp);
+            return invoke("make", {"make", j_buf, l_buf}, argc, argv, envp);
+        }
+    }
+
+    fsys_write(2, STR_LEN("No supported build file found\n"));
+    return 127;
 }
