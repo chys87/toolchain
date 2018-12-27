@@ -1,6 +1,6 @@
 #include <fcntl.h>
 #include <limits.h>
-#include <string_ref.hpp>
+#include <string_view.hpp>
 #include <tinyx32.h>
 #include <unistd.h>
 
@@ -59,20 +59,20 @@ int strnumcmp(const char *a, const char *b) noexcept {
     }
 }
 
-bool all_version_digits(string_ref s) {
+bool all_version_digits(string_view s) {
     for (char c: s)
         if (!isdigit(c) && c != '.' && c != '-')
             return false;
     return true;
 }
 
-int latest(string_ref prefix, size_t argc, char **argv, char **envp) {
+int latest(string_view prefix, size_t argc, char **argv, char **envp) {
 
     char last_name[PATH_MAX];
     char *last_base_name = last_name;
     last_name[0] = 0;
 
-    for (string_ref path: {"/usr/local/bin/"_ref, "/usr/bin/"_ref, "/bin/"_ref}) {
+    for (string_view path: {"/usr/local/bin/"_ref, "/usr/bin/"_ref, "/bin/"_ref}) {
         int fddir = fsys_open2(path.data(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
         if (fddir < 0)
             continue;
@@ -91,7 +91,7 @@ int latest(string_ref prefix, size_t argc, char **argv, char **envp) {
                         continue;
                     if (fsys_faccessat(fddir, ent->d_name, X_OK, 0) == 0) {
                         if (d_name_len + path.length() < PATH_MAX && strnumcmp(last_base_name, ent->d_name) < 0) {
-                            ChainMemcpy(last_name) << path << string_ref{ent->d_name, d_name_len} << '\0';
+                            ChainMemcpy(last_name) << path << string_view{ent->d_name, d_name_len} << '\0';
                             last_base_name = last_name + path.length();
                         }
                     }

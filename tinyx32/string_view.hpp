@@ -1,20 +1,20 @@
 #include <iterator>
 #include <cstddef>
 
-// Pass string_ref by value
-class string_ref
+// Pass string_view by value
+class string_view
 {
 public:
-    string_ref() noexcept = default;
+    string_view() noexcept = default;
     // Don't use explicit.
-    constexpr string_ref(decltype(nullptr)) noexcept : ptr(0), len(0) {}
+    constexpr string_view(decltype(nullptr)) noexcept : ptr(0), len(0) {}
     [[gnu::always_inline]]
-        string_ref(const char *s) noexcept : ptr(s), len(__builtin_strlen(s)) {}
-    constexpr string_ref(const char *s, std::size_t l) noexcept : ptr(s), len(l) {}
-    constexpr string_ref(const char *s, const char *e) noexcept : ptr(s), len(e-s) {}
+        string_view(const char *s) noexcept : ptr(s), len(__builtin_strlen(s)) {}
+    constexpr string_view(const char *s, std::size_t l) noexcept : ptr(s), len(l) {}
+    constexpr string_view(const char *s, const char *e) noexcept : ptr(s), len(e-s) {}
 
-    string_ref(const string_ref &) noexcept = default;
-    string_ref &operator = (const string_ref &) noexcept = default;
+    string_view(const string_view &) noexcept = default;
+    string_view &operator = (const string_view &) noexcept = default;
 
     // Don't provide c_str(). No null-terminator is guaranteed.
     constexpr const char *data() const noexcept { return ptr; }
@@ -51,7 +51,7 @@ public:
     reference front() const noexcept { return ptr[0]; }
     reference back() const noexcept { return ptr[len - 1]; }
 
-    bool equal(const string_ref &o) const noexcept {
+    bool equal(const string_view &o) const noexcept {
         return (length() == o.length()) && __builtin_memcmp(data(), o.data(), length()) == 0;
     }
 
@@ -60,6 +60,6 @@ private:
     std::size_t len;
 };
 
-inline constexpr string_ref operator ""_ref(const char *s, std::size_t l) noexcept {
+inline constexpr string_view operator ""_ref(const char *s, std::size_t l) noexcept {
     return {s, l};
 }
