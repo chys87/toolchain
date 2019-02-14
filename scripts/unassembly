@@ -100,8 +100,10 @@ def cppfilter(fi):
     pattern_replaces = (
             (re.compile(br'::basic_string<char, std::(__\d+::)?char_traits<char>, std::(__\d+::)?allocator<char>>'), b'::string'),
             (re.compile(br'::basic_string<wchar_t, std::(__\d+::)?char_traits<wchar_t>, std::(__\d+::)?allocator<wchar_t>>'), b'::wstring'),
+            (re.compile(br'::basic_string<char(\d+)_t, std::(__\d+::)?char_traits<char\1_t>, std::(__\d+::)?allocator<char\1_t>>'), br'::u\1string'),
             (re.compile(br'::basic_string_view<char, std::(__\d+::)?char_traits<char>>'), b'::string_view'),
             (re.compile(br'::basic_string_view<wchar_t, std::(__\d+::)?char_traits<wchar_t>>'), b'::wstring_view'),
+            (re.compile(br'::basic_string_view<char(\d+)_t, std::(__\d+::)?char_traits<char\1_t>>'), br'::u\1string_view'),
             (re.compile(br' \[clone ([.\w]+)]'),
                 br'\1'),
             (re.compile(br'::unique_ptr<(.+), std::default_delete<\1>>'),
