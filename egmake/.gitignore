@@ -1,0 +1,5 @@
+*.o
+*.P
+*.so
+/Makefile-spec
+*.vim
