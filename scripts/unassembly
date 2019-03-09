@@ -97,6 +97,9 @@ def cppfilter(fi):
             (b'::greater<void>', b'::greater<>'),
             (b'::equal_to<void>', b'::equal_to<>'),
         )
+
+    __type = br'(?:[^,<>]|<(?:[^<>]+|<(?:[^<>]|<[^<>]+>)+>)>)+'  # This pattern catches templates up to 3 levels
+
     pattern_replaces = (
             (re.compile(br'::basic_string<char, std::(__\d+::)?char_traits<char>, std::(__\d+::)?allocator<char>>'), b'::string'),
             (re.compile(br'::basic_string<wchar_t, std::(__\d+::)?char_traits<wchar_t>, std::(__\d+::)?allocator<wchar_t>>'), b'::wstring'),
@@ -144,6 +147,8 @@ def cppfilter(fi):
                 br'::\1<\2>'),
             (re.compile(br'::(basic_stringbuf)<(.*), std::char_traits<\2>, std::allocator<\2>>'),
                 br'::\1<\2>'),
+            (re.compile(br'::span<(' + __type + br'), (?:18446744073709551615ul|4294967295u)>'), br'::span<\1>'),
+            (re.compile(br'::span<(' + __type + br'), (?:18446744073709551615ul|4294967295u)>'), br'::span<\1>'),  # Repeat so we can catch nested spans
             (re.compile(br'\{lambda\([^()]*\)'),
                 br'{lambda'),
             (re.compile(br'float __vector\(4\)'),
