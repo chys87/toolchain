@@ -1,6 +1,6 @@
 /*
  *  fsyscall (Inline system call wrapper for the crazy people)
- *  Copyright (C) 2013  chys <admin@CHYS.INFO>
+ *  Copyright (C) 2013-2019  chys <admin@CHYS.INFO>
  *
  *   This library is free software; you can redistribute it and/or
  *   modify it under the terms of the GNU Lesser General Public
