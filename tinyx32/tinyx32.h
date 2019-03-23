@@ -22,6 +22,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <x86intrin.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 # define TX32_INLINE inline
@@ -94,6 +95,15 @@ unsigned fast_ilog10(uint32_t x) __attribute__((__const__));
 
 // Macros
 #define STR_LEN(s) (s), sizeof(s) - 1
+
+// Linux types
+struct linux_dirent64 {
+    ino64_t        d_ino;
+    off64_t        d_off;
+    unsigned short d_reclen;
+    unsigned char  d_type; // In linux_dirent, it's after d_name; but in linux_dirent64, it's here.
+    char           d_name[1];
+};
 
 // Define additional types for SSE/AVX
 #ifdef __SSE2__

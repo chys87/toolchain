@@ -4,10 +4,11 @@ int j_main(size_t argc, char **argv, char **);
 int mvln_main(size_t argc, char **argv, char **);
 int python3_latest_main(size_t, char **, char **);
 int python_latest_main(size_t, char **, char **);
+int running_browser_main(size_t, char **, char **);
 
 namespace {
 
-constexpr size_t kMaxSubCommandNameLen = 14;
+constexpr size_t kMaxSubCommandNameLen = 22;
 
 struct Dispatch {
     char name[kMaxSubCommandNameLen + 1];
@@ -20,6 +21,7 @@ static const Dispatch dispatch[] = {
     {STR_LEN("j"), j_main},
     {STR_LEN("python3-latest"), python3_latest_main},
     {STR_LEN("python-latest"), python_latest_main},
+    {STR_LEN("running-browser"), running_browser_main},
 };
 
 void unknown_subcommand() {

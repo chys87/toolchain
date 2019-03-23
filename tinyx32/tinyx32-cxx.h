@@ -8,6 +8,7 @@
 #endif
 
 #include <type_traits>
+#include <utility>
 
 # define TX32_NO_UNIQUE_ADDRESS
 
@@ -122,3 +123,40 @@ public:
 
 template <typename T>
 ChainMemcpy(T *) -> ChainMemcpy<T>;
+
+namespace detail {
+
+template <typename F>
+struct Defer
+{
+	const F &f;
+	[[gnu::always_inline]]
+	~Defer() { f(); }
+};
+
+} // namespace detail
+
+#define DEFER(...) DEFER_(__COUNTER__, __VA_ARGS__)
+#define DEFER_(cnt,...) DEFER__(cnt, __VA_ARGS__)
+#define DEFER__(cnt,...) \
+	auto RAII_defer_fun_##cnt = [&]() -> void { __VA_ARGS__; }; \
+	::detail::Defer<decltype(RAII_defer_fun_##cnt)> RAII_defer_##cnt{RAII_defer_fun_##cnt}; \
+	(void)RAII_defer_##cnt /* Suppress warning */
+
+template <typename T, typename Comp>
+void sort(T *lo, T *hi, Comp comp) {
+    if (hi <= lo)
+        return;
+
+    T *mid = lo; // [lo, mid] is sorted.
+    do {
+        T *p = mid;
+        while (comp(p[1], p[0])) {
+            std::swap(p[1], p[0]);
+            if (p == lo)
+                break;
+            --p;
+        }
+        ++mid;
+    } while (mid != hi);
+}
