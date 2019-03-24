@@ -426,11 +426,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off, __OFF64_T_TYPE le
 #define fsys_lstat lstat
 #define fsys_fstat fstat
 #define fsys_fstatat fstatat
-#if defined __GLIBC__ && (__GLIBC__ * 100 + __GLIBC_MINOR__ >= 228)
-# define fsys_statx statx
-#else
-# define fsys_statx(...) syscall(__NR_statx,__VA_ARGS__)
-#endif
+#define fsys_statx statx
 #define fsys_getrusage getrusage
 #define fsys_utimensat utimensat
 #define fsys_futimens futimens
