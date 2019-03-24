@@ -145,6 +145,7 @@ struct Defer
 
 template <typename T, typename Comp>
 void sort(T *lo, T *hi, Comp comp) {
+    --hi;
     if (hi <= lo)
         return;
 
