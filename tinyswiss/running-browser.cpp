@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <tinyx32.h>
 #include <string_view>
+#include <sys/stat.h>
 
 namespace {
 
@@ -35,6 +36,8 @@ const Browser *find_running_browser() {
     }
     DEFER(fsys_close(fd_proc));
 
+    uid_t my_uid = fsys_getuid();
+
     const Browser *best_browser = nullptr;
 
     alignas(linux_dirent64) char buf[16384];
@@ -59,6 +62,13 @@ const Browser *find_running_browser() {
             {
                 char proc_exe_path[128];
                 ChainMemcpy(proc_exe_path) << pair{name, name_l} << "/exe" << '\0';
+
+                if (struct statx st; fsys_statx(fd_proc, proc_exe_path, AT_SYMLINK_NOFOLLOW, STATX_UID, &st) == 0) {
+                    if (st.stx_uid != my_uid)
+                        continue;
+                } else {
+                    continue;
+                }
 
                 exe_l = fsys_readlinkat(fd_proc, proc_exe_path, exe_full_buf, sizeof(exe_full_buf));
             }
