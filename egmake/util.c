@@ -19,25 +19,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <string.h>
 
 void strtr_in_place(char *s, size_t l, char from, char to) {
-	char *e = s + l;
-	while (s < e) {
-		char *p = memchr(s, from, e - s);
-		if (p == NULL)
-			break;
-		*p = to;
-		s = p + 1;
-	}
+  char *e = s + l;
+  while (s < e) {
+    char *p = memchr(s, from, e - s);
+    if (p == NULL)
+      break;
+    *p = to;
+    s = p + 1;
+  }
 }
 
 void replace_cr_ln_in_place(char *s, size_t l) {
-	strtr_in_place(s, l, '\r', ' ');
-	strtr_in_place(s, l, '\n', ' ');
+  strtr_in_place(s, l, '\r', ' ');
+  strtr_in_place(s, l, '\n', ' ');
 }
 
 char *Memcpy(char *d, const void *s, size_t n) {
-	return (char *)memcpy(d, s, n);
+  return (char *)memcpy(d, s, n);
 }
 
 char *Mempcpy(char *d, const void *s, size_t n) {
-	return (char *)mempcpy(d, s, n);
+  return (char *)mempcpy(d, s, n);
 }

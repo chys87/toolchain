@@ -22,17 +22,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "fsyscall.h"
 
 char *func_readlink(const char *nm, unsigned int argc, char **argv) {
-	if (argc != 1)
-		return NULL;
-	char *buf = gmk_alloc(PATH_MAX);
-	ssize_t l = fsys_readlink(argv[0], buf, PATH_MAX - 1);
-	if (l <= 0) {
-		gmk_free(buf);
-		return NULL;
-	} else {
-		buf[l] = '\0';
-		return buf;
-	}
+  if (argc != 1)
+    return NULL;
+  char *buf = gmk_alloc(PATH_MAX);
+  ssize_t l = fsys_readlink(argv[0], buf, PATH_MAX - 1);
+  if (l <= 0) {
+    gmk_free(buf);
+    return NULL;
+  } else {
+    buf[l] = '\0';
+    return buf;
+  }
 }
 
 /*

@@ -22,15 +22,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <unistd.h>
 
 char *func_realpath(const char *nm, unsigned int argc, char **argv) {
-	if (argc != 1)
-		return NULL;
-	char *path = realpath(argv[0], NULL);
-	if (path == NULL)
-		return NULL;
-	size_t l = strlen(path) + 1;
-	char *res = memcpy(gmk_alloc(l), path, l);
-	free(path);
-	return res;
+  if (argc != 1)
+    return NULL;
+  char *path = realpath(argv[0], NULL);
+  if (path == NULL)
+    return NULL;
+  size_t l = strlen(path) + 1;
+  char *res = memcpy(gmk_alloc(l), path, l);
+  free(path);
+  return res;
 }
 
 /*

@@ -22,10 +22,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Count the number of logical processors
 char *func_cpus(const char *nm, unsigned int argc, char **argv) {
-	unsigned cpu_cnt = get_nprocs();
-	char *res = gmk_alloc(8);
-	snprintf(res, 8, "%u", cpu_cnt);
-	return res;
+  unsigned cpu_cnt = get_nprocs();
+  char *res = gmk_alloc(8);
+  snprintf(res, 8, "%u", cpu_cnt);
+  return res;
 }
 
 /*

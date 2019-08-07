@@ -14,7 +14,8 @@
  *
  *   You should have received a copy of the GNU Lesser General Public
  *   License along with this library; if not, write to the Free Software
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ *   MA  02110-1301  USA
  */
 
 #pragma once
@@ -46,52 +47,60 @@
 # define fsys_inline static __inline__ __attribute__((__always_inline__))
 #endif
 
-#define def_fsys_base(funcname,sysname,rettype,clobbermem,argc,...)	\
-	fsys_inline														\
-	rettype fsys_##funcname(FSYS_FUNC_ARGS_##argc(__VA_ARGS__)) {	\
-		rettype r;													\
-		FSYS_LOAD_REGS_##argc(__VA_ARGS__);							\
-		if (__NR_##sysname == 0)									\
-			__asm__ __volatile__ ("xorl\t%k0, %k0\n\tsyscall" :		\
-					"=&a"(r) :										\
-					"i"(0) FSYS_ASM_REGS_##argc :					\
-					FSYS_MEMORY_##clobbermem "cc", "r11", "cx");	\
-		else														\
-			__asm__ __volatile__ ("movl\t%1,%k0\n\tsyscall" :		\
-					"=&a"(r) :										\
-					"i"(__NR_##sysname) FSYS_ASM_REGS_##argc :		\
-					FSYS_MEMORY_##clobbermem "cc", "r11", "cx");	\
-		return r;													\
-	}
-#define def_fsys(funcname,sysname,rettype,argc,...)					\
-	def_fsys_base(funcname,sysname,rettype,1,argc,##__VA_ARGS__)
-#define def_fsys_nomem(funcname,sysname,rettype,argc,...)			\
-	def_fsys_base(funcname,sysname,rettype,0,argc,##__VA_ARGS__)
+#define def_fsys_base(funcname,sysname,rettype,clobbermem,argc,...) \
+  fsys_inline                                                       \
+  rettype fsys_##funcname(FSYS_FUNC_ARGS_##argc(__VA_ARGS__)) {     \
+    rettype r;                                                      \
+    FSYS_LOAD_REGS_##argc(__VA_ARGS__);                             \
+    if (__NR_##sysname == 0)                                        \
+      __asm__ __volatile__ ("xorl\t%k0, %k0\n\tsyscall" :           \
+          "=&a"(r) :                                                \
+          "i"(0) FSYS_ASM_REGS_##argc :                             \
+          FSYS_MEMORY_##clobbermem "cc", "r11", "cx");              \
+    else                                                            \
+      __asm__ __volatile__ ("movl\t%1,%k0\n\tsyscall" :             \
+          "=&a"(r) :                                                \
+          "i"(__NR_##sysname) FSYS_ASM_REGS_##argc :                \
+          FSYS_MEMORY_##clobbermem "cc", "r11", "cx");              \
+    return r;                                                       \
+  }
+#define def_fsys(funcname,sysname,rettype,argc,...)                 \
+  def_fsys_base(funcname,sysname,rettype,1,argc,##__VA_ARGS__)
+#define def_fsys_nomem(funcname,sysname,rettype,argc,...)           \
+  def_fsys_base(funcname,sysname,rettype,0,argc,##__VA_ARGS__)
 
 // fsys_generic is more "generic", but may generate slightly worse code.
 // This is a macro, so we'd better separate the two stages (LOAD_ARGS/LOAD_REGS)
-#define fsys_generic_base(sysno,rettype,clobbermem,argc,...)		\
-	__extension__ ( {												\
-		FSYS_GENERIC_LOAD_ARGS_##argc(__VA_ARGS__);					\
-		FSYS_GENERIC_LOAD_REGS_##argc;								\
-		unsigned long sysno__ = (sysno);							\
-		rettype r__;												\
-		__asm__ __volatile__ ("syscall" :							\
-				"=a"(r__) :											\
-				"a"(sysno__) FSYS_GENERIC_ASM_REGS_##argc :			\
-				FSYS_MEMORY_##clobbermem "cc", "r11", "cx");		\
-		r__;														\
-	} )
-#define fsys_generic(sysno,rettype,argc,...)			fsys_generic_base(sysno,rettype,1,argc,##__VA_ARGS__)
-#define fsys_generic_nomem(sysno,rettype,argc,...)	fsys_generic_base(sysno,rettype,0,argc,##__VA_ARGS__)
+#define fsys_generic_base(sysno,rettype,clobbermem,argc,...)        \
+  __extension__({                                                   \
+      FSYS_GENERIC_LOAD_ARGS_##argc(__VA_ARGS__);                   \
+      FSYS_GENERIC_LOAD_REGS_##argc;                                \
+      unsigned long sysno__ = (sysno);                              \
+      rettype r__;                                                  \
+      __asm__ __volatile__ ("syscall" :                             \
+          "=a"(r__) :                                               \
+          "a"(sysno__) FSYS_GENERIC_ASM_REGS_##argc :               \
+          FSYS_MEMORY_##clobbermem "cc", "r11", "cx");              \
+      r__;                                                          \
+  })
+#define fsys_generic(sysno,rettype,argc,...) \
+  fsys_generic_base(sysno,rettype,1,argc,##__VA_ARGS__)
+#define fsys_generic_nomem(sysno,rettype,argc,...) \
+  fsys_generic_base(sysno,rettype,0,argc,##__VA_ARGS__)
 
 #define FSYS_LOAD_REGS_0()
-#define FSYS_LOAD_REGS_1(ta)				ta A /*__asm__("rdi")*/ = a
-#define FSYS_LOAD_REGS_2(ta,tb)				FSYS_LOAD_REGS_1(ta); tb B /*__asm__("rsi")*/ = b
-#define FSYS_LOAD_REGS_3(ta,tb,tc)			FSYS_LOAD_REGS_2(ta,tb); tc C /*__asm__("rdx")*/ = c
-#define FSYS_LOAD_REGS_4(ta,tb,tc,td)		FSYS_LOAD_REGS_3(ta,tb,tc); register td D __asm__("r10") = d
-#define FSYS_LOAD_REGS_5(ta,tb,tc,td,te)	FSYS_LOAD_REGS_4(ta,tb,tc,td); register te E __asm__("r8") = e
-#define FSYS_LOAD_REGS_6(ta,tb,tc,td,te,tf)	FSYS_LOAD_REGS_5(ta,tb,tc,td,te); register tf F __asm__("r9") = f
+#define FSYS_LOAD_REGS_1(ta) \
+  ta A /*__asm__("rdi")*/ = a
+#define FSYS_LOAD_REGS_2(ta,tb) \
+  FSYS_LOAD_REGS_1(ta); tb B /*__asm__("rsi")*/ = b
+#define FSYS_LOAD_REGS_3(ta,tb,tc) \
+  FSYS_LOAD_REGS_2(ta,tb); tc C /*__asm__("rdx")*/ = c
+#define FSYS_LOAD_REGS_4(ta,tb,tc,td) \
+  FSYS_LOAD_REGS_3(ta,tb,tc); register td D __asm__("r10") = d
+#define FSYS_LOAD_REGS_5(ta,tb,tc,td,te) \
+  FSYS_LOAD_REGS_4(ta,tb,tc,td); register te E __asm__("r8") = e
+#define FSYS_LOAD_REGS_6(ta,tb,tc,td,te,tf) \
+  FSYS_LOAD_REGS_5(ta,tb,tc,td,te); register tf F __asm__("r9") = f
 
 #define FSYS_ASM_REGS_0
 #define FSYS_ASM_REGS_1 FSYS_ASM_REGS_0,"D"(A)
@@ -101,29 +110,41 @@
 #define FSYS_ASM_REGS_5 FSYS_ASM_REGS_4,"r"(E)
 #define FSYS_ASM_REGS_6 FSYS_ASM_REGS_5,"r"(F)
 
-#define FSYS_FUNC_ARGS_0()					void
-#define FSYS_FUNC_ARGS_1(ta)				ta a
-#define FSYS_FUNC_ARGS_2(ta,tb)				ta a, tb b
-#define FSYS_FUNC_ARGS_3(ta,tb,tc)			ta a, tb b, tc c
-#define FSYS_FUNC_ARGS_4(ta,tb,tc,td)		ta a, tb b, tc c, td d
-#define FSYS_FUNC_ARGS_5(ta,tb,tc,td,te)	ta a, tb b, tc c, td d, te e
-#define FSYS_FUNC_ARGS_6(ta,tb,tc,td,te,tf)	ta a, tb b, tc c, td d, te e, tf f
+#define FSYS_FUNC_ARGS_0() void
+#define FSYS_FUNC_ARGS_1(ta) ta a
+#define FSYS_FUNC_ARGS_2(ta,tb) ta a, tb b
+#define FSYS_FUNC_ARGS_3(ta,tb,tc) ta a, tb b, tc c
+#define FSYS_FUNC_ARGS_4(ta,tb,tc,td) ta a, tb b, tc c, td d
+#define FSYS_FUNC_ARGS_5(ta,tb,tc,td,te) ta a, tb b, tc c, td d, te e
+#define FSYS_FUNC_ARGS_6(ta,tb,tc,td,te,tf) ta a, tb b, tc c, td d, te e, tf f
 
 #define FSYS_GENERIC_LOAD_ARGS_0()
-#define FSYS_GENERIC_LOAD_ARGS_1(a)				__typeof__((a)) a__ = (a)
-#define FSYS_GENERIC_LOAD_ARGS_2(a,b)			FSYS_GENERIC_LOAD_ARGS_1(a); __typeof__((b)) b__ = (b)
-#define FSYS_GENERIC_LOAD_ARGS_3(a,b,c)			FSYS_GENERIC_LOAD_ARGS_2(a,b); __typeof__((c)) c__ = (c)
-#define FSYS_GENERIC_LOAD_ARGS_4(a,b,c,d)		FSYS_GENERIC_LOAD_ARGS_3(a,b,c); __typeof__((d)) d__ = (d)
-#define FSYS_GENERIC_LOAD_ARGS_5(a,b,c,d,e)		FSYS_GENERIC_LOAD_ARGS_4(a,b,c,d); __typeof__((e)) e__ = (e)
-#define FSYS_GENERIC_LOAD_ARGS_6(a,b,c,d,e,f)	FSYS_GENERIC_LOAD_ARGS_5(a,b,c,d,e); __typeof__((f)) f__ = (f)
+#define FSYS_GENERIC_LOAD_ARGS_1(a) \
+  __typeof__((a)) a__ = (a)
+#define FSYS_GENERIC_LOAD_ARGS_2(a,b) \
+  FSYS_GENERIC_LOAD_ARGS_1(a); __typeof__((b)) b__ = (b)
+#define FSYS_GENERIC_LOAD_ARGS_3(a,b,c) \
+  FSYS_GENERIC_LOAD_ARGS_2(a,b); __typeof__((c)) c__ = (c)
+#define FSYS_GENERIC_LOAD_ARGS_4(a,b,c,d) \
+  FSYS_GENERIC_LOAD_ARGS_3(a,b,c); __typeof__((d)) d__ = (d)
+#define FSYS_GENERIC_LOAD_ARGS_5(a,b,c,d,e) \
+  FSYS_GENERIC_LOAD_ARGS_4(a,b,c,d); __typeof__((e)) e__ = (e)
+#define FSYS_GENERIC_LOAD_ARGS_6(a,b,c,d,e,f) \
+  FSYS_GENERIC_LOAD_ARGS_5(a,b,c,d,e); __typeof__((f)) f__ = (f)
 
 #define FSYS_GENERIC_LOAD_REGS_0
-#define FSYS_GENERIC_LOAD_REGS_1	__typeof__((a__)) A__ /*__asm__("rdi")*/ = a__
-#define FSYS_GENERIC_LOAD_REGS_2	FSYS_GENERIC_LOAD_REGS_1; __typeof__((b__)) B__ /*__asm__("rsi")*/ = b__
-#define FSYS_GENERIC_LOAD_REGS_3	FSYS_GENERIC_LOAD_REGS_2; __typeof__((c__)) C__ /*__asm__("rdx")*/ = c__
-#define FSYS_GENERIC_LOAD_REGS_4	FSYS_GENERIC_LOAD_REGS_3; register __typeof__((d__)) D__ __asm__("r10") = d__
-#define FSYS_GENERIC_LOAD_REGS_5	FSYS_GENERIC_LOAD_REGS_4; register __typeof__((e__)) E__ __asm__("r8") = e__
-#define FSYS_GENERIC_LOAD_REGS_6	FSYS_GENERIC_LOAD_REGS_5; register __typeof__((f__)) F__ __asm__("r9") = f__
+#define FSYS_GENERIC_LOAD_REGS_1 \
+  __typeof__((a__)) A__ /*__asm__("rdi")*/ = a__
+#define FSYS_GENERIC_LOAD_REGS_2 \
+  FSYS_GENERIC_LOAD_REGS_1; __typeof__((b__)) B__ /*__asm__("rsi")*/ = b__
+#define FSYS_GENERIC_LOAD_REGS_3 \
+  FSYS_GENERIC_LOAD_REGS_2; __typeof__((c__)) C__ /*__asm__("rdx")*/ = c__
+#define FSYS_GENERIC_LOAD_REGS_4 \
+  FSYS_GENERIC_LOAD_REGS_3; register __typeof__((d__)) D__ __asm__("r10") = d__
+#define FSYS_GENERIC_LOAD_REGS_5 \
+  FSYS_GENERIC_LOAD_REGS_4; register __typeof__((e__)) E__ __asm__("r8") = e__
+#define FSYS_GENERIC_LOAD_REGS_6 \
+  FSYS_GENERIC_LOAD_REGS_5; register __typeof__((f__)) F__ __asm__("r9") = f__
 
 #define FSYS_GENERIC_ASM_REGS_0
 #define FSYS_GENERIC_ASM_REGS_1 FSYS_GENERIC_ASM_REGS_0,"D"(A__)
@@ -133,13 +154,13 @@
 #define FSYS_GENERIC_ASM_REGS_5 FSYS_GENERIC_ASM_REGS_4,"r"(E__)
 #define FSYS_GENERIC_ASM_REGS_6 FSYS_GENERIC_ASM_REGS_5,"r"(F__)
 
-#define FSYS_MEMORY_1						"memory",
+#define FSYS_MEMORY_1 "memory",
 #define FSYS_MEMORY_0
 
 #define fsys_errno(r,err) ((r) == (__typeof__(r))(-(err)))
 #define fsys_errno_val(r) (-(int)(long long)(r))
-#define fsys_failure(r)	((unsigned long long)(long long)(r) >= -4095ULL)
-#define fsys_mmap_failed(r)	((unsigned long)(r) >= -4095UL)
+#define fsys_failure(r) ((unsigned long long)(long long)(r) >= -4095ULL)
+#define fsys_mmap_failed(r) ((unsigned long)(r) >= -4095UL)
 
 struct rusage;
 struct sockaddr;
@@ -164,15 +185,15 @@ struct fsys_sigaction {
 #pragma push_macro("sa_sigaction")
 #undef sa_handler
 #undef sa_sigaction
-	union {
-		void (*sa_handler)(int);
-		void (*sa_sigaction)(int, siginfo_t *, void *);
-	} __sigaction_handler;
+  union {
+    void (*sa_handler)(int);
+    void (*sa_sigaction)(int, siginfo_t *, void *);
+  } __sigaction_handler;
 #pragma pop_macro("sa_handler")
 #pragma pop_macro("sa_sigaction")
-	unsigned long sa_flags;
-	void (*sa_restorer) (void);
-	sigset_t sa_mask;
+  unsigned long sa_flags;
+  void (*sa_restorer) (void);
+  sigset_t sa_mask;
 };
 
 def_fsys(uname,uname,int,1,struct utsname *)
@@ -198,7 +219,8 @@ def_fsys(fcntl_cptr,fcntl,int,3,int,int,const void *)
 def_fsys(prctl_ptr,prctl,int,2,int,void *)
 def_fsys(prctl_cptr,prctl,int,2,int,const void *)
 def_fsys_nomem(setpriority,setpriority,int,3,int,int,int)
-// getpriority note: I removed this function. Its C prototype in libc is broken by design.
+// getpriority note: I removed this function.
+// Its C prototype in libc is broken by design.
 // I have difficulty emulating it properly.
 // Use with fsys_generic_nomem if you know what you're doing.
 def_fsys(symlink,symlink,int,2,const char *, const char *)
@@ -223,7 +245,8 @@ def_fsys(fstat,fstat,int,2,int,struct stat*)
 def_fsys(fstatat,newfstatat,int,4,int,const char *,struct stat *,int)
 def_fsys(statx,statx,int,5,int,const char *,int,unsigned,struct statx *)
 def_fsys(getrusage,getrusage,int,2,int,struct rusage *)
-def_fsys(utimensat,utimensat,int,4,int,const char *,const struct timespec *,int)
+def_fsys(utimensat,utimensat,int,4,int,const char *,const struct timespec *,
+         int)
 #define fsys_futimens(a,b) fsys_utimensat(a,0,b,0)
 def_fsys(utime,utime,int,2,const char *,const struct utimbuf *)
 def_fsys(utimes,utimes,int,2,const char *,const struct timeval *)
@@ -233,7 +256,9 @@ def_fsys(statfs,statfs,int,2,const char *,struct statfs *)
 def_fsys(fstatfs,fstatfs,int,2,int,struct statfs *)
 def_fsys(getdents,getdents,long,3,int,void *,unsigned long)
 def_fsys(getdents64,getdents64,long,3,int,void *,unsigned long)
-//def_fsys(fork,fork,int,0) // Be careful it's semantics is different from the libc wrapper. Use it with caution!
+// def_fsys(fork,fork,int,0)
+// Be careful it's semantics is different from the libc wrapper.
+// Use it with caution!
 #define fsys_fork() fsys_clone2(17/*SIGCHLD*/,0)
 def_fsys(vfork,vfork,int,0)
 def_fsys(clone2,clone,int,2,int,void *)
@@ -252,13 +277,17 @@ def_fsys(mmap,mmap,void*,6,void*,unsigned long,int,int,int,long)
 def_fsys(munmap,munmap,int,2,void*,unsigned long)
 def_fsys(madvise,madvise,int,3,void*,unsigned long,int)
 def_fsys(mremap,mremap,void*,4,void*,unsigned long,unsigned long,int)
-def_fsys(rt_sigprocmask,rt_sigprocmask,int,4,int,const void *,void *,unsigned long) // Should be sigset_t. But don't want to include signal.h here
+// Should be sigset_t. But don't want to include signal.h here
+def_fsys(rt_sigprocmask,rt_sigprocmask,int,
+         4,int,const void *,void *,unsigned long)
 #define fsys_sigprocmask(a,b,c) fsys_rt_sigprocmask(a,b,c,_NSIG/8)
 def_fsys_nomem(setsid,setsid,int,0)
 def_fsys_nomem(kill,kill,int,2,int,int)
 def_fsys_nomem(tkill,tkill,int,2,int,int)
 def_fsys_nomem(tgkill,tgkill,int,3,int,int,int)
-def_fsys(rt_sigaction,rt_sigaction,int,4,int,const struct fsys_sigaction *,struct fsys_sigaction *,unsigned long)
+def_fsys(rt_sigaction,rt_sigaction,int,
+         4,int,const struct fsys_sigaction *,struct fsys_sigaction *,
+         unsigned long)
 #define fsys_sigaction(a,b,c) fsys_rt_sigaction(a,b,c,_NSIG/8)
 def_fsys_nomem(alarm,alarm,int,1,int)
 def_fsys(setrlimit,setrlimit,int,2,int,const struct rlimit *)
@@ -266,8 +295,9 @@ def_fsys(getrlimit,getrlimit,int,2,int,struct rlimit *)
 def_fsys(sysinfo,sysinfo,int,1,struct sysinfo *)
 def_fsys_nomem(fadvise64,fadvise64,int,4,int,__OFF64_T_TYPE,__OFF64_T_TYPE,int)
 
-// Glibc wrappers of many of the following syscalls do some bookkeeping related to asynchronous
-// cancelation, or attempts to support old kernels without ***at syscalls.
+// Glibc wrappers of many of the following syscalls do some bookkeeping
+// related to asynchronous cancelation, or attempts to support old kernels
+// without ***at syscalls.
 // We don't need to do that because we never cancel threads and we use new kernels.
 def_fsys(open2,open,int,2,const char *,int)
 def_fsys(open3,open,int,3,const char *,int,int)
@@ -279,17 +309,22 @@ def_fsys(connect,connect,int,3,int,const struct sockaddr *,unsigned long)
 def_fsys(read,read,long,3,int,void *,unsigned long)
 def_fsys(write,write,long,3,int,const void *,unsigned long)
 def_fsys(writev,writev,long,3,int,const struct iovec *,unsigned long)
-def_fsys(pwritev_raw,pwritev,long,5,int,const struct iovec *,unsigned long,unsigned long, __OFF64_T_TYPE)
+def_fsys(pwritev_raw,pwritev,long,5,int,const struct iovec *,
+         unsigned long,unsigned long, __OFF64_T_TYPE)
 #define fsys_pwritev(a,b,c,d) fsys_pwritev_raw(a,b,c,d,0)
 def_fsys(pwrite,pwrite64,long,4,int,const void *,unsigned long, __OFF64_T_TYPE)
 def_fsys(pread,pread64,long,4,int,void *,unsigned long, __OFF64_T_TYPE)
 def_fsys(tee,tee,long,4,int,int,unsigned long,unsigned)
-def_fsys(splice,splice,long,6,int,__OFF64_T_TYPE *,int,__OFF64_T_TYPE *,unsigned long,unsigned)
-def_fsys(vmsplice,vmsplice,long,4,int,const struct iovec *,unsigned long,unsigned int)
+def_fsys(splice,splice,long,6,int,__OFF64_T_TYPE *,int,__OFF64_T_TYPE *,
+         unsigned long,unsigned)
+def_fsys(vmsplice,vmsplice,long,4,int,const struct iovec *,unsigned long,
+         unsigned int)
 def_fsys(sendfile,sendfile,long,4,int,int,__OFF64_T_TYPE *,unsigned long)
-def_fsys(sendto,sendto,long,6,int,const void *,unsigned long,int,const struct sockaddr *,unsigned long)
+def_fsys(sendto,sendto,long,6,int,const void *,unsigned long,int,
+         const struct sockaddr *,unsigned long)
 def_fsys(sendmsg,sendmsg,long,3,int,const struct msghdr *, int)
-def_fsys(recvfrom,recvfrom,long,6,int,void *,unsigned long,int,struct sockaddr *,unsigned *)
+def_fsys(recvfrom,recvfrom,long,6,int,void *,unsigned long,int,
+         struct sockaddr *,unsigned *)
 def_fsys(recvmsg,recvmsg,long,3,int,struct msghdr *,int)
 #define fsys_send(a,b,c,d) fsys_sendto(a,b,c,d,0,0)
 #define fsys_recv(a,b,c,d) fsys_recvfrom(a,b,c,d,0,0)
@@ -306,10 +341,12 @@ def_fsys(epoll_ctl,epoll_ctl,int,4,int,int,int,struct epoll_event *)
 def_fsys(epoll_wait,epoll_wait,int,4,int,struct epoll_event *,int,int)
 def_fsys(select,select,int,5,int,/*fd_set*/void*,void*,void*,struct timeval*)
 def_fsys(poll,poll,int,3,struct pollfd *,unsigned long,int)
-def_fsys(signalfd4,signalfd4,int,4,int,const void/*sigset_t*/*,unsigned long, int)
+def_fsys(signalfd4,signalfd4,int,4,int,const void/*sigset_t*/*,unsigned long,
+         int)
 #define fsys_signalfd(a,b,c) fsys_signalfd4(a,b,_NSIG/8,c)
 def_fsys_nomem(timerfd_create,timerfd_create,int,2,int,int)
-def_fsys(timerfd_settime,timerfd_settime,int,4,int,int,const struct itimerspec *,struct itimerspec *)
+def_fsys(timerfd_settime,timerfd_settime,int,4,int,int,
+         const struct itimerspec *,struct itimerspec *)
 def_fsys_nomem(eventfd,eventfd2,int,2,unsigned,int)
 def_fsys_nomem(inotify_init,inotify_init,int,0)
 def_fsys_nomem(inotify_init1,inotify_init1,int,1,int)
@@ -323,47 +360,41 @@ def_fsys(wait4,wait4,int,4,int,int *,int,struct rusage *)
 #define fsys_waitpid(a,b,c) fsys_wait4(a,b,c,0)
 def_fsys(execve,execve,int,3,const char *,char *const*,char *const *)
 def_fsys(exit_group,exit_group,int,1,int)
-def_fsys(mount,mount,int,5,const char *,const char *,const char *,unsigned long,const void *)
+def_fsys(mount,mount,int,5,const char *,const char *,const char *,
+         unsigned long,const void *)
 def_fsys(umount2,umount2,int,2,const char *,int)
 def_fsys(pivot_root,pivot_root,int,2,const char *,const char *)
 def_fsys(memfd_create,memfd_create,int,2,const char *,unsigned)
 
-// vsyscall is nowadays deprecated; We should use vDSO instead, of which modern glibc
-// takes good care.
+// vsyscall is nowadays deprecated; We should use vDSO instead,
+// of which modern glibc takes good care.
 #define fsys_time time
 #define fsys_gettimeofday gettimeofday
 
-fsys_inline int fsys_sched_getcpu (void)
-{
 #ifdef ASSUME_RDTSCP
-	unsigned eax, edx, ecx;
-	__asm__ __volatile__ ("rdtscp" : "=a"(eax), "=d"(edx), "=c"(ecx));
-	return ecx & 0xfff;
-#else
-	// Third argument to getcpu is ignored since 2.6.24, so we use void *
-	int (*vgetcpu)(unsigned *, unsigned *,void *) = (int (*)(unsigned *, unsigned *, void *)) 0xffffffffff600800;
-	unsigned r;
-	if (__builtin_expect (vgetcpu (&r, 0, 0), 0) == 0) {
-		return r;
-	}
-	else {
-		return -1;
-	}
-#endif
+fsys_inline int fsys_sched_getcpu(void) {
+  unsigned eax, edx, ecx;
+  __asm__ __volatile__ ("rdtscp" : "=a"(eax), "=d"(edx), "=c"(ecx));
+  return ecx & 0xfff;
 }
+#else
+// vsyscall is nowadays deprecated; We should use vDSO instead,
+// of which modern glibc takes good care.
+# define fsys_sched_getcpu sched_getcpu
+#endif
 
 #if defined __GNUC__ && (__GNUC__ * 100 + __GNUC_MINOR__ >= 405)
-fsys_inline void fsys__exit (int x)
-{
-	fsys_exit_group (x);
-	__builtin_trap ();
+fsys_inline void fsys__exit (int x) {
+  fsys_exit_group (x);
+  __builtin_trap ();
 }
 #else
 # define fsys__exit _exit
 #endif
 
-fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off, __OFF64_T_TYPE len, int advice) {
-	return -fsys_fadvise64(fd, off, len, advice);
+fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
+                                   __OFF64_T_TYPE len, int advice) {
+  return -fsys_fadvise64(fd, off, len, advice);
 }
 
 #else
@@ -373,7 +404,8 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off, __OFF64_T_TYPE le
 #include <unistd.h>
 #include <sys/syscall.h>
 
-#define fsys_generic(sysno,rettype,argc,...)		((rettype)syscall(sysno,##__VA_ARGS__))
+#define fsys_generic(sysno,rettype,argc,...) \
+  ((rettype)syscall(sysno,##__VA_ARGS__))
 #define fsys_generic_nomem fsys_generic
 
 #define fsys_errno(r,err) (errno==err)
