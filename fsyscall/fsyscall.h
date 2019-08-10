@@ -374,6 +374,7 @@ def_fsys_nomem(inotify_rm_watch,inotify_rm_watch,int,2,int,int)
 def_fsys(nanosleep,nanosleep,int,2,const struct timespec *,struct timespec *)
 def_fsys(linkat,linkat,int,5,int,const char *,int, const char *, int)
 def_fsys(unlinkat,unlinkat,int,3,int,const char *,int)
+def_fsys(symlinkat,symlinkat,int,3,const char *,int,const char *)
 def_fsys(faccessat,faccessat,int,4,int,const char *,int,int)
 def_fsys(wait4,wait4,int,4,int,int *,int,struct rusage *)
 #define fsys_waitpid(a,b,c) fsys_wait4(a,b,c,0)
@@ -566,6 +567,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_nanosleep nanosleep
 #define fsys_linkat linkat
 #define fsys_unlinkat unlinkat
+#define fsys_symlinkat symlinkat
 #define fsys_faccessat faccessat
 #define fsys_wait4 wait4
 #define fsys_waitpid waitpid
