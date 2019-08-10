@@ -1,5 +1,6 @@
 #include "utils.h"
 #include <stdint.h>
+#include <tinyx32.h>
 
 int strnumcmp(const char *a, const char *b) noexcept {
   const uint8_t *u = (const uint8_t *)a;
@@ -38,4 +39,8 @@ int strnumcmp(const char *a, const char *b) noexcept {
     U = *u++;
     V = *v++;
   }
+}
+
+ssize_t write_sv(int fd, std::string_view sv) {
+  return fsys_write(fd, sv.data(), sv.length());
 }
