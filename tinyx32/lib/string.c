@@ -117,26 +117,24 @@ char *strchrnul(const char *s, int c) {
 }
 
 int strcmp(const char *a, const char *b) {
-    while (*a && *b) {
-        if (*a != *b)
-            return (int)(unsigned char)*a - (int)(unsigned char *)b;
-        ++a;
-        ++b;
-    }
-    return (int)(unsigned char)*a - (int)(unsigned char *)b;
+  while (*a && *a == *b) {
+    ++a;
+    ++b;
+  }
+  return (int)(unsigned char)*a - (int)(unsigned char)*b;
 }
 
 int strncmp(const char *a, const char *b, size_t n) {
-    while (n > 0 && *a && *b) {
-        if (*a != *b)
-            return (int)(unsigned char)*a - (int)(unsigned char *)b;
-        ++a;
-        ++b;
-        --n;
-    }
-    if (n == 0)
-        return 0;
-    return (int)(unsigned char)*a - (int)(unsigned char *)b;
+  while (n > 0 && *a && *b) {
+    if (*a != *b)
+      return (int)(unsigned char)*a - (int)(unsigned char)*b;
+    ++a;
+    ++b;
+    --n;
+  }
+  if (n == 0)
+    return 0;
+  return (int)(unsigned char)*a - (int)(unsigned char)*b;
 }
 
 char *utoa10(unsigned v, char *str) {
