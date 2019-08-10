@@ -68,34 +68,24 @@ int latest(std::string_view prefix, size_t argc, char **argv, char **envp) {
     if (fddir < 0)
       continue;
 
-    char buf[65536];
-    ssize_t l;
-    while ((l = fsys_getdents64(fddir, buf, sizeof(buf))) > 0) {
-      char *ptr = buf;
-      char *ptrend = buf + l;
-      do {
-        DirEnt *ent = reinterpret_cast<DirEnt *>(ptr);
-
-        if (strncmp(ent->d_name, prefix.data(), prefix.length()) == 0) {
-          size_t d_name_len = prefix.length() +
-            strlen(ent->d_name + prefix.length());
-          if (!all_version_digits({ent->d_name + prefix.length(),
-                                   d_name_len - prefix.length()}))
-            continue;
-          if (fsys_faccessat(fddir, ent->d_name, X_OK, 0) == 0) {
-            if (d_name_len + path.length() < PATH_MAX &&
-                strnumcmp(last_base_name, ent->d_name) < 0) {
-              ChainMemcpy(last_name) << path <<
-                std::string_view{ent->d_name, d_name_len} << '\0';
-              last_base_name = last_name + path.length();
-            }
+    fsys_aux::readdir<fsys_aux::ReadDirClose, fsys_aux::ReadDirNoSkipDots,
+                      fsys_aux::ReadDirBufSize<65536>>(fddir, [&](DirEnt *ent) {
+      if (strncmp(ent->d_name, prefix.data(), prefix.length()) == 0) {
+        size_t d_name_len = prefix.length() +
+          strlen(ent->d_name + prefix.length());
+        if (!all_version_digits({ent->d_name + prefix.length(),
+                                 d_name_len - prefix.length()}))
+          return;
+        if (fsys_faccessat(fddir, ent->d_name, X_OK, 0) == 0) {
+          if (d_name_len + path.length() < PATH_MAX &&
+              strnumcmp(last_base_name, ent->d_name) < 0) {
+            ChainMemcpy(last_name) << path <<
+              std::string_view{ent->d_name, d_name_len} << '\0';
+            last_base_name = last_name + path.length();
           }
         }
-
-      } while ((ptr += reinterpret_cast<DirEnt *>(ptr)->d_reclen) < ptrend);
-    }
-
-    fsys_close(fddir);
+      }
+    });
   }
 
   if (last_name[0] != '\0') {

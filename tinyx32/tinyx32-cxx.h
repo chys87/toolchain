@@ -10,6 +10,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "fsys-aux.h"
+
 # define TX32_NO_UNIQUE_ADDRESS
 
 #if defined __has_cpp_attribute
