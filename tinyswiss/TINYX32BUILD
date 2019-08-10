@@ -6,5 +6,6 @@ binary(
         'mvln.cpp',
         'latest.cpp',
         'running-browser.cpp',
+        'utils.cpp',
     ],
 )
