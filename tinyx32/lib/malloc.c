@@ -94,7 +94,7 @@ void free(void *p) {
   if (p == NULL)
     return;
   AllocedBlock *ab = (AllocedBlock *)((char *)p - sizeof(AllocedBlock));
-  FreeBlock *fb = (FreeBlock *)((char *)p - ab->size);
+  FreeBlock *fb = (FreeBlock *)((char *)p - ab->align);
   fb->size = ab->size;
   fb->next = free_block_chain;
   free_block_chain = fb;
