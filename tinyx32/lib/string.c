@@ -141,7 +141,7 @@ int strncmp(const char *a, const char *b, size_t n) {
 
 char *utoa10(unsigned v, char *str) {
     if (v == 0) {
-        *str++ = '\0';
+        *str++ = '0';
         return str;
     }
 
