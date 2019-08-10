@@ -91,10 +91,12 @@ void free(void *p) {
 }
 #else
 void free(void *p) {
-    AllocedBlock *ab = (AllocedBlock *)((char *)p - sizeof(AllocedBlock));
-    FreeBlock *fb = (FreeBlock *)((char *)p - ab->size);
-    fb->size = ab->size;
-    fb->next = free_block_chain;
-    free_block_chain = fb;
+  if (p == NULL)
+    return;
+  AllocedBlock *ab = (AllocedBlock *)((char *)p - sizeof(AllocedBlock));
+  FreeBlock *fb = (FreeBlock *)((char *)p - ab->size);
+  fb->size = ab->size;
+  fb->next = free_block_chain;
+  free_block_chain = fb;
 }
 #endif
