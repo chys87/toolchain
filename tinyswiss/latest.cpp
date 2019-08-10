@@ -8,18 +8,7 @@ using namespace std::string_view_literals;
 
 namespace {
 
-struct linux_dirent64 {
-  ino64_t        d_ino;
-  off64_t        d_off;
-  unsigned short d_reclen;
-  unsigned char  d_type; // In linux_dirent, it's after d_name;
-                         // but in linux_dirent64, it's here.
-  char           d_name[1];
-
-  unsigned char get_d_type() const { return d_type; }
-};
-
-using DirEnt = linux_dirent64;
+using DirEnt = fsys_linux_dirent64;
 
 
 int strnumcmp(const char *a, const char *b) noexcept {

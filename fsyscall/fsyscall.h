@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <sys/types.h>
+
 #if (!defined __GNUC__ || __GNUC__ < 4) && !defined __clang__
 # error "Your compiler is not supported."
 #endif
@@ -32,6 +34,23 @@
 # undef FSYSCALL_USE
 # define FSYSCALL_USE 0
 #endif
+
+struct fsys_linux_dirent64 {
+  ino64_t d_ino;
+  off64_t d_off;
+  unsigned short d_reclen;
+  unsigned char d_type; // In linux_dirent, it's after d_name;
+                        // but in linux_dirent64, it's here.
+  char d_name[1];
+
+#ifdef __cplusplus
+  // Return true if name is "." or ".."
+  bool skip_dot() const {
+    return (d_name[0] == '.' &&
+            (d_name[1] == '\0' || (d_name[1] == '.' && d_name[2] == '\0')));
+  }
+#endif
+};
 
 #if defined __x86_64__ && FSYSCALL_USE
 
