@@ -21,6 +21,19 @@
 # endif
 #endif
 
+inline void *operator new(std::size_t n) { return malloc(n); }
+inline void operator delete(void *p) noexcept { free(p); }
+inline void operator delete(void *p, std::size_t) noexcept {
+  operator delete(p);
+}
+
+inline void *operator new[](std::size_t n) { return operator new(n); }
+inline void operator delete[](void *p) noexcept { operator delete(p); }
+inline void operator delete[](void *p, std::size_t) { operator delete[](p); }
+
+inline void *operator new(std::size_t, void *p) noexcept { return p; }
+inline void operator delete(void *, void *) noexcept {}
+
 template <typename T> requires std::is_trivially_copyable<T>::value
 inline T *Memcpy(T *dst, const void *src, size_t n) {
   return static_cast<T *>(memcpy(dst, src, n));
