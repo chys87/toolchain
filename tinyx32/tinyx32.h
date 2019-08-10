@@ -66,12 +66,14 @@ void *memrchr(const void *, int, size_t) __attribute__((__pure__, __nonnull__(1)
 void *rawmemchr(const void *, int) __attribute__((__pure__, __nonnull__(1)));
 char *strchr(const char *, int) __attribute__((__pure__, __nonnull__(1)));
 char *strchrnul(const char *, int) __attribute__((__pure__, __nonnull__(1)));
+char *strrchr(const char *, int) __attribute__((__pure__, __nonnull__(1)));
 int strcmp(const char *, const char *) __attribute__((__pure__, __nonnull__(1, 2)));
 int strncmp(const char *, const char *, size_t) __attribute__((__pure__, __nonnull__(1, 2)));
 
 // Non-standard string.c
 char *utoa10(unsigned value, char *str);
 char *itoa10(int value, char *str);
+char *basename(const char *) __attribute__((__pure__, __nonnull__(1)));
 
 typedef struct Strtou {
     unsigned val;

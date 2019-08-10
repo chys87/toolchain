@@ -1,4 +1,5 @@
 #include <tinyx32.h>
+#include "utils.h"
 
 int j_main(size_t argc, char **argv, char **);
 int mvln_main(size_t argc, char **argv, char **);
@@ -35,16 +36,6 @@ void print_subcommands() {
     memcpy(mempcpy(buf, disp.name, disp.name_len), "\n", 1);
     fsys_write(1, buf, disp.name_len + 1);
   }
-}
-
-const char *basename(const char *s) {
-  const char *r = s;
-  while (*s) {
-    if (*s == '/')
-      r = s + 1;
-    ++s;
-  }
-  return r;
 }
 
 } // namespace

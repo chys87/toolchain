@@ -116,6 +116,16 @@ char *strchrnul(const char *s, int c) {
     return (char *)p;
 }
 
+char *strrchr(const char *s, int c) {
+  char *r = NULL;
+  for (char *p = (char *)s; *p; ++p) {
+    if (*p == (char)c) {
+      r = p;
+    }
+  }
+  return r;
+}
+
 int strcmp(const char *a, const char *b) {
   while (*a && *a == *b) {
     ++a;
@@ -172,4 +182,13 @@ unsigned strtou(const char *s, char **endptr) {
     if (endptr)
         *endptr = r.endptr;
     return r.val;
+}
+
+char *basename(const char *s) {
+  char *slash = strrchr(s, '/');
+  if (slash) {
+    return slash + 1;
+  } else {
+    return (char *)s;
+  }
 }
