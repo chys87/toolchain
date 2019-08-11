@@ -30,6 +30,8 @@ cc_library(
   ],
   hdrs = [
     'byteorder.h',
+    'defer.h',
+    'swap.h',
   ],
   copts = [
     '-std=gnu++2a',
