@@ -32,7 +32,7 @@
 #include <type_traits>
 
 namespace cbu {
-inline namespace byteorder {
+inline namespace cbu_byteorder {
 
 static_assert(
     std::endian::native == std::endian::little ||
@@ -43,39 +43,39 @@ template <typename T>
 concept Bswappable = std::is_integral<T>::value && sizeof(T) <= 8;
 
 template <Bswappable T> requires sizeof(T) == 1
-inline constexpr T bswap(T x) { return x; }
+inline constexpr T bswap(T x) noexcept { return x; }
 
 template <Bswappable T> requires sizeof(T) == 2
-inline constexpr T bswap(T x) { return __builtin_bswap16(x); }
+inline constexpr T bswap(T x) noexcept { return __builtin_bswap16(x); }
 
 template <Bswappable T> requires sizeof(T) == 4
-inline constexpr T bswap(T x) { return __builtin_bswap32(x); }
+inline constexpr T bswap(T x) noexcept { return __builtin_bswap32(x); }
 
 template <Bswappable T> requires sizeof(T) == 8
-inline constexpr T bswap(T x) { return __builtin_bswap64(x); }
+inline constexpr T bswap(T x) noexcept { return __builtin_bswap64(x); }
 
 template <std::endian order_a, std::endian order_b, Bswappable T>
   requires order_a == order_b
-inline constexpr T may_bswap(T value) { return value; }
+inline constexpr T may_bswap(T value) noexcept { return value; }
 
 template <std::endian order_a, std::endian order_b, Bswappable T>
   requires order_a != order_b
-inline constexpr T may_bswap(T value) { return bswap(value); }
+inline constexpr T may_bswap(T value) noexcept { return bswap(value); }
 
 template <std::endian byte_order, Bswappable T>
-inline constexpr T bswap_for(T value) {
+inline constexpr T bswap_for(T value) noexcept {
   return may_bswap<byte_order, std::endian::native>(value);
 }
 
 // Swap for data exchange with big endian data
 Bswappable{T}
-inline constexpr T bswap_be(T value) {
+inline constexpr T bswap_be(T value) noexcept {
   return bswap_for<std::endian::big>(value);
 }
 
 // Swap for data exchange with little endian data
 Bswappable{T}
-inline constexpr T bswap_le(T value) {
+inline constexpr T bswap_le(T value) noexcept {
   return bswap_for<std::endian::little>(value);
 }
 
@@ -103,10 +103,14 @@ class FixByteOrder {
   T v_;
 };
 
-template <Bswappable T> using PackedLittleEndian = PackedFixByteOrder<T, std::endian::little>;
-template <Bswappable T> using PackedBigEndian = PackedFixByteOrder<T, std::endian::big>;
-template <Bswappable T> using LittleEndian = FixByteOrder<T, std::endian::little>;
-template <Bswappable T> using BigEndian = FixByteOrder<T, std::endian::big>;
+template <Bswappable T> using PackedLittleEndian = PackedFixByteOrder<
+    T, std::endian::little>;
+template <Bswappable T> using PackedBigEndian = PackedFixByteOrder<
+    T, std::endian::big>;
+template <Bswappable T> using LittleEndian = FixByteOrder<
+    T, std::endian::little>;
+template <Bswappable T> using BigEndian = FixByteOrder<
+    T, std::endian::big>;
 
-} // inline namespace byteorder
+} // inline namespace cbu_byteorder
 } // namespace cbu
