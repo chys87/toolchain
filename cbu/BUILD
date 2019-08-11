@@ -29,6 +29,7 @@ cc_library(
   srcs = [
   ],
   hdrs = [
+    'align.h',
     'byteorder.h',
     'defer.h',
     'swap.h',
