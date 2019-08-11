@@ -4,6 +4,7 @@ This repository includes many of my favorite little hobbies
 
 ## List ##
 
+* `cbu`: chys's basic utilities - My C++ utilities
 * `egmake`: Enhanced GNU Make - My GNU make plugin (just a hobby)
 * [`fsyscall`](fsyscall/README.md): Inline system call wrapper for the crazy people (yet another crazy hobby)
 * `makefiles`: My generic makefiles, partially deprecated
