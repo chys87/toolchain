@@ -28,12 +28,7 @@ cc_library(
   name = 'cbu',
   srcs = [
   ],
-  hdrs = [
-    'align.h',
-    'byteorder.h',
-    'defer.h',
-    'swap.h',
-  ],
+  hdrs = glob(['*.h']),
   copts = [
     '-std=gnu++2a',
     '-fconcepts',
