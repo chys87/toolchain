@@ -26,15 +26,17 @@
 
 cc_library(
   name = 'cbu',
-  srcs = [
-  ],
+  srcs = glob(['*.cc'], exclude=['*_test.cc']),
   hdrs = glob(['*.h']),
   copts = [
     '-std=gnu++2a',
     '-fconcepts',
     '-Wall',
     '-Werror',
-  ]
+  ],
+  # cbu is a collection of really TINy utilities so you may always want to
+  # use static linking
+  linkstatic=True,
 )
 
 cc_test(
