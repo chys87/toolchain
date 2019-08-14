@@ -62,10 +62,15 @@ inline constexpr T fast_powi(T a, int n,
 // Equal without incurring warning
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfloat-equal"
-template <Raw_floating_point A, Raw_floating_point B>
-inline constexpr bool equal(A a, B b) noexcept { return (a == b); }
-template <Raw_floating_point A, Raw_floating_point B>
-inline constexpr bool unequal(A a, B b) noexcept { return (a != b); }
+EqualityComparable{A, B}
+inline constexpr bool equal(A a, B b) noexcept(noexcept(a == b)) {
+  return (a == b);
+}
+
+EqualityComparable{A, B}
+inline constexpr bool unequal(A a, B b) noexcept(noexcept(a != b)) {
+  return (a != b);
+}
 #pragma GCC diagnostic pop
 
 Raw_floating_point{T}
