@@ -34,7 +34,7 @@
 #include <boost/type_traits/type_identity.hpp>
 
 namespace cbu {
-inline namespace cbu_faststr {
+inline namespace cbu_fastarith {
 
 // r is the initial value, usually 1
 Raw_arithmetic{T}
@@ -130,5 +130,5 @@ inline bool sub_overflow(U *a, V b) noexcept {
 	return sub_overflow(*a, b, a);
 }
 
-} // inline namespace cbu_faststr
+} // inline namespace cbu_fastarith
 } // namespace cbu
