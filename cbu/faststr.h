@@ -135,12 +135,12 @@ inline T *Memset(T *dst, int c, std::size_t n) noexcept {
   return static_cast<T *>(std::memset(dst, c, n));
 }
 
-template <Trivial_type T>
+template <Char_type T>
 inline T *Memchr(T *dst, int c, std::size_t n) noexcept {
   return static_cast<T *>(std::memchr(dst, c, n));
 }
 
-template <Trivial_type T>
+template <Char_type T>
 inline T *Memrchr(T *dst, int c, std::size_t n) noexcept {
   return static_cast<T *>(::memrchr(dst, c, n));
 }
