@@ -42,16 +42,34 @@ template <typename T>
 concept bool No_cv = std::is_same_v<std::remove_cv_t<T>, T>;
 
 template <typename T>
+concept bool Arithmetic = std::is_arithmetic_v<T>;
+
+template <typename T>
+concept bool Raw_arithmetic = Arithmetic<T> && No_cv<T>;
+
+template <typename T>
 concept bool Floating_point = std::is_floating_point_v<T>;
+
+template <typename T>
+concept bool Raw_floating_point = std::is_floating_point_v<T> && No_cv<T>;
 
 template <typename T>
 concept bool Integral = std::is_integral_v<T>;
 
 template <typename T>
+concept bool Raw_integral = Integral<T> && No_cv<T>;
+
+template <typename T>
 concept bool Unsigned_integral = Integral<T> && std::is_unsigned_v<T>;
 
 template <typename T>
+concept bool Raw_unsigned_integral = Unsigned_integral<T> && No_cv<T>;
+
+template <typename T>
 concept bool Signed_integral = Integral<T> && std::is_signed_v<T>;
+
+template <typename T>
+concept bool Raw_signed_integral = Signed_integral<T> && No_cv<T>;
 
 template <typename T>
 concept bool Char_type = Integral<T> && sizeof(T) == 1;
