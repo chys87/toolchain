@@ -135,5 +135,10 @@ inline bool sub_overflow(U *a, V b) noexcept {
 	return sub_overflow(*a, b, a);
 }
 
+// Map uint32_t or uint64_t to floating point values in [0, 1)
+float map_uint32_to_float(uint32_t v) noexcept;
+double map_uint64_to_double(uint64_t v) noexcept;
+
+
 } // inline namespace cbu_fastarith
 } // namespace cbu
