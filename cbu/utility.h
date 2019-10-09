@@ -107,16 +107,6 @@ inline constexpr auto reversed(Container &&container) noexcept {
   return IteratorRange{container.rbegin(), container.rend()};
 }
 
-template <typename T, std::size_t N>
-inline constexpr std::size_t array_size(T (&array)[N]) noexcept {
-  return N;
-}
-
-template <typename T, std::size_t N>
-inline constexpr T *array_end(T (&array)[N]) {
-  return (array + N);
-}
-
 
 // Reverse a comparator
 template <typename T>
