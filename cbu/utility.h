@@ -104,22 +104,23 @@ inline constexpr auto reversed(Container &container) noexcept {
 
 // Reverse a comparator
 template <typename T>
-struct ReversedComparator {
-  template <typename U, typename V>
-  bool operator () (U &&u, V &&v) const noexcept(noexcept(T()(u, v))) {
-    return static_cast<bool>(T()(v, u));
+class ReversedComparator {
+public:
+  ReversedComparator() noexcept(noexcept(T())) : comp_() {}
+  explicit ReversedComparator(T comp) noexcept(noexcept(T(std::move(comp)))) :
+    comp_(std::move(comp)) {
   }
+
+  template <typename U, typename V>
+  auto operator () (U &&u, V &&v) const
+      noexcept(noexcept(std::declval<const T&>()(std::forward<V>(v),
+                                                 std::forward<U>(u)))) {
+    return comp_(std::forward<V>(v), std::forward<U>(u));
+  }
+
+private:
+  T comp_;
 };
-
-// Specializations
-template <typename T>
-struct ReversedComparator<ReversedComparator<T>> : T {};
-
-template <typename T>
-struct ReversedComparator<std::less<T>> : std::greater<T> {};
-
-template <typename T>
-struct ReversedComparator<std::greater<T>> : std::less<T> {};
 
 } // inline namespace cbu_utility
 } // namespace cbu

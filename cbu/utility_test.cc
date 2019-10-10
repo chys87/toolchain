@@ -59,4 +59,20 @@ TEST(ReversedTest, ConstArray) {
   EXPECT_EQ(1, *(r.end() - 1));
 }
 
+TEST(ReversedComparatorTest, Compare) {
+  std::less cmp;
+  ReversedComparator rcmp{cmp};
+  ReversedComparator<std::remove_reference_t<decltype(cmp)>> rcmp_copy{rcmp};
+  ReversedComparator<std::remove_reference_t<decltype(rcmp)>> rrcmp{rcmp};
+
+  EXPECT_TRUE(cmp(1, 2));
+  EXPECT_FALSE(cmp(2, 1));
+  EXPECT_FALSE(rcmp(1, 2));
+  EXPECT_TRUE(rcmp(2, 1));
+  EXPECT_FALSE(rcmp_copy(1, 2));
+  EXPECT_TRUE(rcmp_copy(2, 1));
+  EXPECT_TRUE(rrcmp(1, 2));
+  EXPECT_FALSE(rrcmp(2, 1));
+}
+
 } // namespace cbu
