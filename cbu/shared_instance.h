@@ -34,15 +34,16 @@ namespace cbu {
 inline namespace cbu_shared_instance {
 
 template <typename T, auto... args>
-inline const T &shared() {
-  static const T instance(std::forward<decltype(args)>(args)...);
+inline T &shared()
+    noexcept(noexcept(T(std::forward<decltype(args)>(args)...))) {
+  static T instance(std::forward<decltype(args)>(args)...);
   return instance;
 }
 
 #if defined __cpp_constinit && __cpp_constinit >= 201907
 template <typename T, auto... args>
-inline const T &shared_constinit() noexcept {
-  static constinit const T instance(std::forward<decltype(args)>(args)...);
+inline T &shared_constinit() noexcept {
+  static constinit T instance(std::forward<decltype(args)>(args)...);
   return instance;
 }
 #endif

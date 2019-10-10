@@ -35,12 +35,14 @@ namespace cbu {
 TEST(SharedInstanceTest, Equality) {
   EXPECT_EQ(0, (shared<int, 0>()));
   EXPECT_EQ(5, (shared<int, 5>()));
-  EXPECT_EQ("xxxxx", (shared<std::string, 5, 'x'>()));
+  EXPECT_EQ("xxxxx", (shared<const std::string, 5, 'x'>()));
 }
 
 TEST(SharedInstanceTest, Uniqueness) {
   EXPECT_EQ((&shared<std::string, 5, 'x'>()),
             (&shared<std::string, 5, 'x'>()));
+  EXPECT_NE((&shared<std::string, 5, 'x'>()),
+            (&shared<const std::string, 5, 'x'>()));
 }
 
 #if defined __cpp_constinit && __cpp_constinit >= 201907
