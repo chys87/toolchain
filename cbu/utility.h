@@ -92,19 +92,13 @@ inline constexpr IteratorRange<std::reverse_iterator<IT>> reversed(
   return {std::reverse_iterator<IT>(end), std::reverse_iterator<IT>(begin)};
 }
 
-template <typename T, std::size_t N>
-inline constexpr IteratorRange<std::reverse_iterator<T*>> reversed(
-    T (&array)[N]) noexcept {
-  return reversed<T*>(array, array + N);
-}
-
 template <typename Container>
 requires requires(Container &cont) {
-  cont.rbegin();
-  cont.rend();
+  std::rbegin(cont);
+  std::rend(cont);
 }
-inline constexpr auto reversed(Container &&container) noexcept {
-  return IteratorRange{container.rbegin(), container.rend()};
+inline constexpr auto reversed(Container &container) noexcept {
+  return IteratorRange{std::rbegin(container), std::rend(container)};
 }
 
 
