@@ -31,31 +31,26 @@
 #include <bit>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 #include "byteorder.h"
 #include "concepts.h"
 
 namespace cbu {
 inline namespace cbu_faststr {
 
-// We could use void pointers, but we choose char to enforce stricter type checking
+// We could use void pointers, but we choose char to enforce stricter
+// type checking
 template <std::endian byte_order, Bswappable T, Raw_char_type C>
 inline T mempick_bswap(const C *s) noexcept {
-  union {
-    T u;
-    C b[sizeof(T)];
-  } u;
-  std::memcpy(u.b, s, sizeof(T));
-  return bswap_for<byte_order>(u.u);
+  T u;
+  std::memcpy(std::addressof(u), s, sizeof(T));
+  return bswap_for<byte_order>(u);
 }
 
 template <std::endian byte_order, Bswappable T, Raw_char_type C>
 inline C *memdrop_bswap(C *s, T v) noexcept {
-  union {
-    T u;
-    C b[sizeof(T)];
-  } u;
-  u.u = bswap_for<byte_order>(v);
-  std::memcpy(s, u.b, sizeof(T));
+  T u = bswap_for<byte_order>(v);
+  std::memcpy(s, std::addressof(u), sizeof(T));
   return (s + sizeof(T));
 }
 
