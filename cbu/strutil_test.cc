@@ -27,9 +27,13 @@
  */
 
 #include "strutil.h"
+#include <string>
+#include <string_view>
 #include <gtest/gtest.h>
 
 namespace cbu {
+
+using namespace std::literals;
 
 TEST(StrUtilTest, Scnprintf) {
   char buf[16];
@@ -37,6 +41,32 @@ TEST(StrUtilTest, Scnprintf) {
   EXPECT_EQ(0, scnprintf(buf, 0, "%s", "abcdefghijklmnopqrstuvwxyz"));
   EXPECT_EQ(0, scnprintf(buf, 1, "%s", "abcdefghijklmnopqrstuvwxyz"));
   EXPECT_EQ(1, scnprintf(buf, 2, "%s", "abcdefghijklmnopqrstuvwxyz"));
+}
+
+TEST(StrUtilTest, Strcnt) {
+  EXPECT_EQ(0, strcnt("abcabc", '\0'));
+  EXPECT_EQ(2, strcnt("abcabc", 'a'));
+  EXPECT_EQ(0, strcnt("abcabc", 'x'));
+  EXPECT_EQ(4, strcnt("0123456789abcdef012345678901234567890123456789", '9'));
+}
+
+TEST(StrUtilTest, Memcnt) {
+  EXPECT_EQ(0, memcnt("abcabc"sv, '\0'));
+  EXPECT_EQ(2, memcnt("abcabc"sv, 'a'));
+  EXPECT_EQ(0, memcnt("abcabc"sv, 'x'));
+  EXPECT_EQ(4, memcnt("0123456789abcdef012345678901234567890123456789"sv, '9'));
+}
+
+TEST(StrUtilTest, Reverse) {
+  char buf[] = "abcdefghijklmnopqrstuvwxyz";
+  EXPECT_EQ(std::end(buf) - 1, reverse(std::begin(buf), std::end(buf) - 1));
+  EXPECT_EQ("zyxwvutsrqponmlkjihgfedcba", std::string(buf));
+}
+
+TEST(StrUtilTest, StrNumCmp) {
+  EXPECT_LT(0, strnumcmp("abcd12a", "abcd9a"));
+  EXPECT_EQ(0, strnumcmp("abcd12a", "abcd12a"));
+  EXPECT_GT(0, strnumcmp("abcd12a", "abcd23a"));
 }
 
 } // namespace cbu

@@ -28,6 +28,7 @@
 
 #include <cstdarg>
 #include <cstddef>
+#include <string_view>
 
 namespace cbu {
 inline namespace cbu_strutil {
@@ -43,6 +44,23 @@ std::size_t scnprintf(char *, std::size_t, const char *, ...) noexcept
 char *strdup_new(const char *)
   __attribute__((__malloc__, __nonnull__(1)));
 
+std::size_t strcnt(const char *, char) noexcept
+  __attribute__((__nonnull__(1), __pure__));
+
+std::size_t memcnt(const char *, char, size_t) noexcept
+  __attribute__((__nonnull__(1), __pure__));
+
+inline std::size_t memcnt(std::string_view sv, char c) noexcept {
+  return memcnt(sv.data(), c, sv.length());
+}
+
+// Same as strcmp, but compares contiguous digits as numbers
+int strnumcmp(const char *, const char *) noexcept
+  __attribute__((__nonnull__(1, 2), __pure__));
+
+
+// Same as std::reverse, but more optimized (at least for x86)
+char *reverse(char *, char *) noexcept;
 
 // c_str: Convert anything to a C-style string
 inline constexpr const char *c_str(const char *s) noexcept {

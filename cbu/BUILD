@@ -48,6 +48,7 @@ cc_test(
     '@gtest//:gtest_main',
   ],
   copts = [
+    '-march=native',
     '-std=gnu++2a',
     '-fconcepts',
     '-Wall',
