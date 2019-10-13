@@ -43,5 +43,23 @@ std::size_t scnprintf(char *, std::size_t, const char *, ...) noexcept
 char *strdup_new(const char *)
   __attribute__((__malloc__, __nonnull__(1)));
 
+
+// c_str: Convert anything to a C-style string
+inline constexpr const char *c_str(const char *s) noexcept {
+  return s;
+}
+
+template<typename T>
+requires requires(T s) { {s.c_str()} -> const char *; }
+inline constexpr const char *c_str(const T &s) noexcept(noexcept(s.c_str())) {
+  return s.c_str();
+}
+
+template<typename T>
+requires requires(T s) { {s->c_str()} -> const char *; }
+inline constexpr const char *c_str(const T &s) noexcept(noexcept(s->c_str())) {
+  return s->c_str();
+}
+
 } // namespace cbu_strutil
 } // namespace cbu
