@@ -37,7 +37,7 @@ namespace cbu {
 inline namespace cbu_fastarith {
 
 // r is the initial value, usually 1
-Raw_arithmetic{T}
+template <Raw_arithmetic T>
 inline constexpr T fast_powu(T a, unsigned t,
                              typename boost::type_identity<T>::type r = T(1)) {
   while (t) {
@@ -49,7 +49,7 @@ inline constexpr T fast_powu(T a, unsigned t,
   return r;
 }
 
-Raw_floating_point{T}
+template <Raw_floating_point T>
 inline constexpr T fast_powi(T a, int n,
                              typename boost::type_identity<T>::type r = T(1)) {
   if (n < 0) {
@@ -62,18 +62,20 @@ inline constexpr T fast_powi(T a, int n,
 // Equal without incurring warning
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wfloat-equal"
-EqualityComparable{A, B}
+template <typename A, typename B>
+requires EqualityComparable<A, B>
 inline constexpr bool equal(A a, B b) noexcept(noexcept(a == b)) {
   return (a == b);
 }
 
-EqualityComparable{A, B}
+template <typename A, typename B>
+requires EqualityComparable<A, B>
 inline constexpr bool unequal(A a, B b) noexcept(noexcept(a != b)) {
   return (a != b);
 }
 #pragma GCC diagnostic pop
 
-Raw_floating_point{T}
+template <Raw_floating_point T>
 inline constexpr T clamp(T v,
                          typename boost::type_identity<T>::type m,
                          typename boost::type_identity<T>::type M) noexcept {
@@ -85,19 +87,19 @@ inline constexpr T clamp(T v,
   return r;
 }
 
-inline std::uint32_t float_to_uint32(float x) requires sizeof(float) == 4 {
+inline std::uint32_t float_to_uint32(float x) requires (sizeof(float) == 4) {
   return bit_cast<std::uint32_t>(x);
 }
 
-inline float uint32_to_float(std::uint32_t u) requires sizeof(float) == 4 {
+inline float uint32_to_float(std::uint32_t u) requires (sizeof(float) == 4) {
   return bit_cast<float>(u);
 }
 
-inline std::uint64_t double_to_uint64(double x) requires sizeof(double) == 8 {
+inline std::uint64_t double_to_uint64(double x) requires (sizeof(double) == 8) {
   return bit_cast<std::uint64_t>(x);
 }
 
-inline double uint64_to_double(std::uint64_t u) requires sizeof(double) == 8 {
+inline double uint64_to_double(std::uint64_t u) requires (sizeof(double) == 8) {
   return bit_cast<double>(u);
 }
 

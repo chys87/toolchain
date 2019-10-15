@@ -43,13 +43,14 @@ template <typename T, typename U>
 concept Member_swap = requires (T &a, U &b) { a.swap(b); };
 
 // When a.swap(b) is available, use it; otherwise, fall back to std::swap
-Member_swap{T, U}
+template <typename T, typename U>
+requires Member_swap<T, U>
 inline void swap_impl(T &a, U &b) noexcept(noexcept(a.swap(b))) {
   a.swap(b);
 }
 
 template <typename T, typename U>
-requires !Member_swap<T, U>
+requires (!Member_swap<T, U>)
 inline void swap_impl(T &a, U &b) noexcept(noexcept(swap(a, b))) {
   swap(a, b);
 }

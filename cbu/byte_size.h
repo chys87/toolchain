@@ -52,7 +52,7 @@ inline constexpr U *byte_back(U *p, std::ptrdiff_t u) {
 }
 
 // A class with similar semantics as size_t, but stores size in bytes
-template <std::size_t N> requires N > 0
+template <std::size_t N> requires (N > 0)
 class ByteSize {
  private:
   explicit constexpr ByteSize(int, std::size_t bytes) noexcept : bytes_(bytes) {

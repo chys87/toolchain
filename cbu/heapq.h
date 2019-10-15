@@ -32,6 +32,7 @@
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
+#include "concepts.h"
 
 namespace cbu {
 inline namespace cbu_heapq {
@@ -117,7 +118,7 @@ template <typename Vec>
 concept Heapq_vector = requires(Vec &vec, std::size_t n) {
   typename Vec::value_type;
   { vec.resize(n) };
-  { vec[n] } -> typename Vec::value_type &;
+  { vec[n] } -> convertible_to<typename Vec::value_type &>;
 };
 
 namespace heapq_detail {

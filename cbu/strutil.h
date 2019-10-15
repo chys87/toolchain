@@ -29,6 +29,7 @@
 #include <cstdarg>
 #include <cstddef>
 #include <string_view>
+#include "concepts.h"
 
 namespace cbu {
 inline namespace cbu_strutil {
@@ -68,13 +69,13 @@ inline constexpr const char *c_str(const char *s) noexcept {
 }
 
 template<typename T>
-requires requires(T s) { {s.c_str()} -> const char *; }
+requires requires(T s) { {s.c_str()} -> convertible_to<const char *>; }
 inline constexpr const char *c_str(const T &s) noexcept(noexcept(s.c_str())) {
   return s.c_str();
 }
 
 template<typename T>
-requires requires(T s) { {s->c_str()} -> const char *; }
+requires requires(T s) { {s->c_str()} -> convertible_to<const char *>; }
 inline constexpr const char *c_str(const T &s) noexcept(noexcept(s->c_str())) {
   return s->c_str();
 }

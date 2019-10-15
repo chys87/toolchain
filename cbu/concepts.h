@@ -34,62 +34,66 @@
 namespace cbu {
 inline namespace cbu_concepts {
 
+// Same as C++2a std::convertible_to
+template <typename From, typename To>
+concept convertible_to = std::is_convertible_v<From, To>;
+
 template <typename T>
-concept bool String_view_compat = requires (const T &t) {
-  { t.data() } -> const char *;
-  { t.length() } -> std::size_t;
+concept String_view_compat = requires (const T &t) {
+  { t.data() } -> convertible_to<const char *>;
+  { t.length() } -> convertible_to<std::size_t>;
 };
 
 template <typename T>
-concept bool No_cv = std::is_same_v<std::remove_cv_t<T>, T>;
+concept No_cv = std::is_same_v<std::remove_cv_t<T>, T>;
 
 template <typename T>
-concept bool Arithmetic = std::is_arithmetic_v<T>;
+concept Arithmetic = std::is_arithmetic_v<T>;
 
 template <typename T>
-concept bool Raw_arithmetic = Arithmetic<T> && No_cv<T>;
+concept Raw_arithmetic = Arithmetic<T> && No_cv<T>;
 
 template <typename T>
-concept bool Floating_point = std::is_floating_point_v<T>;
+concept Floating_point = std::is_floating_point_v<T>;
 
 template <typename T>
-concept bool Raw_floating_point = std::is_floating_point_v<T> && No_cv<T>;
+concept Raw_floating_point = std::is_floating_point_v<T> && No_cv<T>;
 
 template <typename T>
-concept bool Integral = std::is_integral_v<T>;
+concept Integral = std::is_integral_v<T>;
 
 template <typename T>
-concept bool Raw_integral = Integral<T> && No_cv<T>;
+concept Raw_integral = Integral<T> && No_cv<T>;
 
 template <typename T>
-concept bool Unsigned_integral = Integral<T> && std::is_unsigned_v<T>;
+concept Unsigned_integral = Integral<T> && std::is_unsigned_v<T>;
 
 template <typename T>
-concept bool Raw_unsigned_integral = Unsigned_integral<T> && No_cv<T>;
+concept Raw_unsigned_integral = Unsigned_integral<T> && No_cv<T>;
 
 template <typename T>
-concept bool Signed_integral = Integral<T> && std::is_signed_v<T>;
+concept Signed_integral = Integral<T> && std::is_signed_v<T>;
 
 template <typename T>
-concept bool Raw_signed_integral = Signed_integral<T> && No_cv<T>;
+concept Raw_signed_integral = Signed_integral<T> && No_cv<T>;
 
 template <typename T>
-concept bool Char_type = Integral<T> && sizeof(T) == 1;
+concept Char_type = Integral<T> && sizeof(T) == 1;
 
 template <typename T>
-concept bool Raw_char_type = Char_type<T> && No_cv<T> && !std::is_array_v<T>;
+concept Raw_char_type = Char_type<T> && No_cv<T> && !std::is_array_v<T>;
 
 template <typename T>
-concept bool Trivial_type = std::is_trivial_v<T>;
+concept Trivial_type = std::is_trivial_v<T>;
 
 template <typename T>
-concept bool Raw_trivial_type =
+concept Raw_trivial_type =
     Trivial_type<T> and No_cv<T> and not std::is_array_v<T>;
 
 template <typename T, typename U>
-concept bool EqualityComparable = requires (T a, U b) {
-  { a == b } -> bool;
-  { a != b } -> bool;
+concept EqualityComparable = requires (T a, U b) {
+  { a == b } -> convertible_to<bool>;
+  { a != b } -> convertible_to<bool>;
 };
 
 } // namespace cbu_concepts

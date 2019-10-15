@@ -84,27 +84,33 @@ inline C *memdrop_be(C *s, T v) noexcept {
   return memdrop_bswap<std::endian::big, T>(s, v);
 }
 
-inline std::uint16_t mempick2(const Raw_char_type *s) noexcept {
+template <Raw_char_type C>
+inline std::uint16_t mempick2(const C *s) noexcept {
   return mempick<std::uint16_t>(s);
 }
 
-inline std::uint32_t mempick4(const Raw_char_type *s) noexcept {
+template <Raw_char_type C>
+inline std::uint32_t mempick4(const C *s) noexcept {
   return mempick<std::uint32_t>(s);
 }
 
-inline std::uint64_t mempick8(const Raw_char_type *s) noexcept {
+template <Raw_char_type C>
+inline std::uint64_t mempick8(const C *s) noexcept {
   return mempick<std::uint64_t>(s);
 }
 
-inline Raw_char_type *memdrop2(Raw_char_type *s, std::uint16_t v) noexcept {
+template <Raw_char_type C>
+inline C *memdrop2(C *s, std::uint16_t v) noexcept {
   return memdrop(s, v);
 }
 
-inline Raw_char_type *memdrop4(Raw_char_type *s, std::uint32_t v) noexcept {
+template <Raw_char_type C>
+inline C *memdrop4(C *s, std::uint32_t v) noexcept {
   return memdrop(s, v);
 }
 
-inline Raw_char_type *memdrop8(Raw_char_type *s, std::uint64_t v) noexcept {
+template <Raw_char_type C>
+inline C *memdrop8(C *s, std::uint64_t v) noexcept {
   return memdrop(s, v);
 }
 
