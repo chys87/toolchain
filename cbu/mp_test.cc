@@ -88,5 +88,12 @@ TEST_F(MpTest, Div) {
   EXPECT_EQ(81, remainder);
 }
 
+TEST_F(MpTest, Compare) {
+  EXPECT_GT(0, compare(a_, na_, b_, nb_));
+  EXPECT_GT(0, compare(a_, na_, b_, na_));
+  EXPECT_FALSE(eq(a_, na_, b_, nb_));
+  EXPECT_FALSE(eq(a_, na_, b_, na_));
+}
+
 } // namespace mp
 } // namespace cbu

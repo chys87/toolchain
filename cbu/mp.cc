@@ -28,6 +28,7 @@
 
 #include "mp.h"
 #include <string.h>
+#include <algorithm>
 #include <tuple>
 #if __has_include(<x86intrin.h>)
 # include <x86intrin.h>
@@ -208,6 +209,61 @@ size_t add(Word *r, const Word *a, size_t na,
 
 std::pair<size_t, Word> div(Word *r, const Word *a, size_t na, Word b) noexcept {
   return Div(r, a, na, b);
+}
+
+int compare(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
+  na = Minimize(a, na);
+  nb = Minimize(b, nb);
+  if (na > nb) {
+    return 1;
+  } else if (na < nb) {
+    return -1;
+  } else {
+    for (size_t k = na; k; --k) {
+      if (a[k - 1] != b[k - 1]) {
+        if (a[k - 1] > b[k - 1]) {
+          return 1;
+        } else {
+          return -1;
+        }
+      }
+    }
+    return 0;
+  }
+}
+
+bool eq(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
+  na = Minimize(a, na);
+  nb = Minimize(b, nb);
+  if (na != nb) {
+    return false;
+  }
+  while (na--) {
+    if (*a++ != *b++) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool ne(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
+  return !eq(a, na, b, nb);
+}
+
+bool gt(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
+  return compare(a, na, b, nb) > 0;
+}
+
+bool lt(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
+  return compare(a, na, b, nb) < 0;
+}
+
+bool ge(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
+  return compare(a, na, b, nb) >= 0;
+}
+
+bool le(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
+  return compare(a, na, b, nb) < 0;
 }
 
 size_t from_dec(Word *r, const char *s, size_t n) noexcept {

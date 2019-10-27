@@ -52,6 +52,14 @@ size_t add(Word *r, const Word *a, size_t na,
 size_t add(Word *r, const Word *a, size_t na, Word b) noexcept;
 std::pair<size_t, Word> div(Word *r, const Word *a, size_t na, Word b) noexcept;
 
+int compare(const Word *a, size_t na, const Word *b, size_t nb) noexcept;
+bool eq(const Word *a, size_t na, const Word *b, size_t nb) noexcept;
+bool ne(const Word *a, size_t na, const Word *b, size_t nb) noexcept;
+bool gt(const Word *a, size_t na, const Word *b, size_t nb) noexcept;
+bool lt(const Word *a, size_t na, const Word *b, size_t nb) noexcept;
+bool ge(const Word *a, size_t na, const Word *b, size_t nb) noexcept;
+bool le(const Word *a, size_t na, const Word *b, size_t nb) noexcept;
+
 size_t from_dec(Word *r, const char *s, size_t n) noexcept;
 char *to_dec(char *r, const Word *s, size_t n) noexcept;
 std::string to_dec(const Word *s, size_t n) noexcept;
