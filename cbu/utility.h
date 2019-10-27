@@ -122,5 +122,74 @@ private:
   T comp_;
 };
 
+// enumerate
+template <typename IT>
+class EnumerateIterator : public std::iterator<
+    std::forward_iterator_tag,
+    std::pair<
+      std::make_unsigned_t<typename std::iterator_traits<IT>::difference_type>,
+      typename std::iterator_traits<IT>::reference>,
+    typename std::iterator_traits<IT>::difference_type,
+    const std::pair<
+      std::make_unsigned_t<typename std::iterator_traits<IT>::difference_type>,
+      typename std::iterator_traits<IT>::reference>*,
+    std::pair<
+      std::make_unsigned_t<typename std::iterator_traits<IT>::difference_type>,
+      typename std::iterator_traits<IT>::reference>
+    // reference is not a real reference, as in istreambuf_iterator
+    > {
+ private:
+  using BaseTraits = std::iterator_traits<IT>;
+
+ public:
+  using index_type = std::make_unsigned_t<typename BaseTraits::difference_type>;
+  using base_reference = typename BaseTraits::reference;
+  using value_type = std::pair<index_type, base_reference>;
+
+ public:
+  explicit constexpr EnumerateIterator(index_type idx, IT it) noexcept :
+      idx_(idx), it_(it) {}
+
+  constexpr value_type operator*() const noexcept {
+    return {idx_, *it_};
+  }
+  // Unfortunately we cannot provide operator->
+  constexpr EnumerateIterator& operator ++ () noexcept {
+    ++idx_;
+    ++it_;
+    return *this;
+  }
+  constexpr EnumerateIterator operator ++ (int) noexcept {
+    return EnumerateIterator(idx_++, it_++);
+  }
+
+  constexpr bool operator == (const EnumerateIterator& o) const noexcept {
+    return (it_ == o.it_);
+  }
+  constexpr bool operator != (const EnumerateIterator& o) const noexcept {
+    return (it_ != o.it_);
+  }
+
+  constexpr IT base() const noexcept { return it_; }
+
+ private:
+  index_type idx_ {0};
+  IT it_;
+};
+
+template <typename C>
+inline constexpr auto
+enumerate(C& cont) {
+  return IteratorRange{EnumerateIterator(0, std::begin(cont)),
+                       EnumerateIterator(0, std::end(cont))};
+}
+
+template <typename C>
+inline constexpr auto
+enumerate(const C& cont) {
+  return IteratorRange{EnumerateIterator(0, std::begin(cont)),
+                       EnumerateIterator(0, std::end(cont))};
+}
+
 } // inline namespace cbu_utility
 } // namespace cbu

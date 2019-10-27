@@ -75,4 +75,46 @@ TEST(ReversedComparatorTest, Compare) {
   EXPECT_FALSE(rrcmp(2, 1));
 }
 
+TEST(EnumerateTest, StlContainer) {
+  std::vector<std::string> x {"a", "b", "c"};
+  EXPECT_EQ(3, std::size(enumerate(x)));
+  for (auto [idx, v] : enumerate(x)) {
+    v += std::to_string(idx);
+  }
+  EXPECT_EQ("a0", x[0]);
+  EXPECT_EQ("b1", x[1]);
+  EXPECT_EQ("c2", x[2]);
+}
+
+TEST(EnumerateTest, Array) {
+  std::string x[] {"a", "b", "c"};
+  EXPECT_EQ(3, std::size(enumerate(x)));
+  for (auto [idx, v] : enumerate(x)) {
+    v += std::to_string(idx);
+  }
+  EXPECT_EQ("a0", x[0]);
+  EXPECT_EQ("b1", x[1]);
+  EXPECT_EQ("c2", x[2]);
+}
+
+TEST(EnumerateTest, Reversed) {
+  int v[] {1, 2, 3};
+  for (auto [idx, v] : enumerate(reversed(v))) {
+    v += idx;
+  }
+  EXPECT_EQ(3, v[0]);
+  EXPECT_EQ(3, v[1]);
+  EXPECT_EQ(3, v[2]);
+}
+
+TEST(EnumerateTest, Recursive) {
+  int v[] {1, 2, 3};
+  for (auto [idx, v] : enumerate(enumerate(v))) {
+    v.second += v.first + idx;
+  }
+  EXPECT_EQ(1, v[0]);
+  EXPECT_EQ(4, v[1]);
+  EXPECT_EQ(7, v[2]);
+}
+
 } // namespace cbu
