@@ -35,7 +35,11 @@ namespace cbu {
 inline namespace cbu_range {
 
 template <typename T>
-class RangeIterator : public std::iterator<std::random_access_iterator_tag, T> {
+class RangeIterator : public std::iterator<
+    std::random_access_iterator_tag, T,
+    std::make_signed_t<T>,
+    const T*,
+    T /* reference is not a real reference, as in istreambuf_iterator */ > {
 public:
   using difference_type = std::make_signed_t<T>;
 
