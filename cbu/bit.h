@@ -227,25 +227,34 @@ inline constexpr T bzhi(T x, unsigned k) noexcept {
 
 // An iterator to iterate over set bits
 template <typename T> requires std::is_unsigned<T>::value
-class BitIterator : public std::iterator<std::forward_iterator_tag, unsigned> {
+class BitIterator : public std::iterator<
+    std::forward_iterator_tag, unsigned int, int, const unsigned int*,
+    unsigned int
+    // reference is not a real reference, as in istreambuf_iterator
+    > {
 public:
-  explicit constexpr BitIterator(T v = 0) : v_(v) {}
-  BitIterator(const BitIterator &) = default;
-  BitIterator &operator = (const BitIterator &) = default;
+  explicit constexpr BitIterator(T v = 0) noexcept : v_(v) {}
+  constexpr BitIterator(const BitIterator &) noexcept = default;
+  constexpr BitIterator &operator = (const BitIterator &) noexcept = default;
 
-  unsigned operator * () const {
+  constexpr unsigned operator * () const noexcept {
     return ctz(std::common_type_t<T, unsigned>(v_));
   }
 
-  BitIterator &operator ++ () {
-    v_ = blsr(v_); return *this;
+  constexpr BitIterator &operator ++ () {
+    v_ = blsr(v_);
+    return *this;
   }
-  BitIterator operator ++ (int) {
+  constexpr BitIterator operator ++ (int) {
     return BitIterator(std::exchange(v_, blsr(v_)));
   }
 
-  bool operator == (const BitIterator &o) const { return (v_ == o.v_); }
-  bool operator != (const BitIterator &o) const { return (v_ != o.v_); }
+  constexpr bool operator == (const BitIterator &o) const noexcept {
+    return (v_ == o.v_);
+  }
+  constexpr bool operator != (const BitIterator &o) const noexcept {
+    return (v_ != o.v_);
+  }
 
 private:
   T v_;
@@ -258,6 +267,9 @@ set_bits(T v) {
   using UT = std::make_unsigned_t<T>;
   return {BitIterator<UT>(v), BitIterator<UT>(0)};
 }
+
+static_assert(std::size(set_bits(0x123456789abcdef)) ==
+              popcnt(0x123456789abcdef));
 
 } // inline namespace cbu_bit
 } // namespace cbu
