@@ -122,6 +122,17 @@ private:
   T comp_;
 };
 
+// ArrowOperatorTempObject
+// Provide operator -> for operator* that doesn't return a reference
+template <typename T>
+struct ArrowOperatorTempObject {
+  const T value;
+
+  constexpr const T* operator->() const noexcept {
+    return std::addressof(value);
+  }
+};
+
 // enumerate
 template <typename IT>
 class EnumerateIterator : public std::iterator<
@@ -153,7 +164,11 @@ class EnumerateIterator : public std::iterator<
   constexpr value_type operator*() const noexcept {
     return {idx_, *it_};
   }
-  // Unfortunately we cannot provide operator->
+
+  constexpr ArrowOperatorTempObject<value_type> operator->() const noexcept {
+    return {**this};
+  }
+
   constexpr EnumerateIterator& operator ++ () noexcept {
     ++idx_;
     ++it_;

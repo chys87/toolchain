@@ -117,4 +117,17 @@ TEST(EnumerateTest, Recursive) {
   EXPECT_EQ(7, v[2]);
 }
 
+TEST(EnumerateTest, ArrowOperator) {
+  constexpr std::string_view x[] {"hello", "world"};
+  auto enumer = enumerate(x);
+  auto it = enumer.begin();
+  EXPECT_EQ(0, it->first);
+  EXPECT_EQ("hello", it->second);
+  ++it;
+  EXPECT_EQ(1, it->first);
+  EXPECT_EQ("world", it->second);
+  ++it;
+  EXPECT_EQ(enumer.end(), it);
+}
+
 } // namespace cbu
