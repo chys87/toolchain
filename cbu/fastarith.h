@@ -87,20 +87,42 @@ inline constexpr T clamp(T v,
   return r;
 }
 
-inline std::uint32_t float_to_uint32(float x) requires (sizeof(float) == 4) {
-  return bit_cast<std::uint32_t>(x);
+namespace fastarith_detail {
+
+void error() __attribute__((__error__("Unreachable code")));
+
+} // namespace fastarith_detail
+
+inline std::uint32_t float_to_uint32(float x) {
+  if constexpr (sizeof(float) == 4) {
+    return bit_cast<std::uint32_t>(x);
+  } else {
+    fastarith_detail::error();
+  }
 }
 
-inline float uint32_to_float(std::uint32_t u) requires (sizeof(float) == 4) {
-  return bit_cast<float>(u);
+inline float uint32_to_float(std::uint32_t u) {
+  if constexpr (sizeof(float) == 4) {
+    return bit_cast<float>(u);
+  } else {
+    fastarith_detail::error();
+  }
 }
 
-inline std::uint64_t double_to_uint64(double x) requires (sizeof(double) == 8) {
-  return bit_cast<std::uint64_t>(x);
+inline std::uint64_t double_to_uint64(double x) {
+  if constexpr (sizeof(double) == 8) {
+    return bit_cast<std::uint64_t>(x);
+  } else {
+    fastarith_detail::error();
+  }
 }
 
-inline double uint64_to_double(std::uint64_t u) requires (sizeof(double) == 8) {
-  return bit_cast<double>(u);
+inline double uint64_to_double(std::uint64_t u) {
+  if constexpr (sizeof(double) == 8) {
+    return bit_cast<double>(u);
+  } else {
+    fastarith_detail::error();
+  }
 }
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
