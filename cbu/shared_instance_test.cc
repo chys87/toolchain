@@ -49,7 +49,6 @@ TEST(SharedInstanceTest, Uniqueness) {
 TEST(SharedInstanceTest, ConstInit) {
   EXPECT_EQ(0, (shared_constinit<int, 0>()));
   EXPECT_EQ(5, (shared_constinit<int, 5>()));
-  EXPECT_EQ("xxxxx", (shared_constinit<std::string, 5, 'x'>()));
 }
 #endif
 
