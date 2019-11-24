@@ -1,11 +1,14 @@
+#SHELL = /bin/bash
+load ~/bin/egmake.so
+
+SELF_MAKEFILE := $(EGM.realpath $(lastword $(MAKEFILE_LIST)))
+MULTIPLE_OUTPUT_HELPER := $(dir $(SELF_MAKEFILE))/multiple-output-helper.py
+
 ifeq "$(origin V)" "command line"
  Q =
 else
  Q = @$(if $(NAME),printf '[%-5s] $@\n' '$(NAME)'; )
 endif
-
-#SHELL = /bin/bash
-load ~/bin/egmake.so
 
 .SUFFIXES:
 .DELETE_ON_ERROR:
@@ -34,9 +37,14 @@ AUTO_GENERATOR_PYTHON := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.*.py))
 AUTO_GENERATED_PYTHON := $(AUTO_GENERATOR_PYTHON:$(DIR)/%.py=$(BUILDDIR)/%)
 AUTO_GENERATED_PYTHON_DEPS := $(AUTO_GENERATOR_PYTHON:$(DIR)/%.py=$(BUILDDIR)/%.py.P)
 
-AUTO_GENERATOR := $(AUTO_GENERATOR_PYTHON)
-AUTO_GENERATED := $(AUTO_GENERATED_PYTHON)
-AUTO_GENERATED_DEPS := $(AUTO_GENERATED_PYTHON_DEPS)
+AUTO_GENERATOR_PROTOBUF := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.proto))
+AUTO_GENERATED_PROTOBUF_SRCS := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILDDIR)/%.pb.cc)
+AUTO_GENERATED_PROTOBUF_HEADERS := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILDDIR)/%.pb.h)
+AUTO_GENERATED_PROTOBUF_DEPS := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILDDIR)/%.proto.P)
+
+AUTO_GENERATOR := $(AUTO_GENERATOR_PYTHON) $(AUTO_GENERATOR_PYTHON)
+AUTO_GENERATED := $(AUTO_GENERATED_PYTHON) $(AUTO_GENERATED_PROTOBUF_SRCS) $(AUTO_GENERATED_PROTOBUF_HEADERS)
+AUTO_GENERATED_DEPS := $(AUTO_GENERATED_PYTHON_DEPS) $(AUTO_GENERATED_PROTOBUF_DEPS)
 AUTO_GENERATED_SRCS := $(filter %.c %.cc %.cpp %.C %.cxx %.S, $(AUTO_GENERATED))
 AUTO_GENERATED_HEADERS := $(filter %.h %.hpp, $(AUTO_GENERATED))
 
@@ -73,7 +81,7 @@ DEPS    := $(sort $(CDEPS) $(CXXDEPS) $(ASMDEPS))
 CC := gcc
 CXX := g++
 
-INCLUDES := $(foreach x,$(AUTO_GENERATED_HEADERS),-iquote $(dir $(x)))
+INCLUDES := -iquote $(DIR) -iquote $(BUILDDIR) $(foreach x,$(AUTO_GENERATED_HEADERS),-iquote $(dir $(x)))
 LIBS :=
 DEFS := -D _GNU_SOURCE -D NDEBUG \
 	-D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS \
@@ -185,7 +193,7 @@ $(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(AUTO_GENERATED
 endef
 
 define define_target
-$(call define_target_impl,$(1),$(patsubst %.py,%,$(2)))
+$(call define_target_impl,$(1),$(patsubst %.proto,%.pb.cc,$(patsubst %.py,%,$(2))))
 endef
 
 # Make sure headers are generated earlier than everything else
@@ -357,6 +365,22 @@ $(AUTO_GENERATED_PYTHON): $(BUILDDIR)/%: | $(BUILDDIR)/%.py.P
 
 ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
  -include $(AUTO_GENERATED_PYTHON_DEPS)
+endif
+
+$(AUTO_GENERATED_PROTOBUF_SRCS): private NAME := PROTOC
+$(AUTO_GENERATED_PROTOBUF_SRCS): $(BUILDDIR)/%.pb.cc:$(DIR)/%.proto
+	$(Q)$(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$(@:%.pb.cc=%.proto.P) --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+
+$(AUTO_GENERATED_PROTOBUF_HEADERS): private NAME := PROTOC
+$(AUTO_GENERATED_PROTOBUF_HEADERS): $(BUILDDIR)/%.pb.h:$(DIR)/%.proto
+	$(Q)$(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$(@:%.pb.h=%.proto.P) --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+
+$(AUTO_GENERATED_PROTOBUF_DEPS): private NAME := PROTOC
+$(AUTO_GENERATED_PROTOBUF_DEPS): $(BUILDDIR)/%.proto.P:$(DIR)/%.proto
+	$(Q)$(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$@ --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+
+ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
+ -include $(AUTO_GENERATED_PROTOBUF_DEPS)
 endif
 
 # Update ctags
