@@ -36,6 +36,7 @@
 #endif
 
 #include "stdhack.h"
+#include <cassert>
 #include <string>
 
 // Hacks standard containers to add more functionality
@@ -54,6 +55,27 @@ T *extend_impl(std::basic_string<T>* buf, std::size_t n) {
 #else
   buf->resize(buf->size() + n);
   return (buf->data() + buf->size() - n);
+#endif
+}
+
+template <typename T>
+void truncate_impl(std::basic_string<T>* buf, std::size_t n) {
+  assert(n <= buf->size());
+#if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
+  buf->_M_set_length(n);
+#else
+  buf->resize(n);
+#endif
+}
+
+template <typename T>
+void truncate_unsafe_impl(std::basic_string<T>* buf, std::size_t n) {
+  assert(n <= buf->size());
+  assert((*buf)[n] == '\0');
+#if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
+  buf->_M_length(n);
+#else
+  buf->resize(n);
 #endif
 }
 
@@ -78,6 +100,32 @@ char32_t *extend(std::u32string* buf, std::size_t n) {
 #if defined __cpp_char8_t && __cpp_char8_t >= 201811
 char8_t *extend(std::u8string* buf, std::size_t n) {
   return extend_impl(buf, n);
+}
+#endif
+
+void truncate(std::string* buf, std::size_t n) { truncate_impl(buf, n); }
+void truncate(std::wstring* buf, std::size_t n) { truncate_impl(buf, n); }
+void truncate(std::u16string* buf, std::size_t n) { truncate_impl(buf, n); }
+void truncate(std::u32string* buf, std::size_t n) { truncate_impl(buf, n); }
+#if defined __cpp_char8_t && __cpp_char8_t >= 201811
+void truncate(std::u8string* buf, std::size_t n) { truncate_impl(buf, n); }
+#endif
+
+void truncate_unsafe(std::string* buf, std::size_t n) {
+  truncate_unsafe_impl(buf, n);
+}
+void truncate_unsafe(std::wstring* buf, std::size_t n) {
+  truncate_unsafe_impl(buf, n);
+}
+void truncate_unsafe(std::u16string* buf, std::size_t n) {
+  truncate_unsafe_impl(buf, n);
+}
+void truncate_unsafe(std::u32string* buf, std::size_t n) {
+  truncate_unsafe_impl(buf, n);
+}
+#if defined __cpp_char8_t && __cpp_char8_t >= 201811
+void truncate_unsafe(std::u8string* buf, std::size_t n) {
+  truncate_unsafe_impl(buf, n);
 }
 #endif
 

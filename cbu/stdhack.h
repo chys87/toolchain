@@ -43,5 +43,24 @@ char32_t *extend(std::u32string* buf, std::size_t n);
 char8_t *extend(std::u8string* buf, std::size_t n);
 #endif
 
+// Same as resize, but caller should guarantee n <= buf->size()
+void truncate(std::string* buf, std::size_t n);
+void truncate(std::wstring* buf, std::size_t n);
+void truncate(std::u16string* buf, std::size_t n);
+void truncate(std::u32string* buf, std::size_t n);
+#if defined __cpp_char8_t && __cpp_char8_t >= 201811
+void truncate(std::u8string* buf, std::size_t n);
+#endif
+
+// Same as resize, but caller should guarantee n <= buf->size()
+// and (*buf)[n] == '\0'
+void truncate_unsafe(std::string* buf, std::size_t n);
+void truncate_unsafe(std::wstring* buf, std::size_t n);
+void truncate_unsafe(std::u16string* buf, std::size_t n);
+void truncate_unsafe(std::u32string* buf, std::size_t n);
+#if defined __cpp_char8_t && __cpp_char8_t >= 201811
+void truncate_unsafe(std::u8string* buf, std::size_t n);
+#endif
+
 } // namespace cbu_stdhack
 } // namespace cbu

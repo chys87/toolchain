@@ -28,12 +28,16 @@
 
 #include "stdhack.h"
 #include <gtest/gtest.h>
+#include <string_view>
 
 // Hacks standard containers to add more functionality
 
 namespace cbu {
 
-TEST(ExtendTest, Default) {
+using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
+
+TEST(StdHackTest, Extend) {
   std::string u;
   char *w = extend(&u, 1);
 
@@ -45,6 +49,19 @@ TEST(ExtendTest, Default) {
   ASSERT_EQ(6, u.size());
   EXPECT_EQ(u.data() + 1, w);
   EXPECT_EQ('\0', u[6]);
+}
+
+TEST(StdHackTest, Truncate) {
+  std::string u = "abcdefghijklmn"s;
+  truncate(&u, 4);
+  EXPECT_EQ("abcd"sv, u);
+}
+
+TEST(StdHackTest, TruncateUnsafe) {
+  std::string u = "abcd\0efgh"s;
+  EXPECT_EQ(9, u.length());
+  truncate(&u, 4);
+  EXPECT_EQ("abcd"sv, u);
 }
 
 } // namespace cbu
