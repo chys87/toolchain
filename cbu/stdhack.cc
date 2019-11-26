@@ -35,6 +35,7 @@
 # define protected public
 #endif
 
+#include "stdhack.h"
 #include <string>
 
 // Hacks standard containers to add more functionality
