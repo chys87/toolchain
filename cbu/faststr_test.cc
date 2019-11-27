@@ -81,7 +81,7 @@ TEST(FastStrTest, NPrintf) {
 
 TEST(FastStrTest, Append) {
   std::wstring u = L"Hello";
-  append(&u, {L" "sv, L"world"sv});
+  append(&u, {L" ", L"world"});
   EXPECT_EQ(L"Hello world"sv, u);
 }
 

@@ -35,6 +35,7 @@
 #include <initializer_list>
 #include <string>
 #include <utility>
+#include <boost/type_traits/type_identity.hpp>
 #include "byteorder.h"
 #include "concepts.h"
 #include "stdhack.h"
@@ -205,7 +206,8 @@ void append(std::basic_string<C>* res,
 
 template <Std_string_char C>
 void append(std::basic_string<C>* res,
-            std::initializer_list<std::basic_string_view<C>> il) {
+            typename boost::type_identity<
+              std::initializer_list<std::basic_string_view<C>>>::type il) {
   append(res,
          CBU_FASTSTR_SPAN<const std::basic_string_view<C>>(il.begin(),
                                                            il.size()));
