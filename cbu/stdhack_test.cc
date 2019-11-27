@@ -52,15 +52,23 @@ TEST(StdHackTest, Extend) {
 }
 
 TEST(StdHackTest, Truncate) {
-  std::string u = "abcdefghijklmn"s;
+  std::string u = "abcdefg"s;
+  truncate(&u, 16);
+  EXPECT_EQ(7, u.length());
   truncate(&u, 4);
   EXPECT_EQ("abcd"sv, u);
 }
 
 TEST(StdHackTest, TruncateUnsafe) {
+  std::string u = "abcdefghijklmn"s;
+  truncate_unsafe(&u, 4);
+  EXPECT_EQ("abcd"sv, u);
+}
+
+TEST(StdHackTest, TruncateUnsafer) {
   std::string u = "abcd\0efgh"s;
   EXPECT_EQ(9, u.length());
-  truncate(&u, 4);
+  truncate_unsafer(&u, 4);
   EXPECT_EQ("abcd"sv, u);
 }
 
