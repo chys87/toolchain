@@ -31,6 +31,9 @@
 
 namespace cbu {
 
+using namespace std::literals::string_literals;
+using namespace std::literals::string_view_literals;
+
 class MemPickDropTest : public testing::Test {
  public:
   void SetUp() override {
@@ -62,6 +65,18 @@ TEST_F(MemPickDropTest, MemDropNumber) {
   EXPECT_EQ(static_cast<char>(0xcd), buf_[1]);
   EXPECT_EQ(static_cast<char>(0xab), buf_[2]);
   EXPECT_EQ(static_cast<char>(0x03), buf_[3]);
+}
+
+TEST(FastStrTest, NPrintf) {
+  std::string u;
+  EXPECT_EQ(11, append_nprintf(&u, 32, "Hello %s", "world"));
+  EXPECT_EQ("Hello world"sv, u);
+
+  u.clear();
+  EXPECT_EQ(11, append_nprintf(&u, 2, "Hello %s", "world"));
+  EXPECT_EQ("Hello world"sv, u);
+
+  EXPECT_EQ("Hello world"sv, nprintf(2, "Hello %s", "world"));
 }
 
 } // namespace cbu

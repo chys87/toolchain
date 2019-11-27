@@ -27,7 +27,12 @@
  */
 
 #include "faststr.h"
+#include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
+#include "bit.h"
+#include "fastarith.h"
+#include "stdhack.h"
 
 namespace cbu {
 inline namespace cbu_faststr {
@@ -77,6 +82,83 @@ void *memdrop(void *dst, uint64_t v, size_t n) noexcept {
   } else {
     return mempcpy(dst, &v, n);
   }
+}
+
+namespace {
+
+// We assume allocating 2**n bytes is optimal
+inline std::size_t roundup_cap_nonzero(std::size_t n) {
+  return (std::size_t(2) << bsr(n)) - 1;
+}
+
+} // namespace
+
+std::size_t append_vnprintf(std::string* res, std::size_t n,
+                            const char* format, std::va_list ap) {
+  std::va_list ap_copy;
+  va_copy(ap_copy, ap);
+
+  // Argument n includes terminator.  We now don't count it, however.
+  // Now we interpret n only as a hint.
+  // It is automatically increased if too small.
+  if (sub_overflow(&n, 2)) {
+    n = 0;
+  }
+  ++n;
+
+  std::size_t oldlen = res->size();
+
+  n = roundup_cap_nonzero(oldlen + n) - oldlen;
+
+  char *w = extend(res, n);
+  int save_errno = errno;
+  int extra_len = std::vsnprintf(w, n + 1, format, ap);
+  errno = save_errno; // For %m
+  std::size_t el = unsigned(extra_len);
+  if (extra_len < 0) {
+    // Something is really wrong. Leave original string intact
+    truncate_unsafer(res, oldlen);
+    return 0;
+  } else if (el <= n) {
+    // n was a good guess
+    truncate_unsafer(res, oldlen + el);
+    return extra_len;
+  } else {
+    // n was a bad guess. Increase it
+    w = extend(res, el - n) - n;
+    int new_extra_len = std::vsnprintf(w, el + 1, format, ap_copy);
+    if (unsigned(new_extra_len) == el) {
+      // The expected situation. Nothing to do
+      return el;
+    } else {
+      // Something is really wrong. Leave original string intact
+      truncate_unsafer(res, oldlen);
+      return 0;
+    }
+  }
+}
+
+std::size_t append_nprintf(std::string* res, std::size_t hint_size,
+                           const char *format, ...) {
+  std::va_list ap;
+  va_start(ap, format);
+  return append_vnprintf(res, hint_size, format, ap);
+  va_end(ap);
+}
+
+std::string vnprintf(std::size_t hint_size,
+                     const char* format, std::va_list ap) {
+  std::string res;
+  append_vnprintf(&res, hint_size, format, ap);
+  return res;
+}
+
+std::string nprintf(std::size_t hint_size,
+                    const char* format, ...) {
+  std::va_list ap;
+  va_start(ap, format);
+  return vnprintf(hint_size, format, ap);
+  va_end(ap);
 }
 
 } // namespace cbu_faststr

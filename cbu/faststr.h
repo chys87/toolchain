@@ -29,8 +29,10 @@
 #pragma once
 
 #include <bit>
+#include <cstdarg>
 #include <cstdint>
 #include <cstring>
+#include <string>
 #include <utility>
 #include "byteorder.h"
 #include "concepts.h"
@@ -159,6 +161,23 @@ template <Raw_char_type T>
 inline T *memdrop(T *dst, std::uint64_t v, std::size_t n) {
   return static_cast<T *>(memdrop(static_cast<void *>(dst), v, n));
 }
+
+// Use sprintf functions with std::string
+std::size_t append_vnprintf(std::string* res, std::size_t hint_size,
+                            const char* format, std::va_list ap)
+  __attribute__((__format__(__printf__, 3, 0)));
+
+std::size_t append_nprintf(std::string* res, std::size_t hint_size,
+                           const char *format, ...)
+  __attribute__((__format__(__printf__, 3, 4)));
+
+std::string vnprintf(std::size_t hint_size,
+                     const char* format, std::va_list ap)
+  __attribute__((__format__(__printf__, 2, 0)));
+
+std::string nprintf(std::size_t hint_size,
+                    const char* format, ...)
+  __attribute__((__format__(__printf__, 2, 3)));
 
 } // namespace cbu_faststr
 } // namespace cbu
