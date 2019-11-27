@@ -96,5 +96,17 @@ concept EqualityComparable = requires (T a, U b) {
   { a != b } -> convertible_to<bool>;
 };
 
+template <typename T>
+concept Std_string_char = std::is_same_v<T, char> ||
+  std::is_same_v<T, wchar_t> ||
+  std::is_same_v<T, char16_t> ||
+  std::is_same_v<T, char32_t> ||
+#if defined __cpp_char8_t && __cpp_char8_t >= 201811
+  std::is_same_v<T, char8_t>
+#else
+  false
+#endif
+  ;
+
 } // namespace cbu_concepts
 } // namespace cbu

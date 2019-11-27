@@ -32,10 +32,20 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 #include <string>
 #include <utility>
 #include "byteorder.h"
 #include "concepts.h"
+#include "stdhack.h"
+
+#if __has_include(<span>)
+# include <span>
+# define CBU_FASTSTR_SPAN ::std::span
+#else
+# include <boost/beast/core/span.hpp>
+# define CBU_FASTSTR_SPAN ::boost::beast::span
+#endif
 
 namespace cbu {
 inline namespace cbu_faststr {
@@ -179,5 +189,45 @@ std::string nprintf(std::size_t hint_size,
                     const char* format, ...)
   __attribute__((__format__(__printf__, 2, 3)));
 
+// append
+template <Std_string_char C>
+void append(std::basic_string<C>* res,
+            CBU_FASTSTR_SPAN<const std::basic_string_view<C>> sp) {
+  std::size_t l = 0;
+  for (auto sv: sp) {
+    l += sv.length();
+  }
+  C* w = extend(res, l);
+  for (auto sv: sp) {
+    w = Mempcpy(w, sv.data(), sv.length() * sizeof(C));
+  }
+}
+
+template <Std_string_char C>
+void append(std::basic_string<C>* res,
+            std::initializer_list<std::basic_string_view<C>> il) {
+  append(res,
+         CBU_FASTSTR_SPAN<const std::basic_string_view<C>>(il.begin(),
+                                                           il.size()));
+}
+
+template <Std_string_char C>
+std::basic_string<C> concat(
+    CBU_FASTSTR_SPAN<const std::basic_string_view<C>> sp) {
+  std::basic_string<C> res;
+  append(&res, sp);
+  return res;
+}
+
+template <Std_string_char C>
+std::basic_string<C> concat(
+    std::initializer_list<std::basic_string_view<C>> il) {
+  std::basic_string<C> res;
+  append(&res, il);
+  return res;
+}
+
 } // namespace cbu_faststr
 } // namespace cbu
+
+#undef CBU_FASTSTR_SPAN

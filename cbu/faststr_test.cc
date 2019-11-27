@@ -79,4 +79,15 @@ TEST(FastStrTest, NPrintf) {
   EXPECT_EQ("Hello world"sv, nprintf(2, "Hello %s", "world"));
 }
 
+TEST(FastStrTest, Append) {
+  std::wstring u = L"Hello";
+  append(&u, {L" "sv, L"world"sv});
+  EXPECT_EQ(L"Hello world"sv, u);
+}
+
+TEST(FastStrTest, Concat) {
+  EXPECT_EQ(U"Hello world"sv,
+            concat({U"Hello"sv, U" "sv, U"world"sv}));
+}
+
 } // namespace cbu
