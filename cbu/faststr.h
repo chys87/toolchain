@@ -221,13 +221,33 @@ std::basic_string<C> concat(
   return res;
 }
 
-template <Std_string_char C>
-std::basic_string<C> concat(
-    std::initializer_list<std::basic_string_view<C>> il) {
-  std::basic_string<C> res;
-  append(&res, il);
-  return res;
+// enumerate all types, so that the user can use initializer list more easily
+inline std::string concat(std::initializer_list<std::string_view> il) {
+  return concat(CBU_FASTSTR_SPAN<const std::string_view>(
+      il.begin(), il.size()));
 }
+
+inline std::wstring concat(std::initializer_list<std::wstring_view> il) {
+  return concat(CBU_FASTSTR_SPAN<const std::wstring_view>(
+      il.begin(), il.size()));
+}
+
+inline std::u16string concat(std::initializer_list<std::u16string_view> il) {
+  return concat(CBU_FASTSTR_SPAN<const std::u16string_view>(
+      il.begin(), il.size()));
+}
+
+inline std::u32string concat(std::initializer_list<std::u32string_view> il) {
+  return concat(CBU_FASTSTR_SPAN<const std::u32string_view>(
+      il.begin(), il.size()));
+}
+
+#if defined __cpp_char8_t && __cpp_char8_t >= 201811
+inline std::u8string concat(std::initializer_list<std::u8string_view> il) {
+  return concat(CBU_FASTSTR_SPAN<const std::u8string_view>(
+      il.begin(), il.size()));
+}
+#endif
 
 } // namespace cbu_faststr
 } // namespace cbu
