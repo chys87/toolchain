@@ -116,6 +116,31 @@ class ImmutableBasicString {
 
   constexpr operator string_view() const noexcept { return view(); }
 
+  friend bool operator == (const ImmutableBasicString& a,
+                           const ImmutableBasicString& b) noexcept {
+    return a.view() == b.view();
+  }
+  friend bool operator != (const ImmutableBasicString& a,
+                           const ImmutableBasicString& b) noexcept {
+    return a.view() != b.view();
+  }
+  friend bool operator <= (const ImmutableBasicString& a,
+                           const ImmutableBasicString& b) noexcept {
+    return a.view() <= b.view();
+  }
+  friend bool operator >= (const ImmutableBasicString& a,
+                           const ImmutableBasicString& b) noexcept {
+    return a.view() >= b.view();
+  }
+  friend bool operator < (const ImmutableBasicString& a,
+                           const ImmutableBasicString& b) noexcept {
+    return a.view() < b.view();
+  }
+  friend bool operator > (const ImmutableBasicString& a,
+                           const ImmutableBasicString& b) noexcept {
+    return a.view() > b.view();
+  }
+
  private:
   template <typename R, typename Visitor>
   constexpr R dispatch(Visitor visitor) const noexcept {
