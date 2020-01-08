@@ -101,6 +101,7 @@ class ImmutableBasicString {
     return dispatch<size_type>([](const auto& v) { return v.size(); });
   }
   constexpr size_type length() const noexcept { return size(); }
+  [[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
 
   constexpr const C* begin() const noexcept { return data(); }
   constexpr const C* end() const noexcept { return data() + size(); }
