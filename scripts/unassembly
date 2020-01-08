@@ -159,6 +159,10 @@ def cppfilter(fi):
                 br'__v16qi'),
             (re.compile(br'long long __vector\(4\)'),
                 br'__m256i'),
+
+            # absl specific
+            (re.compile(br'absl::flat_hash_set<(.+), absl::hash_internal::Hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
+             br'::absl::flat_hash_set<\1>'),
         )
 
     def do_replace(data):
