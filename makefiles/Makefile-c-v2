@@ -189,7 +189,7 @@ $(BUILDDIR)/$(1).n.out: private CLINKER = $(CXX)
 endif
 $(BUILDDIR)/$(1).n.out: private NAME := LD
 $(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(AUTO_GENERATED_HEADERS)
-	$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(LIBS)
+	$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(LIBS) $$(LIBS-$(1))
 endef
 
 define define_target
