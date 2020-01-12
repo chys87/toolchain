@@ -339,7 +339,7 @@ ifneq "$(MISSING_DEPS)" ""
 endif
 
 $(OBJS): $$(SRC-$$(basename $$(call strip_src,$$@)))
-	$(Q)mkdir -p $(dir $@) && $(COMPILER) -MD -MP -MF '$(@:%.o=%.P)' -frandom-seed=$(<F) -c $(FLAGS) $(FLAGS-$(<F)) -o $@ $< \
+	$(Q)mkdir -p $(dir $@) && $(COMPILER) -MD -MP -MF '$(@:%.o=%.P)' -MT '$@ $(@:%.o=%.P)' -frandom-seed=$(<F) -c $(FLAGS) $(FLAGS-$(<F)) -o $@ $< \
 		|| (rm -f $(@:%.o=%.P); exit 1)
 
 relpath = $(shell python -c 'import os; print(os.path.relpath("$(1)", "$(2)"));')
