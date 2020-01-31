@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -69,6 +69,21 @@ TEST(MapUToFloat, Double) {
   EXPECT_DOUBLE_EQ(1.0, map_uint64_to_double(UINT64_MAX));
   EXPECT_GT(1.0, map_uint64_to_double(UINT64_MAX));
   EXPECT_LT(0.0, map_uint64_to_double(1));
+}
+
+TEST(PowLog10, ILog10) {
+  EXPECT_EQ(0, ilog10(0));
+  EXPECT_EQ(0, ilog10(1));
+  EXPECT_EQ(0, ilog10(2));
+  EXPECT_EQ(0, ilog10(9));
+  EXPECT_EQ(1, ilog10(10));
+  EXPECT_EQ(1, ilog10(99));
+  EXPECT_EQ(2, ilog10(100));
+  EXPECT_EQ(2, ilog10(999));
+  EXPECT_EQ(3, ilog10(1000));
+  EXPECT_EQ(3, ilog10(9999));
+  EXPECT_EQ(4, ilog10(10000));
+  EXPECT_EQ(9, ilog10(4294967295));
 }
 
 } // namespace cbu

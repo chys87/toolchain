@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -160,8 +160,15 @@ inline bool sub_overflow(U *a, V b) noexcept {
 }
 
 // Map uint32_t or uint64_t to floating point values in [0, 1)
-float map_uint32_to_float(uint32_t v) noexcept;
-double map_uint64_to_double(uint64_t v) noexcept;
+float map_uint32_to_float(std::uint32_t v) noexcept;
+double map_uint64_to_double(std::uint64_t v) noexcept;
+
+
+constexpr std::uint32_t ipow10_array[10] = {
+  1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000
+};
+
+unsigned int ilog10(std::uint32_t) noexcept __attribute__((__const__));
 
 
 } // inline namespace cbu_fastarith

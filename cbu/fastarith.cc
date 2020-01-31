@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@
 #include "fastarith.h"
 #include <cmath>
 #include <limits>
+#include "bit.h"
 
 namespace cbu {
 inline namespace cbu_fastarith {
@@ -86,6 +87,19 @@ float map_uint32_to_float(uint32_t v) noexcept {
 
 double map_uint64_to_double(uint64_t v) noexcept {
   return map_uint_to_float<double, uint64_t>(v);
+}
+
+// Adapted from Hacker's Delight
+unsigned ilog10(uint32_t x) noexcept {
+  if (x == 0) {
+    [[unlikely]]
+    return 0;
+  }
+  unsigned y = (unsigned)(9 * bsr(x)) >> 5;
+  if (x >= ipow10_array[y + 1ul]) {
+    ++y;
+  }
+  return y;
 }
 
 } // inline namespace cbu_fastarith
