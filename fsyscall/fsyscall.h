@@ -54,6 +54,7 @@ struct fsys_linux_dirent64 {
 
 #if defined __x86_64__ && FSYSCALL_USE
 
+#include <fcntl.h>
 #include <signal.h>
 #include <sys/syscall.h>
 
@@ -315,11 +316,12 @@ def_fsys(sysinfo,sysinfo,int,1,struct sysinfo *)
 def_fsys_nomem(fadvise64,fadvise64,int,4,int,__OFF64_T_TYPE,__OFF64_T_TYPE,int)
 
 // Glibc wrappers of many of the following syscalls do some bookkeeping
-// related to asynchronous cancelation, or attempts to support old kernels
-// without ***at syscalls.
-// We don't need to do that because we never cancel threads and we use new kernels.
-def_fsys(open2,open,int,2,const char *,int)
-def_fsys(open3,open,int,3,const char *,int,int)
+// related to asynchronous cancelation.
+// We don't need to do that because we never cancel threads
+def_fsys(open2_raw,open,int,2,const char *,int)
+def_fsys(open3_raw,open,int,3,const char *,int,int)
+#define fsys_open2(a,b) fsys_openat3(AT_FDCWD,a,b)
+#define fsys_open3(a,b,c) fsys_openat4(AT_FDCWD,a,b,c)
 def_fsys(openat3,openat,int,3,int,const char *,int)
 def_fsys(openat4,openat,int,4,int,const char *,int,int)
 def_fsys_nomem(lseek,lseek,__OFF64_T_TYPE,3,int,__OFF64_T_TYPE,int)
