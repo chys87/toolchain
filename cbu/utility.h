@@ -93,12 +93,13 @@ inline constexpr IteratorRange<std::reverse_iterator<IT>> reversed(
 }
 
 template <typename Container>
-requires requires(Container &cont) {
-  std::rbegin(cont);
-  std::rend(cont);
+requires requires(Container &&cont) {
+  std::rbegin(std::forward<Container>(cont));
+  std::rend(std::forward<Container>(cont));
 }
-inline constexpr auto reversed(Container &container) noexcept {
-  return IteratorRange{std::rbegin(container), std::rend(container)};
+inline constexpr auto reversed(Container &&container) noexcept {
+  return IteratorRange{std::rbegin(std::forward<Container>(container)),
+                       std::rend(std::forward<Container>(container))};
 }
 
 
