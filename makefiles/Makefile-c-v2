@@ -168,20 +168,30 @@ LTO := 0
 # NBIN: List of unstripped targets (.n.out)
 # BIN: List of stripped targets (.out)
 TARGETS :=
+INST_TARGETS :=
 NBIN :=
 BIN :=
 
 # $(1): Target name; $(2): Dependencies (without .o)
+# $(3): Options (ut)
 # Must set INSTDIR/CC/CXX etc before using define_target
 define define_target_impl
 TARGETS += $(1)
 NBIN += $(BUILDDIR)/$(1).n.out
 BIN  += $(BUILDDIR)/$(1).out
 SRCS-$(1) := $(sort $(foreach c,$(2),$(call strip_src,$(c:%.py=%))))
+ifeq "$(filter ut,$(3))" "ut"
+all:	$(BUILDDIR)/$(1).n.out
+ut:	run-$(1)
+run-$(1): $(BUILDDIR)/$(1).n.out
+	$(BUILDDIR)/$(1).n.out
+else
+INST_TARGETS += $(1)
 all:	$(BUILDDIR)/$(1).out
-install:$(INSTDIR)/$(1)
+install:ut $(INSTDIR)/$(1)
 $(INSTDIR)/$(1):$(BUILDDIR)/$(1).out
 	$(INSTALL) $$< $$@
+endif
 ifeq "$(filter %.c %.S,$(2))" "$(2)"
 $(BUILDDIR)/$(1).n.out: private CLINKER = $(CC)
 else
@@ -193,7 +203,7 @@ $(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(AUTO_GENERATED
 endef
 
 define define_target
-$(call define_target_impl,$(1),$(patsubst %.proto,%.pb.cc,$(patsubst %.py,%,$(2))))
+$(call define_target_impl,$(1),$(patsubst %.proto,%.pb.cc,$(patsubst %.py,%,$(2))),$(3))
 endef
 
 # Make sure headers are generated earlier than everything else
@@ -201,7 +211,7 @@ ifneq "$(AUTO_GENERATED_HEADERS)" ""
 $(OBJS) $(DEPS): | $(AUTO_GENERATED_HEADERS)
 endif
 
-.PHONY:	all install size bincmp purge clean clobber un compare
+.PHONY:	all install size bincmp purge clean clobber un compare ut
 .DEFAULT_GOAL := all
 
 -include Makefile-spec
@@ -286,7 +296,7 @@ bincmp-$(1):
 BINCMP_COMMANDS += bincmp $(INSTDIR)/$(1) $(BUILDDIR)/$(1).out;
 endef
 
-$(foreach x,$(TARGETS),$(eval $(call define_size_unassembly_bincmp,$(x))))
+$(foreach x,$(INST_TARGETS),$(eval $(call define_size_unassembly_bincmp,$(x))))
 
 ifneq "$(filter $(MAKECMDGOALS),purge)" ""
 purge:
