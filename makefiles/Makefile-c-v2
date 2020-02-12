@@ -183,6 +183,7 @@ SRCS-$(1) := $(sort $(foreach c,$(2),$(call strip_src,$(c:%.py=%))))
 ifeq "$(filter ut,$(3))" "ut"
 all:	$(BUILDDIR)/$(1).n.out
 ut:	run-$(1)
+.PHONY: run-$(1)
 run-$(1): $(BUILDDIR)/$(1).n.out
 	$(BUILDDIR)/$(1).n.out
 else
