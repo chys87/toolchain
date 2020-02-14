@@ -160,6 +160,38 @@ def cppfilter(fi):
             (re.compile(br'long long __vector\(4\)'),
                 br'__m256i'),
 
+            # std::ratio
+            (re.compile(br'::ratio<1l*, 1000000000000000000000000l*>'), br'::yocto'),
+            (re.compile(br'::ratio<1l*, 1000000000000000000000l*>'), br'::zepto'),
+            (re.compile(br'::ratio<1l*, 1000000000000000000l*>'), br'::atto'),
+            (re.compile(br'::ratio<1l*, 1000000000000000l*>'), br'::femto'),
+            (re.compile(br'::ratio<1l*, 1000000000000l*>'), br'::pico'),
+            (re.compile(br'::ratio<1l*, 1000000000l*>'), br'::nano'),
+            (re.compile(br'::ratio<1l*, 1000000l*>'), br'::micro'),
+            (re.compile(br'::ratio<1l*, 1000l*>'), br'::milli'),
+            (re.compile(br'::ratio<1l*, 100l*>'), br'::centi'),
+            (re.compile(br'::ratio<1l*, 10l*>'), br'::deci'),
+            (re.compile(br'::ratio<10l*, 1l*>'), br'::deca'),
+            (re.compile(br'::ratio<100l*, 1l*>'), br'::hecto'),
+            (re.compile(br'::ratio<1000l*, 1l*>'), br'::kilo'),
+            (re.compile(br'::ratio<1000000l*, 1l*>'), br'::mega'),
+            (re.compile(br'::ratio<1000000000l*, 1l*>'), br'::giga'),
+            (re.compile(br'::ratio<1000000000000l*, 1l*>'), br'::tera'),
+            (re.compile(br'::ratio<1000000000000000l*, 1l*>'), br'::peta'),
+            (re.compile(br'::ratio<1000000000000000000l*, 1l*>'), br'::exa'),
+            (re.compile(br'::ratio<1000000000000000000000l*, 1l*>'), br'::zetta'),
+            (re.compile(br'::ratio<1000000000000000000000000l*, 1l*>'), br'::yotta'),
+            (re.compile(br'::ratio<(\d+l*), 1l*>'), br'::ratio<\1>'),
+
+            # std::chrono
+            # We assume the standard library uses either long or long (in theory, this may mis-replace user-defined types)
+            (re.compile(br'::duration<long(?: long)?, std::(nano|micro|mini)>'), br'::\1seconds'),
+            (re.compile(br'::duration<long(?: long)?, std::ratio<1l*>>'), br'::seconds'),
+            (re.compile(br'::duration<long(?: long)?, std::ratio<60l*>>'), br'::minutes'),
+            (re.compile(br'::duration<long(?: long)?, std::ratio<3600l*>>'), br'::hours'),
+            (re.compile(br'::duration<long(?: long)?, std::ratio<86400l*>>'), br'::days'),
+            (re.compile(br'::duration<long(?: long)?, std::ratio<604800l*>>'), br'::weeks'),
+
             # absl specific
             (re.compile(br'absl::flat_hash_set<(.+), absl::hash_internal::Hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
              br'::absl::flat_hash_set<\1>'),
