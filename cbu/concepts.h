@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -78,7 +78,8 @@ template <typename T>
 concept Raw_signed_integral = Signed_integral<T> && No_cv<T>;
 
 template <typename T>
-concept Char_type = Integral<T> && sizeof(T) == 1;
+concept Char_type = (Integral<T> && sizeof(T) == 1 &&
+                     !std::is_same_v<std::remove_cv_t<T>, bool>);
 
 template <typename T>
 concept Raw_char_type = Char_type<T> && No_cv<T> && !std::is_array_v<T>;
