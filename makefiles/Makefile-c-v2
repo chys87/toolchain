@@ -42,9 +42,13 @@ AUTO_GENERATED_PROTOBUF_SRCS := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILD
 AUTO_GENERATED_PROTOBUF_HEADERS := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILDDIR)/%.pb.h)
 AUTO_GENERATED_PROTOBUF_DEPS := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILDDIR)/%.proto.P)
 
+AUTO_GENERATOR_FLATBUF := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.fbs))
+AUTO_GENERATED_FLATBUF_HEADERS := $(AUTO_GENERATOR_FLATBUF:$(DIR)/%.fbs=$(BUILDDIR)/%_generated.h)
+AUTO_GENERATED_FLATBUF_DEPS := $(AUTO_GENERATOR_FLATBUF:$(DIR)/%.fbs=$(BUILDDIR)/%.fbs.P)
+
 AUTO_GENERATOR := $(AUTO_GENERATOR_PYTHON) $(AUTO_GENERATOR_PYTHON)
-AUTO_GENERATED := $(AUTO_GENERATED_PYTHON) $(AUTO_GENERATED_PROTOBUF_SRCS) $(AUTO_GENERATED_PROTOBUF_HEADERS)
-AUTO_GENERATED_DEPS := $(AUTO_GENERATED_PYTHON_DEPS) $(AUTO_GENERATED_PROTOBUF_DEPS)
+AUTO_GENERATED := $(AUTO_GENERATED_PYTHON) $(AUTO_GENERATED_PROTOBUF_SRCS) $(AUTO_GENERATED_PROTOBUF_HEADERS) $(AUTO_GENERATED_FLATBUF_HEADERS)
+AUTO_GENERATED_DEPS := $(AUTO_GENERATED_PYTHON_DEPS) $(AUTO_GENERATED_PROTOBUF_DEPS) $(AUTO_GENERATED_FLATBUF_DEPS)
 AUTO_GENERATED_SRCS := $(filter %.c %.cc %.cpp %.C %.cxx %.S, $(AUTO_GENERATED))
 AUTO_GENERATED_HEADERS := $(filter %.h %.hpp, $(AUTO_GENERATED))
 
@@ -160,6 +164,7 @@ CXXWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
 	-Werror=terminate \
 	-Woverloaded-virtual -Wnon-virtual-dtor \
 	-Werror=delete-incomplete
+FLATCFLAGS := --scoped-enums --gen-object-api
 PIE := 0
 NOPLT := 0
 LTO := 0
@@ -380,18 +385,28 @@ endif
 
 $(AUTO_GENERATED_PROTOBUF_SRCS): private NAME := PROTOC
 $(AUTO_GENERATED_PROTOBUF_SRCS): $(BUILDDIR)/%.pb.cc:$(DIR)/%.proto
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$(@:%.pb.cc=%.proto.P) --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+	$(Q)mkdir -p $(dir $@) && $(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$(@:%.pb.cc=%.proto.P) --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 $(AUTO_GENERATED_PROTOBUF_HEADERS): private NAME := PROTOC
 $(AUTO_GENERATED_PROTOBUF_HEADERS): $(BUILDDIR)/%.pb.h:$(DIR)/%.proto
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$(@:%.pb.h=%.proto.P) --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+	$(Q)mkdir -p $(dir $@) && $(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$(@:%.pb.h=%.proto.P) --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 $(AUTO_GENERATED_PROTOBUF_DEPS): private NAME := PROTOC
 $(AUTO_GENERATED_PROTOBUF_DEPS): $(BUILDDIR)/%.proto.P:$(DIR)/%.proto
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$@ --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+	$(Q)mkdir -p $(dir $@) && $(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$@ --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+
+# flatc prints error message to stdout!!! So we have to cat $@
+$(AUTO_GENERATED_FLATBUF_DEPS): private NAME := FLATC
+$(AUTO_GENERATED_FLATBUF_DEPS): $(BUILDDIR)/%.fbs.P:$(DIR)/%.fbs
+	$(Q)mkdir -p $(dir $@) && flatc -M -o $(dir $@) $(FLATCFLAGS) -c $< > $@ || ( [ -r $@ ] && cat $@ >&2; rm -f $@; exit 1)
+
+$(AUTO_GENERATED_FLATBUF_HEADERS): private NAME := FLATC
+$(AUTO_GENERATED_FLATBUF_HEADERS): $(BUILDDIR)/%_generated.h:$(DIR)/%.fbs
+	$(Q)mkdir -p $(dir $@) && flatc -o $(dir $@) $(FLATCFLAGS) -c $<
 
 ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
  -include $(AUTO_GENERATED_PROTOBUF_DEPS)
+ -include $(AUTO_GENERATED_FLATBUF_DEPS)
 endif
 
 # Update ctags
