@@ -194,8 +194,8 @@ run-$(1): $(BUILDDIR)/$(1).n.out
 else
 INST_TARGETS += $(1)
 all:	$(BUILDDIR)/$(1).out
-install:ut $(INSTDIR)/$(1)
-$(INSTDIR)/$(1):$(BUILDDIR)/$(1).out
+install: $(INSTDIR)/$(1)
+$(INSTDIR)/$(1):$(BUILDDIR)/$(1).out ut
 	$(INSTALL) $$< $$@
 endif
 ifeq "$(filter %.c %.S,$(2))" "$(2)"
