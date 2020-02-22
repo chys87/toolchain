@@ -501,7 +501,11 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_vfork vfork
 //#define fsys_clone2(a,b) // Undefined because it's not always safe to use
 #define fsys_getpid getpid
-#define fsys_gettid() ((pid_t)syscall(__NR_gettid))
+#if defined __GLIBC_PREREQ && __GLIBC_PREREQ(2, 30)
+# define fsys_gettid gettid
+#else
+# define fsys_gettid() ((pid_t)syscall(__NR_gettid))
+#endif
 #define fsys_getppid getppid
 #define fsys_getuid getuid
 #define fsys_geteuid geteuid
