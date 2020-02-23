@@ -33,6 +33,8 @@ cc_library(
     '-fconcepts',
     '-Wall',
     '-Werror',
+    '-fmax-errors=5',
+    '-fdiagnostics-color=always',
   ],
   # cbu is a collection of really TINy utilities so you may always want to
   # use static linking
@@ -53,5 +55,7 @@ cc_test(
     '-fconcepts',
     '-Wall',
     '-Werror',
+    '-fmax-errors=5',
+    '-fdiagnostics-color=always',
   ],
 )
