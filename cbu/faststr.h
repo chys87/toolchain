@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -194,6 +194,13 @@ std::string nprintf(std::size_t hint_size,
 template <Std_string_char C>
 void append(std::basic_string<C>* res,
             CBU_FASTSTR_SPAN<const std::basic_string_view<C>> sp) {
+  if (sp.begin() == sp.end()) {
+    // Add this special case so that GCC doesn't generate a spurious
+    // call to extend in the empty branch.
+    // (sp.begin() == sp.end()) helps GCC fold the comparisons with
+    // the following loop
+    return;
+  }
   std::size_t l = 0;
   for (auto sv: sp) {
     l += sv.length();
