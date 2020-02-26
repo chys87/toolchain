@@ -113,7 +113,7 @@ COPTIMIZEFLAGS ?=
 CXXOPTIMIZEFLAGS ?= -fstrict-enums -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0
 ARCHFLAGS := -march=native
 # -Wabi
-GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings \
+GENERIC_WARNINGFLAGS := -Wall -Wextra -Wshadow=local -Wwrite-strings \
 	-Wno-unused-parameter -Wno-missing-field-initializers \
 	-Wno-sign-compare -Wno-clobbered \
 	-Wformat -Wformat-security -Wmissing-include-dirs -Wfloat-equal \
@@ -126,6 +126,7 @@ GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings \
 	-Werror=comment \
 	-Werror=multichar \
 	-Werror=pointer-arith \
+	-Werror=pointer-compare \
 	-Werror=char-subscripts \
 	-Werror=format \
 	-Werror=format-extra-args \
@@ -144,11 +145,19 @@ GENERIC_WARNINGFLAGS := -Wall -Wextra -Wno-shadow -Wwrite-strings \
 	-Werror=enum-compare \
 	-Wdisabled-optimization \
 	-Wsuggest-attribute=noreturn \
+	-Wsuggest-attribute=format \
 	-Wdisabled-optimization \
 	-Werror=date-time \
+	-Werror=array-bounds \
+	-Werror=bool-compare \
+	-Werror=bool-operation \
+	-Werror=duplicated-branches \
+	-Werror=duplicated-cond \
+	-Werror=frame-address \
+	-Werror=sizeof-pointer-memaccess \
+	-Werror=sizeof-array-argument \
+	-Werror=address-of-packed-member \
 	-fmax-errors=5
-# TBA when newer GCC is made default:
-#	-Wsuggest-attribute=format
 CWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
 	-Wmissing-prototypes \
 	-Werror=implicit-int \
@@ -163,7 +172,12 @@ CXXWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
 	-Werror=delete-non-virtual-dtor \
 	-Werror=terminate \
 	-Woverloaded-virtual -Wnon-virtual-dtor \
-	-Werror=delete-incomplete
+	-Werror=placement-new \
+	-Werror=catch-value=2 \
+	-Werror=delete-incomplete \
+	-Wsuggest-final-types \
+	-Wsuggest-final-methods \
+	-Werror=suggest-override
 FLATCFLAGS := --scoped-enums --gen-object-api
 PIE := 0
 NOPLT := 0
