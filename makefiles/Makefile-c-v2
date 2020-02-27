@@ -151,8 +151,8 @@ GENERIC_WARNINGFLAGS := -Wall -Wextra -Wshadow=local -Wwrite-strings \
 	-Werror=array-bounds \
 	-Werror=bool-compare \
 	-Werror=bool-operation \
-	-Werror=duplicated-branches \
-	-Werror=duplicated-cond \
+	-Wduplicated-branches \
+	-Wduplicated-cond \
 	-Werror=frame-address \
 	-Werror=sizeof-pointer-memaccess \
 	-Werror=sizeof-array-argument \
