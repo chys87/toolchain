@@ -49,18 +49,8 @@ struct SizedArrayDeleter {
 };
 
 template <typename T>
-struct sized_unique_ptr {
-  // For non-array types, sized deallocation is automatically applied.
-  using type = std::unique_ptr<T>;
-};
-
-template <typename T>
-struct sized_unique_ptr<T[]> {
-  using type = std::unique_ptr<T[], SizedArrayDeleter>;
-};
-
-template <typename T>
-using sized_unique_ptr_t = typename sized_unique_ptr<T>::type;
+requires std::is_unbounded_array_v<T>
+using sized_unique_ptr = std::unique_ptr<T, SizedArrayDeleter>;
 
 template <typename T, typename... Args>
 requires (!std::is_array_v<T>)
@@ -70,7 +60,7 @@ inline std::unique_ptr<T> make_unique(Args&&... args) {
 
 template <typename T>
 requires std::is_unbounded_array_v<T>
-inline sized_unique_ptr_t<T> make_unique(std::size_t n) {
+inline sized_unique_ptr<T> make_unique(std::size_t n) {
   using V = std::remove_extent_t<T>;
   V* p = static_cast<V*>(::operator new(n * sizeof(V)));
   try {
@@ -79,7 +69,7 @@ inline sized_unique_ptr_t<T> make_unique(std::size_t n) {
     ::operator delete(p, n * sizeof(V));
     throw;
   }
-  return sized_unique_ptr_t<T>(p, SizedArrayDeleter{n * sizeof(V)});
+  return sized_unique_ptr<T>(p, SizedArrayDeleter{n * sizeof(V)});
 }
 
 template <typename T>
@@ -92,7 +82,7 @@ inline std::unique_ptr<T> make_unique_for_overwrite() {
 
 template <typename T>
 requires std::is_unbounded_array_v<T>
-inline sized_unique_ptr_t<T> make_unique_for_overwrite(std::size_t n) {
+inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) {
   using V = std::remove_extent_t<T>;
   V* p = static_cast<V*>(::operator new(n * sizeof(V)));
   try {
@@ -101,7 +91,7 @@ inline sized_unique_ptr_t<T> make_unique_for_overwrite(std::size_t n) {
     ::operator delete(p, n * sizeof(V));
     throw;
   }
-  return sized_unique_ptr_t<T>(p, SizedArrayDeleter{n * sizeof(V)});
+  return sized_unique_ptr<T>(p, SizedArrayDeleter{n * sizeof(V)});
 }
 
 } // namespace cbu_memory
