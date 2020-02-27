@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -59,6 +59,7 @@ class ScopedFD {
 
   constexpr int fd() const noexcept { return fd_; }
   constexpr operator int() const noexcept { return fd_; }
+  operator bool() const = delete;
 
   int release() noexcept { return std::exchange(fd_, -1); }
 
