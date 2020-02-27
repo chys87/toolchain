@@ -33,7 +33,15 @@
 namespace cbu {
 inline namespace cbu_memory {
 
-inline void sized_delete(void* p , std::size_t n) {
+inline void sized_delete(void* p , std::size_t n) noexcept {
+#ifdef __cpp_sized_deallocation
+  ::operator delete(p, n);
+#else
+  ::operator delete(p);
+#endif
+}
+
+inline void sized_array_delete(void* p , std::size_t n) noexcept {
 #ifdef __cpp_sized_deallocation
   ::operator delete[](p, n);
 #else
@@ -41,10 +49,17 @@ inline void sized_delete(void* p , std::size_t n) {
 #endif
 }
 
-struct SizedArrayDeleter {
+struct SizedDeleter {
   size_t bytes;
   void operator()(void* p) noexcept {
     sized_delete(p, bytes);
+  }
+};
+
+struct SizedArrayDeleter {
+  size_t bytes;
+  void operator()(void* p) noexcept {
+    sized_array_delete(p, bytes);
   }
 };
 
@@ -62,7 +77,7 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  V* p = static_cast<V*>(::operator new(n * sizeof(V)));
+  V* p = static_cast<V*>(::operator new[](n * sizeof(V)));
   try {
     std::uninitialized_value_construct_n(p, n);
   } catch (...) {
@@ -84,7 +99,7 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  V* p = static_cast<V*>(::operator new(n * sizeof(V)));
+  V* p = static_cast<V*>(::operator new[](n * sizeof(V)));
   try {
     std::uninitialized_default_construct_n(p, n);
   } catch (...) {
