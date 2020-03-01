@@ -410,7 +410,7 @@ $(AUTO_GENERATED_PROTOBUF_DEPS): $(BUILDDIR)/%.proto.P:$(DIR)/%.proto
 	$(Q)mkdir -p $(dir $@) && $(MULTIPLE_OUTPUT_HELPER) $^ protoc --dependency_out=$@ --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 # flatc prints error message to stdout!!! So we have to cat $@
-$(AUTO_GENERATED_FLATBUF_DEPS): private NAME := FLATC
+$(AUTO_GENERATED_FLATBUF_DEPS): private NAME := FLATCDEP
 $(AUTO_GENERATED_FLATBUF_DEPS): $(BUILDDIR)/%.fbs.P:$(DIR)/%.fbs
 	$(Q)mkdir -p $(dir $@) && flatc -M -o $(dir $@) $(FLATCFLAGS) -c $< > $@ || ( [ -r $@ ] && cat $@ >&2; rm -f $@; exit 1)
 
