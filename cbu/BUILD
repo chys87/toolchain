@@ -1,5 +1,5 @@
 # cbu - chys's basic utilities
-# Copyright (c) 2019, chys <admin@CHYS.INFO>
+# Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,9 +36,10 @@ cc_library(
     '-fmax-errors=5',
     '-fdiagnostics-color=always',
   ],
-  # cbu is a collection of really TINy utilities so you may always want to
+  # cbu is a collection of really TINY utilities so you may always want to
   # use static linking
   linkstatic=True,
+  visibility = ["//visibility:public"],
 )
 
 cc_test(
