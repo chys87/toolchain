@@ -49,23 +49,19 @@ inline void sized_array_delete(void* p , std::size_t n) noexcept {
 #endif
 }
 
-struct SizedDeleter {
-  size_t bytes;
-  void operator()(void* p) noexcept {
-    sized_delete(p, bytes);
-  }
-};
-
+template <typename T>
 struct SizedArrayDeleter {
-  size_t bytes;
-  void operator()(void* p) noexcept {
+  std::size_t bytes;
+  void operator()(T* p) noexcept {
+    std::destroy_n(p, bytes / sizeof(T));
     sized_array_delete(p, bytes);
   }
 };
 
 template <typename T>
 requires std::is_unbounded_array_v<T>
-using sized_unique_ptr = std::unique_ptr<T, SizedArrayDeleter>;
+using sized_unique_ptr = std::unique_ptr<
+    T, SizedArrayDeleter<std::remove_extent_t<T>>>;
 
 template <typename T, typename... Args>
 requires (!std::is_array_v<T>)
@@ -84,7 +80,7 @@ inline sized_unique_ptr<T> make_unique(std::size_t n) {
     ::operator delete(p, n * sizeof(V));
     throw;
   }
-  return sized_unique_ptr<T>(p, SizedArrayDeleter{n * sizeof(V)});
+  return sized_unique_ptr<T>(p, SizedArrayDeleter<V>{n * sizeof(V)});
 }
 
 template <typename T>
@@ -106,7 +102,7 @@ inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) {
     ::operator delete(p, n * sizeof(V));
     throw;
   }
-  return sized_unique_ptr<T>(p, SizedArrayDeleter{n * sizeof(V)});
+  return sized_unique_ptr<T>(p, SizedArrayDeleter<V>{n * sizeof(V)});
 }
 
 } // namespace cbu_memory

@@ -44,5 +44,26 @@ TEST(MemoryTest, MakeUnique) {
   make_unique_for_overwrite<int[]>(5);
 }
 
+class NonTrivialType {
+ public:
+  NonTrivialType() { ++constructors_; }
+  NonTrivialType(const NonTrivialType&) { ++constructors_; }
+  ~NonTrivialType() { ++destructors_; }
+
+ public:
+  static inline int constructors_ = 0;
+  static inline int destructors_ = 0;
+};
+
+TEST(MemoryTest, MakeUniqueDestructorTest) {
+  NonTrivialType::constructors_ = 0;
+  NonTrivialType::destructors_ = 0;
+
+  make_unique_for_overwrite<NonTrivialType[]>(5);
+
+  EXPECT_EQ(5, NonTrivialType::constructors_);
+  EXPECT_EQ(5, NonTrivialType::destructors_);
+}
+
 } // namespace cbu_memory
 } // namespace cbu
