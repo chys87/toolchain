@@ -144,7 +144,7 @@ GENERIC_WARNINGFLAGS := -Wall -Wextra -Wshadow=local -Wwrite-strings \
 	-Werror=strict-aliasing \
 	-Werror=trampolines \
 	-Werror=switch \
-	-Wswitch-enum \
+	-Wswitch-default \
 	-Werror=address \
 	-Werror=enum-compare \
 	-Wdisabled-optimization \
