@@ -52,7 +52,7 @@ template <> struct Opt<> {
 
 template <typename... Args>
 struct Opt<ReadDirNoSkipDots, Args...> : Opt<Args...> {
-  enum : bool { skip_dots = true };
+  enum : bool { skip_dots = false};
 };
 template <typename... Args>
 struct Opt<ReadDirClose, Args...> : Opt<Args...> {
