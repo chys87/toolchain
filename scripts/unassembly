@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (c) 2018, chys <admin@CHYS.INFO>
+# Copyright (c) 2018-2020, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@ import argparse
 import glob
 import locale
 import os
+import platform
 import re
 import signal
 import subprocess
@@ -300,7 +301,9 @@ def main():
                                close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     fi = objdump.stdout
     fi = cppfilter(fi)
-    fi = syscall_replace(fi)
+
+    if sys.platform.startswith('linux') and platform.machine == 'x86_64':
+        fi = syscall_replace(fi)
 
     if not os.isatty(sys.stdout.fileno()):
         # Write to a pipe, whatever.
