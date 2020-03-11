@@ -101,6 +101,19 @@ def cppfilter(fi):
 
     __type = br'(?:[^,<>]|<(?:[^<>]+|<(?:[^<>]|<[^<>]+>)+>)>)+'  # This pattern catches templates up to 3 levels
 
+    def __replacable_character_literal(c):
+        return c.isalnum() or c == '_'
+
+    def __replace_character_literals(m):
+        ctype = m.group(1)
+        value = int(m.group(2))
+        if ctype == b'char' and __replacable_character_literal(chr(value)):
+            return f'\'{chr(value)}\''.encode()
+        elif ctype == b'wchar_t' and __replace_character_literals(chr(value)):
+            return f'L\'{chr(value)}\''.encode()
+        else:
+            return m.group(0)
+
     pattern_replaces = (
             (re.compile(br'::basic_string<char, std::(__\d+::)?char_traits<char>, std::(__\d+::)?allocator<char>>'), b'::string'),
             (re.compile(br'::basic_string<wchar_t, std::(__\d+::)?char_traits<wchar_t>, std::(__\d+::)?allocator<wchar_t>>'), b'::wstring'),
@@ -160,6 +173,7 @@ def cppfilter(fi):
                 br'__v16qi'),
             (re.compile(br'long long __vector\(4\)'),
                 br'__m256i'),
+            (re.compile(br'\((char|wchar_t)\)(\d+)'), __replace_character_literals),
 
             # std::ratio
             (re.compile(br'::ratio<1l*, 1000000000000000000000000l*>'), br'::yocto'),
@@ -196,6 +210,9 @@ def cppfilter(fi):
             # absl specific
             (re.compile(br'absl::flat_hash_set<(.+), absl::hash_internal::Hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
              br'::absl::flat_hash_set<\1>'),
+
+            # cbu specific
+            (re.compile(br'\bcbu::cbu_\w+::'), br'cbu::'),  # Omit cbu's inline namespaces
         )
 
     def do_replace(data):
