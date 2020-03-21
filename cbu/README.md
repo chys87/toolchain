@@ -6,7 +6,6 @@ This is my C++ utilities.
 
 - [g++](https://gcc.gnu.org/) 9.0 or later
 - [Bazel](https://bazel.build/).  Other make tools may also be used if you prefer; you can also just link or copy the files
-- [Boost](https://www.boost.org/).  We need some header-only boost components.
 
 ## Bazel notes
 

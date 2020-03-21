@@ -30,8 +30,8 @@
 
 #include "bit_cast.h"
 #include "concepts.h"
+#include "compat/type_identity.h"
 #include <cstdint>
-#include <boost/type_traits/type_identity.hpp>
 
 namespace cbu {
 inline namespace cbu_fastarith {
@@ -39,7 +39,7 @@ inline namespace cbu_fastarith {
 // r is the initial value, usually 1
 template <Raw_arithmetic T>
 inline constexpr T fast_powu(T a, unsigned t,
-                             typename boost::type_identity<T>::type r = T(1)) {
+                             compat::type_identity_t<T> r = T(1)) {
   while (t) {
     if (t & 1)
       r *= a;
@@ -51,7 +51,7 @@ inline constexpr T fast_powu(T a, unsigned t,
 
 template <Raw_floating_point T>
 inline constexpr T fast_powi(T a, int n,
-                             typename boost::type_identity<T>::type r = T(1)) {
+                             compat::type_identity_t<T> r = T(1)) {
   if (n < 0) {
     n = -n;
     a = 1 / a;
@@ -77,8 +77,8 @@ inline constexpr bool unequal(A a, B b) noexcept(noexcept(a != b)) {
 
 template <Raw_floating_point T>
 inline constexpr T clamp(T v,
-                         typename boost::type_identity<T>::type m,
-                         typename boost::type_identity<T>::type M) noexcept {
+                         compat::type_identity_t<T> m,
+                         compat::type_identity_t<T> M) noexcept {
   // 1) If v is NaN, the result is v
   // 2) M and/or m are ignored if NaN
   T r = v;

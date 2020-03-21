@@ -33,6 +33,7 @@
 #include "bit.h"
 #include "fastarith.h"
 #include "stdhack.h"
+#include "compat/string.h"
 
 namespace cbu {
 inline namespace cbu_faststr {
@@ -80,7 +81,7 @@ void *memdrop(void *dst, uint64_t v, size_t n) noexcept {
     return e;
 
   } else {
-    return mempcpy(dst, &v, n);
+    return compat::mempcpy(dst, &v, n);
   }
 }
 

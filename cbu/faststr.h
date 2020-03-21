@@ -35,18 +35,12 @@
 #include <initializer_list>
 #include <string>
 #include <utility>
-#include <boost/type_traits/type_identity.hpp>
 #include "byteorder.h"
 #include "concepts.h"
 #include "stdhack.h"
-
-#if __has_include(<span>)
-# include <span>
-# define CBU_FASTSTR_SPAN ::std::span
-#else
-# include <boost/beast/core/span.hpp>
-# define CBU_FASTSTR_SPAN ::boost::beast::span
-#endif
+#include "compat/span.h"
+#include "compat/string.h"
+#include "compat/type_identity.h"
 
 namespace cbu {
 inline namespace cbu_faststr {
@@ -156,7 +150,7 @@ inline T *Memchr(T *dst, int c, std::size_t n) noexcept {
 
 template <Char_type T>
 inline T *Memrchr(T *dst, int c, std::size_t n) noexcept {
-  return static_cast<T *>(::memrchr(dst, c, n));
+  return static_cast<T *>(compat::memrchr(dst, c, n));
 }
 
 // Nonstandard
@@ -193,7 +187,7 @@ std::string nprintf(std::size_t hint_size,
 // append
 template <Std_string_char C>
 void append(std::basic_string<C>* res,
-            CBU_FASTSTR_SPAN<const std::basic_string_view<C>> sp) {
+            compat::span<const std::basic_string_view<C>> sp) {
   if (sp.begin() == sp.end()) {
     // Add this special case so that GCC doesn't generate a spurious
     // call to extend in the empty branch.
@@ -213,16 +207,14 @@ void append(std::basic_string<C>* res,
 
 template <Std_string_char C>
 void append(std::basic_string<C>* res,
-            typename boost::type_identity<
-              std::initializer_list<std::basic_string_view<C>>>::type il) {
+            compat::type_identity_t<
+              std::initializer_list<std::basic_string_view<C>>> il) {
   append(res,
-         CBU_FASTSTR_SPAN<const std::basic_string_view<C>>(il.begin(),
-                                                           il.size()));
+         compat::span<const std::basic_string_view<C>>(il.begin(), il.size()));
 }
 
 template <Std_string_char C>
-std::basic_string<C> concat(
-    CBU_FASTSTR_SPAN<const std::basic_string_view<C>> sp) {
+std::basic_string<C> concat(compat::span<const std::basic_string_view<C>> sp) {
   std::basic_string<C> res;
   append(&res, sp);
   return res;
@@ -230,33 +222,26 @@ std::basic_string<C> concat(
 
 // enumerate all types, so that the user can use initializer list more easily
 inline std::string concat(std::initializer_list<std::string_view> il) {
-  return concat(CBU_FASTSTR_SPAN<const std::string_view>(
-      il.begin(), il.size()));
+  return concat(compat::span<const std::string_view>(il.begin(), il.size()));
 }
 
 inline std::wstring concat(std::initializer_list<std::wstring_view> il) {
-  return concat(CBU_FASTSTR_SPAN<const std::wstring_view>(
-      il.begin(), il.size()));
+  return concat(compat::span<const std::wstring_view>(il.begin(), il.size()));
 }
 
 inline std::u16string concat(std::initializer_list<std::u16string_view> il) {
-  return concat(CBU_FASTSTR_SPAN<const std::u16string_view>(
-      il.begin(), il.size()));
+  return concat(compat::span<const std::u16string_view>(il.begin(), il.size()));
 }
 
 inline std::u32string concat(std::initializer_list<std::u32string_view> il) {
-  return concat(CBU_FASTSTR_SPAN<const std::u32string_view>(
-      il.begin(), il.size()));
+  return concat(compat::span<const std::u32string_view>(il.begin(), il.size()));
 }
 
 #if defined __cpp_char8_t && __cpp_char8_t >= 201811
 inline std::u8string concat(std::initializer_list<std::u8string_view> il) {
-  return concat(CBU_FASTSTR_SPAN<const std::u8string_view>(
-      il.begin(), il.size()));
+  return concat(compat::span<const std::u8string_view>(il.begin(), il.size()));
 }
 #endif
 
 } // namespace cbu_faststr
 } // namespace cbu
-
-#undef CBU_FASTSTR_SPAN

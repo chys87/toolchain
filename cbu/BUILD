@@ -26,8 +26,9 @@
 
 cc_library(
   name = 'cbu',
-  srcs = glob(['*.cc'], exclude=['*_test.cc']),
-  hdrs = glob(['*.h']),
+  srcs = glob(['*.cc', 'compat/*.cc'],
+              exclude=['*_test.cc', 'compat/*_test.cc']),
+  hdrs = glob(['*.h', 'compat/*.h']),
   copts = [
     '-std=gnu++2a',
     '-fconcepts',
@@ -44,7 +45,7 @@ cc_library(
 
 cc_test(
   name = 'cbu-tests',
-  srcs = glob(['*_test.cc']),
+  srcs = glob(['*_test.cc', 'compat/*.cc']),
   deps = [
     ':cbu',
     '@gtest//:gtest',
