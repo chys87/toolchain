@@ -34,25 +34,29 @@ namespace cbu {
 namespace compat {
 
 inline void* mempcpy(void* d, const void* s, std::size_t n) noexcept {
-#if __has_builtin(__builtin_mempcpy)
+#if defined __GLIBC__ && defined __USE_GNU
   return __builtin_mempcpy(d, s, n);
 #else
   return static_cast<char*>(std::memcpy(d, s, n)) + n;
 #endif
 }
 
-inline void* memrchr(const void* s, int c, std::size_t n) noexcept {
-#ifdef __GLIBC__
+inline const void* memrchr(const void* s, int c, std::size_t n) noexcept {
+#if defined __GLIBC__ && defined __USE_GNU
   return ::memrchr(s, c, n);
 #else
-  void* r = nullptr;
-  while (void* found = std::memchr(s, c, n)) {
+  const void* r = nullptr;
+  while (const void* found = std::memchr(s, c, n)) {
     r = found;
     n -= static_cast<const char*>(found) - static_cast<const char*>(s) + 1;
     s = static_cast<const char*>(found) + 1;
   }
   return r;
 #endif
+}
+
+inline void* memrchr(void* s, int c, std::size_t n) noexcept {
+  return const_cast<void*>(memrchr(static_cast<const void*>(s), c, n));
 }
 
 } // namespace compat
