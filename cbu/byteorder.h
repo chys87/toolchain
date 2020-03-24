@@ -40,7 +40,11 @@ static_assert(
     "Funny byte order.");
 
 template <typename T>
-concept Bswappable = std::is_integral<T>::value && sizeof(T) <= 8;
+concept Bswappable = (std::is_integral<T>::value &&
+                      std::is_same_v<T, std::remove_cvref_t<T>> &&
+                      !std::is_same_v<T, bool> &&
+                      (sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 ||
+                       sizeof(T) == 8));
 
 template <Bswappable T> requires (sizeof(T) == 1)
 inline constexpr T bswap(T x) noexcept { return x; }
