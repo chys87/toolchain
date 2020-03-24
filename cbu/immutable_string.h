@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -94,11 +94,11 @@ class ImmutableBasicString {
   }
 
   constexpr const C* data() const noexcept {
-    return dispatch<const C*>([](const auto& v) { return v.data(); });
+    return dispatch<const C*>([](const auto& v) noexcept { return v.data(); });
   }
 
   constexpr size_type size() const noexcept {
-    return dispatch<size_type>([](const auto& v) { return v.size(); });
+    return dispatch<size_type>([](const auto& v) noexcept { return v.size(); });
   }
   constexpr size_type length() const noexcept { return size(); }
   [[nodiscard]] constexpr bool empty() const noexcept { return size() == 0; }
@@ -109,7 +109,8 @@ class ImmutableBasicString {
   constexpr const C* cend() const noexcept { return end(); }
 
   constexpr string_view view() const noexcept {
-    return dispatch<string_view>([](const auto& v) { return string_view(v); });
+    return dispatch<string_view>(
+        [](const auto& v) noexcept { return string_view(v); });
   }
   string copy() const {
     return dispatch<string>([](const auto& v) { return string(v); });
@@ -143,8 +144,14 @@ class ImmutableBasicString {
   }
 
  private:
+  template <typename Visitor>
+  static inline constexpr bool Visitor_noexcept = (
+      noexcept(std::declval<Visitor>()(std::declval<string_view>())) &&
+      noexcept(std::declval<Visitor>()(std::declval<string>())));
+
   template <typename R, typename Visitor>
-  constexpr R dispatch(Visitor visitor) const noexcept {
+  constexpr R dispatch(Visitor visitor) const
+      noexcept(Visitor_noexcept<Visitor>) {
     if (std::holds_alternative<string_view>(s_)) {
       return visitor(std::get<string_view>(s_));
     } else if (std::holds_alternative<string>(s_)) {
