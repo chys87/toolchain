@@ -36,7 +36,7 @@
 // std::string_view, but provides additional interfaces for convenient
 // pointer cast to and from other character types
 // (signed char, unsigned char, char8_t, std::byte).
-// It optionally accepts const void*
+// It also accepts explicit const void*
 
 namespace cbu {
 inline namespace cbu_bytes_view {
