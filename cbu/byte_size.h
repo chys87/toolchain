@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@ namespace cbu {
 inline namespace cbu_byte_size {
 
 template <typename U, typename V>
+  requires (std::is_convertible_v<U*, V*> || std::is_convertible_v<V*, U*>)
 inline constexpr std::ptrdiff_t byte_distance(U *p, V *q) {
   return (reinterpret_cast<std::intptr_t>(q) -
       reinterpret_cast<std::intptr_t>(p));
@@ -84,7 +85,9 @@ class ByteSize {
 
   constexpr ByteSize &operator = (const ByteSize &other) noexcept = default;
 
-  template <typename U, typename V> requires (sizeof(U) == N && sizeof(V) == N)
+  template <typename U, typename V>
+    requires (sizeof(U) == N && sizeof(V) == N &&
+              (std::is_convertible_v<U*, V*> || std::is_convertible_v<V*, U*>))
   constexpr ByteSize(U *lo, V *hi) : bytes_(byte_distance(lo, hi)) {}
 
   constexpr std::size_t bytes() const noexcept { return bytes_; }
