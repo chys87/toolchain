@@ -88,6 +88,18 @@ TEST_F(MpTest, Div) {
   EXPECT_EQ(81, remainder);
 }
 
+TEST_F(MpTest, RefTest) {
+  Ref a(a_, na_ + 5);
+  MinRef a_minimized(a);
+  EXPECT_EQ(na_, a_minimized.size());
+
+  static_assert(std::is_constructible_v<ConstRef, Ref>);
+  static_assert(!std::is_constructible_v<Ref, ConstRef>);
+  static_assert(std::is_constructible_v<Ref, MinRef>);
+  static_assert(std::is_constructible_v<MinRef, MinRef>);
+  static_assert(std::is_constructible_v<MinRef, Ref>);
+}
+
 TEST_F(MpTest, Compare) {
   EXPECT_GT(0, compare(a_, na_, b_, nb_));
   EXPECT_GT(0, compare(a_, na_, b_, na_));

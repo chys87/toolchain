@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -146,13 +146,6 @@ inline std::pair<size_t, Word> Div(Word *r, const Word *a, size_t na,
   return std::make_pair(0, c);
 }
 
-template <typename T>
-inline size_t Minimize(const T *s, size_t n) noexcept {
-  while (n && s[n - 1] == 0)
-    --n;
-  return n;
-}
-
 } // namespace
 
 size_t mul(Word *r, const Word *a, size_t na, Word b) noexcept {
@@ -212,8 +205,8 @@ std::pair<size_t, Word> div(Word *r, const Word *a, size_t na, Word b) noexcept 
 }
 
 int compare(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
-  na = Minimize(a, na);
-  nb = Minimize(b, nb);
+  na = minimize(a, na);
+  nb = minimize(b, nb);
   if (na > nb) {
     return 1;
   } else if (na < nb) {
@@ -233,8 +226,8 @@ int compare(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
 }
 
 bool eq(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
-  na = Minimize(a, na);
-  nb = Minimize(b, nb);
+  na = minimize(a, na);
+  nb = minimize(b, nb);
   if (na != nb) {
     return false;
   }
@@ -301,7 +294,7 @@ size_t from_dec(Word *r, const char *s, size_t n) noexcept {
 }
 
 char *to_dec(char *r, const Word *s, size_t n) noexcept {
-  n = Minimize(s, n);
+  n = minimize(s, n);
   if (n == 0) {
     *r++ = '0';
     return r;
@@ -421,7 +414,7 @@ size_t from_oct(Word *r, const char *s, size_t n) noexcept {
 }
 
 char *to_oct(char *r, const Word *s, size_t n) noexcept {
-  n = Minimize(s, n);
+  n = minimize(s, n);
   if (n == 0) {
     *r++ = '0';
     return r;
@@ -435,7 +428,7 @@ char *to_oct(char *r, const Word *s, size_t n) noexcept {
 #endif
 
   const uint8_t *b = reinterpret_cast<const uint8_t *>(s);
-  size_t bytes = Minimize(b, n * sizeof(Word));
+  size_t bytes = minimize(b, n * sizeof(Word));
 
   const uint8_t *pb = b + bytes / 3 * 3;
   unsigned tail = bytes % 3;
@@ -533,7 +526,7 @@ size_t from_bin(Word *r, const char *s, size_t n) noexcept {
 }
 
 char *to_bin(char *r, const Word *s, size_t n) noexcept {
-  n = Minimize(s, n);
+  n = minimize(s, n);
   if (n == 0) {
     *r++ = '0';
     return r;
