@@ -40,7 +40,7 @@ using std::span;
 #else // !__has_include(<span>)
 
 #include <cstddef>
-#include "concepts.h"
+#include "cbu/common/concepts.h"
 
 namespace cbu {
 namespace compat {
