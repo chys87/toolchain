@@ -69,4 +69,6 @@ Common utilities
 
 ### cbu/fsyscall
 
-"Inline system call wrapper for the crazy people", see [fsyscall/README.md](cbu/fsyscall/README.md)
+"Inline system call wrapper for the crazy people", see [fsyscall/README.md](cbu/fsyscall/README.md).
+
+This one is just a hobby - a crazy one.
