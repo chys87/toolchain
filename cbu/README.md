@@ -21,6 +21,10 @@ build --action_env=BAZEL_LINKLIBS=-Wl,-rpath,/usr/local/LIB
 
 Unit testing in this project requires [Google Test](https://github.com/google/googletest).
 
-If you use bazel, Google Test is automatically downloaded from Github and built.
+If you use bazel, Google Test can be automatically downloaded from Github and built.  Just type:
+
+```
+bazel test ...
+```
 
 If you use anything else, you have to take care of it yourself.
