@@ -131,11 +131,3 @@ Cons:
 * `fsys_` functions fall back to glibc wrappers on platforms other than x86-64.
   They often have different header requirement than the inline versions, which causes
   pains in developing programs intended to be portable.
-
-Disclaimer
-==========
-
-I am no fan of GNU or GPL, absolutely.
-The sole reason why this repository is licensed under LGPL rather than a more permissive license
-is that my code is partially based
-on file `sysdeps/unix/sysv/linux/x86_64/sysdep.h` in [glibc](http://www.gnu.org/software/libc/).

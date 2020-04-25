@@ -25,41 +25,12 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cc_library(
-  name = 'common',
-  srcs = glob(['*.cc', 'compat/*.cc'],
-              exclude=['*_test.cc', 'compat/*_test.cc']),
-  hdrs = glob(['*.h', 'compat/*.h']),
-  deps = [
-    '//cbu/fsyscall',
+  name = 'fsyscall',
+  srcs = [],
+  hdrs = [
+    'fsyscall.h',
+    'fsys-aux.h',
   ],
-  copts = [
-    '-std=gnu++2a',
-    '-fconcepts',
-    '-Wall',
-    '-Werror',
-    '-fmax-errors=5',
-    '-fdiagnostics-color=always',
-  ],
-  # cbu is a collection of really TINY utilities so you may always want to
-  # use static linking
-  linkstatic=True,
+  linkstatic = True,
   visibility = ["//visibility:public"],
-)
-
-cc_test(
-  name = 'common-tests',
-  srcs = glob(['*_test.cc', 'compat/*.cc']),
-  deps = [
-    ':common',
-    '@com_google_googletest//:gtest_main',
-  ],
-  copts = [
-    '-march=native',
-    '-std=gnu++2a',
-    '-fconcepts',
-    '-Wall',
-    '-Werror',
-    '-fmax-errors=5',
-    '-fdiagnostics-color=always',
-  ],
 )
