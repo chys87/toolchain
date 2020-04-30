@@ -31,6 +31,8 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <time.h>
+#include <sys/uio.h>
+#include <string_view>
 
 namespace cbu {
 inline namespace cbu_fileutil {
@@ -75,6 +77,18 @@ class AtFile {
 // If anything is wrong, returns 0
 time_t get_file_mtime(AtFile) noexcept;
 time_t get_file_mtime(int) noexcept;
+
+void touch_file(AtFile, time_t) noexcept;
+void touch_file(int, time_t) noexcept;
+
+// Utility functions for conversion between iovec and string_view
+inline constexpr iovec sv2iov(std::string_view sv) noexcept {
+  return {const_cast<char *>(sv.data()), sv.length()};
+}
+
+inline constexpr std::string_view iov2sv(iovec v) noexcept {
+  return {static_cast<const char *>(v.iov_base), v.iov_len};
+}
 
 } // namespace cbu_fileutil
 } // namepsace cbu

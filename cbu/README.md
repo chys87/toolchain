@@ -33,7 +33,7 @@ If you use anything else, you have to take care of it yourself.
 
 ### cbu/common
 
-Common utilities
+[`cbu/common`](cbu/common): Common utilities
 
 * `align.h`: Alignment and power-of-two operations
 * `bit_cast.h`: An (incomplete) implementation of C++20 [`std::bit_cast`](https://en.cppreference.com/w/cpp/numeric/bit_cast)
@@ -72,3 +72,7 @@ Common utilities
 "Inline system call wrapper for the crazy people", see [fsyscall/README.md](cbu/fsyscall/README.md).
 
 This one is just a hobby - a crazy one.
+
+### cbu/io
+
+[`cbu/io`](cbu/io): IO utilities

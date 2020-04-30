@@ -27,6 +27,8 @@
  */
 
 #include "cbu/io/fileutil.h"
+#include <errno.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include "cbu/fsyscall/fsyscall.h"
 
@@ -73,6 +75,24 @@ time_t get_file_mtime(int fd) noexcept {
 #endif
 }
 
+void touch_file(AtFile atfile, time_t timestamp) noexcept {
+  struct timespec ts[2] = {{timestamp, 0}, {timestamp, 0}};
+  int rv = fsys_utimensat(atfile.fd(), atfile.name(), ts, 0);
+  if ((rv != 0) && fsys_errno(rv, ENOENT)) {
+    // Maybe the file does not exist
+    int fd = fsys_openat4(atfile.fd(), atfile.name(),
+                          O_WRONLY | O_CREAT | O_CLOEXEC, 0666);
+    if (fd >= 0) {
+      fsys_futimens(fd, ts);
+      fsys_close(fd);
+    }
+  }
+}
+
+void touch_file(int fd, time_t timestamp) noexcept {
+  struct timespec ts[2] = {{timestamp, 0}, {timestamp, 0}};
+  fsys_futimens(fd, ts);
+}
 
 } // namespace cbu_fileutil
 } // namepsace cbu
