@@ -77,6 +77,10 @@ This one is just a hobby - a crazy one.
 
 [`cbu/io`](cbu/io): IO utilities
 
+### cbu/malloc
+
+[`cbu/malloc`](cbu/malloc): My malloc implementation.  See [benchmark data](cbu/malloc).
+
 ### cbu/sys
 
 [`cbu/sys`](cbu/sys): System utilities
