@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# Supported environment variables:
+# OPT_TRUE_CC: Default: gcc-svn
+# OPT_TRUE_CXX: Default: g++-svn
+# OPT_DISABLE_REWRITE: Disable rewrite
+# OPT_DISABLE_CCACHE: Disable gcc
+# GCC_SVN_OPT_FORCE_ARG_{0..19}: Extra arguments
+
+# Limit memory usage to 1GiB
+ulimit -v 1048576
+
+shopt -s extglob
+
+CURDIR="$(readlink -f "${BASH_SOURCE[0]}")"
+CURDIR="${CURDIR%/*}"
+
+OPT_TRUE_CC="${OPT_TRUE_CC:-gcc-svn}"
+OPT_TRUE_CXX="${OPT_TRUE_CXX:-g++-svn}"
+
+case "$0" in
+	*++*) exe="$OPT_TRUE_CXX";;
+	*) exe="$OPT_TRUE_CC";;
+esac
+
+lto=0
+compile=0
+conftest=0
+shared=0
+thirty_two=0
+ccache=1
+
+args=()
+for x; do
+	case "$x" in
+		-flto) lto=1;;
+		-fno-lto) lto=0;;
+		*conftest*|*configure*/tmp.c) conftest=1;;
+		-c) compile=1;;
+		-shared) shared=1;;
+		-m32) thirty_two=1;;
+#		-M?(M)) ccache=0;;
+	esac
+	args+=("$x")
+done
+
+if (( !conftest && !(lto && compile) && !thirty_two )) && [[ -z "$OPT_DISABLE_REWRITE" ]]; then
+	args+=(-B"$CURDIR")
+fi
+# args+=(-B/path/to/binutils/bin)
+
+# Allow forcing arguments
+for ((i=0; i<20; ++i)); do
+	force_arg="GCC_SVN_OPT_FORCE_ARG_$i"
+	force_arg="${!force_arg}"
+	if [[ -n "$force_arg" ]]; then
+		args+=("$force_arg")
+	fi
+done
+
+if ((ccache)) && [[ -z "$OPT_DISABLE_CCACHE" ]]; then
+
+	# Cache in /tmp/ccache
+	export CCACHE_DIR=/tmp/ccache
+	export CCACHE_NODIRECT=1
+	unset -v CCACHE_COMPRESS
+	unset -v CCACHE_COMPILERCHECK
+	if ! [ -d "$CCACHE_DIR" ]; then
+		mkdir -p "$CCACHE_DIR"
+	fi
+	cmdline=(ccache "$exe" "${args[@]}")
+else
+	cmdline=("$exe" "${args[@]}")
+fi
+
+# We could use auto, but let's fix an unclear GCC bug
+if ! ((conftest)) && [[ -t 2 ]]; then
+	cmdline+=(-fdiagnostics-color)
+fi
+
+exec "${cmdline[@]}"
