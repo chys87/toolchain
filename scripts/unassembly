@@ -294,7 +294,7 @@ def main():
     fi = objdump.stdout
     fi = cppfilter(fi)
 
-    if sys.platform.startswith('linux') and platform.machine == 'x86_64':
+    if sys.platform.startswith('linux') and platform.machine() == 'x86_64':
         fi = syscall_replace(fi)
 
     if not os.isatty(sys.stdout.fileno()):
