@@ -228,10 +228,9 @@ def read_header(filename):
 def syscall_replace(fi):
     data = get_lines(fi, 3) # In cases of static libraries, we need 3 lines
 
-    if b'x86-64' not in data: # If not x86-64, skip the expensive steps
+    if b'x86-64' not in data:  # If not x86-64, skip the expensive steps
         yield data
-        while True:
-            yield next(fi)
+        yield from fi
         return
 
     # x86-64 LP64 syscalls
