@@ -42,32 +42,6 @@ import signal
 import subprocess
 import sys
 
-def iterwrapper(f):
-    '''
-    The purpose of this wrapper is to fix the iteration problem in Python 3:
-    "for f in pipe" causes write syscall to be used with 1 as the third argument,
-    which is extremely slow.
-    '''
-    if not hasattr(f, 'read'):
-        return f
-
-    def generator(f):
-        txt = b''
-        while True:
-            newtxt = f.read(8192)
-            if not newtxt:
-                break
-            txt += newtxt
-            i = txt.rfind(b'\n')
-            if i >= 0:
-                i += 1
-                yield txt[:i]
-                txt = txt[i:]
-        if txt:
-            f = None
-            yield txt
-
-    return generator(f)
 
 def get_lines(it, count):
     '''
@@ -83,6 +57,7 @@ def get_lines(it, count):
     except StopIteration:
         pass
     return txt
+
 
 def cppfilter(fi):
     simple_replaces = ( # Don't use a dict. We want orders.
@@ -223,7 +198,7 @@ def cppfilter(fi):
         return data
 
     data = b''
-    for txt in iterwrapper(fi):
+    for txt in fi:
         data += txt
         if len(data) >= 8192: # An arbitrary threshold
             yield do_replace(data)
@@ -326,7 +301,7 @@ def main():
         # Write to a pipe, whatever.
         signal.signal(signal.SIGPIPE, signal.SIG_DFL) # Prevents message at SIGPIPE
         data = b''
-        for txt in iterwrapper(fi):
+        for txt in fi:
             data += txt
             if len(data) >= 8192: # An arbitrary threshold
                 sys.stdout.buffer.write(data)
@@ -338,7 +313,7 @@ def main():
         pager = subprocess.Popen(['less'], close_fds=True, stdin=subprocess.PIPE)
         fo = pager.stdin
         data = b''
-        for txt in iterwrapper(fi):
+        for txt in fi:
             data += txt
             if len(data) >= 8192: # An arbitrary threshold
                 if not safe_write(fo, data):
