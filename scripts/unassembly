@@ -296,28 +296,36 @@ def main():
     if sys.platform.startswith('linux') and platform.machine() == 'x86_64':
         fi = syscall_replace(fi)
 
+    # An arbitrary threshold
+    FLUSH_THRESHOLD = 8192
+    # Try to improve pipe performance by always flushing multiple of 4KiB
+    FLUSH_UNIT = 4096
+
     if not os.isatty(sys.stdout.fileno()):
         # Write to a pipe, whatever.
         signal.signal(signal.SIGPIPE, signal.SIG_DFL) # Prevents message at SIGPIPE
         data = b''
         for txt in fi:
             data += txt
-            if len(data) >= 8192: # An arbitrary threshold
-                sys.stdout.buffer.write(data)
-                data = b''
+            if len(data) >= FLUSH_THRESHOLD:
+                l = len(data) // FLUSH_UNIT * FLUSH_UNIT
+                sys.stdout.buffer.write(data[:l])
+                data = data[l:]
         fi = None
         sys.stdout.buffer.write(data)
     else:
-        # We call less ourselves. In this case, we should exit with 0 rather than SIGPIPE if we get it.
+        # We call less ourselves.
+        # In this case, we should exit with 0 rather than SIGPIPE if we get it.
         pager = subprocess.Popen(['less'], close_fds=True, stdin=subprocess.PIPE)
         fo = pager.stdin
         data = b''
         for txt in fi:
             data += txt
-            if len(data) >= 8192: # An arbitrary threshold
-                if not safe_write(fo, data):
+            if len(data) >= FLUSH_THRESHOLD:
+                l = len(data) // FLUSH_UNIT * FLUSH_UNIT
+                if not safe_write(fo, data[:l]):
                     break
-                data = b''
+                data = data[l:]
         else:
             if data:
                 safe_write(fo, data)
