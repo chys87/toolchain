@@ -89,6 +89,15 @@ def cppfilter(fi):
         else:
             return m.group(0)
 
+    def __replace_cbu_strpack(m):
+        chars = m.group(1)
+        chars = chars.replace(br"', '", b'')
+        if chars.startswith(b", '"):
+            chars = chars[3:]
+        if chars.endswith(b'\''):
+            chars = chars[:-1]
+        return b'cbu::"' + chars + b'"_str'
+
     pattern_replaces = (
             (re.compile(br'::basic_string<char, std::(__\d+::)?char_traits<char>, std::(__\d+::)?allocator<char>>'), b'::string'),
             (re.compile(br'::basic_string<wchar_t, std::(__\d+::)?char_traits<wchar_t>, std::(__\d+::)?allocator<wchar_t>>'), b'::wstring'),
@@ -188,6 +197,7 @@ def cppfilter(fi):
 
             # cbu specific
             (re.compile(br'\bcbu::cbu_\w+::'), br'cbu::'),  # Omit cbu's inline namespaces
+            (re.compile(br'\bcbu::strpack<char((?:, \'(?:\\\'|[^\']*)\')+)>::s'), __replace_cbu_strpack),
         )
 
     def do_replace(data):
