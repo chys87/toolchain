@@ -241,6 +241,10 @@ endif
 
 -include Makefile-spec
 
+ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
+ $(EGM.mkdirp $(INSTDIR))
+endif
+
 IS_CLANG := 0
 ifneq "$(subst clang,,$(CC))" "$(CC)"
  IS_CLANG := 1
