@@ -29,7 +29,8 @@ else
 endif
 
 ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
- $(EGM.mkdirp $(SRCDIRS:$(DIR)/%=$(BUILDDIR)/%))
+ # Don't write $(DIR)/%=$(BUILDDIR)/%, since $(SRCDIRS) may be just bare $(DIR)
+ $(EGM.mkdirp $(SRCDIRS:$(DIR)%=$(BUILDDIR)%))
 endif
 
 define strip_src
