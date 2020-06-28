@@ -1,7 +1,7 @@
 #SHELL = /bin/bash
 load ~/bin/egmake.so
 
-SELF_MAKEFILE := $(EGM.realpath $(lastword $(MAKEFILE_LIST)))
+SELF_MAKEFILE := $(realpath $(lastword $(MAKEFILE_LIST)))
 MULTIPLE_OUTPUT_HELPER := $(dir $(SELF_MAKEFILE))/multiple-output-helper.py
 
 ifeq "$(origin V)" "command line"
@@ -242,7 +242,7 @@ endif
 -include Makefile-spec
 
 ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
- $(EGM.mkdirp $(INSTDIR))
+ $(EGM.mkdirp $(EGM.expanduser $(INSTDIR)))
 endif
 
 IS_CLANG := 0
@@ -251,7 +251,7 @@ ifneq "$(subst clang,,$(CC))" "$(CC)"
 endif
 
 ifeq "$(TARGETS)" ""
-$(eval $(call define_target,$(notdir $(EGM.realpath $(DIR))),$(OBJS:$(BUILDDIR)/%.o=%)))
+$(eval $(call define_target,$(notdir $(realpath $(DIR))),$(OBJS:$(BUILDDIR)/%.o=%)))
 endif
 
 ifeq "$(CXXSRCS)" ""

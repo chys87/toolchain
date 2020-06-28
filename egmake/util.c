@@ -17,6 +17,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "util.h"
 #include <string.h>
+#include <stdlib.h>
+#include <gnumake.h>
 
 void strtr_in_place(char *s, size_t l, char from, char to) {
   char *e = s + l;
@@ -40,4 +42,14 @@ char *Memcpy(char *d, const void *s, size_t n) {
 
 char *Mempcpy(char *d, const void *s, size_t n) {
   return (char *)mempcpy(d, s, n);
+}
+
+char *strdup_to_gmk_with_len(const char *s, size_t n) {
+  char *ret = (char *)gmk_alloc(n + 1);
+  *Mempcpy(ret, s, n) = '\0';
+  return ret;
+}
+
+char *strdup_to_gmk(const char *s) {
+  return (char *)strdup_to_gmk_with_len(s, strlen(s));
 }

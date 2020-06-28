@@ -31,3 +31,6 @@ static inline size_t max_size(size_t a, size_t b) {
 
 char *Memcpy(char *d, const void *s, size_t n);
 char *Mempcpy(char *d, const void *s, size_t n);
+
+char *strdup_to_gmk_with_len(const char *s, size_t l);
+char *strdup_to_gmk(const char *s);

@@ -50,8 +50,7 @@ char *func_cat(const char *nm, unsigned int argc, char **argv) {
     }
     fsys_close(fd);
   }
-  char *ret = gmk_alloc(L + 1);
-  *Mempcpy(ret, res, L) = '\0';
+  char *ret = strdup_to_gmk_with_len(res, L);
   free(res);
   replace_cr_ln_in_place(ret, L);
   return ret;
