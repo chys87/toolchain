@@ -47,6 +47,7 @@ If you use anything else, you have to take care of it yourself.
    and `const void*` (explicit).
 * `concepts.h`: Somewhat like C++20's [`<concepts>`](https://en.cppreference.com/w/cpp/header/concepts)
 * `defer.h`: Provides macro `CBU_DEFER` for easier [RAII](https://en.cppreference.com/w/cpp/language/raii)
+* `destruct.h`: Provides several destruction functions
 * `encoding.h`: UTF-8 functions
 * `fastarith.h`: Various C++ arithmetic functions
 * `fastdiv.h`: Provides `fastdiv` and `fastmod`, to provide for faster division operations if the dividend is known to be small
