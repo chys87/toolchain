@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,6 +83,12 @@ TEST(FastStrTest, Append) {
   std::wstring u = L"Hello";
   append(&u, {L" ", L"world"});
   EXPECT_EQ(L"Hello world"sv, u);
+  append(&u, {L", "});
+  EXPECT_EQ(L"Hello world, "sv, u);
+  append(&u, {});
+  EXPECT_EQ(L"Hello world, "sv, u);
+  append(&u, {L"a", L"b", L"c"});
+  EXPECT_EQ(L"Hello world, abc"sv, u);
 }
 
 TEST(FastStrTest, Concat) {

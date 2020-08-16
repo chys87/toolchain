@@ -162,5 +162,7 @@ std::string nprintf(std::size_t hint_size,
   va_end(ap);
 }
 
+template void append<char>(std::string*, compat::span<const std::string_view>);
+
 } // namespace cbu_faststr
 } // namespace cbu

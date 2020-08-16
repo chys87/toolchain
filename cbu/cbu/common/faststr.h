@@ -188,27 +188,43 @@ std::string nprintf(std::size_t hint_size,
 template <Std_string_char C>
 void append(std::basic_string<C>* res,
             compat::span<const std::basic_string_view<C>> sp) {
-  if (sp.begin() == sp.end()) {
+  std::size_t n = sp.size();
+  auto* p = sp.data();
+  if (n == 0) {
     // Add this special case so that GCC doesn't generate a spurious
     // call to extend in the empty branch.
-    // (sp.begin() == sp.end()) helps GCC fold the comparisons with
-    // the following loop
     return;
   }
+
+  // n == 2 is a common case - accelerate it
+  if (n == 2) {
+    auto& a = *p;
+    auto& b = *(p + 1);
+    std::size_t l = a.length() + b.length();
+    C* w = extend(res, l);
+    w = Mempcpy(w, a.data(), a.length() * sizeof(C));
+    w = Mempcpy(w, b.data(), b.length() * sizeof(C));
+    return;
+  }
+
   std::size_t l = 0;
-  for (auto sv: sp) {
-    l += sv.length();
+  for (auto k = n, q = p; k; --k) {
+    l += (q++)->length();
   }
   C* w = extend(res, l);
-  for (auto sv: sp) {
+  for (; n; --n) {
+    auto sv = *p++;
     w = Mempcpy(w, sv.data(), sv.length() * sizeof(C));
   }
 }
 
+extern template void append<char>(std::string*,
+                                  compat::span<const std::string_view>);
+
 template <Std_string_char C>
-void append(std::basic_string<C>* res,
-            compat::type_identity_t<
-              std::initializer_list<std::basic_string_view<C>>> il) {
+inline void append(std::basic_string<C>* res,
+                   compat::type_identity_t<
+                     std::initializer_list<std::basic_string_view<C>>> il) {
   append(res,
          compat::span<const std::basic_string_view<C>>(il.begin(), il.size()));
 }
