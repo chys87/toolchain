@@ -29,6 +29,7 @@
 #include "mp.h"
 #include <string.h>
 #include <algorithm>
+#include <limits>
 #include <tuple>
 #if __has_include(<x86intrin.h>)
 # include <x86intrin.h>
