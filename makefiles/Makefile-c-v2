@@ -1,6 +1,8 @@
 #SHELL = /bin/bash
 load ~/bin/egmake.so
 
+export GCC_COLORS=1
+
 SELF_MAKEFILE := $(realpath $(lastword $(MAKEFILE_LIST)))
 MULTIPLE_OUTPUT_HELPER := $(dir $(SELF_MAKEFILE))/multiple-output-helper.py
 
