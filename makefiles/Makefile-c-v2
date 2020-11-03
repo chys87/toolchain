@@ -423,11 +423,11 @@ $(AUTO_GENERATED_PROTOBUF_DEPS): $(BUILDDIR)/%.proto.P:$(DIR)/%.proto
 # flatc prints error message to stdout!!! So we have to cat $@
 $(AUTO_GENERATED_FLATBUF_DEPS): private NAME := FLATCDEP
 $(AUTO_GENERATED_FLATBUF_DEPS): $(BUILDDIR)/%.fbs.P:$(DIR)/%.fbs
-	$(Q)flatc -M -o $(dir $@) $(FLATCFLAGS) -c $< > $@ || ( [ -r $@ ] && cat $@ >&2; rm -f $@; exit 1)
+	$(Q)flatc -M -o $(dir $@) $(FLATCFLAGS) $(FLAGS-$(<F)) -c $< > $@ || ( [ -r $@ ] && cat $@ >&2; rm -f $@; exit 1)
 
 $(AUTO_GENERATED_FLATBUF_HEADERS): private NAME := FLATC
 $(AUTO_GENERATED_FLATBUF_HEADERS): $(BUILDDIR)/%_generated.h:$(DIR)/%.fbs
-	$(Q)flatc -o $(dir $@) $(FLATCFLAGS) -c $<
+	$(Q)flatc -o $(dir $@) $(FLATCFLAGS) $(FLAGS-$(<F)) -c $<
 
 ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
  -include $(AUTO_GENERATED_PROTOBUF_DEPS)
