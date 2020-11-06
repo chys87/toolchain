@@ -383,7 +383,7 @@ $(OBJS): $$(SRC-$$(basename $$(call strip_src,$$@)))
 	$(Q)$(COMPILER) -MD -MP -MF '$(@:%.o=%.P)' -MT '$@ $(@:%.o=%.P)' -frandom-seed=$(<F) -c $(FLAGS) $(FLAGS-$(<F)) -o $@ $< \
 		|| (rm -f $(@:%.o=%.P); exit 1)
 
-relpath = $(shell python -c 'import os; print(os.path.relpath("$(1)", "$(2)"));')
+relpath = $(shell python3 -c 'import os; print(os.path.relpath("$(1)", "$(2)"));')
 
 # The python scripts takes at least 2 arguments:
 #  argv1: Relative directory to find source files from current directory
