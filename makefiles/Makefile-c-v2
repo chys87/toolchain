@@ -197,6 +197,7 @@ TARGETS :=
 INST_TARGETS :=
 NBIN :=
 BIN :=
+UT_SUCCESS_FILES :=
 
 # $(1): Target name; $(2): Dependencies (without .o)
 # $(3): Options (ut)
@@ -210,8 +211,10 @@ ifeq "$(filter ut,$(3))" "ut"
 all:	$(BUILDDIR)/$(1).n.out
 ut:	run-$(1)
 .PHONY: run-$(1)
-run-$(1): $(BUILDDIR)/$(1).n.out
-	$(BUILDDIR)/$(1).n.out
+run-$(1): $(BUILDDIR)/$(1).success
+UT_SUCCESS_FILES += $(BUILDDIR)/$(1).success
+$(BUILDDIR)/$(1).success: $(BUILDDIR)/$(1).n.out
+	$(BUILDDIR)/$(1).n.out && touch $$@
 else
 INST_TARGETS += $(1)
 all:	$(BUILDDIR)/$(1).out
@@ -331,7 +334,7 @@ $(foreach x,$(INST_TARGETS),$(eval $(call define_size_unassembly_bincmp,$(x))))
 
 ifneq "$(filter $(MAKECMDGOALS),purge)" ""
 purge:
-	rm -f $(filter-out $(AUTO_GENERATED) $(AUTO_GENERATED_DEPS) $(BIN) $(NBIN) $(OBJS) $(DEPS),\
+	rm -f $(filter-out $(AUTO_GENERATED) $(AUTO_GENERATED_DEPS) $(BIN) $(NBIN) $(OBJS) $(DEPS) $(UT_SUCCESS_FILES),\
 		$(shell find $(BUILDDIR) '!' -type d))
 	[ -d $(BUILDDIR) ] && find $(BUILDDIR) -depth -mindepth 1 -type d -empty -print -delete
 endif
