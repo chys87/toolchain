@@ -94,39 +94,6 @@ cbu_mutex_lock_wait_asm:
     ud2
 
 
-#ifdef __RTM__
-    .section .text.tm_mutex_asm,"ax",@progbits
-    .globl cbu_tm_mutex_fallback_lock_asm
-    .align 16
-    // This "function" preserves red zone. Returns to R8
-    //; Input: EAX (c); RDI (ptr); R8 (ret); RCX (retry address)
-    //; Output: RAX/RCX/RDX/RSI/R10/R11 = garbage. RDI/R8 preserved
-cbu_tm_mutex_fallback_lock_asm:
-    testb $2, %al  // If the CPU says the transaction may succeed on a retry, we honor its advice
-    jnz   1f
-    xorl  %eax, %eax
-    movl  $1, %edx
-    lock cmpxchg    %edx, (%rdi)
-    jne   cbu_mutex_lock_wait_asm
-    jmp   *%r8
-    ud2
-    .align 16
-1:
-    jmp        *%rcx
-    ud2
-
-    .globl cbu_tm_mutex_fallback_unlock_asm
-    .align 16
-    // This "function" preserves red zone. Returns to R8
-    //; Input: RDI (ptr); R8 (ret)
-    //; Output: RAX/RCX/RDX/RSI/R11 = garbage. RDI/R8 preserved
-cbu_tm_mutex_fallback_unlock_asm:
-    lock decl (%rdi)
-    jnz     cbu_mutex_unlock_wake_asm
-    jmpq    *%r8
-    ud2
-
-#endif // __RTM__
 #endif // __x86_64__
 
     .section    .note.GNU-stack,"",@progbits

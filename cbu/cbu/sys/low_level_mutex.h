@@ -55,10 +55,6 @@ private:
 
 private:
   int v_ = 0;
-
-#if defined __x86_64__ && defined __RTM__
-  friend class LowLevelTmMutex;
-#endif
 };
 
 #if defined __x86_64__
@@ -112,57 +108,8 @@ CBU_MUTEX_INLINE void LowLevelMutex::unlock() noexcept {
 #endif
 
 
-#if defined __x86_64__ && defined __RTM__
-class LowLevelTmMutex {
-public:
-  CBU_MUTEX_INLINE void lock() noexcept;
-  CBU_MUTEX_INLINE void unlock() noexcept;
-
-private:
-  LowLevelMutex m_;
-};
-
-CBU_MUTEX_INLINE void LowLevelTmMutex::lock() noexcept {
-  asm volatile ("\n"
-#if defined __PIC__ || defined __PIE__
-    "  leaq\t1f(%%rip), %%r8\n"
-    "  leaq\t2f(%%rip), %%rcx\n"
-#else
-    "  movl\t$1f, %%r8d\n"
-    "  movl\t$2f, %%ecx\n"
-#endif
-    "2:\n"
-    "  xbegin\tcbu_tm_mutex_fallback_lock_asm\n" // This "function" preserves red zone
-    "  cmpl\t$0, (%%rdi)\n"
-    "  je\t1f\n"
-    "  xabort\t$0xff\n"
-    "1:"
-    :
-    : "D"(&m_.v_)
-    : "memory", "cc", "ax", "dx", "si", "cx", "r8", "r10", "r11"
-    );
-}
-
-CBU_MUTEX_INLINE void LowLevelTmMutex::unlock() noexcept {
-  asm volatile ("\n"
-#if defined __PIC__ || defined __PIE__
-    "  leaq\t1f(%%rip), %%r8\n"
-#else
-    "  mov\t$1f, %%r8d\n"
-#endif
-    "  cmpl\t$0, (%%rdi)\n"
-    "  jnz\tcbu_tm_mutex_fallback_unlock_asm\n"
-    "  xend\n"
-    "1:"
-    :
-    : "D"(&m_.v_)
-    : "memory", "cc", "si", "ax", "dx", "cx", "r8", "r11"
-    );
-}
-
-#else
+// For compatibility only
 using LowLevelTmMutex = LowLevelMutex;
-#endif
 
 #undef CBU_MUTEX_INLINE
 
