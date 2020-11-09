@@ -185,7 +185,7 @@ CXXWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
 	-Wsuggest-final-types \
 	-Wsuggest-final-methods \
 	-Werror=suggest-override
-FLATCFLAGS := --scoped-enums --gen-object-api
+FLATCFLAGS := --scoped-enums --gen-object-api --cpp-std c++17
 PIE := 0
 NOPLT := 0
 LTO := 0
