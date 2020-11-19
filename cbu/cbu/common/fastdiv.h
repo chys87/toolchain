@@ -36,16 +36,6 @@ namespace cbu {
 inline namespace cbu_fastdiv {
 namespace fastdiv_detail {
 
-// It's strange that there's no feature test macro for consteval, so
-// we resort to GCC versions
-#ifndef cbu_consteval
-# if defined __GNUC__ && __GNUC__ >= 10
-#  define cbu_consteval consteval
-# else
-#  define cbu_consteval constexpr
-# endif
-#endif
-
 struct Magic {
   // (v / D) == ((v >> S) * M) >> N;
   unsigned int S;
@@ -55,12 +45,12 @@ struct Magic {
 
 
 template <typename Type>
-inline cbu_consteval bool check(Type K, Type D, Type M, Type N) noexcept {
+inline consteval bool check(Type K, Type D, Type M, Type N) noexcept {
   return (K / D == K * M >> N);
 }
 
 template <typename Type>
-inline cbu_consteval Type get_k(Type D, Type M, Type N) noexcept {
+inline consteval Type get_k(Type D, Type M, Type N) noexcept {
   Type lo = 0; // Satisfies
   Type hi = std::numeric_limits<Type>::max(); // Dissatisfies
   do {
@@ -96,7 +86,7 @@ inline cbu_consteval Type get_k(Type D, Type M, Type N) noexcept {
   return hi;
 }
 
-inline cbu_consteval Magic magic_base(std::uint32_t D,
+inline consteval Magic magic_base(std::uint32_t D,
                                       std::uint32_t UB) noexcept {
   for (unsigned int N = 1; N < 32; ++N) {
     // Find proper M, use this:
@@ -117,7 +107,7 @@ inline cbu_consteval Magic magic_base(std::uint32_t D,
   return {};
 }
 
-inline cbu_consteval Magic magic(std::uint32_t D, std::uint32_t UB) noexcept {
+inline consteval Magic magic(std::uint32_t D, std::uint32_t UB) noexcept {
   for (unsigned int S = 0; S < 32 && (D & ((1u << S) - 1)) == 0; ++S) {
     Magic mag = magic_base(D >> S, UB);
     if (mag.M != 0) {
