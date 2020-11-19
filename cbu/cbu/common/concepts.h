@@ -45,6 +45,12 @@ concept String_view_compat = requires (const T &t) {
 };
 
 template <typename T>
+concept Zstring_view_compat = requires (const T &t) {
+  { t.c_str() } -> convertible_to<const char *>;
+  { t.length() } -> convertible_to<std::size_t>;
+};
+
+template <typename T>
 concept No_cv = std::is_same_v<std::remove_cv_t<T>, T>;
 
 template <typename T>

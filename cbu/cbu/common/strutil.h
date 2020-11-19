@@ -82,5 +82,13 @@ inline constexpr const char *c_str(const T &s) noexcept(noexcept(s->c_str())) {
   return s->c_str();
 }
 
+// Compares two string views, and returns negative, 0, and positive
+int compare_string_view(std::string_view a, std::string_view b) noexcept
+  __attribute__((__pure__));
+
+// Returns negative if (a < b), 0 or positive otherwise
+int compare_string_view_for_lt(std::string_view a, std::string_view b) noexcept
+  __attribute__((__pure__));
+
 } // namespace cbu_strutil
 } // namespace cbu
