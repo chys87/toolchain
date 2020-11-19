@@ -37,6 +37,11 @@
 #include "cbu/common/byteorder.h"
 
 namespace cbu {
+
+inline namespace cbu_short_string {
+template <std::size_t> class short_string;
+};
+
 inline namespace cbu_ipv4 {
 
 inline constexpr std::endian network_endian = std::endian::big;
@@ -92,7 +97,7 @@ class IPv4 {
   }
 
   char* to_string(char* buffer) const noexcept;
-  std::string to_string() const;
+  short_string<15> to_string() const;
 
   static std::optional<IPv4> from_string(std::string_view s) noexcept;
 

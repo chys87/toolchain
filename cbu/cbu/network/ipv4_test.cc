@@ -27,7 +27,10 @@
  */
 
 #include "cbu/network/ipv4.h"
+
 #include <gtest/gtest.h>
+
+#include "cbu/common/short_string.h"
 
 namespace cbu::cbu_network {
 
@@ -42,7 +45,7 @@ TEST(IPv4Test, ToStringTest) {
   for (int i = 0; i < 256; ++i) {
     IPv4 ip(192, 168, 1, i);
     ASSERT_EQ("192.168.1." + std::to_string(i),
-              ip.to_string());
+              ip.to_string().string());
   }
 }
 

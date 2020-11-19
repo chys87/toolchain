@@ -60,6 +60,7 @@ If you use anything else, you have to take care of it yourself.
 * `range.h`: Wraps two iterators to an object for [range-based for](https://en.cppreference.com/w/cpp/language/range-for)
 * `scoped_fd.h`: Wraps a file descriptor in a class
 * `shared_instance.h`: An enhanced singleton implementation
+* `short_string.h`: A class for storing very short strings efficiently
 * `stdhack.h`: Hacks standard strings and containers, providing resizing without initialization
 * `strpack.h`: Converts a string literal to a class with variadic templates
 * `strutil.h`: Various string utilities, higher level than `faststr.h`

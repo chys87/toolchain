@@ -28,6 +28,7 @@
 
 #include "cbu/network/ipv4.h"
 #include "cbu/common/fastdiv.h"
+#include "cbu/common/short_string.h"
 
 namespace cbu::cbu_ipv4 {
 namespace {
@@ -95,9 +96,10 @@ char* IPv4::to_string(char* p) const noexcept {
   return p;
 }
 
-std::string IPv4::to_string() const {
-  char buf[16];  // The max length of an IPv4 is 15
-  return std::string(buf, to_string(buf) - buf);
+short_string<15> IPv4::to_string() const {
+  short_string<15> res;  // The max length of an IPv4 is 15
+  res.set_length(to_string(res.buffer()) - res.buffer());
+  return res;
 }
 
 std::optional<IPv4> IPv4::from_string(std::string_view s) noexcept {
