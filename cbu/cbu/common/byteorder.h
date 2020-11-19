@@ -66,9 +66,22 @@ template <std::endian order_a, std::endian order_b, Bswappable T>
   requires (order_a != order_b)
 inline constexpr T may_bswap(T value) noexcept { return bswap(value); }
 
+template <Bswappable T>
+inline constexpr T may_bswap(std::endian a, std::endian b, T value) noexcept {
+  if (a == b) {
+    return value;
+  } else {
+    return bswap(value);
+  }
+}
+
 template <std::endian byte_order, Bswappable T>
 inline constexpr T bswap_for(T value) noexcept {
   return may_bswap<byte_order, std::endian::native>(value);
+}
+
+template <Bswappable T>
+inline constexpr T bswap_for(std::endian byte_order, T value) noexcept {
 }
 
 // Swap for data exchange with big endian data

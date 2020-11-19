@@ -82,6 +82,12 @@ This one is just a hobby - a crazy one.
 
 [`cbu/malloc`](cbu/malloc): My malloc implementation.  See [benchmark data](cbu/malloc).
 
+### cbu/network
+
+[`cbu/network`](cbu/network): Networking utilities
+
+* `ipv4.h`: Provides a simple `IPv4` class and related utility functions
+
 ### cbu/sys
 
 [`cbu/sys`](cbu/sys): System utilities
