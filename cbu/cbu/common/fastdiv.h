@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -129,6 +129,19 @@ inline cbu_consteval Magic magic(std::uint32_t D, std::uint32_t UB) noexcept {
   return {};
 }
 
+// Work around a bug in some veresions of GCC, which insists on
+// evaluating UB / (D / 7) even if it should be short-circuited.
+template <std::uint32_t D, std::uint32_t UB> requires (D / 7 != 0)
+inline constexpr bool use_div7_special_case() {
+  return (D % 7 == 0 && ((D / 7) & ((D / 7) - 1)) == 0 &&
+          UB / (D / 7) <= 65536);
+}
+
+template <std::uint32_t D, std::uint32_t UB> requires (D / 7 == 0)
+inline constexpr bool use_div7_special_case() {
+  return false;
+}
+
 } // namespace fastdiv_detail
 
 // Compute (v / D) (where v is unknown to be < UB)
@@ -141,8 +154,7 @@ inline constexpr std::uint32_t fastdiv(std::uint32_t v) noexcept {
   constexpr auto N = mag.N;
   if constexpr (M != 0) {
     return (v >> S) * M >> N;
-  } else if constexpr (D % 7 == 0 && ((D / 7) & ((D / 7) - 1)) == 0 &&
-                       UB / (D / 7) <= 65536) {
+  } else if constexpr (fastdiv_detail::use_div7_special_case<D, UB>()) {
     // Special case
     v /= D / 7;
     std::uint32_t a = 9363 * v >> 16;

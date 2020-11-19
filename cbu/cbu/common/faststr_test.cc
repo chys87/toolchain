@@ -94,8 +94,8 @@ TEST(FastStrTest, Append) {
 TEST(FastStrTest, Concat) {
   EXPECT_EQ("Hello world"sv,
             concat({"Hello", " ", "world"}));
-  EXPECT_EQ(U"Hello world"sv,
-            concat({U"Hello", U" ", U"world"}));
+  EXPECT_EQ(L"Hello world"sv,
+            concat({L"Hello", L" ", L"world"}));
 }
 
 } // namespace cbu
