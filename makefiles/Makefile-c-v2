@@ -279,6 +279,8 @@ ifeq "$(LTO)" "1"
 endif
 ifeq "$(PIE)" "1"
  OPTIMIZEFLAGS += -fpie -pie
+else
+ OPTIMIZEFLAGS += -fno-pie -no-pie
 endif
 ifeq "$(NOPLT)" "1"
  OPTIMIZEFLAGS += -fno-plt
