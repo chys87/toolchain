@@ -47,6 +47,7 @@ public:
 
   CBU_MUTEX_INLINE void lock() noexcept;
   CBU_MUTEX_INLINE void unlock() noexcept;
+  CBU_MUTEX_INLINE bool try_lock() noexcept;
   void yield() noexcept;
 
 private:
@@ -107,6 +108,11 @@ CBU_MUTEX_INLINE void LowLevelMutex::unlock() noexcept {
 
 #endif
 
+CBU_MUTEX_INLINE bool LowLevelMutex::try_lock() noexcept {
+  int copy = 0;
+  return std::atomic_ref(v_).compare_exchange_strong(
+      copy, 1, std::memory_order_acquire, std::memory_order_relaxed);
+}
 
 // For compatibility only
 using LowLevelTmMutex = LowLevelMutex;
