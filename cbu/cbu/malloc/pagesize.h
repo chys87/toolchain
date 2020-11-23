@@ -29,7 +29,7 @@
 #pragma once
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 
 constexpr unsigned pagesize_bits = 12;
 constexpr unsigned pagesize = 1 << pagesize_bits;

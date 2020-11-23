@@ -59,7 +59,7 @@ class ScopedFD {
 
   constexpr int fd() const noexcept { return fd_; }
   constexpr operator int() const noexcept { return fd_; }
-  operator bool() const = delete;
+  explicit operator bool() const = delete;
 
   int release() noexcept { return std::exchange(fd_, -1); }
 

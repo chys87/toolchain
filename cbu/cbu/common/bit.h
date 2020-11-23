@@ -143,7 +143,8 @@ inline constexpr unsigned clz(long long x) noexcept {
 }
 
 inline constexpr unsigned bsr(unsigned x) noexcept {
-#if defined __GNUC__ && (defined __i386__ || defined __x86_64__)
+#if (defined __GNUC__ && (defined __i386__ || defined __x86_64__)) \
+    && !defined __clang__
   return __builtin_ia32_bsrsi(x);
 #else
   return clz(x) ^ (8 * sizeof(x) - 1);
@@ -151,7 +152,7 @@ inline constexpr unsigned bsr(unsigned x) noexcept {
 }
 
 inline constexpr unsigned bsr(unsigned long x) noexcept {
-#if defined __GNUC__ && defined __x86_64__
+#if defined __GNUC__ && defined __x86_64__ && !defined __clang__
   return (sizeof(unsigned long) == 4 ? __builtin_ia32_bsrsi(x) :
           __builtin_ia32_bsrdi(x));
 #else
@@ -160,7 +161,7 @@ inline constexpr unsigned bsr(unsigned long x) noexcept {
 }
 
 inline constexpr unsigned bsr(unsigned long long x) noexcept {
-#if defined __GNUC__ && defined __x86_64__
+#if defined __GNUC__ && defined __x86_64__ && !defined __clang__
   return __builtin_ia32_bsrdi(x);
 #else
   return clz(x) ^ (8 * sizeof(x) - 1);

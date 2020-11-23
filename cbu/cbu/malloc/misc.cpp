@@ -39,7 +39,7 @@
 #include "cbu/sys/low_level_mutex.h"
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 
 void fatal(const char* s) noexcept {
   size_t n = write(2, s, strlen(s));
@@ -56,8 +56,8 @@ std::nullptr_t nomem() noexcept {
   fatal("Insufficient memory\n");
 #else
   errno = ENOMEM;
-#endif
   return nullptr;
+#endif
 }
 
 namespace {

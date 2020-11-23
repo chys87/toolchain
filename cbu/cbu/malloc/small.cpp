@@ -31,12 +31,12 @@
 #include <atomic>
 #include <mutex>
 #include "cbu/common/byte_size.h"
-#include "cbu/malloc/compat.h"
+#include "cbu/compat/atomic_ref.h"
 #include "cbu/malloc/tc.h"
 #include "cbu/sys/low_level_mutex.h"
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 
 struct Block {
   Block *next;  // In free list

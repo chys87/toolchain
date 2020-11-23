@@ -30,7 +30,7 @@
 
 #include "bit_cast.h"
 #include "concepts.h"
-#include "compat/type_identity.h"
+#include "cbu/compat/type_identity.h"
 #include <cstdint>
 
 namespace cbu {
@@ -89,7 +89,14 @@ inline constexpr T clamp(T v,
 
 namespace fastarith_detail {
 
+#ifndef __has_attribute
+# define __has_attribute(...) 0
+#endif
+#if __has_attribute(__error__)
 void error() __attribute__((__error__("Unreachable code")));
+#else
+[[noreturn]] void error();
+#endif
 
 } // namespace fastarith_detail
 

@@ -31,7 +31,7 @@
 #include "cbu/malloc/private.h"
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 namespace {
 
 // Check pagesize at runtime

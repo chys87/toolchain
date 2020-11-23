@@ -33,7 +33,7 @@
 #include "cbu/malloc/private.h"
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 
 struct ThreadCache {
   enum struct Status : unsigned char {

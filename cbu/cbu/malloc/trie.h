@@ -31,11 +31,11 @@
 #include <string.h>
 #include <memory>
 #include "cbu/common/bit.h"
+#include "cbu/compat/atomic_ref.h"
 #include "cbu/malloc/permanent.h"
-#include "cbu/malloc/compat.h"
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 namespace detail {
 
 template <typename Node>
@@ -43,7 +43,11 @@ Node* ensure_node_heavy(Node **ptr, SimplePermaAlloc<Node> &allocator) {
   Node* next = allocator.alloc();
   if (false_no_fail(next == NULL))
     return NULL;
+#ifdef __cpp_lib_assume_aligned
   memset(std::assume_aligned<alignof(Node)>(next), 0, sizeof(*next));
+#else
+  memset(next, 0, sizeof(*next));
+#endif
   Node* got = 0;
   if (!std::atomic_ref(*ptr).compare_exchange_strong(
         got, next, std::memory_order_acq_rel, std::memory_order_acquire)) {
@@ -102,12 +106,16 @@ class Trie {
 };
 
 template <unsigned TotalBits, typename ValueType>
+requires (TotalBits >= 8 and TotalBits <= sizeof(uintptr_t) * 8 and
+          (sizeof(ValueType) & (sizeof(ValueType) - 1)) == 0)
 ValueType* Trie<TotalBits, ValueType>::lookup_fail_crash(uintptr_t v) {
   assert(v < ((uintptr_t(1) << TotalBits) - 1));
   uintptr_t levelmask = (uintptr_t(1) << LevelBits) - 1;
   Node* node = reinterpret_cast<Node *>(
       head_[TopBits ? (v >> (Levels * LevelBits + LeafBits)) : 0]);
+#ifndef __clang__
 #pragma GCC unroll 16
+#endif
   for (int i = (Levels - 1) * LevelBits; i >= 0; i -= LevelBits) {
     size_t o = (v >> (i + LeafBits)) & levelmask;
     node = reinterpret_cast<Node *>(
@@ -117,6 +125,8 @@ ValueType* Trie<TotalBits, ValueType>::lookup_fail_crash(uintptr_t v) {
 }
 
 template <unsigned TotalBits, typename ValueType>
+requires (TotalBits >= 8 and TotalBits <= sizeof(uintptr_t) * 8 and
+          (sizeof(ValueType) & (sizeof(ValueType) - 1)) == 0)
 ValueType* Trie<TotalBits, ValueType>::lookup(uintptr_t v) {
   assert(v < ((uintptr_t(1) << TotalBits) - 1));
   uintptr_t levelmask = (uintptr_t(1) << LevelBits) - 1;

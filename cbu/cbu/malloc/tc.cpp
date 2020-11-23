@@ -30,7 +30,7 @@
 #include "cbu/common/once.h"
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 
 __thread ThreadCache thread_cache;
 

@@ -43,7 +43,7 @@
 #include <mutex>
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 
 union Description {
   struct {

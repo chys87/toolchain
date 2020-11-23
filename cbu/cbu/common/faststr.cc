@@ -33,7 +33,7 @@
 #include "bit.h"
 #include "fastarith.h"
 #include "stdhack.h"
-#include "compat/string.h"
+#include "cbu/compat/string.h"
 
 namespace cbu {
 inline namespace cbu_faststr {

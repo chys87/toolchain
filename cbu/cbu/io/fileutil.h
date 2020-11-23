@@ -40,7 +40,10 @@ inline namespace cbu_fileutil {
 // Wraps an fd (to a directory) and a filename for openat and friends
 class AtFile {
  public:
-  constexpr AtFile(const char *n = nullptr) noexcept : AtFile(AT_FDCWD, n) {}
+#ifndef __clang__
+  constexpr
+#endif
+  AtFile(const char *n = nullptr) noexcept : AtFile(AT_FDCWD, n) {}
   AtFile(const AtFile &) noexcept = default;
 
   explicit constexpr operator bool() const noexcept { return name(); }
@@ -54,9 +57,15 @@ class AtFile {
 #if defined __linux__ && defined __x86_64__ && defined __LP64__ && \
     AT_FDCWD < 0 && AT_FDCWD >= -32768 && !defined CBU_LARGE_FD
  public:
-  constexpr AtFile(int f, const char *n) noexcept :
+#ifndef __clang__
+  constexpr
+#endif
+  AtFile(int f, const char *n) noexcept :
     fd_(f), name_u_(reinterpret_cast<uint64_t>(n)) {}
-  constexpr const char *name() const noexcept {
+#ifndef __clang__
+  constexpr
+#endif
+  const char *name() const noexcept {
     return reinterpret_cast<const char *>(name_u_);
   }
 

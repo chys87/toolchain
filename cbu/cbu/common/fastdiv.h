@@ -87,7 +87,7 @@ inline consteval Type get_k(Type D, Type M, Type N) noexcept {
 }
 
 inline consteval Magic magic_base(std::uint32_t D,
-                                      std::uint32_t UB) noexcept {
+                                  std::uint32_t UB) noexcept {
   for (unsigned int N = 1; N < 32; ++N) {
     // Find proper M, use this:
     // (D-1) / D == ((D - 1) * M) >> N == 0
@@ -136,12 +136,11 @@ inline constexpr bool use_div7_special_case() {
 
 // Compute (v / D) (where v is unknown to be < UB)
 // We use tricks to have the compiler generate faster and/or smaller code
-template <std::uint32_t D, std::uint32_t UB>
+template <std::uint32_t D, std::uint32_t UB,
+          unsigned int S = fastdiv_detail::magic(D, UB).S,
+          std::uint32_t M = fastdiv_detail::magic(D, UB).M,
+          unsigned int N = fastdiv_detail::magic(D, UB).N>
 inline constexpr std::uint32_t fastdiv(std::uint32_t v) noexcept {
-  constexpr auto mag = fastdiv_detail::magic(D, UB);
-  constexpr auto S = mag.S;
-  constexpr auto M = mag.M;
-  constexpr auto N = mag.N;
   if constexpr (M != 0) {
     return (v >> S) * M >> N;
   } else if constexpr (fastdiv_detail::use_div7_special_case<D, UB>()) {

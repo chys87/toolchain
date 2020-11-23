@@ -38,9 +38,9 @@
 #include "byteorder.h"
 #include "concepts.h"
 #include "stdhack.h"
-#include "compat/span.h"
-#include "compat/string.h"
-#include "compat/type_identity.h"
+#include "cbu/compat/span.h"
+#include "cbu/compat/string.h"
+#include "cbu/compat/type_identity.h"
 
 namespace cbu {
 inline namespace cbu_faststr {
@@ -208,7 +208,8 @@ void append(std::basic_string<C>* res,
   }
 
   std::size_t l = 0;
-  for (auto k = n, q = p; k; --k) {
+  auto q = p;
+  for (auto k = n; k; --k) {
     l += (q++)->length();
   }
   C* w = extend(res, l);

@@ -78,7 +78,7 @@ class short_string {
   constexpr operator zstring_view() const noexcept { return {s_, l_}; }
 
   constexpr zstring_view string_view() const noexcept { return {s_, l_}; }
-  constexpr std::string string() const { return std::string(s_, l_); }
+  std::string string() const { return std::string(s_, l_); }
 
   constexpr void assign(std::string_view rhs) noexcept {
     auto copy_end = std::copy_n(rhs.data(), rhs.length(), s_);

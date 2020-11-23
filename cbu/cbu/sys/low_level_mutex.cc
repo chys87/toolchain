@@ -32,21 +32,6 @@
 #include <atomic>
 #include "cbu/fsyscall/fsyscall.h"
 
-// Implement std::atomic_ref if it's missing.
-// This hack is undefined behavior per C++ standard, but it works fine
-// in practice
-#ifndef __cpp_lib_atomic_ref
-namespace std {
-
-template <typename T>
-requires (sizeof(std::atomic<T>) == sizeof(T))
-inline std::atomic<T>& atomic_ref(T& val) {
-  return reinterpret_cast<std::atomic<T>&>(val);
-}
-
-} // namespace std
-#endif
-
 namespace cbu {
 inline namespace cbu_low_level_mutex {
 

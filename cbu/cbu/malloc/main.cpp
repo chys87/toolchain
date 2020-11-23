@@ -37,7 +37,7 @@
 #include <algorithm>
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 namespace {
 
 // Naive realloc, for debugging purpose only

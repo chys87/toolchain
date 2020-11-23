@@ -550,7 +550,7 @@ char *to_bin(char *r, const Word *s, size_t n) noexcept {
                                   _mm_setr_epi16(1, 2, 4, 8, 16, 32, 64, 128));
       u = _mm_srli_epi16(u, 7) & _mm_set1_epi16(1);
       u = _mm_add_epi8(_mm_packus_epi16(u, u), _mm_set1_epi8('0'));
-      r = memdrop8(r, _mm_cvtsi128_si64x(u));
+      r = memdrop8(r, _mm_cvtsi128_si64(u));
 #else
       *r++ = (b >> 7) + '0';
       *r++ = (1 & (b >> 6)) + '0';

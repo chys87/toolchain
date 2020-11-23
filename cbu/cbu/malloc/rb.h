@@ -35,7 +35,7 @@
 // responsibility to guarantee.
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 
 template <typename Node>
 struct RbLink {

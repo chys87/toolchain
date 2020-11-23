@@ -29,6 +29,7 @@
 #pragma once
 
 #include <atomic>
+#include "cbu/compat/atomic_ref.h"
 
 namespace cbu {
 inline namespace cbu_low_level_mutex {

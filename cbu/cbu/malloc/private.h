@@ -36,7 +36,7 @@
 #include "cbu/malloc/pagesize.h"
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
 inline constexpr bool true_no_fail(bool) { return true; }

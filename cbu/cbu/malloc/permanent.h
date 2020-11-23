@@ -35,7 +35,7 @@
 #include <mutex>
 
 namespace cbu {
-namespace cbu_malloc {
+inline namespace cbu_malloc {
 
 // size must be non-0, and multiple of pagesize
 void* get_pages_for_perma(size_t size) noexcept;
@@ -58,6 +58,7 @@ private:
 };
 
 template <typename T>
+requires (sizeof(T) <= pagesize and alignof(T) <= pagesize)
 T* PermaAlloc<T>::alloc() {
   if (std::lock_guard locker(lock_); list_) {
     T* node = list_;
@@ -92,6 +93,7 @@ T* PermaAlloc<T>::alloc() {
 }
 
 template <typename T>
+requires (sizeof(T) <= pagesize and alignof(T) <= pagesize)
 T *PermaAlloc<T>::alloc_list(unsigned preferred_count) {
   unsigned count = 0;
   using Ptr = decltype(T::next);
@@ -151,6 +153,7 @@ T *PermaAlloc<T>::alloc_list(unsigned preferred_count) {
 }
 
 template <typename T>
+requires (sizeof(T) <= pagesize and alignof(T) <= pagesize)
 void PermaAlloc<T>::free(T* ptr) noexcept {
   std::lock_guard locker(lock_);
   ptr->next = list_;
@@ -159,6 +162,7 @@ void PermaAlloc<T>::free(T* ptr) noexcept {
 }
 
 template <typename T>
+requires (sizeof(T) <= pagesize and alignof(T) <= pagesize)
 void PermaAlloc<T>::free_list(T* ptr) noexcept {
   if (!ptr)
     return;
