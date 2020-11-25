@@ -18,3 +18,8 @@ Benchmark on my computer (running test case in [tests](tests)):
 |VmRSS at exit (KiB)|<ins>263172</ins>|1320820|**101732**|1004396|
 
 (Legend: **best**; <ins>2nd best</ins>)
+
+## CAVEATS
+
+My implementation doesn't (yet) register [atfork handlers](https://linux.die.net/man/3/pthread_atfork), so it's very unsafe to do fork in
+a multi-threaded process (unless the child process immediately calls exec, and nothing between fork and exec requires malloc).
