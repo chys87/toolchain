@@ -251,7 +251,7 @@ def syscall_replace(fi):
     pattern = re.compile(br'^#define\s+__NR_([_a-z\d]+)\s+\(__X32_SYSCALL_BIT \+ (\d+)\)$', re.M)
     table.update((int(m.group(2)) + 0x40000000, m.group(1)) for m in pattern.finditer(read_header('unistd_x32.h')))
 
-    pattern = re.compile(br'(mov\s+\$0x)([a-f\d]+)(,%[er]?a[xl])\s*(?=\n.+syscall)')
+    pattern = re.compile(br'(mov\s+\$0x)([a-f\d]+)(,%[er]?a[xl])\s*(?=\n(.+(lea|mov|xor|add|sub|clt|sh[lr]).+\n){,5}.+syscall)')
 
     def sub(match):
         no = int(match.group(2), 16)
