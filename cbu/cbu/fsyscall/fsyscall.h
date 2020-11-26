@@ -588,6 +588,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_inotify_add_watch inotify_add_watch
 #define fsys_inotify_rm_watch inotify_rm_watch
 #define fsys_nanosleep nanosleep
+#define fsys_clock_nanosleep clock_nanosleep
 #define fsys_linkat linkat
 #define fsys_unlinkat unlinkat
 #define fsys_symlinkat symlinkat
