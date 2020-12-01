@@ -308,6 +308,7 @@ ifneq "$(TAGSFILE)" ""
 endif
 
 all:	$(TAGSFILE)
+all: ut
 
 SIZE_COMMANDS :=
 UN_COMMANDS :=
