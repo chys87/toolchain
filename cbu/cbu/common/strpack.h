@@ -38,6 +38,10 @@ template <typename T, T... chars>
 struct strpack {
   enum : std::size_t { n = sizeof...(chars) };
   static constexpr T s[] = {chars..., T()};
+  static constexpr T* fill(T* p) noexcept {
+    ((*p++ = chars), ...);
+    return p;
+  }
 };
 
 template <typename T, T... chars>

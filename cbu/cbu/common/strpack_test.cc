@@ -47,6 +47,12 @@ TEST(StrPackTest, MembersTest) {
   EXPECT_EQ(L'\0', w.s[3]);
 }
 
+TEST(StrPackTest, FillTest) {
+  char buffer[5];
+  *("abcd"_strpack.fill(buffer)) = '\0';
+  EXPECT_STREQ("abcd", buffer);
+}
+
 template <const char* s>
 void test_foo(char* d) {
   strcpy(d, s);
