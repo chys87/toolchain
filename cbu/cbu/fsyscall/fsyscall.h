@@ -239,6 +239,7 @@ def_fsys(socketpair,socketpair,int,4,int,int,int,int*)
 def_fsys_nomem(shutdown,shutdown,int,2,int,int)
 def_fsys(setsockopt,setsockopt,int,5,int,int,int,const void *,unsigned long)
 def_fsys(getsockopt,getsockopt,int,5,int,int,int,void*,unsigned long)
+def_fsys(getsockname,getsockname,int,3,int,struct sockaddr*,unsigned*)
 def_fsys_nomem(ioctl_long,ioctl,int,3,int,int,long)
 def_fsys(ioctl_ptr,ioctl,int,3,int,int,void *)
 def_fsys_nomem(fcntl_void,fcntl,int,2,int,int)
@@ -465,6 +466,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_shutdown shutdown
 #define fsys_setsockopt setsockopt
 #define fsys_getsockopt getsockopt
+#define fsys_getsockname getsockname
 #define fsys_ioctl_long ioctl
 #define fsys_ioctl_ptr ioctl
 #define fsys_fcntl_void fcntl
