@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,16 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
+
+TEST(PairTest, Comparisons) {
+  pair<int, int> a{5, 6};
+  pair<int, int> b{5, 7};
+  pair<int, int> c{4, 7};
+  EXPECT_EQ(a, a);
+  EXPECT_NE(a, b);
+  EXPECT_LT(a, b);
+  EXPECT_GT(a, c);
+}
 
 TEST(ReversedTest, Container) {
   std::vector<int> x{1, 2, 3, 4, 5};
