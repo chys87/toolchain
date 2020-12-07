@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <compare>
 #include <cstddef>
 #include <functional>
 #include <iterator>
@@ -43,6 +44,9 @@ struct pair {
   [[no_unique_address]] V second;
 
   using bitwise_movable_chain = pair(U, V);
+
+  bool operator == (const pair&) const noexcept = default;
+  auto operator <=> (const pair&) const noexcept = default;
 };
 
 template <typename U, typename V>
