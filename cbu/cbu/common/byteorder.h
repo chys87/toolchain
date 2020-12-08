@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,6 +82,7 @@ inline constexpr T bswap_for(T value) noexcept {
 
 template <Bswappable T>
 inline constexpr T bswap_for(std::endian byte_order, T value) noexcept {
+  return may_bswap(byte_order, std::endian::native, value);
 }
 
 // Swap for data exchange with big endian data
