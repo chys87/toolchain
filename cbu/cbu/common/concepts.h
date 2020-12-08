@@ -51,6 +51,9 @@ concept Zstring_view_compat = requires (const T &t) {
 };
 
 template <typename T>
+concept Pointer = std::is_pointer_v<T>;
+
+template <typename T>
 concept No_cv = std::is_same_v<std::remove_cv_t<T>, T>;
 
 template <typename T>
