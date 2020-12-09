@@ -213,8 +213,9 @@ ut:	run-$(1)
 .PHONY: run-$(1)
 run-$(1): $(BUILDDIR)/$(1).success
 UT_SUCCESS_FILES += $(BUILDDIR)/$(1).success
+$(BUILDDIR)/$(1).success: private NAME := UT
 $(BUILDDIR)/$(1).success: $(BUILDDIR)/$(1).n.out
-	if [ -f $$@ ] && md5sum --status -c $$@; then touch $$@; else $(BUILDDIR)/$(1).n.out && md5sum $$< > $$@; fi
+	$$(Q)if [ -f $$@ ] && md5sum --status -c $$@; then touch $$@; else $(BUILDDIR)/$(1).n.out && md5sum $$< > $$@; fi
 else
 INST_TARGETS += $(1)
 all:	$(BUILDDIR)/$(1).out
