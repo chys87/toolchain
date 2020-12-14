@@ -33,6 +33,7 @@
 #include "cbu/common/bit.h"
 #include "cbu/compat/atomic_ref.h"
 #include "cbu/malloc/permanent.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 inline namespace cbu_malloc {
@@ -48,6 +49,11 @@ Node* ensure_node_heavy(Node **ptr, SimplePermaAlloc<Node> &allocator) {
 #else
   memset(next, 0, sizeof(*next));
 #endif
+  if (cbu::tweak::SINGLE_THREADED) {
+    *ptr = next;
+    return next;
+  }
+
   Node* got = 0;
   if (!std::atomic_ref(*ptr).compare_exchange_strong(
         got, next, std::memory_order_acq_rel, std::memory_order_acquire)) {

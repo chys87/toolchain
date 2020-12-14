@@ -31,6 +31,7 @@
 #include <pthread.h>
 #include <type_traits>
 #include "cbu/malloc/private.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 inline namespace cbu_malloc {
@@ -61,6 +62,8 @@ struct ThreadCache {
   // is unspecified, so we can't expect that prepare will never be called after
   // its destruction.
   bool prepare() noexcept {
+    if (tweak::SINGLE_THREADED)
+      return false;
     if (status == Status::NORMAL)
       return true;
     do_prepare();

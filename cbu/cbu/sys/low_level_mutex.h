@@ -30,6 +30,7 @@
 
 #include <atomic>
 #include "cbu/compat/atomic_ref.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 inline namespace cbu_low_level_mutex {
@@ -62,57 +63,70 @@ private:
 #if defined __x86_64__
 
 CBU_MUTEX_INLINE void LowLevelMutex::lock() noexcept {
-  int ax = 0, one = 1;
-  asm volatile ("\n"
-    "  lock; cmpxchgl %[one], (%%rdi)\n"
+  if (!tweak::SINGLE_THREADED) {
+    int ax = 0, one = 1;
+    asm volatile ("\n"
+      "  lock; cmpxchgl %[one], (%%rdi)\n"
 #if defined __PIC__ || defined __PIE__
-    "  leaq\t1f(%%rip), %%r8\n"
+      "  leaq\t1f(%%rip), %%r8\n"
 #else
-    "  movl\t$1f, %%r8d\n"
+      "  movl\t$1f, %%r8d\n"
 #endif
-    "  jnz\tcbu_mutex_lock_wait_asm\n" // This "function" preserves red zone
-    "1:"
-    : "+a"(ax), [one]"+d"(one)
-    : "D"(&v_)
-    : "memory", "cc", "si", "cx", "r8", "r10", "r11"
-    );
+      "  jnz\tcbu_mutex_lock_wait_asm\n" // This "function" preserves red zone
+      "1:"
+      : "+a"(ax), [one]"+d"(one)
+      : "D"(&v_)
+      : "memory", "cc", "si", "cx", "r8", "r10", "r11"
+      );
+  }
 }
 
 CBU_MUTEX_INLINE void LowLevelMutex::unlock() noexcept {
-  asm volatile ("\n"
-    "  lock; decl (%%rdi)\n"
+  if (!tweak::SINGLE_THREADED) {
+    asm volatile ("\n"
+      "  lock; decl (%%rdi)\n"
 #if defined __PIC__ || defined __PIE__
-    "  leaq\t2f(%%rip), %%r8\n"
+      "  leaq\t2f(%%rip), %%r8\n"
 #else
-    "  mov\t$2f, %%r8d\n"
+      "  mov\t$2f, %%r8d\n"
 #endif
-    "  jnz\tcbu_mutex_unlock_wake_asm\n" // This "function" preserves red zone
-    "2:\n"
-    :
-    : "D"(&v_)
-    : "memory", "cc", "si", "ax", "dx", "cx", "r8", "r11");
+      "  jnz\tcbu_mutex_unlock_wake_asm\n" // This "function" preserves red zone
+      "2:\n"
+      :
+      : "D"(&v_)
+      : "memory", "cc", "si", "ax", "dx", "cx", "r8", "r11");
+  }
 }
 
 #else
 
 CBU_MUTEX_INLINE void LowLevelMutex::lock() noexcept {
-  int copy = 0;
-  if (!std::atomic_ref(v_).compare_exchange_weak(copy, 1, std::memory_order_acquire, std::memory_order_relaxed))
-    wait(copy);
+  if (!tweak::SINGLE_THREADED) {
+    int copy = 0;
+    if (!std::atomic_ref(v_).compare_exchange_weak(
+        copy, 1, std::memory_order_acquire, std::memory_order_relaxed))
+      wait(copy);
+  }
 }
 
 CBU_MUTEX_INLINE void LowLevelMutex::unlock() noexcept {
-  int c = std::atomic_ref(v_).fetch_sub(1, std::memory_order_release) - 1;
-  if (__builtin_expect(c, 0) != 0)
-    wake();
+  if (!tweak::SINGLE_THREADED) {
+    int c = std::atomic_ref(v_).fetch_sub(1, std::memory_order_release) - 1;
+    if (__builtin_expect(c, 0) != 0)
+      wake();
+  }
 }
 
 #endif
 
 CBU_MUTEX_INLINE bool LowLevelMutex::try_lock() noexcept {
-  int copy = 0;
-  return std::atomic_ref(v_).compare_exchange_strong(
-      copy, 1, std::memory_order_acquire, std::memory_order_relaxed);
+  if (tweak::SINGLE_THREADED) {
+    return true;
+  } else {
+    int copy = 0;
+    return std::atomic_ref(v_).compare_exchange_strong(
+        copy, 1, std::memory_order_acquire, std::memory_order_relaxed);
+  }
 }
 
 // For compatibility only

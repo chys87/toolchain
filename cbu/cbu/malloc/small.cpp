@@ -34,6 +34,7 @@
 #include "cbu/compat/atomic_ref.h"
 #include "cbu/malloc/tc.h"
 #include "cbu/sys/low_level_mutex.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 inline namespace cbu_malloc {
@@ -64,7 +65,9 @@ void free_small_list(Block *ptr) {
 
     Run *run = block2run(p);
     auto count = p->count;
-    int remain = std::atomic_ref(run->allocated).fetch_sub(
+    int remain = cbu::tweak::SINGLE_THREADED ?
+      (run->allocated -= count) :
+      std::atomic_ref(run->allocated).fetch_sub(
         count, std::memory_order_release) - count;
     if (remain <= 0) {
       if (remain < 0)

@@ -95,3 +95,15 @@ This one is just a hobby - a crazy one.
 [`cbu/sys`](cbu/sys): System utilities
 
 * `low_level_mutex.h`: Implement a very simple and low-level mutex (for use in low-level code such as malloc)
+
+### cbu/tweak
+
+[`cbu/tweak`](cbu/tweak): Tweak options
+
+This library is most useful if you enable LTO (link-time optimization) and
+static linking.
+You can define your own strong symbols to override the weak symbols, which
+propagate to all references to them and remove unnecessary code.
+
+* `single_threaded.cc`: You may depend on `single_threaded` if your program is always single-threaded.
+* `multi_threaded.cc`: You may depend on `multi_threaded` if your program is almost always multi-threaded.
