@@ -42,7 +42,7 @@ namespace cbu {
 inline namespace cbu_malloc {
 
 void fatal(const char* s) noexcept {
-  size_t n = write(2, s, strlen(s));
+  size_t n = fsys_write(2, s, strlen(s));
   (void)n;
   abort();
 }
