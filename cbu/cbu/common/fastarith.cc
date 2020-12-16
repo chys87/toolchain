@@ -40,18 +40,6 @@ namespace {
 float scale(float a, int n) { return std::scalbnf(a, n); }
 double scale(double a, int n) { return std::scalbn(a, n); }
 
-inline constexpr unsigned clz(unsigned x) noexcept {
-  return __builtin_clz(x);
-}
-
-inline constexpr unsigned clz(unsigned long x) noexcept {
-  return __builtin_clzl(x);
-}
-
-inline constexpr unsigned clz(unsigned long long x) noexcept {
-  return __builtin_clzll(x);
-}
-
 template <typename F, typename U>
 requires (std::is_floating_point<F>::value &&
           std::numeric_limits<F>::radix == 2 &&
