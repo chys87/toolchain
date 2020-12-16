@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <bit>
 #include <cstring>
 #include <new>
 #include <type_traits>
@@ -36,6 +37,9 @@
 namespace cbu {
 inline namespace cbu_bit_cast {
 
+#if defined __cpp_lib_bit_cast && __cpp_lib_bit_cast >= 201805
+using std::bit_cast;
+#else
 template <typename To, typename From>
 requires (sizeof(To) == sizeof(From)
   and std::is_trivially_copyable_v<From>
@@ -47,6 +51,7 @@ inline To bit_cast(const From &src) noexcept {
   std::memcpy(std::addressof(to), std::addressof(src), sizeof(to));
   return to;
 }
+#endif
 
 // For this function, we allow non-trivial types, and allow arbitrary size pairs
 template <typename To, typename From>
