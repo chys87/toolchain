@@ -32,6 +32,7 @@ cc_library(
   deps = [
     '//cbu/compat',
     '//cbu/fsyscall',
+    '//cbu/tweak:tweak',
   ],
   copts = [
     '-std=gnu++2a',

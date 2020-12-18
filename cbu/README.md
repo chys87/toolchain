@@ -58,6 +58,7 @@ If you use anything else, you have to take care of it yourself.
 * `mp.h`: Multi-precicision integer operations: full support for addition, subtraction, multiplication and limited support for division
 * `once.h`: Provides macro `CBU_ONCE`, somewhat like but easier to use than [`pthread_once`](https://linux.die.net/man/3/pthread_once)
 * `range.h`: Wraps two iterators to an object for [range-based for](https://en.cppreference.com/w/cpp/language/range-for)
+* `ref_cnt.h`: Reference-counting operations
 * `scoped_fd.h`: Wraps a file descriptor in a class
 * `shared_instance.h`: An enhanced singleton implementation
 * `short_string.h`: A class for storing very short strings efficiently
