@@ -204,8 +204,15 @@ inline constexpr unsigned popcnt(long long x) noexcept {
   return __builtin_popcountll(x);
 }
 
-template <typename T> requires std::is_unsigned<T>::value
+// Clear lowest set bit
+// Same as Intel BMI's BLSR instruction
+template <typename T> requires std::is_integral<T>::value
 inline constexpr T blsr(T x) noexcept { return (x & (x - 1)); }
+
+// Isolate lowest set bit
+// Same as Intel BMI's BLSI instruction
+template <typename T> requires std::is_integral<T>::value
+inline constexpr T blsi(T x) noexcept { return (x & -x); }
 
 template <typename T> requires (std::is_integral<T>::value && sizeof(T) == 4)
 inline constexpr T bzhi(T x, unsigned k) noexcept {
