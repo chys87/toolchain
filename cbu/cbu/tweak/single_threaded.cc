@@ -47,7 +47,11 @@ extern "C" {
 
 } // extern "C"
 
-[[gnu::externally_visible, gnu::visibility("default"), gnu::cold]]
+[[
+#if defined __GNUC__ && !defined __clang__
+  gnu::externally_visible,
+#endif
+  gnu::visibility("default"), gnu::cold]]
 int pthread_create(pthread_t*, const pthread_attr_t*,
                    void *(*)(void *), void *) {
   const char* msg = "Your program links in single_threaded.cc; "

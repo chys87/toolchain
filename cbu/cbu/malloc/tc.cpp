@@ -36,7 +36,6 @@ __thread ThreadCache thread_cache;
 
 void ThreadCache::do_prepare() noexcept {
   if (status != Status::INITIAL) {
-    [[unlikely]]
     return;
   }
 

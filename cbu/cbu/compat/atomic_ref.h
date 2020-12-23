@@ -31,14 +31,18 @@
 #include <atomic>
 
 #ifndef __cpp_lib_atomic_ref
+
+#include <type_traits>
+
 // It's undefined behavior to attempt to define things in std, but in practice
 // this works pretty fine.
 namespace std {
 
 template <typename T>
-requires (sizeof(std::atomic<T>) == sizeof(T))
-std::atomic<T>& atomic_ref(T& val) {
-  return reinterpret_cast<std::atomic<T>&>(val);
+requires (sizeof(std::atomic<std::remove_const_t<T>>) == sizeof(T))
+std::atomic<std::remove_const_t<T>>& atomic_ref(T& val) {
+  // Don't use reinterpret_cast.  We may need to cast away 'const'
+  return (std::atomic<std::remove_const_t<T>>&)val;
 }
 
 } // namespace std

@@ -31,6 +31,7 @@
 #include <atomic>
 #include <utility>
 
+#include "cbu/compat/atomic_ref.h"
 #include "cbu/tweak/tweak.h"
 
 namespace cbu {

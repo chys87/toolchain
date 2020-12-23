@@ -144,7 +144,6 @@ void *alloc_small_category(unsigned cat) noexcept {
   if (thread_cache.prepare()) {
     return alloc_small_category_with_cache(&thread_cache.small, cat);
   } else {
-    [[unlikely]];
     std::lock_guard locker(fallback_cache_lock);
     return alloc_small_category_with_cache(&fallback_cache, cat);
   }
@@ -158,7 +157,6 @@ void free_small(void *ptr) noexcept {
   if (thread_cache.prepare()) {
     free_small_with_cache(&thread_cache.small, ptr);
   } else {
-    [[unlikely]];
     std::lock_guard locker(fallback_cache_lock);
     free_small_with_cache(&fallback_cache, ptr);
   }

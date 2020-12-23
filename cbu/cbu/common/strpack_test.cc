@@ -30,7 +30,7 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-namespace cbu_strpack {
+inline namespace cbu_strpack {
 namespace {
 
 TEST(StrPackTest, MembersTest) {

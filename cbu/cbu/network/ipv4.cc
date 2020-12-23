@@ -30,7 +30,8 @@
 #include "cbu/common/fastdiv.h"
 #include "cbu/common/short_string.h"
 
-namespace cbu::cbu_ipv4 {
+namespace cbu {
+inline namespace cbu_ipv4 {
 namespace {
 
 char* uint8_to_string(char* p, std::uint8_t v) noexcept {
@@ -127,4 +128,5 @@ std::optional<IPv4> IPv4::from_string(std::string_view s) noexcept {
 }
 
 
-} // namespace cbu::cbu_ipv4
+} // namespace cbu_ipv4
+} // namespace cbu

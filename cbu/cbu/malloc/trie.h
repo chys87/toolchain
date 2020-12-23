@@ -55,7 +55,7 @@ Node* ensure_node_heavy(Node **ptr, SimplePermaAlloc<Node> &allocator) {
   }
 
   Node* got = 0;
-  if (!std::atomic_ref(*ptr).compare_exchange_strong(
+  if (!std::atomic_ref<Node*>(*ptr).compare_exchange_strong(
         got, next, std::memory_order_acq_rel, std::memory_order_acquire)) {
     Node* rgot = got;
     allocator.free(next);
@@ -66,7 +66,7 @@ Node* ensure_node_heavy(Node **ptr, SimplePermaAlloc<Node> &allocator) {
 
 template <typename Node>
 inline Node* ensure_node(Node** ptr, SimplePermaAlloc<Node>& allocator) {
-  Node *next = std::atomic_ref(*ptr).load(std::memory_order_acquire);
+  Node *next = std::atomic_ref<Node*>(*ptr).load(std::memory_order_acquire);
   if (next == nullptr)
     next = ensure_node_heavy(ptr, allocator);
   return next;
@@ -125,7 +125,7 @@ ValueType* Trie<TotalBits, ValueType>::lookup_fail_crash(uintptr_t v) {
   for (int i = (Levels - 1) * LevelBits; i >= 0; i -= LevelBits) {
     size_t o = (v >> (i + LeafBits)) & levelmask;
     node = reinterpret_cast<Node *>(
-        std::atomic_ref(node->link[o]).load(std::memory_order_acquire));
+        std::atomic_ref<Node*>(node->link[o]).load(std::memory_order_acquire));
   }
   return &node->tbl[v & ((1 << LeafBits) - 1)];
 }

@@ -35,10 +35,8 @@ cc_library(
   ],
   copts = [
     '-std=gnu++2a',
-    '-fconcepts',
     '-Wall',
     '-Werror',
-    '-fmax-errors=5',
     '-fdiagnostics-color=always',
   ],
   # cbu is a collection of really TINY utilities so you may always want to
@@ -57,10 +55,8 @@ cc_test(
   copts = [
     '-march=native',
     '-std=gnu++2a',
-    '-fconcepts',
     '-Wall',
     '-Werror',
-    '-fmax-errors=5',
     '-fdiagnostics-color=always',
   ],
 )

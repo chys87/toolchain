@@ -7,6 +7,8 @@ This is my C++ utilities.
 - [g++](https://gcc.gnu.org/) 10 or later
 - [Bazel](https://bazel.build/).  Other make tools may also be used if you prefer; you can also just link or copy the files
 
+The latest version of clang might also compile, but I don't guarantee.
+
 ## Bazel notes
 
 If you need to specify your favorite compilers and/or library paths, create a file `user.bazelrc` and say:

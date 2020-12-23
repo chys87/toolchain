@@ -29,8 +29,11 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 #include <mutex>
+#include <new>
 
+#include "cbu/compat/atomic_ref.h"
 #include "cbu/common/defer.h"
 #include "cbu/sys/low_level_mutex.h"
 
@@ -101,7 +104,8 @@ class LazyInit {
   template <typename... Args>
   bool init(Args&&... args) noexcept(noexcept(T(std::forward<Args>(args)...))) {
     return guard_.init([&, this]() {
-      std::construct_at(pointer(), std::forward<Args>(args)...);
+      // libc++ doesn't have std::construct_at yet
+      new (pointer()) T(std::forward<Args>(args)...);
     });
   }
 

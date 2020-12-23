@@ -635,5 +635,5 @@ auto Rb<Accessor>::remove(Node *node) noexcept -> Node * {
   return node;
 }
 
-} // namepsace cbu_malloc
+} // namespace cbu_malloc
 } // namespace cbu

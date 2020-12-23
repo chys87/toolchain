@@ -33,7 +33,11 @@
 #include <sys/epoll.h>
 #include "coroutine.h"
 
-#define VISIBLE __attribute__((externally_visible, visibility("default")))
+#if defined __GNUC__ && !defined __clang__
+# define VISIBLE __attribute__((externally_visible, visibility("default")))
+#else
+# define VISIBLE __attribute__((visibility("default")))
+#endif
 
 namespace cbu {
 namespace coroutine {
@@ -53,64 +57,81 @@ void single_poll(int fd, short events, int timeout = -1) {
 
 extern "C" {
 
-VISIBLE int poll(pollfd* fds, nfds_t nfds, int timeout) {
+VISIBLE int hook_poll(pollfd* fds, nfds_t nfds, int timeout) asm("poll");
+int hook_poll(pollfd* fds, nfds_t nfds, int timeout) {
   if (active_container == nullptr)
     return sys_poll(fds, nfds, timeout);
   return active_container->Poll(fds, nfds, timeout);
 }
 
-VISIBLE ssize_t read(int fd, void* buffer, size_t n) {
+VISIBLE ssize_t hook_read(int fd, void* buffer, size_t n) asm("read");
+ssize_t hook_read(int fd, void* buffer, size_t n) {
   if (active_container == nullptr || is_non_blocking(fd))
     return sys_read(fd, buffer, n);
   single_poll(fd, POLLIN);
   return sys_read(fd, buffer, n);
 }
 
-VISIBLE ssize_t write(int fd, const void* buffer, size_t n) {
+VISIBLE ssize_t hook_write(int fd, const void* buffer, size_t n) asm("write");
+ssize_t hook_write(int fd, const void* buffer, size_t n) {
   if (active_container == nullptr || is_non_blocking(fd))
     return sys_write(fd, buffer, n);
   single_poll(fd, POLLOUT);
   return sys_write(fd, buffer, n);
 }
 
-VISIBLE ssize_t send(int fd, const void* buffer, size_t n, int flags) {
+VISIBLE ssize_t hook_send(int fd, const void* buffer, size_t n, int flags)
+  asm("send");
+ssize_t hook_send(int fd, const void* buffer, size_t n, int flags) {
   return sendto(fd, buffer, n, flags, nullptr, 0);
 }
 
-VISIBLE ssize_t sendto(int fd, const void* buffer, size_t n, int flags,
-                       const sockaddr* addr, socklen_t addrlen) {
+VISIBLE ssize_t hook_sendto(int fd, const void* buffer, size_t n, int flags,
+                            const sockaddr* addr, socklen_t addrlen)
+  asm("sendto");
+ssize_t hook_sendto(int fd, const void* buffer, size_t n, int flags,
+                    const sockaddr* addr, socklen_t addrlen) {
   if (active_container == nullptr || is_non_blocking(fd))
     return sys_sendto(fd, buffer, n, flags, addr, addrlen);
   single_poll(fd, POLLOUT);
   return sys_sendto(fd, buffer, n, flags, addr, addrlen);
 }
 
-VISIBLE ssize_t recv(int fd, void* buffer, size_t n, int flags) {
+VISIBLE ssize_t hook_recv(int fd, void* buffer, size_t n, int flags)
+  asm("recv");
+ssize_t hook_recv(int fd, void* buffer, size_t n, int flags) {
   return recvfrom(fd, buffer, n, flags, nullptr, 0);
 }
 
-VISIBLE ssize_t recvfrom(int fd, void* buffer, size_t n, int flags,
-                         sockaddr* addr, socklen_t addrlen) {
+VISIBLE ssize_t hook_recvfrom(int fd, void* buffer, size_t n, int flags,
+                              sockaddr* addr, socklen_t addrlen)
+  asm("recvfrom");
+ssize_t hook_recvfrom(int fd, void* buffer, size_t n, int flags,
+                      sockaddr* addr, socklen_t addrlen) {
   if (active_container == nullptr || is_non_blocking(fd))
-    return sys_sendto(fd, buffer, n, flags, addr, addrlen);
+    return sys_recvfrom(fd, buffer, n, flags, addr, addrlen);
   single_poll(fd, POLLIN);
   return sys_recvfrom(fd, buffer, n, flags, addr, addrlen);
 }
 
-VISIBLE unsigned int sleep(unsigned int seconds) {
+VISIBLE unsigned int hook_sleep(unsigned int seconds) asm("sleep");
+unsigned int hook_sleep(unsigned int seconds) {
   poll(nullptr, 0, seconds * 1000);
   return 0;
 }
 
-VISIBLE int usleep(useconds_t seconds) {
+VISIBLE int hook_usleep(useconds_t seconds) asm("usleep");
+int hook_usleep(useconds_t seconds) {
   poll(nullptr, 0, seconds / 1000);
   if (auto remain = seconds % 1000)
     sys_usleep(remain);
   return 0;
 }
 
-VISIBLE int epoll_wait(int epfd, epoll_event* events, int maxevents,
-                       int timeout) {
+VISIBLE int hook_epoll_wait(int epfd, epoll_event* events, int maxevents,
+                            int timeout) asm("epoll_wait");
+int hook_epoll_wait(int epfd, epoll_event* events, int maxevents,
+                    int timeout) {
   if (active_container == nullptr)
     return sys_epoll_wait(epfd, events, maxevents, timeout);
   single_poll(epfd, POLLIN, timeout);

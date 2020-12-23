@@ -30,6 +30,11 @@
 
 #include <cstddef>
 
+#ifdef __clang__
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wgnu-string-literal-operator-template"
+#endif
+
 namespace cbu {
 inline namespace cbu_strpack {
 
@@ -57,3 +62,7 @@ constexpr const T* operator""_str() {
 
 } // namespace cbu_strpack
 } // namespace cbu
+
+#ifdef __clang__
+# pragma GCC diagnostic pop
+#endif
