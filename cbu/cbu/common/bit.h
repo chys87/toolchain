@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -145,27 +145,30 @@ inline constexpr unsigned clz(long long x) noexcept {
 inline constexpr unsigned bsr(unsigned x) noexcept {
 #if (defined __GNUC__ && (defined __i386__ || defined __x86_64__)) \
     && !defined __clang__
-  return __builtin_ia32_bsrsi(x);
-#else
-  return clz(x) ^ (8 * sizeof(x) - 1);
+  if (!std::is_constant_evaluated()) {
+    return __builtin_ia32_bsrsi(x);
+  }
 #endif
+  return clz(x) ^ (8 * sizeof(x) - 1);
 }
 
 inline constexpr unsigned bsr(unsigned long x) noexcept {
 #if defined __GNUC__ && defined __x86_64__ && !defined __clang__
-  return (sizeof(unsigned long) == 4 ? __builtin_ia32_bsrsi(x) :
-          __builtin_ia32_bsrdi(x));
-#else
-  return clz(x) ^ (8 * sizeof(x) - 1);
+  if (!std::is_constant_evaluated()) {
+    return (sizeof(unsigned long) == 4 ? __builtin_ia32_bsrsi(x) :
+            __builtin_ia32_bsrdi(x));
+  }
 #endif
+  return clz(x) ^ (8 * sizeof(x) - 1);
 }
 
 inline constexpr unsigned bsr(unsigned long long x) noexcept {
 #if defined __GNUC__ && defined __x86_64__ && !defined __clang__
-  return __builtin_ia32_bsrdi(x);
-#else
-  return clz(x) ^ (8 * sizeof(x) - 1);
+  if (!std::is_constant_evaluated()) {
+    return __builtin_ia32_bsrdi(x);
+  }
 #endif
+  return clz(x) ^ (8 * sizeof(x) - 1);
 }
 
 inline constexpr unsigned bsr(int x) noexcept {
@@ -180,6 +183,7 @@ inline constexpr unsigned bsr(long long x) noexcept {
   return bsr(static_cast<unsigned long long>(x));
 }
 
+// popcnt: Count the number of set bits
 inline constexpr unsigned popcnt(unsigned x) noexcept {
   return __builtin_popcount(x);
 }
