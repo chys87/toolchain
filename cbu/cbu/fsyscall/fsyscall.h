@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2013-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2013-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -390,7 +390,9 @@ def_fsys(clock_nanosleep,clock_nanosleep,int,4,int,int,const struct timespec*, s
 def_fsys(linkat,linkat,int,5,int,const char *,int, const char *, int)
 def_fsys(unlinkat,unlinkat,int,3,int,const char *,int)
 def_fsys(symlinkat,symlinkat,int,3,const char *,int,const char *)
-def_fsys(faccessat,faccessat,int,4,int,const char *,int,int)
+def_fsys(faccessat_raw,faccessat,int,3,int,const char *,int)
+def_fsys(faccessat2,faccessat2,int,4,int,const char *,int,int)
+#define fsys_faccessat(a,b,c,d) fsys_faccessat2(a,b,c,d)
 def_fsys(wait4,wait4,int,4,int,int *,int,struct rusage *)
 #define fsys_waitpid(a,b,c) fsys_wait4(a,b,c,0)
 def_fsys(waitid_raw,waitid,int,5,int,int,void*,int,struct rusage*)
