@@ -295,7 +295,9 @@ endif
 
 CFLAGS := $(OPTIMIZEFLAGS) $(COPTIMIZEFLAGS) $(ARCHFLAGS) $(CWARNINGFLAGS) $(CSTD) $(INCLUDES) $(DEFS) $(EXTRA_CFLAGS)
 CXXFLAGS := $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS)
-BASE_LDFLAGS := -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed -Wl,-z,relro -Wl,-z,noexecstack
+BASE_LDFLAGS := -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed \
+  -Wl,-z,relro -Wl,-z,noexecstack \
+  -Wl,-z,start-stop-visibility=hidden
 LDFLAGS := $(ARCHFLAGS) $(OPTIMIZEFLAGS) $(BASE_LDFLAGS) $(EXTRA_LDFLAGS)
 
 ifeq "$(DIR)" "."
