@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,12 +28,21 @@
 
 #pragma once
 
+#if __has_include(<sys/user.h>)
+# include <sys/user.h>
+#endif
+
 namespace cbu {
 inline namespace cbu_malloc {
 
+#ifdef PAGE_SHIFT
+constexpr unsigned pagesize_bits = PAGE_SHIFT;
+constexpr unsigned pagesize = 1 << pagesize_bits;
+#else
 constexpr unsigned pagesize_bits = 12;
 constexpr unsigned pagesize = 1 << pagesize_bits;
 static_assert(pagesize == 4096);
+#endif
 
 #if defined __x86_64__ || defined __i386__
 constexpr unsigned hugepagesize = 2048 * 1024;
