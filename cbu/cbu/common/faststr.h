@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,76 +48,93 @@ inline namespace cbu_faststr {
 // We could use void pointers, but we choose char to enforce stricter
 // type checking
 template <std::endian byte_order, Bswappable T, Raw_char_type C>
-inline T mempick_bswap(const C *s) noexcept {
-  T u;
-  std::memcpy(std::addressof(u), s, sizeof(T));
-  return bswap_for<byte_order>(u);
+inline constexpr T mempick_bswap(const C* s) noexcept {
+  if (std::is_constant_evaluated()) {
+    T u = 0;
+    for (std::size_t i = 0; i < sizeof(T); ++i) {
+      u = (u << 8) | std::uint8_t(*s++);
+    }
+    return may_bswap<std::endian::big, byte_order>(u);
+  } else {
+    T u;
+    std::memcpy(std::addressof(u), s, sizeof(T));
+    return bswap_for<byte_order>(u);
+  }
 }
 
 template <std::endian byte_order, Bswappable T, Raw_char_type C>
-inline C *memdrop_bswap(C *s, T v) noexcept {
-  T u = bswap_for<byte_order>(v);
-  std::memcpy(s, std::addressof(u), sizeof(T));
-  return (s + sizeof(T));
+inline constexpr C* memdrop_bswap(C *s, T v) noexcept {
+  if (std::is_constant_evaluated()) {
+    T u = may_bswap<std::endian::little, byte_order>(v);
+    for (std::size_t i = 0; i < sizeof(T); ++i) {
+      *s++ = std::uint8_t(u);
+      u >>= 8;
+    }
+    return s;
+  } else {
+    T u = bswap_for<byte_order>(v);
+    std::memcpy(s, std::addressof(u), sizeof(T));
+    return (s + sizeof(T));
+  }
 }
 
 template <Bswappable T, Raw_char_type C>
-inline T mempick(const C *s) noexcept {
+inline constexpr T mempick(const C* s) noexcept {
   return mempick_bswap<std::endian::native, T>(s);
 }
 
 template <Bswappable T, Raw_char_type C>
-inline T mempick_le(const C *s) noexcept {
+inline constexpr T mempick_le(const C* s) noexcept {
   return mempick_bswap<std::endian::little, T>(s);
 }
 
 template <Bswappable T, Raw_char_type C>
-inline T mempick_be(const C *s) noexcept {
+inline constexpr T mempick_be(const C* s) noexcept {
   return mempick_bswap<std::endian::big, T>(s);
 }
 
 template <Bswappable T, Raw_char_type C>
-inline C *memdrop(C *s, T v) noexcept {
+inline constexpr C* memdrop(C* s, T v) noexcept {
   return memdrop_bswap<std::endian::native, T>(s, v);
 }
 
 template <Bswappable T, Raw_char_type C>
-inline C *memdrop_le(C *s, T v) noexcept {
+inline constexpr C* memdrop_le(C* s, T v) noexcept {
   return memdrop_bswap<std::endian::little, T>(s, v);
 }
 
 template <Bswappable T, Raw_char_type C>
-inline C *memdrop_be(C *s, T v) noexcept {
+inline constexpr C* memdrop_be(C* s, T v) noexcept {
   return memdrop_bswap<std::endian::big, T>(s, v);
 }
 
 template <Raw_char_type C>
-inline std::uint16_t mempick2(const C *s) noexcept {
+inline constexpr std::uint16_t mempick2(const C* s) noexcept {
   return mempick<std::uint16_t>(s);
 }
 
 template <Raw_char_type C>
-inline std::uint32_t mempick4(const C *s) noexcept {
+inline constexpr std::uint32_t mempick4(const C* s) noexcept {
   return mempick<std::uint32_t>(s);
 }
 
 template <Raw_char_type C>
-inline std::uint64_t mempick8(const C *s) noexcept {
+inline constexpr std::uint64_t mempick8(const C* s) noexcept {
   return mempick<std::uint64_t>(s);
 }
 
 template <Raw_char_type C>
-inline C *memdrop2(C *s, std::uint16_t v) noexcept {
+inline constexpr C* memdrop2(C* s, std::uint16_t v) noexcept {
   return memdrop(s, v);
 }
 
 template <Raw_char_type C>
-inline C *memdrop4(C *s, std::uint32_t v) noexcept {
+inline constexpr C* memdrop4(C* s, std::uint32_t v) noexcept {
   return memdrop(s, v);
 }
 
 template <Raw_char_type C>
-inline C *memdrop8(C *s, std::uint64_t v) noexcept {
+inline constexpr C* memdrop8(C* s, std::uint64_t v) noexcept {
   return memdrop(s, v);
 }
 
@@ -163,8 +180,17 @@ inline T *Mempset(T *dst, int c, std::size_t n) noexcept {
 void *memdrop(void *dst, std::uint64_t, std::size_t) noexcept;
 
 template <Raw_char_type T>
-inline T *memdrop(T *dst, std::uint64_t v, std::size_t n) {
-  return static_cast<T *>(memdrop(static_cast<void *>(dst), v, n));
+inline constexpr T* memdrop(T* dst, std::uint64_t v, std::size_t n) noexcept {
+  if (std::is_constant_evaluated()) {
+    char buf[sizeof(v)];
+    memdrop(buf, v);
+    for (std::size_t i = 0; i < n; ++i) {
+      dst[i] = buf[i];
+    }
+    return dst + n;
+  } else {
+    return static_cast<T *>(memdrop(static_cast<void *>(dst), v, n));
+  }
 }
 
 // Use sprintf functions with std::string

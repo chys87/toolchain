@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,11 +60,58 @@ TEST_F(MemPickDropTest, MemDrop) {
 }
 
 TEST_F(MemPickDropTest, MemDropNumber) {
-  memdrop(buf_, 0x0123456789abcdefull, 3);
+  memdrop(buf_, bswap_for<std::endian::little>(0x0123456789abcdefull), 3);
   EXPECT_EQ(static_cast<char>(0xef), buf_[0]);
   EXPECT_EQ(static_cast<char>(0xcd), buf_[1]);
   EXPECT_EQ(static_cast<char>(0xab), buf_[2]);
   EXPECT_EQ(static_cast<char>(0x03), buf_[3]);
+}
+
+TEST(MemPickDropConstexprTest, MemDrop) {
+  struct A {
+    constexpr A() {
+      char* s = buf_;
+      s = memdrop_be<uint32_t>(s, 0x01020304);
+      s = memdrop_le<uint32_t>(s, 0x01020304);
+      l_ = s - buf_;
+    }
+
+    char buf_[8];
+    size_t l_;
+  };
+  constexpr A a;
+  static_assert(a.l_ == 8);
+  static_assert(a.buf_[0] == 1);
+  static_assert(a.buf_[1] == 2);
+  static_assert(a.buf_[2] == 3);
+  static_assert(a.buf_[3] == 4);
+  static_assert(a.buf_[4] == 4);
+  static_assert(a.buf_[5] == 3);
+  static_assert(a.buf_[6] == 2);
+  static_assert(a.buf_[7] == 1);
+}
+
+TEST(MemPickDropConstexprTest, MemPick) {
+  constexpr char b[] {1, 2, 3, 4, 4, 3, 2, 1};
+  static_assert(mempick_be<uint32_t>(b) == 0x01020304);
+  static_assert(mempick_le<uint32_t>(b + 4) == 0x01020304);
+}
+
+TEST(MemPickDropConstexprTest, MemDropNumber) {
+  struct A {
+    constexpr A() {
+      for (size_t i = 0; i < std::size(buf_); ++i) {
+        buf_[i] = static_cast<uint8_t>(i);
+      }
+      memdrop(buf_, bswap_for<std::endian::little>(0x0123456789abcdefull), 3);
+    }
+    uint8_t buf_[8];
+  };
+  constexpr A a;
+  static_assert(a.buf_[0] == 0xef);
+  static_assert(a.buf_[1] == 0xcd);
+  static_assert(a.buf_[2] == 0xab);
+  static_assert(a.buf_[3] == 0x03);
 }
 
 TEST(FastStrTest, NPrintf) {
