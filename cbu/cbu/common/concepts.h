@@ -28,26 +28,23 @@
 
 #pragma once
 
+#include <concepts>
 #include <cstddef>
 #include <type_traits>
 
 namespace cbu {
 inline namespace cbu_concepts {
 
-// Same as C++2a std::convertible_to
-template <typename From, typename To>
-concept convertible_to = std::is_convertible_v<From, To>;
-
 template <typename T>
 concept String_view_compat = requires (const T &t) {
-  { t.data() } -> convertible_to<const char *>;
-  { t.length() } -> convertible_to<std::size_t>;
+  { t.data() } -> std::convertible_to<const char *>;
+  { t.length() } -> std::convertible_to<std::size_t>;
 };
 
 template <typename T>
 concept Zstring_view_compat = requires (const T &t) {
-  { t.c_str() } -> convertible_to<const char *>;
-  { t.length() } -> convertible_to<std::size_t>;
+  { t.c_str() } -> std::convertible_to<const char *>;
+  { t.length() } -> std::convertible_to<std::size_t>;
 };
 
 template <typename T>
@@ -102,8 +99,8 @@ concept Raw_trivial_type =
 
 template <typename T, typename U>
 concept EqualityComparable = requires (T a, U b) {
-  { a == b } -> convertible_to<bool>;
-  { a != b } -> convertible_to<bool>;
+  { a == b } -> std::convertible_to<bool>;
+  { a != b } -> std::convertible_to<bool>;
 };
 
 template <typename T>

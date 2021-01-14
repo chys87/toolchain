@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,9 +30,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <cstddef>
 #include <type_traits>
-#include "concepts.h"
 
 namespace cbu {
 inline namespace cbu_heapq {
@@ -118,7 +118,7 @@ template <typename Vec>
 concept Heapq_vector = requires(Vec &vec, std::size_t n) {
   typename Vec::value_type;
   { vec.resize(n) };
-  { vec[n] } -> convertible_to<typename Vec::value_type &>;
+  { vec[n] } -> std::convertible_to<typename Vec::value_type &>;
 };
 
 namespace heapq_detail {

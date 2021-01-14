@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,10 +28,10 @@
 
 #pragma once
 
+#include <concepts>
 #include <cstdarg>
 #include <cstddef>
 #include <string_view>
-#include "concepts.h"
 
 namespace cbu {
 inline namespace cbu_strutil {
@@ -71,13 +71,13 @@ inline constexpr const char *c_str(const char *s) noexcept {
 }
 
 template<typename T>
-requires requires(T s) { {s.c_str()} -> convertible_to<const char *>; }
+requires requires(T s) { {s.c_str()} -> std::convertible_to<const char *>; }
 inline constexpr const char *c_str(const T &s) noexcept(noexcept(s.c_str())) {
   return s.c_str();
 }
 
 template<typename T>
-requires requires(T s) { {s->c_str()} -> convertible_to<const char *>; }
+requires requires(T s) { {s->c_str()} -> std::convertible_to<const char *>; }
 inline constexpr const char *c_str(const T &s) noexcept(noexcept(s->c_str())) {
   return s->c_str();
 }

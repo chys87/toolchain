@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <concepts>  // std::convertible_to
 #include <cstddef>  // std::byte
 #include <iterator>  // std::data, std::size
 #include <string_view>
 #include <type_traits>
+
 #include "concepts.h"
 
 // This header provides a "bytes view" class, which behaves somewhat like
@@ -73,8 +75,8 @@ template <typename T> concept Explicit_type = is_explicit_type_v<T>;
 
 template <typename T>
 concept Valid_obj = requires (T&& obj) {
-  { std::data(std::forward<T>(obj)) } -> convertible_to<const void*>;
-  { std::size(std::forward<T>(obj)) } -> convertible_to<std::size_t>;
+  { std::data(std::forward<T>(obj)) } -> std::convertible_to<const void*>;
+  { std::size(std::forward<T>(obj)) } -> std::convertible_to<std::size_t>;
   requires Valid_type<std::remove_const_t<std::remove_reference_t<
       decltype(*std::data(std::forward<T>(obj)))>>>;
 };

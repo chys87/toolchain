@@ -33,12 +33,12 @@
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
+#include <span>
 #include <string>
 #include <utility>
 #include "byteorder.h"
 #include "concepts.h"
 #include "stdhack.h"
-#include "cbu/compat/span.h"
 #include "cbu/compat/string.h"
 #include "cbu/compat/type_identity.h"
 
@@ -213,7 +213,7 @@ std::string nprintf(std::size_t hint_size,
 // append
 template <Std_string_char C>
 void append(std::basic_string<C>* res,
-            compat::span<const std::basic_string_view<C>> sp) {
+            std::span<const std::basic_string_view<C>> sp) {
   std::size_t n = sp.size();
   auto* p = sp.data();
   if (n == 0) {
@@ -246,18 +246,18 @@ void append(std::basic_string<C>* res,
 }
 
 extern template void append<char>(std::string*,
-                                  compat::span<const std::string_view>);
+                                  std::span<const std::string_view>);
 
 template <Std_string_char C>
 inline void append(std::basic_string<C>* res,
                    compat::type_identity_t<
                      std::initializer_list<std::basic_string_view<C>>> il) {
   append(res,
-         compat::span<const std::basic_string_view<C>>(il.begin(), il.size()));
+         std::span<const std::basic_string_view<C>>(il.begin(), il.size()));
 }
 
 template <Std_string_char C>
-std::basic_string<C> concat(compat::span<const std::basic_string_view<C>> sp) {
+std::basic_string<C> concat(std::span<const std::basic_string_view<C>> sp) {
   std::basic_string<C> res;
   append(&res, sp);
   return res;
@@ -265,24 +265,24 @@ std::basic_string<C> concat(compat::span<const std::basic_string_view<C>> sp) {
 
 // enumerate all types, so that the user can use initializer list more easily
 inline std::string concat(std::initializer_list<std::string_view> il) {
-  return concat(compat::span<const std::string_view>(il.begin(), il.size()));
+  return concat(std::span<const std::string_view>(il.begin(), il.size()));
 }
 
 inline std::wstring concat(std::initializer_list<std::wstring_view> il) {
-  return concat(compat::span<const std::wstring_view>(il.begin(), il.size()));
+  return concat(std::span<const std::wstring_view>(il.begin(), il.size()));
 }
 
 inline std::u16string concat(std::initializer_list<std::u16string_view> il) {
-  return concat(compat::span<const std::u16string_view>(il.begin(), il.size()));
+  return concat(std::span<const std::u16string_view>(il.begin(), il.size()));
 }
 
 inline std::u32string concat(std::initializer_list<std::u32string_view> il) {
-  return concat(compat::span<const std::u32string_view>(il.begin(), il.size()));
+  return concat(std::span<const std::u32string_view>(il.begin(), il.size()));
 }
 
 #if defined __cpp_char8_t && __cpp_char8_t >= 201811
 inline std::u8string concat(std::initializer_list<std::u8string_view> il) {
-  return concat(compat::span<const std::u8string_view>(il.begin(), il.size()));
+  return concat(std::span<const std::u8string_view>(il.begin(), il.size()));
 }
 #endif
 

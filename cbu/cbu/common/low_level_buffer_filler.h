@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@
 #pragma once
 
 #include <algorithm>
+#include <concepts>
 #include <cstddef>
 #include <cstring>
 #include <string_view>
@@ -104,7 +105,8 @@ class LowLevelBufferFiller {
 
   template <typename T>
     requires requires (T&& v) {
-      {std::forward<T>(v).to_buffer(std::declval<Ch*>())} -> convertible_to<Ch*>;
+      {std::forward<T>(v).to_buffer(std::declval<Ch*>())} ->
+          std::convertible_to<Ch*>;
     }
   LowLevelBufferFiller& operator<<(T&& v) noexcept {
     p_ = std::forward<T>(v).to_buffer(p_);
@@ -127,7 +129,7 @@ class LowLevelBufferFiller {
   template <typename T>
     requires requires (T&& v) {
       {std::forward<T>(v).constexpr_to_buffer(std::declval<Ch*>())} ->
-      convertible_to<Ch*>;
+          std::convertible_to<Ch*>;
     }
   constexpr LowLevelBufferFiller& operator<(T&& v) noexcept {
     p_ = std::forward<T>(v).constexpr_to_buffer(p_);

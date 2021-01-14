@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -162,7 +162,7 @@ std::string nprintf(std::size_t hint_size,
   va_end(ap);
 }
 
-template void append<char>(std::string*, compat::span<const std::string_view>);
+template void append<char>(std::string*, std::span<const std::string_view>);
 
 } // namespace cbu_faststr
 } // namespace cbu
