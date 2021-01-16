@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,6 +67,15 @@ TEST(StrUtilTest, StrNumCmp) {
   EXPECT_LT(0, strnumcmp("abcd12a", "abcd9a"));
   EXPECT_EQ(0, strnumcmp("abcd12a", "abcd12a"));
   EXPECT_GT(0, strnumcmp("abcd12a", "abcd23a"));
+}
+
+TEST(StrUtilTest, StrCmpLengthFirst) {
+  EXPECT_LT(strcmp_length_first("z", "ab"), 0);
+  EXPECT_LT(strcmp_length_first("ab", "zz"), 0);
+  EXPECT_EQ(strcmp_length_first("ab", "ab"), 0);
+  EXPECT_GT(strcmp_length_first("zz", "ab"), 0);
+  EXPECT_GT(strcmp_length_first("zzz", "ab"), 0);
+  EXPECT_GT(strcmp_length_first("aaa", "zz"), 0);
 }
 
 } // namespace cbu

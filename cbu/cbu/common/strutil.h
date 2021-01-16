@@ -31,6 +31,7 @@
 #include <concepts>
 #include <cstdarg>
 #include <cstddef>
+#include <cstring>
 #include <string_view>
 
 namespace cbu {
@@ -89,6 +90,26 @@ int compare_string_view(std::string_view a, std::string_view b) noexcept
 // Returns negative if (a < b), 0 or positive otherwise
 int compare_string_view_for_lt(std::string_view a, std::string_view b) noexcept
   __attribute__((__pure__));
+
+// First compare by length, then by string content
+// Suitable for use in map and set
+inline constexpr int strcmp_length_first(
+    std::string_view a, std::string_view b) noexcept {
+  if (a.length() < b.length())
+    return -1;
+  else if (a.length() > b.length())
+    return 1;
+  else
+    return std::memcmp(a.data(), b.data(), a.length());
+}
+
+struct StrLessLengthFirst {
+  using is_transparent = void;
+  constexpr bool operator()(std::string_view a,
+                            std::string_view b) const noexcept {
+    return strcmp_length_first(a, b) < 0;
+  }
+};
 
 } // namespace cbu_strutil
 } // namespace cbu
