@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (c) 2018-2020, chys <admin@CHYS.INFO>
+# Copyright (c) 2018-2021, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -72,6 +72,10 @@ def cppfilter(fi):
             (b'::less<void>', b'::less<>'),
             (b'::greater<void>', b'::greater<>'),
             (b'::equal_to<void>', b'::equal_to<>'),
+
+            (b'(__gnu_cxx::_Lock_policy)0', b'__gnu_cxx::_S_single'),
+            (b'(__gnu_cxx::_Lock_policy)1', b'__gnu_cxx::_S_mutex'),
+            (b'(__gnu_cxx::_Lock_policy)2', b'__gnu_cxx::_S_atomic'),
         )
 
     __type = br'(?:[^,<>]|<(?:[^<>]+|<(?:[^<>]|<[^<>]+>)+>)>)+'  # This pattern catches templates up to 3 levels
@@ -131,13 +135,17 @@ def cppfilter(fi):
                 br'::unordered_set<\1, std::hash<\1 const\&>>'),
             (re.compile(br'::unordered_map<(.+), (.+), std::(__\d+::)?hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<std::pair<\1 const, \2>>>'),
                 br'::unordered_map<\1, \2>'),
-            (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\2>, std::less<\1>, std::allocator<\2>>'),
+            (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\2>,'),
+                br'::_Rb_tree<\1, \2, std::_Select1st<(...)>,'),
+            (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\(\.\.\.\)>, std::less<\1>, std::allocator<\2>>'),
                 br'::_Rb_tree<\1, \2>'),
-            (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\2>, std::less<>, std::allocator<\2>>'),
+            (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\(\.\.\.\)>, std::less<>, std::allocator<\2>>'),
                 br'::_Rb_tree<\1, \2, std::_Select1st<...>, std::less<>>'),
-            (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\1>, std::less<\1>, std::allocator<\1>>'),
+            (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\1>,'),
+                br'::_Rb_tree<\1, \1, std::_Identity<(...)>,'),
+            (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\(\.\.\.\)>, std::less<\1>, std::allocator<\1>>'),
                 br'::_Rb_tree<\1, \1>'),
-            (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\1>, std::less<>, std::allocator<\1>>'),
+            (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\(\.\.\.\)>, std::less<>, std::allocator<\1>>'),
                 br'::_Rb_tree<\1, \1, std::_Identity<...>, std::less<>>'),
             (re.compile(br'::unordered_map<(.+), (.+), std::hash<\1 const&>, std::equal_to<\1>, std::allocator<std::pair<\1 const, \2>>>'),
                 br'::unordered_map<\1, \2, std::hash<\1 const\&>>'),
@@ -145,6 +153,7 @@ def cppfilter(fi):
                 br'::\1<\2>'),
             (re.compile(br'::(basic_stringbuf)<(.*), std::char_traits<\2>, std::allocator<\2>>'),
                 br'::\1<\2>'),
+            (re.compile(br'std::allocator<' + __type + br'>'), br'std::allocator<(...)>'),  # Do this after other STL replacements
             (re.compile(br'::span<(' + __type + br'), (?:18446744073709551615ul|4294967295u)>'), br'::span<\1>'),
             (re.compile(br'::span<(' + __type + br'), (?:18446744073709551615ul|4294967295u)>'), br'::span<\1>'),  # Repeat so we can catch nested spans
             (re.compile(br'\{lambda\([^()]*\)'),
