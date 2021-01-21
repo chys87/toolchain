@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,7 @@
 #if __has_include(<x86intrin.h>)
 # include <x86intrin.h>
 #endif
+#include "cbu/common/platform.h"
 #include "bit.h"
 #include "fastarith.h"
 #include "faststr.h"
@@ -445,6 +446,9 @@ char *to_oct(char *r, const Word *s, size_t n) noexcept {
       break;
     case 2:
       v = mempick_le<uint16_t>(pb);
+      break;
+    default:
+      __builtin_unreachable();
   }
 
   unsigned tail_oct_digits = bsr(v) / 3 + 1;
@@ -464,18 +468,18 @@ char *to_oct(char *r, const Word *s, size_t n) noexcept {
 
   while (pb > b) {
     pb -= 3;
-    unsigned v = mempick_le<uint32_t>(pb);
+    unsigned vv = mempick_le<uint32_t>(pb);
 #if defined __x86_64__ && defined __BMI2__
-    uint64_t bv = _pdep_u64(v, 0x0707070707070707) + 0x3030303030303030;
+    uint64_t bv = _pdep_u64(vv, 0x0707070707070707) + 0x3030303030303030;
     r = memdrop_be(r, bv);
 #else
     unsigned b0 = pb[0], b1 = pb[1], b2 = pb[2];
     *r++ = (b2 >> 5) + '0';
     *r++ = (7 & (b2 >> 2)) + '0';
-    *r++ = (7 & (v >> 15)) + '0';
+    *r++ = (7 & (vv >> 15)) + '0';
     *r++ = (7 & (b1 >> 4)) + '0';
     *r++ = (7 & (b1 >> 1)) + '0';
-    *r++ = (7 & (v >> 6)) + '0';
+    *r++ = (7 & (vv >> 6)) + '0';
     *r++ = (7 & (b0 >> 3)) + '0';
     *r++ = (7 & (b0 >> 0)) + '0';
 #endif
@@ -542,9 +546,9 @@ char *to_bin(char *r, const Word *s, size_t n) noexcept {
   } while (bits);
 
   while (--n) {
-    Word v = s[n - 1];
-    for (unsigned k = sizeof(v); k; --k) {
-      uint8_t b = v >> ((k - 1) * 8);
+    Word vv = s[n - 1];
+    for (unsigned k = sizeof(vv); k; --k) {
+      uint8_t b = vv >> ((k - 1) * 8);
 #if defined __AVX2__ && defined __x86_64__
       __m128i u = _mm_mullo_epi16(_mm_set1_epi16(b),
                                   _mm_setr_epi16(1, 2, 4, 8, 16, 32, 64, 128));

@@ -89,17 +89,18 @@ std::size_t strcnt(const char *s, char c) noexcept {
   const __m256i *p = (const __m256i *)((uintptr_t)s & ~31);
 
   __m256i val = *p++;
-  uint32_t mask_z = uint32_t(_mm256_movemask_epi8(
-      _mm256_cmpeq_epi8(zero, val))) >> misalign;
-  uint32_t mask_c = uint32_t(_mm256_movemask_epi8(
-      _mm256_cmpeq_epi8(val, ref))) >> misalign;
-  if (mask_z) {
-    // a ^ (a - 1): blsmsk
-    mask_c &= mask_z ^ (mask_z - 1);
-    return uint32_t(_mm_popcnt_u32(mask_c));
+  {
+    uint32_t mask_z = uint32_t(_mm256_movemask_epi8(
+        _mm256_cmpeq_epi8(zero, val))) >> misalign;
+    uint32_t mask_c = uint32_t(_mm256_movemask_epi8(
+        _mm256_cmpeq_epi8(val, ref))) >> misalign;
+    if (mask_z) {
+      // a ^ (a - 1): blsmsk
+      mask_c &= mask_z ^ (mask_z - 1);
+      return uint32_t(_mm_popcnt_u32(mask_c));
+    }
+    r = uint32_t(_mm_popcnt_u32(mask_c));
   }
-
-  r = uint32_t(_mm_popcnt_u32(mask_c));
 
   for (;;) {
     val = *p++;
