@@ -31,7 +31,6 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
-#include "cbu/common/align.h"
 #include "cbu/common/bit.h"
 #include "cbu/malloc/pagesize.h"
 

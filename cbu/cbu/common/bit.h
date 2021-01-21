@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -282,6 +282,63 @@ set_bits(T v) {
 
 static_assert(std::size(set_bits(0x123456789abcdef)) ==
               popcnt(0x123456789abcdef));
+
+inline constexpr std::size_t pow2_floor(std::size_t n,
+                                        std::size_t size) noexcept {
+  return (n & ~(size - 1));
+}
+
+inline constexpr std::size_t pow2_ceil(std::size_t n,
+                                       std::size_t size) noexcept {
+  return pow2_floor(n + size - 1, size);
+}
+
+template <typename T>
+inline constexpr T *pow2_floor(T *p, std::size_t size) noexcept {
+  return reinterpret_cast<T*>(std::uintptr_t(p) & ~std::uintptr_t(size - 1));
+}
+
+template <typename T>
+inline constexpr T *pow2_ceil(T *p, std::size_t size) noexcept {
+  return pow2_floor(reinterpret_cast<T *>(std::uintptr_t(p) + size - 1), size);
+}
+
+template <typename T> requires std::is_integral_v<T>
+inline constexpr std::make_unsigned_t<T> MAX_POW2 =
+    std::make_unsigned_t<T>(1) << (8 * sizeof(T) - 1);
+
+// Ceiling to the nearest power of 2
+// Undefined for n > MAX_POW2<T>
+template <typename T> requires std::is_integral_v<T>
+inline constexpr T pow2_ceil(T n) noexcept {
+  return (MAX_POW2<T> >> (clz(std::max(n, T(1)) - 1) - 1));
+}
+
+// Flooring to the nearest power of 2
+// Undefined for n == 0
+template <typename T> requires std::is_integral_v<T>
+inline constexpr T pow2_floor(T n) noexcept {
+  return (std::make_unsigned_t<T>(1) << (8 * sizeof(T) - 1)) >> clz(n);
+}
+
+static_assert(pow2_ceil(0) == 1);
+static_assert(pow2_ceil(1) == 1);
+static_assert(pow2_ceil(2) == 2);
+static_assert(pow2_ceil(3) == 4);
+static_assert(pow2_ceil(4) == 4);
+static_assert(pow2_ceil(5) == 8);
+static_assert(pow2_ceil(8) == 8);
+static_assert(pow2_ceil(9) == 16);
+static_assert(pow2_ceil(uint32_t(0x80000000)) == 0x80000000);
+
+static_assert(pow2_floor(1) == 1);
+static_assert(pow2_floor(2) == 2);
+static_assert(pow2_floor(3) == 2);
+static_assert(pow2_floor(4) == 4);
+static_assert(pow2_floor(7) == 4);
+static_assert(pow2_floor(8) == 8);
+static_assert(pow2_floor(15) == 8);
+static_assert(pow2_floor(uint32_t(0xffff0f0f)) == 0x80000000);
 
 } // inline namespace cbu_bit
 } // namespace cbu
