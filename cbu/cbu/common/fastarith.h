@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -140,6 +140,18 @@ inline bool mul_overflow(A a, B b, C *c) noexcept {
 template <Raw_integral A, Raw_integral B, Raw_integral C>
 inline bool add_overflow(A a, B b, C *c) noexcept {
   return __builtin_add_overflow(a, b, c);
+}
+
+template <typename T, typename U>
+requires std::is_convertible_v<T*, U*>
+inline bool add_overflow(T* a, std::size_t b, U** c) noexcept {
+  std::uintptr_t res;
+  if (__builtin_add_overflow(std::uintptr_t(a), b, &res)) {
+    return true;
+  } else {
+    *c = reinterpret_cast<U*>(res);
+    return false;
+  }
 }
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
