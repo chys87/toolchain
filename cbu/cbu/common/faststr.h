@@ -28,6 +28,9 @@
 
 #pragma once
 
+#if __has_include(<x86intrin.h>)
+# include <x86intrin.h>
+#endif
 #include <bit>
 #include <cstdarg>
 #include <cstdint>
@@ -44,6 +47,9 @@
 
 namespace cbu {
 inline namespace cbu_faststr {
+
+// Useful for some SIMD operations
+extern const char arch_linear_bytes64[64];
 
 // We could use void pointers, but we choose char to enforce stricter
 // type checking
@@ -177,21 +183,51 @@ inline T *Mempset(T *dst, int c, std::size_t n) noexcept {
       reinterpret_cast<char *>(std::memset(dst, c, n)) + n);
 }
 
-void *memdrop(void *dst, std::uint64_t, std::size_t) noexcept;
+void* memdrop_var64(void* dst, std::uint64_t, std::size_t) noexcept;
+#if __WORDSIZE >= 64
+void* memdrop_var128(void* dst, unsigned __int128, std::size_t) noexcept;
+#endif
+#ifdef __SSE2__
+void* memdrop(void* dst, __m128i, std::size_t) noexcept;
+#endif
+#ifdef __AVX2__
+void* memdrop(void* dst, __m256i, std::size_t) noexcept;
+#endif
 
-template <Raw_char_type T>
-inline constexpr T* memdrop(T* dst, std::uint64_t v, std::size_t n) noexcept {
+template <Raw_char_type T, Raw_integral IT>
+requires (Raw_char_type<T> || std::is_void_v<T>)
+inline constexpr T* memdrop(T* dst, IT v, std::size_t n) noexcept {
+  using S = std::conditional_t<std::is_void_v<T>, char, T>;
+  S* d = static_cast<S*>(dst);
   if (std::is_constant_evaluated()) {
     char buf[sizeof(v)];
     memdrop(buf, v);
     for (std::size_t i = 0; i < n; ++i) {
-      dst[i] = buf[i];
+      d[i] = buf[i];
     }
-    return dst + n;
+    return d + n;
   } else {
-    return static_cast<T *>(memdrop(static_cast<void *>(dst), v, n));
+#if __WORDSIZE >= 64
+    if (sizeof(IT) > 8)
+      return static_cast<T*>(memdrop_var128(d, v, n));
+#endif
+    return static_cast<T*>(memdrop_var64(d, v, n));
   }
 }
+
+#ifdef __SSE2__
+template <Raw_char_type T>
+inline T* memdrop(T* dst, __m128i v, std::size_t n) noexcept {
+  return static_cast<T*>(memdrop(static_cast<void*>(dst), v, n));
+}
+#endif
+
+#ifdef __AVX2__
+template <Raw_char_type T>
+inline T* memdrop(T* dst, __m256i v, std::size_t n) noexcept {
+  return static_cast<T*>(memdrop(static_cast<void*>(dst), v, n));
+}
+#endif
 
 // Use sprintf functions with std::string
 std::size_t append_vnprintf(std::string* res, std::size_t hint_size,

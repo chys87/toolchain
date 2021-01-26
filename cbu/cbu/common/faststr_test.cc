@@ -65,6 +65,53 @@ TEST_F(MemPickDropTest, MemDropNumber) {
   EXPECT_EQ(static_cast<char>(0xcd), buf_[1]);
   EXPECT_EQ(static_cast<char>(0xab), buf_[2]);
   EXPECT_EQ(static_cast<char>(0x03), buf_[3]);
+
+#if __WORDSIZE >= 64
+  if (std::endian::native == std::endian::little) {
+    unsigned __int128 v =
+      ((unsigned __int128)UINT64_C(0x0102030405060708) << 64) |
+      UINT64_C(0x090a0b0c0d0e0f);
+
+    memset(buf_, 0, sizeof(buf_));
+    memdrop(buf_, v, 7);
+    EXPECT_EQ(std::string(buf_, 7), std::string((char*)&v, 7));
+    EXPECT_EQ(buf_[7], 0);
+
+    memset(buf_, 0, sizeof(buf_));
+    memdrop(buf_, v, 14);
+    EXPECT_EQ(std::string(buf_, 14), std::string((char*)&v, 14));
+    EXPECT_EQ(buf_[14], 0);
+  }
+#endif
+
+#ifdef __SSE2__
+  {
+    __m128i x = _mm_setr_epi8(
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+    for (int i = 0; i <= 16; ++i) {
+      memset(buf_, 42, 16);
+      ASSERT_EQ(buf_ + i, memdrop(buf_, x, i));
+      for (int j = 0; j < 16; ++j) {
+        ASSERT_EQ((j < i) ? j : 42, buf_[j]);
+      }
+    }
+  }
+#endif
+
+#ifdef __AVX2__
+  {
+    __m256i x = _mm256_setr_epi8(
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+        16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31);
+    for (int i = 0; i <= 32; ++i) {
+      memset(buf_, 42, 32);
+      ASSERT_EQ(buf_ + i, memdrop(buf_, x, i)) << "length=" << i;
+      for (int j = 0; j < 32; ++j) {
+        ASSERT_EQ((j < i) ? j : 42, buf_[j]) << "length=" << i << ", j=" << j;
+      }
+    }
+  }
+#endif
 }
 
 TEST(MemPickDropConstexprTest, MemDrop) {

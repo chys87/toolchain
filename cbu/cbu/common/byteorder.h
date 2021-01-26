@@ -44,7 +44,7 @@ concept Bswappable = (std::is_integral<T>::value &&
                       std::is_same_v<T, std::remove_cvref_t<T>> &&
                       !std::is_same_v<T, bool> &&
                       (sizeof(T) == 1 || sizeof(T) == 2 || sizeof(T) == 4 ||
-                       sizeof(T) == 8));
+                       sizeof(T) == 8 || sizeof(T) == 16));
 
 template <Bswappable T> requires (sizeof(T) == 1)
 inline constexpr T bswap(T x) noexcept { return x; }
@@ -57,6 +57,13 @@ inline constexpr T bswap(T x) noexcept { return __builtin_bswap32(x); }
 
 template <Bswappable T> requires (sizeof(T) == 8)
 inline constexpr T bswap(T x) noexcept { return __builtin_bswap64(x); }
+
+template <Bswappable T> requires (sizeof(T) == 16)
+inline constexpr T bswap(T x) noexcept {
+  unsigned long long lo = static_cast<unsigned long long>(x);
+  unsigned long long hi = static_cast<unsigned long long>(x >> 64);
+  return (T(bswap(lo)) << 64) | bswap(hi);
+}
 
 template <std::endian order_a, std::endian order_b, Bswappable T>
   requires (order_a == order_b)

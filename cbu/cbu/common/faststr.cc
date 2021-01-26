@@ -38,7 +38,18 @@
 namespace cbu {
 inline namespace cbu_faststr {
 
-void *memdrop(void *dst, uint64_t v, size_t n) noexcept {
+alignas(64) const char arch_linear_bytes64[64] = {
+  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+  0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+  0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+  0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+  0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+  0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
+  0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
+  0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
+};
+
+void* memdrop_var64(void* dst, uint64_t v, size_t n) noexcept {
   if (std::endian::native == std::endian::little) {
 
     char *d = static_cast<char *>(dst);
@@ -84,6 +95,57 @@ void *memdrop(void *dst, uint64_t v, size_t n) noexcept {
     return compat::mempcpy(dst, &v, n);
   }
 }
+
+#if __WORDSIZE >= 64
+void* memdrop_var128(void* dst, unsigned __int128 v, std::size_t n) noexcept {
+  if (std::endian::native == std::endian::little) {
+    if (n <= 8) {
+      return memdrop(static_cast<char*>(dst), uint64_t(v), n);
+    } else {
+      memdrop8(static_cast<char*>(dst), uint64_t(v));
+      memdrop8(static_cast<char*>(dst) + n - 8,
+               uint64_t(v >> ((n - 8) * 8)));
+      return static_cast<char*>(dst) + n;
+    }
+  } else {
+    return compat::mempcpy(dst, &v, n);
+  }
+}
+#endif
+
+#ifdef __SSE2__
+void* memdrop(void* dst, __m128i v, std::size_t n) noexcept {
+  char *d = static_cast<char *>(dst);
+  char *e = d + n;
+
+  unsigned m = n;
+
+  if (m > 8) {
+    __m128i u = _mm_shuffle_epi8(
+        v, *(const __m128i_u *)(arch_linear_bytes64 + n - 8));
+    memdrop8(d, __v2di(v)[0]);
+    memdrop8(e - 8, __v2di(u)[0]);
+    return e;
+  } else {
+    return memdrop(d, __v2di(v)[0], n);
+  }
+}
+#endif
+
+#ifdef __AVX2__
+void* memdrop(void* dst, __m256i v, std::size_t n) noexcept {
+  char *d = static_cast<char *>(dst);
+  unsigned m = n;
+
+  if (m > 16) {
+    *(__m128i_u *)d = _mm256_extracti128_si256(v, 0);
+    __m128i vv = _mm256_extracti128_si256(v, 1);
+    return memdrop(d + 16, vv, n - 16);
+  } else {
+    return memdrop(d, _mm256_extracti128_si256(v, 0), n);
+  }
+}
+#endif
 
 namespace {
 
