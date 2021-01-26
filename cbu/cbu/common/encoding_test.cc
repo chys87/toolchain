@@ -54,4 +54,24 @@ TEST(Utf8Test, Utf8LeadingByteToTrailingLength) {
             utf8_leading_byte_to_trailing_length(u8"\U0010FFFF"[0]));
 }
 
+TEST(Utf8Test, Char32ToUtf8) {
+  char buffer[16];
+
+  // Unsupported code points
+  EXPECT_EQ(char32_to_utf8(buffer, char32_t(0x110000)), nullptr);
+  EXPECT_EQ(char32_to_utf8(buffer, char32_t(0xd801)), nullptr);
+
+  EXPECT_EQ(char32_to_utf8(buffer, U'x') - buffer, 1);
+  EXPECT_EQ(std::string(buffer, 1), std::string((const char*)u8"x"));
+
+  EXPECT_EQ(char32_to_utf8(buffer, U'\u07ff') - buffer, 2);
+  EXPECT_EQ(std::string(buffer, 2), std::string((const char*)u8"\u07ff"));
+
+  EXPECT_EQ(char32_to_utf8(buffer, U'人') - buffer, 3);
+  EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"人"));
+
+  EXPECT_EQ(char32_to_utf8(buffer, U'\U00012345') - buffer, 4);
+  EXPECT_EQ(std::string(buffer, 4), std::string((const char*)u8"\U00012345"));
+}
+
 } // namespace cbu

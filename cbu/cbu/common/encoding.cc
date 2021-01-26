@@ -26,61 +26,67 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "cbu/common/encoding.h"
 
-#include <cstddef>
-#include <cstdint>
-#include <limits>
+#if __has_include(<x86intrin.h>)
+# include <x86intrin.h>
+#endif
+
+#include "cbu/common/faststr.h"
 
 namespace cbu {
 inline namespace cbu_encoding {
 
-// We follow RFC 3629, allowing UTF-8 only up to 4 bytes
-// (encoding Unicode up to U+10FFFF)
-enum struct Utf8ByteType {
-  ASCII,
-  LEADING,
-  TRAILING,
-  INVALID,
-};
-
-inline constexpr Utf8ByteType utf8_byte_type(std::uint8_t c) noexcept {
-  if (std::int8_t(c) >= 0) {
-    return Utf8ByteType::ASCII;
-  } else if (std::int8_t(c) < std::int8_t(0xc0) /* c >= 0x80 && c < 0xc0 */ ) {
-    return Utf8ByteType::TRAILING;
-  } else if (c >= 0xc0 && c < 0xf4) {
-    return Utf8ByteType::LEADING;
+char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
+  if (u < 0x800) {
+    if (u < 0x80) {
+      *w++ = u;
+    } else {
+#if defined __BMI2__
+      w = memdrop_be<uint16_t>(w, _pdep_u32(u, 0x1f3f) | 0xc080u);
+#else
+      *w++ = (u >> 6) + 0xc0u;
+      *w++ = (u & 0x3fu) + 0x80u;
+#endif
+    }
+  } else if (u < 0x10000) {
+    if (u >= 0xd800 && u <= 0xdfff) {
+      // UTF-16 surrogate pairs
+      [[unlikely]]
+      return nullptr;
+    } else {
+      // Most Chinese characters fall here
+#if defined __BMI2__
+      memdrop_be<uint32_t>(w, _pdep_u32(u, 0x0f3f3f00) | 0xe0808000);
+      w += 3;
+#else
+      *w++ = (u >> 12) + 0xe0u;
+      *w++ = ((u >> 6) & 0x3fu) + 0x80u;
+      *w++ = (u & 0x3fu) + 0x80u;
+#endif
+    }
   } else {
-    return Utf8ByteType::INVALID;
-  }
-}
-
-
-// What Unicode code point ranges can be expressed in k bytes?
-inline constexpr std::uint32_t utf8_bytes_limit[4] = {
-  0x0080, 0x0800, 0x10000, 0x110000
-};
-
-inline constexpr unsigned int char32_to_utf8_length(char32_t c) noexcept {
-  for (std::size_t i = 0;
-       i < sizeof(utf8_bytes_limit) / sizeof(utf8_bytes_limit[0]); ++i) {
-    if (std::uint32_t(c) < utf8_bytes_limit[i]) {
-      return i + 1;
+    [[unlikely]]
+    if (u < 0x110000) {
+#if defined __BMI2__
+      w = memdrop_be<uint32_t>(w, _pdep_u32(u, 0x073f3f3f) | 0xf0808080u);
+#else
+      *w++ = (u >> 18) + 0xf0u;
+      *w++ = ((u >> 12) & 0x3fu) + 0x80u;
+      *w++ = ((u >> 6) & 0x3fu) + 0x80u;
+      *w++ = (u & 0x3fu) + 0x80u;
+#endif
+    } else {
+      return nullptr;
     }
   }
-  return 0;
+  return w;
 }
 
-inline constexpr unsigned int utf8_leading_byte_to_trailing_length(
-    std::uint8_t c) noexcept {
-  return (__builtin_clz(static_cast<unsigned int>(std::uint8_t(~c))) -
-          (std::numeric_limits<unsigned int>::digits - 7));
+char* char32_to_utf8(char* dst, char32_t c) noexcept {
+  return reinterpret_cast<char*>(
+      char32_to_utf8(reinterpret_cast<char8_t*>(dst), c));
 }
 
-// If c is out of range (> U+10FFFF) or is a UTF-16 surrogate, return nullptr
-char8_t* char32_to_utf8(char8_t* dst, char32_t c) noexcept;
-char* char32_to_utf8(char* dst, char32_t c) noexcept;
-
-} // inline namepsace cbu_encoding
+} // namepsace cbu_encoding
 } // namespace cbu
