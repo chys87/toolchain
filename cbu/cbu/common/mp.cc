@@ -329,9 +329,11 @@ char *to_dec(char *r, const Word *s, size_t n) noexcept {
 
 std::string to_dec(const Word *s, size_t n) noexcept {
   std::string res;
-  res.resize(n * std::numeric_limits<Word>::digits10 + 1);
-  char *r = to_dec(&res[0], s, n);
-  res.resize(r - &res[0]);
+  // Note the meaning of digits10 - numeric_limits<uint8_t>::digits10 is 2
+  // instead of 3
+  char* r = cbu::extend(&res,
+                        n * (std::numeric_limits<Word>::digits10 + 1) + 1);
+  cbu::truncate_unsafe(&res, to_dec(r, s, n) - r);
   return res;
 }
 
@@ -397,9 +399,8 @@ char *to_hex(char *r, const Word *s, size_t n) noexcept {
 
 std::string to_hex(const Word *s, size_t n) noexcept {
   std::string res;
-  res.resize(n * (std::numeric_limits<Word>::digits / 4) + 1);
-  char *r = to_hex(&res[0], s, n);
-  res.resize(r - &res[0]);
+  char* r = cbu::extend(&res, n * (std::numeric_limits<Word>::digits / 4) + 1);
+  cbu::truncate_unsafe(&res, to_hex(r, s, n) - r);
   return res;
 }
 
@@ -490,9 +491,8 @@ char *to_oct(char *r, const Word *s, size_t n) noexcept {
 
 std::string to_oct(const Word *s, size_t n) noexcept {
   std::string res;
-  res.resize(n * std::numeric_limits<Word>::digits / 3 + 1);
-  char *r = to_oct(&res[0], s, n);
-  res.resize(r - &res[0]);
+  char* r = cbu::extend(&res, n * std::numeric_limits<Word>::digits / 3 + 1);
+  cbu::truncate_unsafe(&res, to_oct(r, s, n) - r);
   return res;
 }
 
@@ -509,17 +509,24 @@ size_t from_bin(Word *r, const char *s, size_t n) noexcept {
     const char *p = s + n;
 #if defined __x86_64__ && defined __AVX2__
     static_assert(sizeof(Word) == 8);
-    __m256i va = _mm256_slli_epi16(*reinterpret_cast<const __m256i_u *>(p), 7);
-    __m256i vb = _mm256_slli_epi16(*reinterpret_cast<const __m256i_u *>(p + 32),
-                                   7);
-    Word v = uint32_t(_mm256_movemask_epi8(va)) |
-             uint64_t(uint32_t(_mm256_movemask_epi8(vb))) << 32;
+    __m256i ones = _mm256_set1_epi8('1');
+    __m256i swap_mask = _mm256_setr_epi8(
+        7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8,
+        7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8);
+    __m256i va = _mm256_shuffle_epi8(_mm256_cmpeq_epi8(
+        *reinterpret_cast<const __m256i_u*>(p), ones), swap_mask);
+    __m256i vb = _mm256_shuffle_epi8(_mm256_cmpeq_epi8(
+        *reinterpret_cast<const __m256i_u*>(p + 32), ones), swap_mask);
+    Word& w = r[nr++];
+    uint32_t* pw = reinterpret_cast<uint32_t*>(&w);
+    *(pw + 1) = bswap(_mm256_movemask_epi8(va));
+    *(pw + 0) = bswap(_mm256_movemask_epi8(vb));
 #else
     Word v = 0;
     for (unsigned k = 8 * sizeof(Word); k; --k)
       v = v * 2 + *p++ - '0';
-#endif
     r[nr++] = v;
+#endif
   }
 
   Word v = 0;

@@ -52,6 +52,14 @@ inline constexpr std::size_t minimize(const T* s, std::size_t n) noexcept {
   return n;
 }
 
+template <bool NEED_MINIMIZE, typename T>
+inline constexpr std::size_t may_minimize(const T* w, std::size_t n) noexcept {
+  if constexpr (NEED_MINIMIZE)
+    return minimize(w, n);
+  else
+    return n;
+}
+
 size_t mul(Word *r, const Word *a, size_t na, Word b) noexcept;
 size_t mul(Word *r, const Word *a, size_t na,
            const Word *b, size_t nb) noexcept;
@@ -149,16 +157,15 @@ class BasicRef {
 
   constexpr BasicRef() noexcept : w_(nullptr), n_(0) {}
   constexpr BasicRef(Word* w, std::size_t n) noexcept :
-    w_(w), n_(MINIMIZED ? ::cbu::mp::minimize(w, n) : n) {}
+    w_(w), n_(may_minimize<MINIMIZED>(w, n)) {}
   template <Radix radix> BasicRef(Word* w, Radixed<radix> rs) noexcept :
-    w_(w), n_(StringConversion<radix>::from_str(w, rs.s)) {}
+    BasicRef(w, StringConversion<radix>::from_str(w, rs.s)) {}
 
   template <bool OTHER_CONST, bool OTHER_MINIMIZED>
     requires (!OTHER_CONST || CONST)
   constexpr BasicRef(const BasicRef<OTHER_CONST, OTHER_MINIMIZED>& o) noexcept :
     w_(o.data()),
-    n_((!OTHER_MINIMIZED && MINIMIZED) ?
-        ::cbu::mp::minimize(o.data(), o.size()) : o.size()) {}
+    n_(may_minimize<!OTHER_MINIMIZED && MINIMIZED>(o.data(), o.size())) {}
 
   constexpr BasicRef& operator=(const BasicRef&) noexcept = default;
 
