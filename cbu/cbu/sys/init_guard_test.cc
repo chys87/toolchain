@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@ namespace cbu {
 inline namespace cbu_init_guard {
 namespace {
 
-constexpr int sleep_unit = 100 * 1000;
+constexpr int sleep_unit = 300 * 1000;
 
 TEST(InitGuardTest, InitGuard) {
   InitGuard guard;
@@ -50,7 +50,6 @@ TEST(InitGuardTest, InitGuard) {
     usleep(us);
     try {
       guard.init([&](int throw_val) {
-        usleep(3 * sleep_unit);
         ++throws;
         throw throw_val;
       }, 5);
@@ -61,7 +60,6 @@ TEST(InitGuardTest, InitGuard) {
   auto nonthrowing = [&](int us) {
     usleep(us);
     guard.init([&]() {
-      usleep(3 * sleep_unit);
       ++succ;
     });
   };
@@ -81,6 +79,7 @@ TEST(InitGuardTest, InitGuard) {
   EXPECT_EQ(succ.load(), 1);
   EXPECT_LE(throws.load(), 6);
   EXPECT_GE(throws.load(), 4);
+  EXPECT_EQ(caught.load(), throws.load());
 }
 
 struct Cls {

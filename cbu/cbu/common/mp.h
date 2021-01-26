@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -148,7 +148,8 @@ class BasicRef {
   using W = std::conditional_t<CONST, const Word, Word>;
 
   constexpr BasicRef() noexcept : w_(nullptr), n_(0) {}
-  constexpr BasicRef(Word* w, std::size_t n) noexcept : w_(w), n_(n) {}
+  constexpr BasicRef(Word* w, std::size_t n) noexcept :
+    w_(w), n_(MINIMIZED ? ::cbu::mp::minimize(w, n) : n) {}
   template <Radix radix> BasicRef(Word* w, Radixed<radix> rs) noexcept :
     w_(w), n_(StringConversion<radix>::from_str(w, rs.s)) {}
 

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,9 +40,9 @@ class MpTest : public testing::Test {
   }
 
  protected:
-  Word a_[128];
+  Word a_[128] = {};
   size_t na_ = 0;
-  Word b_[128];
+  Word b_[128] = {};
   size_t nb_ = 0;
 };
 
