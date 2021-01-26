@@ -33,6 +33,7 @@
 #endif
 #include <array>
 #include <cstdint>
+#include <optional>
 
 #include "cbu/common/bit.h"
 #include "cbu/common/encoding.h"
