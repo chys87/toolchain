@@ -35,6 +35,7 @@
 #include <cstdint>
 
 #include "cbu/common/bit.h"
+#include "cbu/common/encoding.h"
 #include "cbu/common/fastarith.h"
 #include "cbu/common/faststr.h"
 
@@ -206,6 +207,194 @@ std::string escape_string(std::string_view src, EscapeStyle style) {
   std::string res;
   escape_string_append(&res, src, style);
   return res;
+}
+
+namespace {
+
+inline constexpr std::tuple<UnescapeStringStatus, char*, const char*> tuplize(
+    const UnescapeStringResult& result) noexcept {
+  return {result.status, result.dst_ptr, result.src_ptr};
+}
+
+std::tuple<char, char*, const char*> copy_until_backslash(
+    char* dst, const char* src, const char* end) noexcept {
+#ifdef __AVX2__
+  while (src + 32 <= end) {
+    __v32qu val = __v32qu(*(const __m256i_u*)src);
+    __m256i mask = __m256i((val == v32qu('\\')) | (val == v32qu('\"')));
+    if (_mm256_testz_si256(mask, mask)) {
+      *(__m256i_u*)dst = __m256i(val);
+      src += 32;
+      dst += 32;
+    } else {
+      unsigned off = ctz(_mm256_movemask_epi8(mask));
+      dst = memdrop(dst, __m256i(val), off);
+      src += off;
+      return {*src, dst, src};
+    }
+  }
+#endif
+  while (src < end && *src != '\\' && *src != '\"') {
+    *dst++ = *src++;
+  }
+  if (src >= end) {
+    return {'\0', dst, src};
+  } else {
+    return {*src, dst, src};
+  }
+}
+
+inline consteval std::array<char, 128> make_unescape_fast_map() noexcept {
+  std::array<char, 128> res{};
+  res['\\'] = '\\';
+  res['\"'] = '\"';
+  res['\''] = '\'';
+  res['/'] = '/';  // For JSON
+  res['a'] = '\a';
+  res['b'] = '\b';
+  res['e'] = '\x1f';
+  res['f'] = '\f';
+  res['n'] = '\n';
+  res['r'] = '\r';
+  res['t'] = '\t';
+  res['v'] = '\v';
+  return res;
+}
+
+inline constexpr std::array<char, 128> UNESCAPE_FAST_MAP =
+    make_unescape_fast_map();
+
+inline constexpr std::optional<unsigned> convert_xdigit(std::uint8_t c)
+    noexcept {
+  if ((c >= '0') && (c <= '9')) {
+    return (c - '0');
+  } else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f') {
+    return (((c | 0x20) - 'a') + 10);
+  } else {
+    return std::nullopt;
+  }
+}
+
+inline constexpr std::optional<unsigned> convert_2xdigit(const char *s)
+    noexcept {
+  auto a = convert_xdigit(*s++);
+  if (!a) return a;
+  auto b = convert_xdigit(*s++);
+  if (!b) return b;
+  return *a * 16 + *b;
+}
+
+inline constexpr std::optional<unsigned> convert_4xdigit(const char *s)
+    noexcept {
+  auto a = convert_xdigit(*s++);
+  if (!a) return a;
+  auto b = convert_xdigit(*s++);
+  if (!b) return b;
+  auto c = convert_xdigit(*s++);
+  if (!c) return c;
+  auto d = convert_xdigit(*s++);
+  if (!d) return d;
+  return ((*a * 16 + *b) * 16 + *c) * 16 + *d;
+}
+
+UnescapeStringResult parse_escape_sequence(
+    char* dst, const char* src, const char* end) noexcept {
+  const char* start_src = src - 1;
+  if (src >= end) return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
+  std::uint8_t c = *src++;
+  char replacement = 0;
+  if (c < 0x80) replacement = UNESCAPE_FAST_MAP[c];
+  if (replacement != 0) {
+    *dst++ = replacement;
+    return {UnescapeStringStatus::OK_QUOTE, dst, src};
+  } else if (c == 'x') {
+    if (src + 2 > end)
+      return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
+    auto r = convert_2xdigit(src);
+    if (!r)
+      return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
+    src += 2;
+    *dst++ = *r;
+    return {UnescapeStringStatus::OK_QUOTE, dst, src};
+  } else if (c >= '0' && c <= '7') {
+    // Various parsers disagree how to parse octal representations
+    // overflowing octet.
+    // E.g., "\400" is " 0" in Node.js and is "\0" in Python.
+    // We take the Node.js approach since it appears more reasonable.
+    unsigned ch = c - '0';
+    if (src < end && (*src >= '0' && *src <= '7')) {
+      ch = ch * 8 + (*src++ - '0');
+      if ((ch < 040) && src < end && (*src >= '0' && *src <= '7')) {
+        ch = ch * 8 + (*src++ - '0');
+      }
+    }
+    *dst++ = ch;
+    return {UnescapeStringStatus::OK_QUOTE, dst, src};
+  } else {
+    char32_t ch;
+    if (c == 'u') {
+      if (src + 4 > end)
+        return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
+      auto r = convert_4xdigit(src);
+      if (!r) return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
+      src += 4;
+
+      ch = *r;
+      if ((ch >= 0xd800) && (ch <= 0xdbff)) {
+        // UTF-16 lead surrogate
+        if (src + 6 > end || src[0] != '\\' || src[1] != 'u')
+          return {UnescapeStringStatus::HEAD_SURROGATE_WITHOUT_TAIL,
+                  dst, start_src};
+        r = convert_4xdigit(src + 2);
+        if (!r || !(*r >= 0xdc00 && *r <= 0xdfff))
+          return {UnescapeStringStatus::HEAD_SURROGATE_WITHOUT_TAIL,
+                  dst, start_src};
+        src += 6;
+        ch = 0x10000 + (ch - 0xd800) * 1024 + (*r - 0xdc00);
+      } else if ((ch >= 0xdc00) && (ch <= 0xdfff)) {
+        // UTF-16 tail surrogate
+        return {UnescapeStringStatus::TAIL_SURROGATE_WITHOUT_HEAD,
+                dst, start_src};
+      }
+    } else if (c == 'U') {
+      if (src + 8 > end)
+        return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
+      auto hi = convert_4xdigit(src);
+      if (!hi) return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
+      auto lo = convert_4xdigit(src + 4);
+      if (!lo) return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
+      src += 8;
+      ch = (*hi << 16) + *lo;
+    } else {
+      return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
+    }
+
+    char* new_dst = char32_to_utf8(dst, ch);
+    if (new_dst == nullptr)
+      return {UnescapeStringStatus::CODE_POINT_OUT_OF_RANGE, dst, start_src};
+    dst = new_dst;
+    return {UnescapeStringStatus::OK_QUOTE, dst, src};
+  }
+}
+
+} // namespace
+
+UnescapeStringResult unescape_string(char* dst, const char* src,
+                                     const char* end) noexcept {
+  for (;;) {
+    char c;
+    std::tie(c, dst, src) = copy_until_backslash(dst, src, end);
+    if (c == '\0')
+      return {UnescapeStringStatus::OK_EOS, dst, src};
+    if (c == '\"')
+      return {UnescapeStringStatus::OK_QUOTE, dst, src};
+    // Now c (a.k.a. *src) must be '\\'
+    ++src;
+    UnescapeStringStatus status;
+    std::tie(status, dst, src) = tuplize(parse_escape_sequence(dst, src, end));
+    if (status != UnescapeStringStatus::OK_QUOTE)
+      return {status, dst, src};
+  }
 }
 
 } // inline namespace cbu_escape

@@ -49,5 +49,30 @@ void escape_string_append(std::string* dst, std::string_view src,
 std::string escape_string(std::string_view src,
                           EscapeStyle style = EscapeStyle::C);
 
+// unescape_string supports both C and JSON styles
+// Unescaping terminates either by encoutering unescaped '\"' or end-of-string
+enum UnescapeStringStatus : unsigned char {
+  OK_QUOTE,
+  OK_EOS,
+  INVALID_ESCAPE,  // Invalid escape sequence
+  CODE_POINT_OUT_OF_RANGE,  // Unsupported Unicode code points
+  HEAD_SURROGATE_WITHOUT_TAIL,  // Head surrogate without tail
+  TAIL_SURROGATE_WITHOUT_HEAD,  // Tail surrogate without head
+};
+
+struct UnescapeStringResult {
+  UnescapeStringStatus status;
+  char* dst_ptr;
+  const char* src_ptr;
+};
+
+UnescapeStringResult unescape_string(char* dst, const char* src,
+                                     const char* end) noexcept;
+
+inline UnescapeStringResult unescape_string(char* dst,
+                                            std::string_view src) noexcept {
+  return unescape_string(dst, src.data(), src.data() + src.size());
+}
+
 } // inline namespace cbu_escape
 } // namespace cbu

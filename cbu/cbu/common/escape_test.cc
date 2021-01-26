@@ -30,6 +30,7 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
+namespace {
 
 TEST(EscapeTest, EscapeC) {
   std::string s;
@@ -73,4 +74,79 @@ TEST(EscapeTest, AlignmentTest) {
   }
 }
 
+std::string unescape(std::string_view s) {
+  char buffer[1024];
+  auto [status, dst, src] = unescape_string(buffer, s);
+  if (status == UnescapeStringStatus::OK_EOS ||
+      status == UnescapeStringStatus::OK_QUOTE) {
+    return std::string(buffer, dst - buffer);
+  } else {
+    return {};
+  }
+}
+
+TEST(EscapeTest, UnEscape) {
+  char buffer[512];
+
+  // Basic tests
+  EXPECT_EQ(unescape_string(buffer, R"(\)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+  EXPECT_EQ(unescape_string(buffer, R"(\x)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+  EXPECT_EQ(unescape_string(buffer, R"(\x1)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+  EXPECT_EQ(unescape_string(buffer, R"(\x12)").status,
+            UnescapeStringStatus::OK_EOS);
+  EXPECT_EQ(unescape_string(buffer, R"(\x1x)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+
+  EXPECT_EQ(unescape_string(buffer, R"(\u)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+  EXPECT_EQ(unescape_string(buffer, R"(\uabc)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+  EXPECT_EQ(unescape_string(buffer, R"(\uabcd)").status,
+            UnescapeStringStatus::OK_EOS);
+  EXPECT_EQ(unescape_string(buffer, R"(\uabcu)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+
+  EXPECT_EQ(unescape_string(buffer, R"(\U)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+  EXPECT_EQ(unescape_string(buffer, R"(\U0001abc)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+  EXPECT_EQ(unescape_string(buffer, R"(\U0001abcd)").status,
+            UnescapeStringStatus::OK_EOS);
+  EXPECT_EQ(unescape_string(buffer, R"(\U0001abcU)").status,
+            UnescapeStringStatus::INVALID_ESCAPE);
+
+  // Surrogate pairs
+  EXPECT_EQ(unescape_string(buffer, R"(\udc00)").status,
+            UnescapeStringStatus::TAIL_SURROGATE_WITHOUT_HEAD);
+  EXPECT_EQ(unescape_string(buffer, R"(\ud800)").status,
+            UnescapeStringStatus::HEAD_SURROGATE_WITHOUT_TAIL);
+  EXPECT_EQ(unescape_string(buffer, R"(\ud800\udbff)").status,
+            UnescapeStringStatus::HEAD_SURROGATE_WITHOUT_TAIL);
+  EXPECT_EQ(unescape_string(buffer, R"(\ud800\udc00)").status,
+            UnescapeStringStatus::OK_EOS);
+  EXPECT_EQ(std::string(buffer, 4), std::string((const char*)u8"\U00010000"));
+
+  // Out of range
+  EXPECT_EQ(unescape_string(buffer, R"(\U0000dc00)").status,
+            UnescapeStringStatus::CODE_POINT_OUT_OF_RANGE);
+  EXPECT_EQ(unescape_string(buffer, R"(\U0000dfff)").status,
+            UnescapeStringStatus::CODE_POINT_OUT_OF_RANGE);
+  EXPECT_EQ(unescape_string(buffer, R"(\U00110000)").status,
+            UnescapeStringStatus::CODE_POINT_OUT_OF_RANGE);
+
+  // Legal sequences
+  ASSERT_EQ(unescape(R"(\1\11\111\377\400\x3a)"), "\1\11\111\377\0400\x3a");
+  ASSERT_EQ(unescape(R"(\uabcd\U0001abcd)"), "\uabcd\U0001abcd");
+  ASSERT_EQ(unescape(R"(Hello world\"\"", )"), "Hello world\"\"");
+
+  ASSERT_EQ(unescape(R"(abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ)"),
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+  ASSERT_EQ(unescape(R"(abcdefghijklmnopqrstuvwxyz\vABCDEFGHIJKLMNOPQRSTUVW)"),
+            "abcdefghijklmnopqrstuvwxyz\vABCDEFGHIJKLMNOPQRSTUVW");
+}
+
+} // namespace
 } // namespace cbu
