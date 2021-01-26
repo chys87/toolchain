@@ -232,7 +232,7 @@ inline constexpr T bzhi(T x, unsigned k) noexcept {
 #if defined __x86_64__ && defined __BMI2__
   return __builtin_ia32_bzhi_di(x, k);
 #else
-  return x & ((uint64_t(1) << k) - 1);
+  return x & ((std::uint64_t(1) << k) - 1);
 #endif
 }
 
