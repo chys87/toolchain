@@ -100,11 +100,11 @@ void* memdrop_var64(void* dst, uint64_t v, size_t n) noexcept {
 void* memdrop_var128(void* dst, unsigned __int128 v, std::size_t n) noexcept {
   if (std::endian::native == std::endian::little) {
     if (n <= 8) {
-      return memdrop(static_cast<char*>(dst), uint64_t(v), n);
+      return memdrop_var64(dst, uint64_t(v), n);
     } else {
       memdrop8(static_cast<char*>(dst), uint64_t(v));
       memdrop8(static_cast<char*>(dst) + n - 8,
-               uint64_t(v >> ((n - 8) * 8)));
+               uint64_t(v >> ((n - 8) * 8 % 64)));
       return static_cast<char*>(dst) + n;
     }
   } else {
@@ -118,16 +118,14 @@ void* memdrop(void* dst, __m128i v, std::size_t n) noexcept {
   char *d = static_cast<char *>(dst);
   char *e = d + n;
 
-  unsigned m = n;
-
-  if (m > 8) {
+  if (n > 8) {
     __m128i u = _mm_shuffle_epi8(
         v, *(const __m128i_u *)(arch_linear_bytes64 + n - 8));
     memdrop8(d, __v2di(v)[0]);
     memdrop8(e - 8, __v2di(u)[0]);
     return e;
   } else {
-    return memdrop(d, __v2di(v)[0], n);
+    return memdrop_var64(d, __v2di(v)[0], n);
   }
 }
 #endif
@@ -135,9 +133,8 @@ void* memdrop(void* dst, __m128i v, std::size_t n) noexcept {
 #ifdef __AVX2__
 void* memdrop(void* dst, __m256i v, std::size_t n) noexcept {
   char *d = static_cast<char *>(dst);
-  unsigned m = n;
 
-  if (m > 16) {
+  if (n > 16) {
     *(__m128i_u *)d = _mm256_extracti128_si256(v, 0);
     __m128i vv = _mm256_extracti128_si256(v, 1);
     return memdrop(d + 16, vv, n - 16);

@@ -194,8 +194,10 @@ void* memdrop(void* dst, __m128i, std::size_t) noexcept;
 void* memdrop(void* dst, __m256i, std::size_t) noexcept;
 #endif
 
-template <Raw_char_type T, Raw_integral IT>
-requires (Raw_char_type<T> || std::is_void_v<T>)
+template <typename T, typename IT>
+requires ((Raw_char_type<T> || std::is_void_v<T>) &&
+          (Raw_integral<IT> || std::is_same_v<IT, unsigned __int128> ||
+           std::is_same_v<IT, __int128>))
 inline constexpr T* memdrop(T* dst, IT v, std::size_t n) noexcept {
   using S = std::conditional_t<std::is_void_v<T>, char, T>;
   S* d = static_cast<S*>(dst);
