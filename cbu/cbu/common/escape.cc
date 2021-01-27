@@ -101,20 +101,11 @@ constexpr char* escape_string_naive(
 }
 
 #ifdef __AVX2__
-inline constexpr __v32qu v32qu(std::uint8_t c) noexcept {
-  return __v32qu{
-    c, c, c, c, c, c, c, c,
-    c, c, c, c, c, c, c, c,
-    c, c, c, c, c, c, c, c,
-    c, c, c, c, c, c, c, c};
-}
-
 inline __m256i get_encoding_mask(__m256i chars, EscapeStyle style) noexcept {
   __v32qu vq = __v32qu(chars);
-  __v32qu mask = ((vq < v32qu(0x20)) | (vq == v32qu('\\')) |
-                  (vq == v32qu('\"')));
+  __v32qu mask = ((vq < 0x20) | (vq == '\\') | (vq == '\"'));
   if (style == EscapeStyle::JSON) {
-    mask |= (vq == v32qu('/'));
+    mask |= (vq == '/');
   }
   return __m256i(mask);
 }
@@ -222,14 +213,14 @@ std::tuple<char, char*, const char*> copy_until_backslash(
 #ifdef __AVX2__
   while (src + 32 <= end) {
     __v32qu val = __v32qu(*(const __m256i_u*)src);
-    __m256i mask = __m256i((val == v32qu('\\')) | (val == v32qu('\"')));
+    *(__m256i_u*)dst = __m256i(val);
+    __m256i mask = __m256i((val == '\\') | (val == '\"'));
     if (_mm256_testz_si256(mask, mask)) {
-      *(__m256i_u*)dst = __m256i(val);
       src += 32;
       dst += 32;
     } else {
       unsigned off = ctz(_mm256_movemask_epi8(mask));
-      dst = memdrop(dst, __m256i(val), off);
+      dst += off;
       src += off;
       return {*src, dst, src};
     }
