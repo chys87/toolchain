@@ -45,22 +45,6 @@ namespace cbu {
 namespace mp {
 namespace {
 
-inline unsigned convert_xdigit(unsigned char c, bool *success = nullptr) {
-  if ((c >= '0') && (c <= '9')) {
-    if (success)
-      *success = true;
-    return (c - '0');
-  } else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f') {
-    if (success)
-      *success = true;
-    return (((c | 0x20) - 'a') + 10);
-  } else {
-    if (success)
-      *success = false;
-    return -1u;
-  }
-}
-
 // r = a * b + c
 inline size_t Madd(Word *r, const Word *a, size_t na, Word b, Word c) noexcept {
   if (na == 0 || b == 0) {
@@ -347,16 +331,22 @@ size_t from_hex(Word *r, const char *s, size_t n) noexcept {
   size_t i = 0;
   while (n > 2 * sizeof(Word)) {
     n -= 2 * sizeof(Word);
-    Word word = 0;
-    const char *p = s + n;
-    for (unsigned k = 2 * sizeof(Word); k; --k)
-      word = word * 16 + convert_xdigit(*p++);
-    r[i++] = word;
+    if constexpr (sizeof(Word) == 4) {
+      r[i++] = convert_8xdigit(s + n, true).value_or(0);
+    } else if constexpr (sizeof(Word) == 8) {
+      r[i++] = convert_16xdigit(s + n, true).value_or(0);
+    } else {
+      Word word = 0;
+      const char *p = s + n;
+      for (unsigned k = 2 * sizeof(Word); k; --k)
+        word = word * 16 + convert_xdigit(*p++, true).value_or(0);
+      r[i++] = word;
+    }
   }
 
   Word word = 0;
   for (; n; --n)
-    word = word * 16 + convert_xdigit(*s++);
+    word = word * 16 + convert_xdigit(*s++, true).value_or(0);
   r[i++] = word;
   return i;
 }

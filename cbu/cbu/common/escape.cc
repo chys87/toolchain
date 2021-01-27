@@ -265,67 +265,6 @@ inline consteval std::array<char, 128> make_unescape_fast_map() noexcept {
 inline constexpr std::array<char, 128> UNESCAPE_FAST_MAP =
     make_unescape_fast_map();
 
-inline constexpr std::optional<unsigned> convert_xdigit(std::uint8_t c)
-    noexcept {
-  if ((c >= '0') && (c <= '9')) {
-    return (c - '0');
-  } else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f') {
-    return (((c | 0x20) - 'a') + 10);
-  } else {
-    return std::nullopt;
-  }
-}
-
-inline constexpr std::optional<unsigned> convert_2xdigit(const char *s)
-    noexcept {
-  auto a = convert_xdigit(*s++);
-  if (!a) return a;
-  auto b = convert_xdigit(*s++);
-  if (!b) return b;
-  return *a * 16 + *b;
-}
-
-inline std::optional<unsigned> convert_4xdigit(const char *s) noexcept {
-#if defined __SSE4_1__ && defined __BMI2__
-  __v16qu v = __v16qu(__v4su{mempick_be<uint32_t>(s), 0, 0, 0});
-  __v16qu digits = (v - '0' <= 9);
-  __v16qu v_small = v | 0x20;
-  __v16qu hex = (v_small - 'a' < 6);
-  if ((_mm_movemask_epi8(__m128i(digits | hex)) & 0b1111) != 0b1111)
-    return std::nullopt;
-  __v16qu res = (digits & (v - '0')) | (hex & (v_small - ('a' - 10)));
-  uint32_t t = __v4su(res)[0];
-  return _pext_u32(t, 0x0f0f0f0f);
-#endif
-  auto a = convert_xdigit(*s++);
-  if (!a) return a;
-  auto b = convert_xdigit(*s++);
-  if (!b) return b;
-  auto c = convert_xdigit(*s++);
-  if (!c) return c;
-  auto d = convert_xdigit(*s++);
-  if (!d) return d;
-  return ((*a * 16 + *b) * 16 + *c) * 16 + *d;
-}
-
-inline std::optional<unsigned> convert_8xdigit(const char *s) noexcept {
-#if defined __x86_64__ && defined __SSE4_1__ && defined __BMI2__
-  __v16qu v = __v16qu(__v2du{mempick_be<uint64_t>(s), 0});
-  __v16qu digits = (v - '0' <= 9);
-  __v16qu v_small = v | 0x20;
-  __v16qu hex = (v_small - 'a' < 6);
-  if (uint8_t(_mm_movemask_epi8(__m128i(digits | hex))) != 0xff)
-    return std::nullopt;
-  __v16qu res = (digits & (v - '0')) | (hex & (v_small - ('a' - 10)));
-  uint64_t t = __v2du(res)[0];
-  return unsigned(_pext_u64(t, 0x0f0f0f0f'0f0f0f0f));
-#endif
-  auto a = convert_4xdigit(s);
-  auto b = convert_4xdigit(s + 4);
-  if (!a || !b) return std::nullopt;
-  return (*a << 16) + *b;
-}
-
 UnescapeStringResult parse_escape_sequence(
     char* dst, const char* src, const char* end) noexcept {
   const char* start_src = src - 1;
