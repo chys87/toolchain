@@ -34,7 +34,7 @@
 #if __has_include(<x86intrin.h>)
 # include <x86intrin.h>
 #endif
-#include "cbu/common/platform.h"
+#include "cbu/compat/platform.h"
 #include "bit.h"
 #include "fastarith.h"
 #include "faststr.h"
