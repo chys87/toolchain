@@ -283,13 +283,13 @@ set_bits(T v) {
 static_assert(std::size(set_bits(0x123456789abcdef)) ==
               popcnt(0x123456789abcdef));
 
-inline constexpr std::size_t pow2_floor(std::size_t n,
-                                        std::size_t size) noexcept {
+template <typename T> requires std::is_integral_v<T>
+inline constexpr T pow2_floor(T n, std::type_identity_t<T> size) noexcept {
   return (n & ~(size - 1));
 }
 
-inline constexpr std::size_t pow2_ceil(std::size_t n,
-                                       std::size_t size) noexcept {
+template <typename T> requires std::is_integral_v<T>
+inline constexpr T pow2_ceil(T n, std::type_identity_t<T> size) noexcept {
   return pow2_floor(n + size - 1, size);
 }
 
