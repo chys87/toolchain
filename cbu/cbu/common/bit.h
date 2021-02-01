@@ -218,22 +218,19 @@ inline constexpr T blsr(T x) noexcept { return (x & (x - 1)); }
 template <typename T> requires std::is_integral<T>::value
 inline constexpr T blsi(T x) noexcept { return (x & -x); }
 
-template <typename T> requires (std::is_integral<T>::value && sizeof(T) == 4)
+template <typename T> requires std::is_integral_v<T>
 inline constexpr T bzhi(T x, unsigned k) noexcept {
 #if defined __BMI2__
-  return __builtin_ia32_bzhi_si(x, k);
-#else
+  if (!std::is_constant_evaluated()) {
+    if constexpr (sizeof(T) <= 4)
+      return __builtin_ia32_bzhi_si(std::make_unsigned_t<T>(x), k);
+    if constexpr (sizeof(T) == 8)
+      return __builtin_ia32_bzhi_di(x, k);
+  }
+#endif
+  if (k >= 8 * sizeof(T))
+    return x;
   return x & ((1u << k) - 1);
-#endif
-}
-
-template <typename T> requires (std::is_integral<T>::value && sizeof(T) == 8)
-inline constexpr T bzhi(T x, unsigned k) noexcept {
-#if defined __x86_64__ && defined __BMI2__
-  return __builtin_ia32_bzhi_di(x, k);
-#else
-  return x & ((std::uint64_t(1) << k) - 1);
-#endif
 }
 
 
