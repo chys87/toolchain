@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -106,8 +106,6 @@ void *MmapWrapper::alloc(size_t size) noexcept {
 
       hint_ptr_ = next_hint;
     }
-    if (uintptr_t(p) % hugepagesize == 0)
-      fsys_madvise(p, size, MADV_HUGEPAGE);
     return p;
   } else {
     return fsys_mmap(nullptr, size, PROT_READ | PROT_WRITE, kFlags, -1, 0);

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -68,7 +68,7 @@ void *get_perma_pages_brk(size_t size) noexcept {
     return nullptr;
 
   // Try to take advantage of transparent huge pages
-  // But don't do this if we don't need much memory (such as the CLI utility)
+  // But don't do this if we don't need much memory
   // Therefore, we return a value larger than hugepagesize from the second call on
 
   void *old_alloc_end = heap_end;
@@ -88,12 +88,6 @@ void *get_perma_pages_brk(size_t size) noexcept {
   }
 
   heap_avail = ret_end;
-
-  if (hugepagesize) {
-    void *hint_start = cbu::pow2_ceil(old_alloc_end, hugepagesize);
-    if (hint_start < alloc_end)
-      fsys_madvise(hint_start, byte_distance(hint_start, alloc_end), MADV_HUGEPAGE);
-  }
 
   return ret_start;
 }
