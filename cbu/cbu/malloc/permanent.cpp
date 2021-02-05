@@ -124,8 +124,8 @@ void *get_perma_pages_mmap(size_t size) noexcept {
   }
 
   size_t alloc_size = cbu::pow2_ceil(size, pseudo_hugepagesize);
-  void *np = mmap_wrapper(alloc_size);
-  if (false_no_fail(fsys_mmap_failed(np)))
+  void *np = raw_mmap_alloc(alloc_size);
+  if (false_no_fail(np == nullptr))
     return nullptr;
 
   if (alloc_size == size)

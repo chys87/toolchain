@@ -367,7 +367,7 @@ struct Arena {
 
   bool extend_nomove(Page* , size_t oldsize, size_t growsize) noexcept;
   void do_munmap(Page* , size_t) noexcept;
-  Page* do_mmap(size_t, size_t *) noexcept;
+  Page* do_mmap_alloc(size_t, size_t *) noexcept;
 
   // Returns a linked list (linked with link_ad.left)
   Description *check_munmap_unlocked(
@@ -390,8 +390,8 @@ Page* Arena::allocate(size_t size) noexcept {
   if (!page) {
     // Must do actual allocation.
     size_t alloc_size = 0;
-    page = this->do_mmap(size, &alloc_size);
-    if (fsys_mmap_failed(page))
+    page = do_mmap_alloc(size, &alloc_size);
+    if (page == nullptr)
       return nomem();
     assert(size <= alloc_size);
     if (size < alloc_size)
@@ -453,8 +453,7 @@ bool Arena::extend_nomove(Page* ptr, size_t old, size_t grow) noexcept {
   return cache.extend_nomove(ptr, old, grow);
 }
 
-Page* Arena::do_mmap (size_t size, size_t *psize) noexcept
-{
+Page* Arena::do_mmap_alloc(size_t size, size_t *psize) noexcept {
   // Try to be hugepage friendly, but don't do so for the first call,
   // so that we won't use hugepage for applications requiring very little memory
   unsigned hint_size = preferred_mmap_size;
@@ -465,7 +464,7 @@ Page* Arena::do_mmap (size_t size, size_t *psize) noexcept
   }
   size_t alloc_size = cbu::pow2_ceil(size, hint_size);
   *psize = alloc_size;
-  void *p = mmap_wrapper(alloc_size);
+  void *p = raw_mmap_alloc(alloc_size);
   return static_cast<Page* >(p);
 }
 

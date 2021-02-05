@@ -168,7 +168,9 @@ std::nullptr_t nomem() noexcept;
 [[noreturn, gnu::cold]]
 void fatal(const char* msg) noexcept;
 
-void *mmap_wrapper(size_t) noexcept;
+// Returns nullptr on failure instead of MAP_FAILED
+void* raw_mmap_alloc(size_t) noexcept
+  __attribute__((__malloc__, __alloc_size__(1)));
 
 } // namespace cbu_malloc
 } // namespace cbu

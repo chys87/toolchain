@@ -62,7 +62,7 @@ std::nullptr_t nomem() noexcept {
 
 namespace {
 
-class MmapWrapper {
+class RawMmapAlloc {
  public:
   void *alloc(size_t size) noexcept;
 
@@ -74,7 +74,7 @@ class MmapWrapper {
   static constexpr int kFlags = MAP_PRIVATE | MAP_ANONYMOUS;
 };
 
-void *MmapWrapper::alloc(size_t size) noexcept {
+void *RawMmapAlloc::alloc(size_t size) noexcept {
   assert(size > 0);
   assert(size < 0x7fffffff);
   assert(size % pagesize == 0);
@@ -108,15 +108,18 @@ void *MmapWrapper::alloc(size_t size) noexcept {
     }
     return p;
   } else {
-    return fsys_mmap(nullptr, size, PROT_READ | PROT_WRITE, kFlags, -1, 0);
+    void* p = fsys_mmap(nullptr, size, PROT_READ | PROT_WRITE, kFlags, -1, 0);
+    if (false_no_fail(fsys_mmap_failed(p)))
+      p = nullptr;
+    return p;
   }
 }
 
 } // namespace
 
-void* mmap_wrapper(size_t size) noexcept {
-  static MmapWrapper wrapper;
-  return wrapper.alloc(size);
+void* raw_mmap_alloc(size_t size) noexcept {
+  static RawMmapAlloc allocator;
+  return allocator.alloc(size);
 }
 
 } // namespace cbu_malloc
