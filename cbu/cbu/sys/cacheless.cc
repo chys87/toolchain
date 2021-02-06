@@ -115,28 +115,38 @@ void* copy(void* dst, const void* src, size_t size) noexcept {
     _mm_prefetch(s + 192, _MM_HINT_T0);
     while (size >= 64) {
       _mm_prefetch(s + 256, _MM_HINT_T0);
-      _mm_stream_si128((__m128i*)d, *(const __m128i_u*)s);
-      _mm_stream_si128((__m128i*)(d + 16), *(const __m128i_u*)(s + 16));
-      _mm_stream_si128((__m128i*)(d + 32), *(const __m128i_u*)(s + 32));
-      _mm_stream_si128((__m128i*)(d + 48), *(const __m128i_u*)(s + 48));
+      __m128i A = *(const __m128i_u*)s;
+      __m128i B = *(const __m128i_u*)(s + 16);
+      __m128i C = *(const __m128i_u*)(s + 32);
+      __m128i D = *(const __m128i_u*)(s + 48);
+      _mm_stream_si128((__m128i*)d, A);
+      _mm_stream_si128((__m128i*)(d + 16), B);
+      _mm_stream_si128((__m128i*)(d + 32), C);
+      _mm_stream_si128((__m128i*)(d + 48), D);
       d += 64;
       s += 64;
       size -= 64;
     }
   } else {
     while (size >= 64) {
-      _mm_stream_si128((__m128i*)d, *(const __m128i_u*)s);
-      _mm_stream_si128((__m128i*)(d + 16), *(const __m128i_u*)(s + 16));
-      _mm_stream_si128((__m128i*)(d + 32), *(const __m128i_u*)(s + 32));
-      _mm_stream_si128((__m128i*)(d + 48), *(const __m128i_u*)(s + 48));
+      __m128i A = *(const __m128i_u*)s;
+      __m128i B = *(const __m128i_u*)(s + 16);
+      __m128i C = *(const __m128i_u*)(s + 32);
+      __m128i D = *(const __m128i_u*)(s + 48);
+      _mm_stream_si128((__m128i*)d, A);
+      _mm_stream_si128((__m128i*)(d + 16), B);
+      _mm_stream_si128((__m128i*)(d + 32), C);
+      _mm_stream_si128((__m128i*)(d + 48), D);
       d += 64;
       s += 64;
       size -= 64;
     }
   }
   if (size & 32) {
-    _mm_stream_si128((__m128i*)d, *(const __m128i_u*)s);
-    _mm_stream_si128((__m128i*)(d + 16), *(const __m128i_u*)(s + 16));
+      __m128i A = *(const __m128i_u*)s;
+      __m128i B = *(const __m128i_u*)(s + 16);
+    _mm_stream_si128((__m128i*)d, A);
+    _mm_stream_si128((__m128i*)(d + 16), B);
     d += 32;
     s += 32;
     size -= 32;
@@ -148,8 +158,10 @@ void* copy(void* dst, const void* src, size_t size) noexcept {
     size -= 16;
   }
   if (size) {
-    store(d + size - 16, mempick8(s + size - 16));
-    store(d + size - 8, mempick8(s + size - 8));
+    uint64_t A = mempick8(s + size - 16);
+    uint64_t B = mempick8(s + size - 8);
+    store(d + size - 16, A);
+    store(d + size - 8, B);
   }
   return d + size;
 }
