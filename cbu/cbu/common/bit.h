@@ -224,13 +224,15 @@ inline constexpr T bzhi(T x, unsigned k) noexcept {
   if (!std::is_constant_evaluated()) {
     if constexpr (sizeof(T) <= 4)
       return __builtin_ia32_bzhi_si(std::make_unsigned_t<T>(x), k);
+# if defined __x86_64__
     if constexpr (sizeof(T) == 8)
       return __builtin_ia32_bzhi_di(x, k);
+# endif
   }
 #endif
   if (k >= 8 * sizeof(T))
     return x;
-  return x & ((1u << k) - 1);
+  return x & ((T(1) << k) - 1);
 }
 
 
