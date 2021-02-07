@@ -108,7 +108,7 @@ template <Bswappable T, std::endian byte_order>
 class [[gnu::packed]] PackedFixByteOrder {
  public:
   constexpr PackedFixByteOrder(T v) noexcept : v_(bswap_for<byte_order>(v)) {}
-  PackedFixByteOrder(const PackedFixByteOrder &) noexcept = default;
+  constexpr PackedFixByteOrder(const PackedFixByteOrder &) noexcept = default;
 
   constexpr operator T () const noexcept { return bswap_for<byte_order>(v_); }
 
@@ -120,7 +120,7 @@ template <Bswappable T, std::endian byte_order>
 class FixByteOrder {
  public:
   constexpr FixByteOrder(T v) noexcept : v_(bswap_for<byte_order>(v)) {}
-  FixByteOrder(const FixByteOrder &) noexcept = default;
+  constexpr FixByteOrder(const FixByteOrder &) noexcept = default;
 
   constexpr operator T () const noexcept { return bswap_for<byte_order>(v_); }
 
