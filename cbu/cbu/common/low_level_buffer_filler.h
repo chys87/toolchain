@@ -33,12 +33,14 @@
 #include <cstddef>
 #include <cstring>
 #include <string_view>
+#include <type_traits>
 
 #include "cbu/common/byteorder.h"
 #include "cbu/common/concepts.h"
+#include "cbu/common/faststr.h"
 
 namespace cbu {
-inline namespace cbu_low_level_buffer_fillter {
+inline namespace cbu_low_level_buffer_filler {
 
 template <Integral T, std::endian Order>
 struct FillByEndian {
@@ -46,23 +48,9 @@ struct FillByEndian {
 
   constexpr FillByEndian(T v) noexcept: value(v) {}
 
-  template <Char_type Ch>
-  Ch* to_buffer(Ch* p) const noexcept {
-    T swapped = bswap_for<Order>(value);
-    std::memcpy(p, &swapped, sizeof(T));
-    return p + sizeof(T);
-  }
-
-  template <Char_type Ch>
-  constexpr Ch* constexpr_to_buffer(Ch* p) const noexcept {
-    for (std::size_t i = 0; i < sizeof(T); ++i) {
-      if constexpr (Order == std::endian::little) {
-        *p++ = Ch((value >> (i * 8)) & 0xff);
-      } else {
-        *p++ = Ch((value >> ((sizeof(T) - 1 - i) * 8)) & 0xff);
-      }
-    }
-    return p;
+  template <Raw_char_type Ch>
+  constexpr Ch* to_buffer(Ch* p) const noexcept {
+    return memdrop_bswap<Order>(p, value);
   }
 };
 
@@ -81,7 +69,7 @@ class LowLevelBufferFiller {
   explicit constexpr LowLevelBufferFiller(Ch* p) noexcept : p_(p) {}
   // Copy is safe, but makes no sense, so we disable it.
   LowLevelBufferFiller(const LowLevelBufferFiller&) = delete;
-  constexpr LowLevelBufferFiller(LowLevelBufferFiller&& o) :
+  constexpr LowLevelBufferFiller(LowLevelBufferFiller&& o) noexcept :
     p_(std::exchange(o.p_, nullptr)) {}
 
   LowLevelBufferFiller& operator=(const LowLevelBufferFiller&) = delete;
@@ -97,9 +85,14 @@ class LowLevelBufferFiller {
     return *this;
   }
 
-  LowLevelBufferFiller& operator<<(std::basic_string_view<Ch> v) noexcept {
+  constexpr LowLevelBufferFiller& operator<<(
+      std::basic_string_view<Ch> v) noexcept {
     auto size = v.size();
-    p_ = static_cast<Ch*>(std::memcpy(p_, v.data(), size)) + size;
+    if (std::is_constant_evaluated()) {
+      p_ = std::copy_n(v.data(), size, p_);
+    } else {
+      p_ = static_cast<Ch*>(std::memcpy(p_, v.data(), size)) + size;
+    }
     return *this;
   }
 
@@ -108,31 +101,8 @@ class LowLevelBufferFiller {
       {std::forward<T>(v).to_buffer(std::declval<Ch*>())} ->
           std::convertible_to<Ch*>;
     }
-  LowLevelBufferFiller& operator<<(T&& v) noexcept {
+  constexpr LowLevelBufferFiller& operator<<(T&& v) noexcept {
     p_ = std::forward<T>(v).to_buffer(p_);
-    return *this;
-  }
-
-  // operator < is less intuitive, is less efficient, doesn't guarantee
-  // evaluation order even under C++20, but has the benefit of being constexpr
-  constexpr LowLevelBufferFiller& operator<(Ch c) noexcept {
-    *p_++ = c;
-    return *this;
-  }
-
-  constexpr LowLevelBufferFiller& operator<(std::basic_string_view<Ch> v)
-      noexcept {
-    p_ = std::copy_n(v.data(), v.size(), p_);
-    return *this;
-  }
-
-  template <typename T>
-    requires requires (T&& v) {
-      {std::forward<T>(v).constexpr_to_buffer(std::declval<Ch*>())} ->
-          std::convertible_to<Ch*>;
-    }
-  constexpr LowLevelBufferFiller& operator<(T&& v) noexcept {
-    p_ = std::forward<T>(v).constexpr_to_buffer(p_);
     return *this;
   }
 
@@ -142,5 +112,5 @@ class LowLevelBufferFiller {
   Ch* p_;
 };
 
-} // inline namespace cbu_low_level_buffer_fillter
+} // inline namespace cbu_low_level_buffer_filler
 } // namespace cbu

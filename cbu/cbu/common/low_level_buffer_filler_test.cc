@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,24 +31,25 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-inline namespace cbu_low_level_buffer_fillter {
+inline namespace cbu_low_level_buffer_filler {
 namespace {
 
 using std::operator""sv;
 
 TEST(LowLevelBufferFillerTest, NonConstExpr) {
-  char buffer[4096];
+  // Hopefully this makes LowLevelBufferFiller not constexpr
+  std::unique_ptr<char[]> buffer(new char[4096]);
 
-  LowLevelBufferFiller filler{buffer};
+  LowLevelBufferFiller filler{buffer.get()};
   filler << 'x'
     << "yz"sv
     << FillLittleEndian(uint16_t(258))
     << FillBigEndian(uint16_t(258));
 
   char* p = filler.pointer();
-  auto size = p - buffer;
+  auto size = p - buffer.get();
   EXPECT_EQ(7, size);
-  EXPECT_EQ("xyz\x02\x01\x01\x02"sv, std::string_view(buffer, size));
+  EXPECT_EQ("xyz\x02\x01\x01\x02"sv, std::string_view(buffer.get(), size));
 }
 
 struct StaticBuffer {
@@ -60,10 +61,10 @@ TEST(LowLevelBufferFillerTest, ConstExpr) {
   constexpr StaticBuffer sb = []() {
     StaticBuffer res;
     LowLevelBufferFiller filler{res.buffer};
-    filler < 'x'
-      < "yz"sv
-      < FillLittleEndian(uint16_t(258))
-      < FillBigEndian(uint16_t(258));
+    filler << 'x'
+      << "yz"sv
+      << FillLittleEndian(uint16_t(258))
+      << FillBigEndian(uint16_t(258));
     res.n = filler.pointer() - res.buffer;
     return res;
   }();
@@ -72,5 +73,5 @@ TEST(LowLevelBufferFillerTest, ConstExpr) {
 }
 
 } // namespace
-} // inline namespace cbu_low_level_buffer_fillter
+} // inline namespace cbu_low_level_buffer_filler
 } // namespace cbu
