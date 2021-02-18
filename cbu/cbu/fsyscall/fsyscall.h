@@ -65,6 +65,7 @@ struct fsys_linux_dirent64 {
 
 #include <fcntl.h>
 #include <signal.h>
+#include <time.h>
 #include <sys/syscall.h>
 
 // We cannot omit always_inline. At least vfork requires it.
@@ -387,6 +388,27 @@ def_fsys_nomem(inotify_rm_watch,inotify_rm_watch,int,2,int,int)
 def_fsys(nanosleep_raw,nanosleep,int,2,const struct timespec *,struct timespec *)
 #define fsys_nanosleep(a,b) fsys_clock_nanosleep(0,0,a,b)
 def_fsys(clock_nanosleep,clock_nanosleep,int,4,int,int,const struct timespec*, struct timespec*)
+def_fsys(clock_gettime_raw,clock_gettime,int,2,int,struct timespec*)
+// It's important to note that the caller cannot reliably determine the
+// return value convention of this function, so it should really only compare
+// it against 0 and not attempt to check for errno.
+fsys_inline int fsys_clock_gettime_auto(clockid_t clk, struct timespec* ts) {
+  // linux/include/vdso/datapage.h enumerates clocks that can be handled
+  // without falling back to real system calls.
+  // If we know at compile time that the clock can never be handled without
+  // falling back to real system calls, we emit syscall instruction directly.
+  if (__builtin_constant_p(clk) &&
+      clk != CLOCK_REALTIME &&
+      clk != CLOCK_MONOTONIC &&
+      clk != CLOCK_BOOTTIME &&
+      clk != CLOCK_TAI &&
+      clk != CLOCK_REALTIME_COARSE &&
+      clk != CLOCK_MONOTONIC_COARSE &&
+      clk != CLOCK_MONOTONIC_RAW)
+    return fsys_clock_gettime_raw(clk, ts);
+  else
+    return clock_gettime(clk, ts);
+}
 def_fsys(linkat,linkat,int,5,int,const char *,int, const char *, int)
 def_fsys(unlinkat,unlinkat,int,3,int,const char *,int)
 def_fsys(symlinkat,symlinkat,int,3,const char *,int,const char *)
@@ -591,6 +613,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_inotify_rm_watch inotify_rm_watch
 #define fsys_nanosleep nanosleep
 #define fsys_clock_nanosleep clock_nanosleep
+#define fsys_clock_gettime_auto clock_gettime
 #define fsys_linkat linkat
 #define fsys_unlinkat unlinkat
 #define fsys_symlinkat symlinkat
