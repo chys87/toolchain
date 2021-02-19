@@ -29,6 +29,7 @@
 #pragma once
 
 #include <memory>
+#include <new>
 
 namespace cbu {
 inline namespace cbu_memory {
@@ -104,6 +105,90 @@ inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) {
   }
   return sized_unique_ptr<T>(p, SizedArrayDeleter<V>{n * sizeof(V)});
 }
+
+// OutlinableArray<T> is like array<T> or unique_ptr<T[]>, but allocates
+// either on stack or heap depending on size.  It is somewhat a simplified
+// version of absl::InlinedVector.
+//
+// Usage:
+//  OutlinableArrayBuffer<T, N> buffer;
+//  OutlinableArray<T> array(&buffer, n);
+//  (or, OutlinableArray<T> array(&buffer, n,
+//                                OutlinableArray<T>::for_overwrite))
+//
+// The purpose of not embedding buffer in array is for better compiler
+// optimization.
+template <typename T> class OutlinableArray;
+
+template <typename T, std::size_t N>
+struct OutlinableArrayBuffer {
+  alignas(T) char buffer[sizeof(T) * N];
+};
+
+template <typename T>
+class OutlinableArray {
+ public:
+  struct ForOverwriteTag {};
+  static constexpr ForOverwriteTag for_overwrite{};
+
+  using value_type = T;
+  using reference = T&;
+  using pointer = T*;
+  using iterator = T*;
+
+  template <std::size_t N>
+  constexpr OutlinableArray(OutlinableArrayBuffer<T, N>* buffer,
+                            std::size_t n) :
+    ptr_(new (get_pointer(buffer, n)) T[n]()),
+    size_(n),
+    allocated_(n <= N ? 0 : n) {}
+
+  template <std::size_t N>
+  constexpr OutlinableArray(OutlinableArrayBuffer<T, N>* buffer, std::size_t n,
+                      ForOverwriteTag) :
+    ptr_(new (get_pointer(buffer, n)) T[n]),
+    allocated_(n <= N ? 0 : n) {}
+
+  OutlinableArray(const OutlinableArray&) = delete;
+  OutlinableArray& operator = (const OutlinableArray&) = delete;
+
+  constexpr ~OutlinableArray() noexcept {
+    std::destroy_n(ptr_, size_);
+    if (allocated_) {
+      if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+        ::operator delete[](ptr_, size_ * sizeof(T),
+                            std::align_val_t(alignof(T)));
+      else
+        ::operator delete[](ptr_, size_ * sizeof(T));
+    }
+  }
+
+  constexpr T* get() const noexcept { return ptr_; }
+  constexpr T* data() const noexcept { return ptr_; }
+  constexpr std::size_t size() const noexcept { return size_; }
+  constexpr T* begin() const noexcept { return ptr_; }
+  constexpr T* end() const noexcept { return ptr_ + size_; }
+  constexpr T* cbegin() const noexcept { return ptr_; }
+  constexpr T* cend() const noexcept { return ptr_ + size_; }
+  constexpr T& operator[](std::size_t k) const noexcept { return ptr_[k]; }
+
+ private:
+  template <std::size_t N>
+  constexpr void* get_pointer(OutlinableArrayBuffer<T, N>* buffer,
+                              std::size_t n) {
+    if (n <= N)
+      return buffer->buffer;
+    else if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+      return ::operator new[](sizeof(T) * n, std::align_val_t(alignof(T)));
+    else
+      return ::operator new[](sizeof(T) * n);
+  }
+
+ private:
+  T* ptr_;
+  std::size_t size_;
+  bool allocated_;
+};
 
 } // namespace cbu_memory
 } // namespace cbu

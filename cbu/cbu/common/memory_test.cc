@@ -78,5 +78,36 @@ TEST(MemoryTest, MakeUniqueNullPointer) {
       nullptr, SizedArrayDeleter<NonTrivialType>{sizeof(NonTrivialType)});
 }
 
+TEST(MemoryTest, OutlinableArray) {
+  {
+    OutlinableArrayBuffer<int, 5> buf;
+
+    {
+      OutlinableArray<int> arr(&buf, 3);
+      ASSERT_EQ(arr.get(), static_cast<void*>(buf.buffer));
+    }
+    {
+      OutlinableArray<int> arr(&buf, 6);
+      ASSERT_NE(arr.get(), static_cast<void*>(buf.buffer));
+    }
+  }
+
+  struct alignas(64) OverAligned {
+    int x;
+  };
+  {
+    OutlinableArrayBuffer<OverAligned, 5> buf;
+
+    {
+      OutlinableArray<OverAligned> arr(&buf, 5);
+      ASSERT_EQ(arr.get(), static_cast<void*>(buf.buffer));
+    }
+    {
+      OutlinableArray<OverAligned> arr(&buf, 6);
+      ASSERT_NE(arr.get(), static_cast<void*>(buf.buffer));
+    }
+  }
+}
+
 } // namespace cbu_memory
 } // namespace cbu
