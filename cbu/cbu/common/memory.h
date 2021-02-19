@@ -34,26 +34,42 @@
 namespace cbu {
 inline namespace cbu_memory {
 
-inline void sized_delete(void* p , std::size_t n) noexcept {
+// This function only deletes the raw memory, without invoking destructor
+template <typename T>
+inline constexpr void sized_delete(T* p , std::size_t bytes) noexcept {
 #ifdef __cpp_sized_deallocation
-  ::operator delete(p, n);
+  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    ::operator delete(p, bytes, std::align_val_t(alignof(T)));
+  else
+    ::operator delete(p, bytes);
 #else
-  ::operator delete(p);
+  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    ::operator delete(p, std::align_val_t(alignof(T)));
+  else
+    ::operator delete(p);
 #endif
 }
 
-inline void sized_array_delete(void* p , std::size_t n) noexcept {
+// This function only deletes the raw memory, without invoking destructor
+template <typename T>
+inline constexpr void sized_array_delete(T* p , std::size_t bytes) noexcept {
 #ifdef __cpp_sized_deallocation
-  ::operator delete[](p, n);
+  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    ::operator delete[](p, bytes, std::align_val_t(alignof(T)));
+  else
+    ::operator delete[](p, bytes);
 #else
-  ::operator delete[](p);
+  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    ::operator delete[](p, std::align_val_t(alignof(T)));
+  else
+    ::operator delete[](p);
 #endif
 }
 
 template <typename T>
 struct SizedArrayDeleter {
   std::size_t bytes;
-  void operator()(T* p) noexcept {
+  constexpr void operator()(T* p) noexcept {
     std::destroy_n(p, bytes / sizeof(T));
     sized_array_delete(p, bytes);
   }
@@ -74,11 +90,15 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  V* p = static_cast<V*>(::operator new[](n * sizeof(V)));
+  std::size_t bytes = n * sizeof(V);
+  V* p =
+    alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ ?
+      static_cast<V*>(::operator new[](bytes, std::align_val_t(alignof(T)))) :
+      static_cast<V*>(::operator new[](bytes));
   try {
     std::uninitialized_value_construct_n(p, n);
   } catch (...) {
-    ::operator delete[](p, n * sizeof(V));
+    sized_array_delete(p, bytes);
     throw;
   }
   return sized_unique_ptr<T>(p, SizedArrayDeleter<V>{n * sizeof(V)});
@@ -96,11 +116,15 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  V* p = static_cast<V*>(::operator new[](n * sizeof(V)));
+  std::size_t bytes = n * sizeof(V);
+  V* p =
+    alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ ?
+      static_cast<V*>(::operator new[](bytes, std::align_val_t(alignof(T)))) :
+      static_cast<V*>(::operator new[](bytes));
   try {
     std::uninitialized_default_construct_n(p, n);
   } catch (...) {
-    ::operator delete[](p, n * sizeof(V));
+    sized_array_delete(p, bytes);
     throw;
   }
   return sized_unique_ptr<T>(p, SizedArrayDeleter<V>{n * sizeof(V)});

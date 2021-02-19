@@ -32,6 +32,10 @@
 namespace cbu {
 inline namespace cbu_memory {
 
+struct alignas(256) OverAligned {
+  int x;
+};
+
 TEST(MemoryTest, MakeUnique) {
   EXPECT_EQ(sizeof(void*), sizeof(make_unique<int>(5)));
   EXPECT_EQ(2 * sizeof(void*), sizeof(make_unique<int[]>(5)));
@@ -42,6 +46,19 @@ TEST(MemoryTest, MakeUnique) {
   EXPECT_EQ(0, make_unique<int[]>(5)[0]);
   make_unique_for_overwrite<int>();
   make_unique_for_overwrite<int[]>(5);
+
+  {
+    auto ptr = make_unique<OverAligned>();
+    EXPECT_EQ(uintptr_t(ptr.get()) % alignof(OverAligned), 0);
+  }
+  {
+    auto ptr = make_unique<OverAligned[]>(5);
+    EXPECT_EQ(uintptr_t(ptr.get()) % alignof(OverAligned), 0);
+  }
+  {
+    auto ptr = make_unique_for_overwrite<OverAligned[]>(5);
+    EXPECT_EQ(uintptr_t(ptr.get()) % alignof(OverAligned), 0);
+  }
 }
 
 class NonTrivialType {
@@ -91,10 +108,6 @@ TEST(MemoryTest, OutlinableArray) {
       ASSERT_NE(arr.get(), static_cast<void*>(buf.buffer));
     }
   }
-
-  struct alignas(64) OverAligned {
-    int x;
-  };
   {
     OutlinableArrayBuffer<OverAligned, 5> buf;
 
