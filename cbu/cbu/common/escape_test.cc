@@ -148,5 +148,15 @@ TEST(EscapeTest, UnEscape) {
             "abcdefghijklmnopqrstuvwxyz\vABCDEFGHIJKLMNOPQRSTUVW");
 }
 
+TEST(EscapeTest, UnEscapeInPlace) {
+  char buffer[] = R"(\uabcd\u1234\u1111\u2222\u3333\u4444\u5555\u6666)";
+  const char* end = buffer + strlen(buffer);
+  auto [status, end_dst, end_src] = unescape_string(buffer, buffer, end);
+  ASSERT_EQ(status, UnescapeStringStatus::OK_EOS);
+  ASSERT_EQ(end_src, end);
+  ASSERT_EQ(std::string(buffer, end_dst),
+            "\uabcd\u1234\u1111\u2222\u3333\u4444\u5555\u6666");
+}
+
 } // namespace
 } // namespace cbu

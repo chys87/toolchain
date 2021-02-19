@@ -213,15 +213,15 @@ std::tuple<char, char*, const char*> copy_until_backslash(
 #ifdef __AVX2__
   while (src + 32 <= end) {
     __v32qu val = __v32qu(*(const __m256i_u*)src);
-    *(__m256i_u*)dst = __m256i(val);
     __m256i mask = __m256i((val == '\\') | (val == '\"'));
     if (_mm256_testz_si256(mask, mask)) {
+      *(__m256i_u*)dst = __m256i(val);
       src += 32;
       dst += 32;
     } else {
       unsigned off = ctz(_mm256_movemask_epi8(mask));
-      dst += off;
-      src += off;
+      for (unsigned i = off; i; --i)
+        *dst++ = *src++;
       return {*src, dst, src};
     }
   }
