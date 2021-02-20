@@ -70,7 +70,11 @@ class zstring_view : public std::string_view {
 
   using std::string_view::compare;
   constexpr int compare(const char *o) const noexcept {
-    return __builtin_strcmp(c_str(), o);
+    if (std::is_constant_evaluated()) {
+      return compare(std::string_view(o));
+    } else {
+      return __builtin_strcmp(c_str(), o);
+    }
   }
 
   // Return a reference to a static empty string_view instance.
@@ -93,39 +97,62 @@ inline const zstring_view &zstring_view::empty_instance() noexcept {
   return empty_zstring_view_instance;
 }
 
-inline bool operator == (const zstring_view &a, const char *b) noexcept {
+inline constexpr bool operator == (const zstring_view &a,
+                                   const char *b) noexcept {
   return a.compare(b) == 0;
 }
-inline int operator <=> (const zstring_view &a, const char *b) noexcept {
+
+inline constexpr int operator <=> (const zstring_view &a,
+                                   const char *b) noexcept {
   return a.compare(b);
 }
 
-inline int compare(const zstring_view &a, const zstring_view &b) noexcept {
+inline constexpr int compare(const zstring_view &a,
+                             const zstring_view &b) noexcept {
   return a.compare(b);
 }
-inline int compare(const zstring_view &a, const char *b) noexcept {
+
+inline constexpr int compare(const zstring_view &a, const char *b) noexcept {
   return a.compare(b);
 }
-inline int compare(const char *a, const zstring_view &b) noexcept {
+
+inline constexpr int compare(const char *a, const zstring_view &b) noexcept {
   return -compare(b, a);
 }
 
-inline bool operator<(const zstring_view &a, const zstring_view &b) noexcept {
-  return compare_string_view_for_lt(a, b) < 0;
+inline constexpr bool operator<(const zstring_view &a,
+                                const zstring_view &b) noexcept {
+  if (std::is_constant_evaluated()) {
+    return std::string_view(a) < std::string_view(b);
+  } else {
+    return compare_string_view_for_lt(a, b) < 0;
+  }
 }
-inline bool operator>(const zstring_view &a, const zstring_view &b) noexcept {
-  return compare_string_view_for_lt(b, a) < 0;
+inline constexpr bool operator>(const zstring_view &a,
+                                const zstring_view &b) noexcept {
+  return (b < a);
 }
-inline bool operator<=(const zstring_view &a, const zstring_view &b) noexcept {
+
+inline constexpr bool operator<=(const zstring_view &a,
+                                 const zstring_view &b) noexcept {
   return !(a > b);
 }
-inline bool operator>=(const zstring_view &a, const zstring_view &b) noexcept {
+
+inline constexpr bool operator>=(const zstring_view &a,
+                                 const zstring_view &b) noexcept {
   return !(a < b);
 }
 
 inline constexpr zstring_view operator""_sv(const char *s, size_t l) noexcept {
   return {s, l};
 }
+
+// Test constexpr comparisons
+static_assert("abc"_sv > "123"_sv);
+// As of GCC 10, there's a bug that fails the following assertion.
+// (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99181)
+// TODO: Uncomment it when it's fixed.
+// static_assert("\xff"_sv > "aaa"_sv);
 
 } // namespace cbu_zstring_view
 } // namespace cbu
