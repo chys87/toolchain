@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,47 +40,17 @@ inline namespace cbu_fileutil {
 // Wraps an fd (to a directory) and a filename for openat and friends
 class AtFile {
  public:
-#ifndef __clang__
-  constexpr
-#endif
-  AtFile(const char *n = nullptr) noexcept : AtFile(AT_FDCWD, n) {}
-  AtFile(const AtFile &) noexcept = default;
+  constexpr AtFile(int f, const char *n) noexcept : fd_(f), name_(n) {}
+  constexpr AtFile(const char *n = nullptr) noexcept : AtFile(AT_FDCWD, n) {}
+  constexpr AtFile(const AtFile &) noexcept = default;
 
   explicit constexpr operator bool() const noexcept { return name(); }
   constexpr int fd() const noexcept { return fd_; }
-
-// On x86-64, pointers that are nominally 64-bit actually have only 48
-// significant bits.  We take advantage of this and try to save the fd and
-// pointer to 64 bits.
-// However, that would imply that valid fds are < 32768, which is not always
-// the case.
-#if defined __linux__ && defined __x86_64__ && defined __LP64__ && \
-    AT_FDCWD < 0 && AT_FDCWD >= -32768 && !defined CBU_LARGE_FD
- public:
-#ifndef __clang__
-  constexpr
-#endif
-  AtFile(int f, const char *n) noexcept :
-    fd_(f), name_u_(reinterpret_cast<uint64_t>(n)) {}
-#ifndef __clang__
-  constexpr
-#endif
-  const char *name() const noexcept {
-    return reinterpret_cast<const char *>(name_u_);
-  }
-
- private:
-  int fd_ : 16;
-  uint64_t name_u_ : 48;
-#else
- public:
-  constexpr AtFile(int f, const char *n) noexcept : fd_(f), name_(n) {}
   constexpr const char *name() const noexcept { return name_; }
 
  private:
   int fd_;
   const char *name_;
-#endif
 };
 
 // If anything is wrong, returns 0
