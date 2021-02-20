@@ -71,6 +71,7 @@ class short_string {
 
   constexpr const char *c_str() const noexcept { return s_; }
   constexpr const char *data() const noexcept { return s_; }
+  constexpr char operator[](std::size_t n) const noexcept { return s_[n]; }
   constexpr len_t length() const noexcept { return l_; }
   constexpr len_t size() const noexcept { return l_; }
   constexpr const char *begin() const noexcept { return s_; }
