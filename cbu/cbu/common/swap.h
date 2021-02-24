@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,18 +45,18 @@ concept Member_swap = requires (T &a, U &b) { a.swap(b); };
 // When a.swap(b) is available, use it; otherwise, fall back to std::swap
 template <typename T, typename U>
 requires Member_swap<T, U>
-inline void swap_impl(T &a, U &b) noexcept(noexcept(a.swap(b))) {
+inline constexpr void swap_impl(T &a, U &b) noexcept(noexcept(a.swap(b))) {
   a.swap(b);
 }
 
 template <typename T, typename U>
 requires (!Member_swap<T, U>)
-inline void swap_impl(T &a, U &b) noexcept(noexcept(swap(a, b))) {
+inline constexpr void swap_impl(T &a, U &b) noexcept(noexcept(swap(a, b))) {
   swap(a, b);
 }
 
 template <typename T, typename U, std::size_t N>
-inline void swap_impl(T (&a)[N], U (&b)[N])
+inline constexpr void swap_impl(T (&a)[N], U (&b)[N])
     noexcept(noexcept(swap_impl(a[0], b[0]))) {
   for (std::size_t i = 0; i < N; ++i)
     swap_impl(a[i], b[i]);
@@ -68,7 +68,7 @@ namespace cbu {
 inline namespace cbu_swap {
 
 template <typename T, typename U>
-inline void swap(T &a, U &b)
+inline constexpr void swap(T &a, U &b)
     noexcept(noexcept(cbu_swap_detail::swap_impl(a, b))) {
   cbu_swap_detail::swap_impl(a, b);
 }
