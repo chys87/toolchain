@@ -55,6 +55,7 @@ If you use anything else, you have to take care of it yourself.
 * `fastarith.h`: Various C++ arithmetic functions
 * `fastdiv.h`: Provides `fastdiv` and `fastmod`, to provide for faster division operations if the dividend is known to be small
 * `faststr.h`: Provides `mempick`, `memdrop`, `append`, `concat` and similar functions for easy string operations
+* `fifo_list.h`: Provides `fifo_list<T>`, a first-in-first-out singly-linked container type with fast access to both ends
 * `heapq.h`: Heap operations
 * `immutable_string.h`: An "immutable" string class that holds either a `string_view` or a real `string` object.
 * `memory.h`: Provides some C++20 memory functions that are missing from GCC 9
