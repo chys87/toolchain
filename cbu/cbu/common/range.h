@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <compare>
 #include <iterator>
 #include <type_traits>
 
@@ -44,8 +45,9 @@ public:
   using difference_type = std::make_signed_t<T>;
 
   explicit constexpr RangeIterator(T v) noexcept : v_(v) {}
-  RangeIterator(const RangeIterator &) noexcept = default;
-  RangeIterator &operator = (const RangeIterator &) noexcept = default;
+  constexpr RangeIterator(const RangeIterator &) noexcept = default;
+  constexpr RangeIterator &operator = (const RangeIterator &) noexcept
+    = default;
 
   constexpr T operator * () const noexcept {
     return v_;
@@ -77,23 +79,14 @@ public:
     return (v_ + x);
   }
 
-  constexpr bool operator == (const RangeIterator &o) const noexcept {
-    return (v_ == o.v_);
+  friend constexpr bool operator == (const RangeIterator& a,
+                                     const RangeIterator& b) noexcept {
+    return a.v_ == b.v_;
   }
-  constexpr bool operator != (const RangeIterator &o) const noexcept {
-    return (v_ != o.v_);
-  }
-  constexpr bool operator < (const RangeIterator &o) const {
-    return (v_ < o.v_);
-  }
-  constexpr bool operator <= (const RangeIterator &o) const {
-    return (v_ <= o.v_);
-  }
-  constexpr bool operator > (const RangeIterator &o) const {
-    return (v_ > o.v_);
-  }
-  constexpr bool operator >= (const RangeIterator &o) const {
-    return (v_ >= o.v_);
+
+  friend constexpr auto operator <=> (const RangeIterator& a,
+                                      const RangeIterator& b) noexcept {
+    return a.v_ <=> b.v_;
   }
 
 private:
