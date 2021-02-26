@@ -40,7 +40,7 @@ TEST(ByteSizeTest, ByteDistanceTest) {
 
   int y[10];
   EXPECT_EQ(10 * sizeof(int),
-            byte_distance(static_cast<volatile int*>(y), y + 10));
+            byte_distance(static_cast<const int*>(y), y + 10));
   EXPECT_EQ(y + 4, byte_advance(y, 4 * sizeof(int)));
   EXPECT_EQ(y, byte_advance(y + 4, -4 * sizeof(int)));
 }

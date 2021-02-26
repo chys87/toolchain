@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
@@ -35,20 +36,33 @@
 namespace cbu {
 inline namespace cbu_byte_size {
 
-template <typename U, typename V>
-  requires (std::is_convertible_v<U*, V*> || std::is_convertible_v<V*, U*>)
-inline constexpr std::ptrdiff_t byte_distance(U *p, V *q) {
+template <typename U>
+inline constexpr std::ptrdiff_t byte_distance(const U* p, const U* q) {
+  if (std::is_constant_evaluated()) {
+    if constexpr (!std::is_void_v<U>)
+      return (q - p) * std::ptrdiff_t(sizeof(U));
+  }
   return (reinterpret_cast<std::intptr_t>(q) -
       reinterpret_cast<std::intptr_t>(p));
 }
 
 template <typename U>
-inline constexpr U *byte_advance(U *p, std::ptrdiff_t u) {
+inline constexpr U* byte_advance(U* p, std::ptrdiff_t u) noexcept {
+  if (std::is_constant_evaluated() && !std::is_void_v<U>) {
+    if constexpr (!std::is_void_v<U>) {
+      return (p + u / std::ptrdiff_t(sizeof(U)));
+    }
+  }
   return reinterpret_cast<U *>(reinterpret_cast<std::intptr_t>(p) + u);
 }
 
 template<typename U>
-inline constexpr U *byte_back(U *p, std::ptrdiff_t u) {
+inline constexpr U* byte_back(U* p, std::ptrdiff_t u) {
+  if (std::is_constant_evaluated()) {
+    if constexpr (!std::is_void_v<U>) {
+      return (p - u / std::ptrdiff_t(sizeof(U)));
+    }
+  }
   return reinterpret_cast<U *>(reinterpret_cast<std::intptr_t>(p) - u);
 }
 
@@ -85,10 +99,10 @@ class ByteSize {
 
   constexpr ByteSize &operator = (const ByteSize &other) noexcept = default;
 
-  template <typename U, typename V>
-    requires (sizeof(U) == N && sizeof(V) == N &&
-              (std::is_convertible_v<U*, V*> || std::is_convertible_v<V*, U*>))
-  constexpr ByteSize(U *lo, V *hi) : bytes_(byte_distance(lo, hi)) {}
+  template <typename U>
+    requires (sizeof(U) == N)
+  constexpr ByteSize(const U* lo, const U* hi) :
+    bytes_(byte_distance(lo, hi)) {}
 
   constexpr std::size_t bytes() const noexcept { return bytes_; }
   constexpr std::size_t size() const noexcept { return bytes_ / N; }
@@ -121,28 +135,48 @@ class ByteSize {
     ++*this;
     return r;
   }
+
   constexpr ByteSize operator -- (int) noexcept {
     ByteSize r = *this;
     --*this;
     return r;
   }
 
+  // Comparisons
+  friend constexpr bool operator == (const ByteSize& a,
+                                     const ByteSize& b) noexcept {
+    return a.bytes_ == b.bytes_;
+  }
+
+  friend constexpr auto operator <=> (const ByteSize& a,
+                                      const ByteSize& b) noexcept {
+    return a.bytes_ <=> b.bytes_;
+  }
+
+  // Explicitly define comparisions against integers to avoid ambiguity.
+  template <typename T> requires std::is_integral<T>::value
+  friend constexpr bool operator == (const ByteSize& a, T b) noexcept {
+    return a.bytes_ == b * N;
+  }
+
+  template <typename T> requires std::is_integral<T>::value
+  friend constexpr auto operator <=> (const ByteSize& a, T b) noexcept {
+    return a.bytes_ <=> b * N;
+  }
+
+  template <typename T> requires std::is_integral<T>::value
+  friend constexpr bool operator == (T a, const ByteSize& b) noexcept {
+    return a * N == b.bytes_;
+  }
+
+  template <typename T> requires std::is_integral<T>::value
+  friend constexpr auto operator <=> (T a, const ByteSize& b) noexcept {
+    return a * N <=> b.bytes_;
+  }
+
  private:
   std::size_t bytes_;
 };
-
-#define CBU_DEFINE_BYTESIZE_COMP(op) \
-  template <std::size_t N> \
-  inline constexpr bool operator op(ByteSize<N> a, ByteSize<N> b) noexcept { \
-    return (a.bytes() op b.bytes()); \
-  }
-CBU_DEFINE_BYTESIZE_COMP(==)
-CBU_DEFINE_BYTESIZE_COMP(!=)
-CBU_DEFINE_BYTESIZE_COMP(>=)
-CBU_DEFINE_BYTESIZE_COMP(<=)
-CBU_DEFINE_BYTESIZE_COMP(>)
-CBU_DEFINE_BYTESIZE_COMP(<)
-#undef CBU_DEFINE_BYTESIZE_COMP
 
 template <std::size_t N, typename T> requires std::is_integral<T>::value
 inline constexpr ByteSize<N> operator * (const ByteSize<N> &a, T b) noexcept {
