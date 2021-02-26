@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <compare>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -60,7 +61,7 @@ class ImmutableBasicString {
   static constexpr Ref REF = Ref::REF;
 
  public:
-  constexpr ImmutableBasicString() noexcept : s_(std::string_view()) {}
+  constexpr ImmutableBasicString() noexcept : s_(string_view()) {}
 
   template <typename...Args>
     requires std::is_constructible_v<string, Args&&...>
@@ -81,10 +82,11 @@ class ImmutableBasicString {
     return ImmutableBasicString(REF, std::forward<Args>(args)...);
   }
 
-  ImmutableBasicString(const ImmutableBasicString&) = default;
-  ImmutableBasicString(ImmutableBasicString&&) = default;
-  ImmutableBasicString& operator=(const ImmutableBasicString&) = default;
-  ImmutableBasicString& operator=(ImmutableBasicString&&) = default;
+  constexpr ImmutableBasicString(const ImmutableBasicString&) = default;
+  constexpr ImmutableBasicString(ImmutableBasicString&&) = default;
+  constexpr ImmutableBasicString& operator=(const ImmutableBasicString&)
+    = default;
+  constexpr ImmutableBasicString& operator=(ImmutableBasicString&&) = default;
 
   constexpr bool holds_reference() const noexcept {
     return std::holds_alternative<string_view>(s_);
@@ -118,29 +120,33 @@ class ImmutableBasicString {
 
   constexpr operator string_view() const noexcept { return view(); }
 
-  friend bool operator == (const ImmutableBasicString& a,
-                           const ImmutableBasicString& b) noexcept {
+  friend constexpr  bool operator == (const ImmutableBasicString& a,
+                                      const ImmutableBasicString& b) noexcept {
     return a.view() == b.view();
   }
-  friend bool operator != (const ImmutableBasicString& a,
-                           const ImmutableBasicString& b) noexcept {
+  friend constexpr bool operator != (const ImmutableBasicString& a,
+                                     const ImmutableBasicString& b) noexcept {
     return a.view() != b.view();
   }
-  friend bool operator <= (const ImmutableBasicString& a,
-                           const ImmutableBasicString& b) noexcept {
+  friend constexpr bool operator <= (const ImmutableBasicString& a,
+                                     const ImmutableBasicString& b) noexcept {
     return a.view() <= b.view();
   }
-  friend bool operator >= (const ImmutableBasicString& a,
-                           const ImmutableBasicString& b) noexcept {
+  friend constexpr bool operator >= (const ImmutableBasicString& a,
+                                     const ImmutableBasicString& b) noexcept {
     return a.view() >= b.view();
   }
-  friend bool operator < (const ImmutableBasicString& a,
-                           const ImmutableBasicString& b) noexcept {
+  friend constexpr bool operator < (const ImmutableBasicString& a,
+                                    const ImmutableBasicString& b) noexcept {
     return a.view() < b.view();
   }
-  friend bool operator > (const ImmutableBasicString& a,
-                           const ImmutableBasicString& b) noexcept {
+  friend constexpr bool operator > (const ImmutableBasicString& a,
+                                    const ImmutableBasicString& b) noexcept {
     return a.view() > b.view();
+  }
+  friend constexpr auto operator <=> (const ImmutableBasicString& a,
+                                      const ImmutableBasicString& b) noexcept {
+    return a.view() <=> b.view();
   }
 
  private:

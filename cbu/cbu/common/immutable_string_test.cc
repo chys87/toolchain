@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,17 @@ TEST(ImmutableStringTest, Construction) {
   EXPECT_TRUE(ImmutableString(3, 'x').holds_copy());
   EXPECT_FALSE(ImmutableString().holds_copy());
   EXPECT_FALSE(ImmutableString::ref("x").holds_copy());
+
+}
+
+TEST(ImmutableStringTest, U32Construction) {
+  using IS = ImmutableBasicString<char32_t>;
+
+  EXPECT_TRUE(IS(U"x").holds_copy());
+  EXPECT_TRUE(IS(U"x"sv).holds_copy());
+  EXPECT_TRUE(IS(3, U'x').holds_copy());
+  EXPECT_FALSE(IS().holds_copy());
+  EXPECT_FALSE(IS::ref(U"x").holds_copy());
 
 }
 
