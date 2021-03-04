@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -131,6 +131,64 @@ CBU_MUTEX_INLINE bool LowLevelMutex::try_lock() noexcept {
 
 // For compatibility only
 using LowLevelTmMutex = LowLevelMutex;
+
+class SpinLock {
+ public:
+  constexpr SpinLock() noexcept = default;
+  SpinLock(const SpinLock &) = delete;
+  SpinLock &operator = (const SpinLock &) = delete;
+
+  CBU_MUTEX_INLINE void lock() noexcept;
+  CBU_MUTEX_INLINE void unlock() noexcept;
+  CBU_MUTEX_INLINE bool try_lock() noexcept;
+  void yield() noexcept;
+
+ private:
+  CBU_MUTEX_INLINE void pause() noexcept;
+
+ private:
+  int v_ = 0;
+};
+
+CBU_MUTEX_INLINE void SpinLock::lock() noexcept {
+  if (!tweak::SINGLE_THREADED) {
+    do {
+      while (std::atomic_ref(v_).load(std::memory_order_relaxed) != 0) {
+        pause();
+      }
+    } while (!try_lock());
+  }
+}
+
+CBU_MUTEX_INLINE void SpinLock::unlock() noexcept {
+  if (!tweak::SINGLE_THREADED) {
+    std::atomic_ref(v_).store(0, std::memory_order_release);
+  }
+}
+
+CBU_MUTEX_INLINE bool SpinLock::try_lock() noexcept {
+  if (!tweak::SINGLE_THREADED) {
+    int expected = 0;
+    return std::atomic_ref(v_).compare_exchange_strong(
+        expected, 1, std::memory_order_acquire, std::memory_order_relaxed);
+  }
+  return true;
+}
+
+CBU_MUTEX_INLINE void SpinLock::yield() noexcept {
+  if (!tweak::SINGLE_THREADED) {
+  }
+}
+
+CBU_MUTEX_INLINE void SpinLock::pause() noexcept {
+  if (!tweak::SINGLE_THREADED) {
+#if (defined __i386__ || defined __x86_64__) && defined __has_builtin
+# if __has_builtin(__builtin_ia32_pause)
+    __builtin_ia32_pause();
+# endif
+#endif
+  }
+}
 
 #undef CBU_MUTEX_INLINE
 
