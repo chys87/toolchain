@@ -93,7 +93,7 @@ int compare_string_view_for_lt(std::string_view a, std::string_view b) noexcept
 
 // First compare by length, then by string content
 // Suitable for use in map and set
-inline constexpr int strcmp_length_first(
+constexpr int strcmp_length_first(
     std::string_view a, std::string_view b) noexcept {
   if (a.length() < b.length())
     return -1;
@@ -102,6 +102,14 @@ inline constexpr int strcmp_length_first(
   else
     return std::memcmp(a.data(), b.data(), a.length());
 }
+
+struct StrCmpLengthFirst {
+  using is_transparent = void;
+  constexpr int operator()(std::string_view a,
+                           std::string_view b) const noexcept {
+    return strcmp_length_first(a, b);
+  }
+};
 
 struct StrLessLengthFirst {
   using is_transparent = void;
