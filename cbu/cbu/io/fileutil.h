@@ -60,6 +60,9 @@ time_t get_file_mtime(int) noexcept;
 void touch_file(AtFile, time_t) noexcept;
 void touch_file(int, time_t) noexcept;
 
+// If a file doesn't exist, create it.
+bool ensure_file(AtFile, mode_t) noexcept;
+
 // Utility functions for conversion between iovec and string_view
 inline constexpr iovec sv2iov(std::string_view sv) noexcept {
   return {const_cast<char *>(sv.data()), sv.length()};

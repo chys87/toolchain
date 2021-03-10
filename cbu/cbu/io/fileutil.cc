@@ -94,5 +94,18 @@ void touch_file(int fd, time_t timestamp) noexcept {
   fsys_futimens(fd, ts);
 }
 
+bool ensure_file(AtFile atfile, mode_t mode) noexcept {
+  if (fsys_faccessat(atfile.fd(), atfile.name(), F_OK, 0) == 0)
+    return true;
+  int fd = fsys_openat4(atfile.fd(), atfile.name(),
+                        O_CREAT | O_WRONLY | O_EXCL | O_CLOEXEC, mode);
+  if (fd >= 0) {
+    fsys_close(fd);
+    return true;
+  } else {
+    return false;
+  }
+}
+
 } // namespace cbu_fileutil
 } // namepsace cbu
