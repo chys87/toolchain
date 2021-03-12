@@ -36,13 +36,20 @@ TEST(EscapeTest, EscapeC) {
   std::string s;
   escape_string_append(&s, "\1\2\b\f\\\"Hello world一二三四五六七八九\\/");
   EXPECT_EQ(s, R"(\x01\x02\b\f\\\"Hello world一二三四五六七八九\\/)");
+
+  EXPECT_EQ(escape_string(""), "");
+  EXPECT_EQ(escape_string("", EscapeStringOptions::C.with_quotes()), R"("")");
 }
 
 TEST(EscapeTest, EscapeJSON) {
   std::string s;
   escape_string_append(&s, "\1\2\b\f\\\"Hello world一二三四五六七八九\\/",
-                       EscapeStyle::JSON);
+                       EscapeStringOptions::JSON);
   EXPECT_EQ(s, R"(\u0001\u0002\b\f\\\"Hello world一二三四五六七八九\\\/)");
+
+  EXPECT_EQ(
+      escape_string("\1\2😍", EscapeStringOptions::JSON.with_quotes()),
+      R"("\u0001\u0002😍")");
 }
 
 TEST(EscapeTest, AlignmentTest) {

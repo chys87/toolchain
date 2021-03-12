@@ -41,13 +41,40 @@ enum struct EscapeStyle : unsigned {
   JSON,
 };
 
-char* escape_string(char* w, std::string_view src, EscapeStyle style) noexcept;
+struct EscapeStringOptions {
+  EscapeStyle style : 1 = EscapeStyle::C;
+  bool quotes : 1 = false;
+
+  constexpr EscapeStringOptions(EscapeStyle style = EscapeStyle::C) noexcept :
+    style(style) {}
+
+  static const EscapeStringOptions JSON;
+  static const EscapeStringOptions C;
+
+  constexpr EscapeStringOptions with_quotes(bool w = true) const noexcept {
+    auto res = *this;
+    res.quotes = w;
+    return res;
+  }
+
+  constexpr EscapeStringOptions without_quotes() const noexcept {
+    return with_quotes(false);
+  }
+};
+
+inline constexpr EscapeStringOptions EscapeStringOptions::JSON =
+    EscapeStringOptions(EscapeStyle::JSON);
+inline constexpr EscapeStringOptions EscapeStringOptions::C =
+    EscapeStringOptions(EscapeStyle::C);
+
+char* escape_string(char* w, std::string_view src,
+                    EscapeStringOptions options) noexcept;
 
 void escape_string_append(std::string* dst, std::string_view src,
-                          EscapeStyle style = EscapeStyle::C);
+                          EscapeStringOptions options = EscapeStringOptions());
 
 std::string escape_string(std::string_view src,
-                          EscapeStyle style = EscapeStyle::C);
+                          EscapeStringOptions options = EscapeStringOptions());
 
 // unescape_string supports both C and JSON styles
 // Unescaping terminates either by encoutering unescaped '\"' or end-of-string

@@ -89,14 +89,18 @@ inline constexpr bool needs_escaping(std::uint8_t c,
 }
 
 constexpr char* escape_string_naive(
-    char* w, std::string_view src, EscapeStyle style) {
+    char* w, std::string_view src, EscapeStringOptions options) {
+  if (options.quotes)
+    *w++ = '"';
   for (char c : src) {
-    if (needs_escaping(c, style)) {
-      w = escape_char(w, c, style);
+    if (needs_escaping(c, options.style)) {
+      w = escape_char(w, c, options.style);
     } else {
       *w++ = c;
     }
   }
+  if (options.quotes)
+    *w++ = '"';
   return w;
 }
 
@@ -138,12 +142,19 @@ inline char* encode_by_mask(char* w, const char* s,
 
 } // namespace
 
-char* escape_string(char* w, std::string_view src, EscapeStyle style)
-    noexcept {
+char* escape_string(char* w, std::string_view src,
+                    EscapeStringOptions options) noexcept {
 #ifdef __AVX2__
   if (src.empty()) {
+    if (options.quotes) {
+      *w++ = '"';
+      *w++ = '"';
+    }
     return w;
   }
+
+  if (options.quotes)
+    *w++ = '"';
 
   const char* s = src.data();
   std::size_t n = src.size();
@@ -151,24 +162,26 @@ char* escape_string(char* w, std::string_view src, EscapeStyle style)
   s = (const char*)(std::uintptr_t(s) & -32);
   n += misalign;
   __m256i chars = *(const __m256i*)s;
-  __m256i msk = get_encoding_mask(chars, style);
+  __m256i msk = get_encoding_mask(chars, options.style);
   std::uint32_t bmsk = _mm256_movemask_epi8(msk);
-  w = encode_by_mask(w, s, bmsk, style,
+  w = encode_by_mask(w, s, bmsk, options.style,
                      misalign, std::min<std::uint32_t>(32, n));
   s += 32;
   if (n <= 32) {
+    if (options.quotes)
+      *w++ = '"';
     return w;
   }
   n -= 32;
 
   while (n & -32) {
     __m256i chars = *(const __m256i*)s;
-    __m256i msk = get_encoding_mask(chars, style);
+    __m256i msk = get_encoding_mask(chars, options.style);
     if (_mm256_testz_si256(msk, msk)) {
       *(__m256i_u*)w = chars;
       w += 32;
     } else {
-      w = encode_by_mask(w, s, _mm256_movemask_epi8(msk), style);
+      w = encode_by_mask(w, s, _mm256_movemask_epi8(msk), options.style);
     }
     s += 32;
     n -= 32;
@@ -176,28 +189,30 @@ char* escape_string(char* w, std::string_view src, EscapeStyle style)
 
   if (n) {
     __m256i chars = *(const __m256i*)s;
-    __m256i msk = get_encoding_mask(chars, style);
+    __m256i msk = get_encoding_mask(chars, options.style);
     std::uint32_t bmsk = _mm256_movemask_epi8(msk);
-    w = encode_by_mask(w, s, bmsk, style, 0, n);
+    w = encode_by_mask(w, s, bmsk, options.style, 0, n);
   }
+  if (options.quotes)
+    *w++ = '"';
   return w;
 #endif // __AVX2__
-  return escape_string_naive(w, src, style);
+  return escape_string_naive(w, src, options);
 }
 
 void escape_string_append(std::string* dst,
-                          std::string_view src, EscapeStyle style) {
-  if (!src.empty()) {
-    char* p = extend(
-        dst, (style == EscapeStyle::JSON) ? 6 * src.size() : 4 * src.size());
-    p = escape_string(p, src, style);
-    truncate_unsafe(dst, p - dst->data());
-  }
+                          std::string_view src, EscapeStringOptions options) {
+  char* p = extend(
+      dst,
+      (options.style == EscapeStyle::JSON) ?
+        6 * src.size() + 2 : 4 * src.size() + 2);
+  p = escape_string(p, src, options);
+  truncate_unsafe(dst, p - dst->data());
 }
 
-std::string escape_string(std::string_view src, EscapeStyle style) {
+std::string escape_string(std::string_view src, EscapeStringOptions options) {
   std::string res;
-  escape_string_append(&res, src, style);
+  escape_string_append(&res, src, options);
   return res;
 }
 
