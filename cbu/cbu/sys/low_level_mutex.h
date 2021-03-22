@@ -29,6 +29,7 @@
 #pragma once
 
 #include <atomic>
+
 #include "cbu/compat/atomic_ref.h"
 #include "cbu/tweak/tweak.h"
 
@@ -42,21 +43,21 @@ inline namespace cbu_low_level_mutex {
 // 1: Locked; no waiter
 // 2: Locked and waited for
 class LowLevelMutex {
-public:
+ public:
   constexpr LowLevelMutex() noexcept = default;
   LowLevelMutex(const LowLevelMutex &) = delete;
-  LowLevelMutex &operator = (const LowLevelMutex &) = delete;
+  LowLevelMutex &operator=(const LowLevelMutex &) = delete;
 
   CBU_MUTEX_INLINE void lock() noexcept;
   CBU_MUTEX_INLINE void unlock() noexcept;
   CBU_MUTEX_INLINE bool try_lock() noexcept;
   void yield() noexcept;
 
-private:
+ private:
   void wait(int) noexcept;
   void wake() noexcept;
 
-private:
+ private:
   int v_ = 0;
 };
 
@@ -65,36 +66,39 @@ private:
 CBU_MUTEX_INLINE void LowLevelMutex::lock() noexcept {
   if (!tweak::SINGLE_THREADED) {
     int ax = 0, one = 1;
-    asm volatile ("\n"
-      "  lock; cmpxchgl %[one], (%%rdi)\n"
+    asm volatile(
+        "\n"
+        "  lock; cmpxchgl %[one], (%%rdi)\n"
 #if defined __PIC__ || defined __PIE__
-      "  leaq\t1f(%%rip), %%r8\n"
+        "  leaq\t1f(%%rip), %%r8\n"
 #else
-      "  movl\t$1f, %%r8d\n"
+        "  movl\t$1f, %%r8d\n"
 #endif
-      "  jnz\tcbu_mutex_lock_wait_asm\n" // This "function" preserves red zone
-      "1:"
-      : "+a"(ax), [one]"+d"(one)
-      : "D"(&v_)
-      : "memory", "cc", "si", "cx", "r8", "r10", "r11"
-      );
+        "  jnz\tcbu_mutex_lock_wait_asm\n"  // This "function" preserves red
+                                            // zone
+        "1:"
+        : "+a"(ax), [one] "+d"(one)
+        : "D"(&v_)
+        : "memory", "cc", "si", "cx", "r8", "r10", "r11");
   }
 }
 
 CBU_MUTEX_INLINE void LowLevelMutex::unlock() noexcept {
   if (!tweak::SINGLE_THREADED) {
-    asm volatile ("\n"
-      "  lock; decl (%%rdi)\n"
+    asm volatile(
+        "\n"
+        "  lock; decl (%%rdi)\n"
 #if defined __PIC__ || defined __PIE__
-      "  leaq\t2f(%%rip), %%r8\n"
+        "  leaq\t2f(%%rip), %%r8\n"
 #else
-      "  mov\t$2f, %%r8d\n"
+        "  mov\t$2f, %%r8d\n"
 #endif
-      "  jnz\tcbu_mutex_unlock_wake_asm\n" // This "function" preserves red zone
-      "2:\n"
-      :
-      : "D"(&v_)
-      : "memory", "cc", "si", "ax", "dx", "cx", "r8", "r11");
+        "  jnz\tcbu_mutex_unlock_wake_asm\n"  // This "function" preserves red
+                                              // zone
+        "2:\n"
+        :
+        : "D"(&v_)
+        : "memory", "cc", "si", "ax", "dx", "cx", "r8", "r11");
   }
 }
 
@@ -104,7 +108,7 @@ CBU_MUTEX_INLINE void LowLevelMutex::lock() noexcept {
   if (!tweak::SINGLE_THREADED) {
     int copy = 0;
     if (!std::atomic_ref(v_).compare_exchange_weak(
-        copy, 1, std::memory_order_acquire, std::memory_order_relaxed))
+            copy, 1, std::memory_order_acquire, std::memory_order_relaxed))
       wait(copy);
   }
 }
@@ -112,8 +116,7 @@ CBU_MUTEX_INLINE void LowLevelMutex::lock() noexcept {
 CBU_MUTEX_INLINE void LowLevelMutex::unlock() noexcept {
   if (!tweak::SINGLE_THREADED) {
     int c = std::atomic_ref(v_).fetch_sub(1, std::memory_order_release) - 1;
-    if (__builtin_expect(c, 0) != 0)
-      wake();
+    if (__builtin_expect(c, 0) != 0) wake();
   }
 }
 
@@ -136,7 +139,7 @@ class SpinLock {
  public:
   constexpr SpinLock() noexcept = default;
   SpinLock(const SpinLock &) = delete;
-  SpinLock &operator = (const SpinLock &) = delete;
+  SpinLock &operator=(const SpinLock &) = delete;
 
   CBU_MUTEX_INLINE void lock() noexcept;
   CBU_MUTEX_INLINE void unlock() noexcept;
@@ -177,20 +180,26 @@ CBU_MUTEX_INLINE bool SpinLock::try_lock() noexcept {
 
 CBU_MUTEX_INLINE void SpinLock::yield() noexcept {
   if (!tweak::SINGLE_THREADED) {
+    std::atomic_ref(v_).store(0, std::memory_order_release);
+    do {
+      do {
+        pause();
+      } while (std::atomic_ref(v_).load(std::memory_order_relaxed) != 0);
+    } while (!try_lock());
   }
 }
 
 CBU_MUTEX_INLINE void SpinLock::pause() noexcept {
   if (!tweak::SINGLE_THREADED) {
 #if (defined __i386__ || defined __x86_64__) && defined __has_builtin
-# if __has_builtin(__builtin_ia32_pause)
+#if __has_builtin(__builtin_ia32_pause)
     __builtin_ia32_pause();
-# endif
+#endif
 #endif
   }
 }
 
 #undef CBU_MUTEX_INLINE
 
-} // namesapce cbu_low_level_mutex
-} // namespace cbu
+}  // namespace cbu_low_level_mutex
+}  // namespace cbu

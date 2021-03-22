@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,16 +27,18 @@
  */
 
 #include "cbu/sys/low_level_mutex.h"
+
 #include <chrono>
 #include <mutex>
 #include <thread>
+
 #include <gtest/gtest.h>
+
 
 namespace cbu {
 inline namespace cbu_low_level_mutex {
 
 TEST(LowLevelMutexTest, LockTest) {
-
   LowLevelMutex mutex;
   int value = 0;
 
@@ -44,7 +46,7 @@ TEST(LowLevelMutexTest, LockTest) {
 
   std::vector<std::thread> threads;
   for (int i = 0; i < 10; ++i) {
-    threads.push_back(std::thread([&]{
+    threads.push_back(std::thread([&] {
       {
         std::lock_guard locker(mutex);
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -52,8 +54,7 @@ TEST(LowLevelMutexTest, LockTest) {
       }
     }));
   }
-  for (auto& thread: threads)
-    thread.join();
+  for (auto& thread : threads) thread.join();
 
   auto end = std::chrono::steady_clock::now();
 
@@ -64,6 +65,32 @@ TEST(LowLevelMutexTest, LockTest) {
   EXPECT_GE(1.5, seconds);
 }
 
+TEST(LowLevelMutexTest, SpinLockTest) {
+  SpinLock mutex;
+  int value = 0;
 
-} // namespace cbu_low_level_mutex
-} // namespace cbu
+  auto begin = std::chrono::steady_clock::now();
+
+  std::vector<std::thread> threads;
+  for (int i = 0; i < 10; ++i) {
+    threads.push_back(std::thread([&] {
+      {
+        std::lock_guard locker(mutex);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        ++value;
+      }
+    }));
+  }
+  for (auto& thread : threads) thread.join();
+
+  auto end = std::chrono::steady_clock::now();
+
+  EXPECT_EQ(10, value);
+
+  auto seconds = std::chrono::duration<double>(end - begin).count();
+  EXPECT_LE(1.0, seconds);
+  EXPECT_GE(1.5, seconds);
+}
+
+}  // namespace cbu_low_level_mutex
+}  // namespace cbu
