@@ -69,17 +69,15 @@ inline constexpr U* byte_back(U* p, std::ptrdiff_t u) {
 // A class with similar semantics as size_t, but stores size in bytes
 template <std::size_t N> requires (N > 0)
 class ByteSize {
- private:
-  explicit constexpr ByteSize(int, std::size_t bytes) noexcept : bytes_(bytes) {
-  }
-
  public:
   ByteSize() noexcept = default;
   constexpr ByteSize(std::size_t count) noexcept : bytes_(count * N) {}
   constexpr ByteSize(const ByteSize &other) noexcept = default;
 
   static constexpr ByteSize from_bytes(std::size_t bytes) noexcept {
-    return ByteSize(0, bytes);
+    ByteSize r(0);
+    r.bytes_ = bytes;
+    return r;
   }
 
   template <std::size_t M> requires (N > M && N % M == 0)
@@ -188,6 +186,9 @@ inline constexpr ByteSize<N> operator * (T a, const ByteSize<N> &b) noexcept {
   return ByteSize<N>::from_bytes(b.bytes() * a);
 }
 
+template <std::size_t M, std::size_t N>
+void operator*(const ByteSize<M>&, const ByteSize<N>&) = delete;
+
 template <std::size_t N>
 inline constexpr ByteSize<N> operator + (const ByteSize<N> &a,
                                          const ByteSize<N> &b) noexcept {
@@ -198,6 +199,18 @@ template <std::size_t N>
 inline constexpr ByteSize<N> operator - (const ByteSize<N> &a,
                                          const ByteSize<N> &b) noexcept {
   return ByteSize<N>::from_bytes(a.bytes() - b.bytes());
+}
+
+template <std::size_t M, std::size_t N> requires (M != N)
+inline constexpr std::size_t operator+(const ByteSize<M>& a,
+                                       const ByteSize<N>& b) noexcept {
+  return std::size_t(a) + std::size_t(b);
+}
+
+template <std::size_t M, std::size_t N> requires (M != N)
+inline constexpr std::size_t operator-(const ByteSize<M>& a,
+                                       const ByteSize<N>& b) noexcept {
+  return std::size_t(a) - std::size_t(b);
 }
 
 // Explicitly define them to avoid "ByteSize + int" being compiled as
@@ -223,7 +236,7 @@ inline constexpr ByteSize<N> operator - (T a, const ByteSize<N> &b) noexcept {
 }
 
 template <std::size_t N>
-inline constexpr ByteSize<N> operator + (const ByteSize<N> &a) noexcept {
+inline constexpr std::size_t operator+(const ByteSize<N>& a) noexcept {
   return a;
 }
 
