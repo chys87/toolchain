@@ -69,11 +69,35 @@ inline constexpr void sized_array_delete(T* p , std::size_t bytes) noexcept {
 template <typename T>
 struct SizedArrayDeleter {
   std::size_t bytes;
-  constexpr void operator()(T* p) noexcept {
+  constexpr void operator()(T* p) const noexcept {
     std::destroy_n(p, bytes / sizeof(T));
     sized_array_delete(p, bytes);
   }
 };
+
+namespace cbu_memory_detail {
+
+template <typename T, bool DEFAULT_INIT>
+inline T* new_and_init_array(std::size_t n) {
+  std::size_t bytes = n * sizeof(T);
+  T* p;
+  if (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    p = static_cast<T*>(::operator new[](bytes, std::align_val_t(alignof(T))));
+  else
+    p = static_cast<T*>(::operator new[](bytes));
+  try {
+    if (DEFAULT_INIT)
+      std::uninitialized_default_construct_n(p, n);
+    else
+      std::uninitialized_value_construct_n(p, n);
+  } catch (...) {
+    sized_array_delete(p, bytes);
+    throw;
+  }
+  return p;
+}
+
+}  // namespace cbu_memory_detail
 
 template <typename T>
 requires std::is_unbounded_array_v<T>
@@ -90,18 +114,8 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  std::size_t bytes = n * sizeof(V);
-  V* p =
-    alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ ?
-      static_cast<V*>(::operator new[](bytes, std::align_val_t(alignof(T)))) :
-      static_cast<V*>(::operator new[](bytes));
-  try {
-    std::uninitialized_value_construct_n(p, n);
-  } catch (...) {
-    sized_array_delete(p, bytes);
-    throw;
-  }
-  return sized_unique_ptr<T>(p, SizedArrayDeleter<V>{n * sizeof(V)});
+  return sized_unique_ptr<T>(cbu_memory_detail::new_and_init_array<V, false>(n),
+                             SizedArrayDeleter<V>{n * sizeof(V)});
 }
 
 template <typename T>
@@ -116,18 +130,38 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  std::size_t bytes = n * sizeof(V);
-  V* p =
-    alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__ ?
-      static_cast<V*>(::operator new[](bytes, std::align_val_t(alignof(T)))) :
-      static_cast<V*>(::operator new[](bytes));
-  try {
-    std::uninitialized_default_construct_n(p, n);
-  } catch (...) {
-    sized_array_delete(p, bytes);
-    throw;
-  }
-  return sized_unique_ptr<T>(p, SizedArrayDeleter<V>{n * sizeof(V)});
+  return sized_unique_ptr<T>(cbu_memory_detail::new_and_init_array<V, true>(n),
+                             SizedArrayDeleter<V>{n * sizeof(V)});
+}
+
+template <typename T, typename... Args>
+requires (!std::is_array_v<T>)
+inline std::shared_ptr<T> make_shared(Args&&... args) {
+  return std::make_shared<T>(std::forward<Args>(args)...);
+}
+
+template <typename T>
+requires std::is_unbounded_array_v<T>
+inline std::shared_ptr<T> make_shared(std::size_t n) {
+  using V = std::remove_extent_t<T>;
+  return std::shared_ptr<T>(cbu_memory_detail::new_and_init_array<V, false>(n),
+                            SizedArrayDeleter<V>{n * sizeof(V)});
+}
+
+template <typename T>
+requires (!std::is_array_v<T>)
+inline std::shared_ptr<T> make_shared_for_overwrite() {
+  // GCC 9 doesn't have std::make_shared_for_overwrite yet.
+  // return std::make_shared_for_overwrite<T>();
+  return std::shared_ptr<T>(new T);
+}
+
+template <typename T>
+requires std::is_unbounded_array_v<T>
+inline std::shared_ptr<T> make_shared_for_overwrite(std::size_t n) {
+  using V = std::remove_extent_t<T>;
+  return std::shared_ptr<T>(cbu_memory_detail::new_and_init_array<V, true>(n),
+                            SizedArrayDeleter<V>{n * sizeof(V)});
 }
 
 // OutlinableArray<T> is like array<T> or unique_ptr<T[]>, but allocates
@@ -161,20 +195,18 @@ class OutlinableArray {
   using iterator = T*;
 
   template <std::size_t N>
-  constexpr OutlinableArray(OutlinableArrayBuffer<T, N>* buffer,
-                            std::size_t n) :
-    ptr_(new (get_pointer(buffer, n)) T[n]()),
-    size_(n),
-    allocated_(n <= N ? 0 : n) {}
+  constexpr OutlinableArray(OutlinableArrayBuffer<T, N>* buffer, std::size_t n)
+      : ptr_(new (get_pointer(buffer, n)) T[n]()),
+        size_(n),
+        allocated_(n <= N ? 0 : n) {}
 
   template <std::size_t N>
   constexpr OutlinableArray(OutlinableArrayBuffer<T, N>* buffer, std::size_t n,
-                      ForOverwriteTag) :
-    ptr_(new (get_pointer(buffer, n)) T[n]),
-    allocated_(n <= N ? 0 : n) {}
+                            ForOverwriteTag)
+      : ptr_(new (get_pointer(buffer, n)) T[n]), allocated_(n <= N ? 0 : n) {}
 
   OutlinableArray(const OutlinableArray&) = delete;
-  OutlinableArray& operator = (const OutlinableArray&) = delete;
+  OutlinableArray& operator=(const OutlinableArray&) = delete;
 
   constexpr ~OutlinableArray() noexcept {
     std::destroy_n(ptr_, size_);
@@ -214,5 +246,5 @@ class OutlinableArray {
   bool allocated_;
 };
 
-} // namespace cbu_memory
-} // namespace cbu
+}  // namespace cbu_memory
+}  // namespace cbu

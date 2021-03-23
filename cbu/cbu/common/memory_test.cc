@@ -27,6 +27,7 @@
  */
 
 #include "memory.h"
+
 #include <gtest/gtest.h>
 
 namespace cbu {
@@ -61,6 +62,34 @@ TEST(MemoryTest, MakeUnique) {
   }
 }
 
+TEST(MemoryTest, MakeShared) {
+  EXPECT_EQ(5, *make_shared<int>(5));
+  EXPECT_EQ(0, make_shared<int[]>(5)[0]);
+  make_shared_for_overwrite<int>();
+  make_shared_for_overwrite<int[]>(5);
+
+  {
+    std::shared_ptr<int[]> p = make_shared<int[]>(5);
+    std::shared_ptr<int> q(p, p.get());
+    EXPECT_EQ(q.get(), p.get());
+    p[0] = 42;
+    EXPECT_EQ(*q, 42);
+  }
+
+  {
+    auto ptr = make_shared<OverAligned>();
+    EXPECT_EQ(uintptr_t(ptr.get()) % alignof(OverAligned), 0);
+  }
+  {
+    auto ptr = make_shared<OverAligned[]>(5);
+    EXPECT_EQ(uintptr_t(ptr.get()) % alignof(OverAligned), 0);
+  }
+  {
+    auto ptr = make_shared_for_overwrite<OverAligned[]>(5);
+    EXPECT_EQ(uintptr_t(ptr.get()) % alignof(OverAligned), 0);
+  }
+}
+
 class NonTrivialType {
  public:
   NonTrivialType() { ++constructors_; }
@@ -82,6 +111,20 @@ TEST(MemoryTest, MakeUniqueDestructorTest) {
   EXPECT_EQ(5, NonTrivialType::destructors_);
 }
 
+TEST(MemoryTest, MakeSharedDestructorTest) {
+  NonTrivialType::constructors_ = 0;
+  NonTrivialType::destructors_ = 0;
+
+  {
+    auto p1 = make_shared_for_overwrite<NonTrivialType[]>(5);
+    std::shared_ptr<NonTrivialType> p2(p1, p1.get());
+    std::shared_ptr<NonTrivialType> p3(p1, p1.get() + 3);
+  }
+
+  EXPECT_EQ(5, NonTrivialType::constructors_);
+  EXPECT_EQ(5, NonTrivialType::destructors_);
+}
+
 TEST(MemoryTest, MakeUniqueNullPointer) {
   sized_unique_ptr<int[]>();
   sized_unique_ptr<int[]>(nullptr);
@@ -89,8 +132,8 @@ TEST(MemoryTest, MakeUniqueNullPointer) {
   sized_unique_ptr<int[]>(nullptr, SizedArrayDeleter<int>{sizeof(int)});
   sized_unique_ptr<NonTrivialType[]>();
   sized_unique_ptr<NonTrivialType[]>(nullptr);
-  sized_unique_ptr<NonTrivialType[]>(
-      nullptr, SizedArrayDeleter<NonTrivialType>{});
+  sized_unique_ptr<NonTrivialType[]>(nullptr,
+                                     SizedArrayDeleter<NonTrivialType>{});
   sized_unique_ptr<NonTrivialType[]>(
       nullptr, SizedArrayDeleter<NonTrivialType>{sizeof(NonTrivialType)});
 }
@@ -122,5 +165,5 @@ TEST(MemoryTest, OutlinableArray) {
   }
 }
 
-} // namespace cbu_memory
-} // namespace cbu
+}  // namespace cbu_memory
+}  // namespace cbu
