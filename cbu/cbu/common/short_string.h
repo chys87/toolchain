@@ -69,15 +69,15 @@ class short_string {
   constexpr char (&buffer() noexcept)[MaxLen + 1] { return s_; }
   constexpr void set_length(len_t l) { l_ = l; }
 
-  constexpr const char *c_str() const noexcept { return s_; }
-  constexpr const char *data() const noexcept { return s_; }
+  constexpr const char* c_str() const noexcept { return s_; }
+  constexpr const char* data() const noexcept { return s_; }
   constexpr char operator[](std::size_t n) const noexcept { return s_[n]; }
   constexpr len_t length() const noexcept { return l_; }
   constexpr len_t size() const noexcept { return l_; }
-  constexpr const char *begin() const noexcept { return s_; }
-  constexpr const char *end() const noexcept { return s_ + l_; }
-  constexpr const char *cbegin() const noexcept { return s_; }
-  constexpr const char *cend() const noexcept { return s_ + l_; }
+  constexpr const char* begin() const noexcept { return s_; }
+  constexpr const char* end() const noexcept { return s_ + l_; }
+  constexpr const char* cbegin() const noexcept { return s_; }
+  constexpr const char* cend() const noexcept { return s_ + l_; }
   constexpr operator zstring_view() const noexcept { return {s_, l_}; }
 
   constexpr zstring_view string_view() const noexcept { return {s_, l_}; }
@@ -90,7 +90,7 @@ class short_string {
   }
 
   // For some third-party type traits
-  static constexpr inline bool pass_by_ref(short_string *) { return true; }
+  static constexpr inline bool pass_by_ref(short_string*) { return true; }
 
  private:
   char s_[MaxLen + 1];
@@ -99,6 +99,53 @@ class short_string {
 
 template <std::size_t N> requires (N > 0)
 short_string(const char (&)[N]) -> short_string<N - 1>;
+
+// This class is like short_string, but the length is fixed
+template <std::size_t Len, bool HasTerminator = false>
+class fixed_length_string {
+ public:
+  explicit fixed_length_string(UninitializedShortString) noexcept {}
+
+  constexpr fixed_length_string() noexcept : s_{} {}
+  consteval fixed_length_string(std::string_view src) noexcept : s_{} {
+    assign(src);
+  }
+
+  constexpr char* data() noexcept { return s_; }
+  constexpr const char* data() const noexcept { return s_; }
+  constexpr const char* c_str() const noexcept requires HasTerminator {
+    return s_;
+  }
+  static constexpr size_t length() noexcept { return Len; }
+  static constexpr size_t size() noexcept { return Len; }
+  constexpr char* begin() noexcept { return s_; }
+  constexpr char* end() noexcept { return s_ + Len; }
+  constexpr const char* begin() const noexcept { return s_; }
+  constexpr const char* end() const noexcept { return s_ + Len; }
+  constexpr const char* cbegin() const noexcept { return s_; }
+  constexpr const char* cend() const noexcept { return s_ + Len; }
+  constexpr operator std::string_view() const noexcept { return {s_, Len}; }
+  constexpr operator zstring_view() const noexcept requires HasTerminator {
+    return {s_, Len};
+  }
+
+  constexpr void assign(std::string_view src) noexcept {
+    constexpr std::size_t copy_len = std::min(Len, src.size());
+    std::copy_n(src.data(), copy_len, s_);
+    std::fill_n(s_ + copy_len, sizeof(s_) - copy_len, 0);
+  }
+
+  // For some third-party type traits
+  static constexpr inline bool pass_by_ref(fixed_length_string*) {
+    return true;
+  }
+
+ private:
+  char s_[Len + HasTerminator];
+};
+
+template <std::size_t N>
+fixed_length_string(const char (&)[N]) -> fixed_length_string<N - 1>;
 
 } // namespace cbu_short_string
 } // namespace cbu
