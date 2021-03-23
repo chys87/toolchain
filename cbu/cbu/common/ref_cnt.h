@@ -44,13 +44,11 @@ constexpr int REF_CNT_SINGLE_THREADED = 1;
 constexpr int REF_CNT_MAY_NOT_WRITE_ZERO = 2;
 
 // Increase a ref_cnt_t
-inline void ref_cnt_inc(ref_cnt_t *p, int options = 0) noexcept {
-  if (!(options & REF_CNT_SINGLE_THREADED) &&
-      !cbu::tweak::SINGLE_THREADED &&
-      std::atomic_ref(*p).load(std::memory_order_relaxed) >= 2) {
-    std::atomic_ref(*p).fetch_add(1, std::memory_order_acquire);
-  } else {
+inline void ref_cnt_inc(ref_cnt_t* p, int options = 0) noexcept {
+  if ((options & REF_CNT_SINGLE_THREADED) || cbu::tweak::SINGLE_THREADED) {
     ++*p;
+  } else {
+    std::atomic_ref(*p).fetch_add(1, std::memory_order_acquire);
   }
 }
 
