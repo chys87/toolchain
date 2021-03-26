@@ -45,6 +45,7 @@ class LazyFD {
  public:
   explicit constexpr LazyFD(int fd = -1) noexcept
       : ig_(InitGuard::LowLevelInit(negative_to_init(fd))) {}
+
   ~LazyFD() noexcept {
     int fd = *ig_.raw_value_ptr();
     if (fd >= 0) ::fsys_close(fd);
@@ -60,7 +61,7 @@ class LazyFD {
   template <typename Foo, typename... Args>
   void init(Foo&& foo, Args&&... args) noexcept(
       noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
-    ig_.init(std::forward<Foo>(foo), std::forward<Args>(args)...);
+    ig_.init_with_reuse(std::forward<Foo>(foo), std::forward<Args>(args)...);
   }
 
  private:

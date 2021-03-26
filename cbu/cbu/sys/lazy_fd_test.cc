@@ -26,12 +26,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 #include "cbu/sys/lazy_fd.h"
+
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include <thread>
 #include <vector>
-#include<fcntl.h>
 
 #include <gtest/gtest.h>
 
@@ -44,6 +45,10 @@ TEST(LazyFDTest, LazyFD) {
     EXPECT_LT(lfd.fd(), 0);
     lfd.init([]() noexcept { return open("/dev/null", O_RDONLY | O_CLOEXEC); });
     EXPECT_GE(lfd.fd(), 0);
+
+    struct stat st;
+    ASSERT_EQ(fstat(lfd.fd(), &st), 0);
+    EXPECT_TRUE(S_ISCHR(st.st_mode));
   }
 
   {
@@ -64,6 +69,10 @@ TEST(LazyFDTest, LazyFD) {
     }
     for (auto& thread : threads) thread.join();
     EXPECT_EQ(called.load(), 1);
+
+    struct stat st;
+    ASSERT_EQ(fstat(lfd.fd(), &st), 0);
+    EXPECT_TRUE(S_ISCHR(st.st_mode));
   }
 }
 
