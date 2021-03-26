@@ -83,6 +83,8 @@ class short_string {
   constexpr zstring_view string_view() const noexcept { return {s_, l_}; }
   std::string string() const { return std::string(s_, l_); }
 
+  static constexpr len_t capacity() noexcept { return MaxLen; }
+
   constexpr void assign(std::string_view rhs) noexcept {
     auto copy_end = std::copy_n(rhs.data(), rhs.length(), s_);
     *copy_end = '\0';
