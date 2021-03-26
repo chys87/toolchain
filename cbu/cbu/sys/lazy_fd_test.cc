@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,82 +27,45 @@
  */
 
 
-#include "cbu/sys/init_guard.h"
+#include "cbu/sys/lazy_fd.h"
 
 #include <thread>
 #include <vector>
+#include<fcntl.h>
 
 #include <gtest/gtest.h>
 
-namespace cbu {
-inline namespace cbu_init_guard {
+namespace cbu::inline cbu_init_guard {
 namespace {
 
-constexpr int sleep_unit = 300 * 1000;
-
-TEST(InitGuardTest, InitGuard) {
-  InitGuard guard;
-  std::atomic<int> succ{0};
-  std::atomic<int> throws{0};
-  std::atomic<int> caught{0};
-
-  auto throwing = [&](int us) {
-    usleep(us);
-    try {
-      guard.init([&](int throw_val) {
-        ++throws;
-        throw throw_val;
-      }, 5);
-    } catch (int) {
-      ++caught;
-    }
-  };
-  auto nonthrowing = [&](int us) {
-    usleep(us);
-    guard.init([&]() {
-      ++succ;
-    });
-  };
-
-  std::vector<std::thread> threads;
-  for (int i = 0; i < 10; ++i) {
-    threads.push_back(std::thread(throwing, i * sleep_unit));
-  }
-  for (int i = 0; i < 5; ++i) {
-    threads.push_back(std::thread(nonthrowing, (i + 5) * sleep_unit));
-  }
-
-  for (auto& thr: threads) {
-    thr.join();
-  }
-
-  EXPECT_EQ(succ.load(), 1);
-  EXPECT_LE(throws.load(), 6);
-  EXPECT_GE(throws.load(), 4);
-  EXPECT_EQ(caught.load(), throws.load());
-}
-
-struct Cls {
-  Cls() { ++ctor; }
-  ~Cls() { ++dtor; }
-
-  static inline std::atomic<int> ctor{0};
-  static inline std::atomic<int> dtor{0};
-};
-
-TEST(InitGuardTest, LazyInit) {
+TEST(LazyFDTest, LazyFD) {
   {
-    LazyInit<Cls> lz;
-    EXPECT_FALSE(lz.inited());
-    lz.init();
-    EXPECT_TRUE(lz.inited());
-    lz.init();
-    EXPECT_TRUE(lz.inited());
+    LazyFD lfd;
+    EXPECT_LT(lfd.fd(), 0);
+    lfd.init([]() noexcept { return open("/dev/null", O_RDONLY | O_CLOEXEC); });
+    EXPECT_GE(lfd.fd(), 0);
   }
-  EXPECT_EQ(Cls::ctor.load(), 1);
-  EXPECT_EQ(Cls::dtor.load(), 1);
+
+  {
+    LazyFD lfd;
+    EXPECT_LT(lfd.fd(), 0);
+
+    std::vector<std::thread> threads;
+    std::atomic<int> called = 0;
+    for (int i = 0; i < 5; ++i) {
+      threads.push_back(std::thread([&]() {
+        usleep(10 * 1000);
+        lfd.init([&]() {
+          usleep(5 * 1000);
+          ++called;
+          return open("/dev/null", O_RDONLY | O_CLOEXEC);
+        });
+      }));
+    }
+    for (auto& thread : threads) thread.join();
+    EXPECT_EQ(called.load(), 1);
+  }
 }
 
-} // namespace
-} // inline namespace cbu_init_guard
-} // namespace cbu
+}  // namespace
+}  // namespace cbu::inline cbu_init_guard

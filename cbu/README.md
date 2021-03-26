@@ -100,6 +100,8 @@ This one is just a hobby - a crazy one.
 [`cbu/sys`](cbu/sys): System utilities
 
 * `cacheless.h`: Support for non-temporal copy and store
+* `init_guard.h`: An initialization guard
+* `lazy_fd.h`: A lazily initialized file descriptor type
 * `low_level_mutex.h`: Implement a very simple and low-level mutex (for use in low-level code such as malloc)
 
 ### cbu/tweak

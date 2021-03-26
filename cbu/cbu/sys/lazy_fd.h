@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,63 +26,54 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
+#include <atomic>
+#include <limits>
+#include <memory>
+#include <new>
+
+#include "cbu/common/defer.h"
+#include "cbu/compat/atomic_ref.h"
+#include "cbu/fsyscall/fsyscall.h"
 #include "cbu/sys/init_guard.h"
 
-#include <linux/futex.h>
-#include <limits>
-
-#include "cbu/fsyscall/fsyscall.h"
-
 namespace cbu {
-inline namespace cbu_init_guard {
 
-bool InitGuard::uninit() noexcept {
-  int v = std::atomic_ref(v_).load(std::memory_order_acquire);
-  while (inited(v)) {
-    if (std::atomic_ref(v_).compare_exchange_weak(
-            v, ABORTED, std::memory_order_acquire, std::memory_order_acquire)) {
-      return true;
-    }
+// Like ScopedFD, but supports atomic lazy initialization
+class LazyFD {
+ public:
+  explicit constexpr LazyFD(int fd = -1) noexcept
+      : ig_(InitGuard::LowLevelInit(negative_to_init(fd))) {}
+  ~LazyFD() noexcept {
+    int fd = *ig_.raw_value_ptr();
+    if (fd >= 0) ::fsys_close(fd);
   }
-  return false;
-}
 
-bool InitGuard::guard_lock(int v) noexcept {
-  for (;;) {
-    while (v == INIT || v == ABORTED) {
-      if (std::atomic_ref(v_).compare_exchange_weak(
-              v, (v == INIT) ? RUNNING : RUNNING_WAITING,
-              std::memory_order_acquire, std::memory_order_relaxed)) {
-        return true;
-      }
-    }
+  LazyFD(const LazyFD&) = delete;
+  LazyFD& operator=(const LazyFD&) = delete;
 
-    if (inited(v)) return false;
+  constexpr int fd() const noexcept { return *ig_.raw_value_ptr(); }
+  constexpr operator int() const noexcept { return fd(); }
+  explicit operator bool() const = delete;
 
-    if (v != RUNNING_WAITING) {
-      if (!std::atomic_ref(v_).compare_exchange_strong(
-              v, RUNNING_WAITING, std::memory_order_acquire,
-              std::memory_order_relaxed) &&
-          v != RUNNING_WAITING) {
-        continue;
-      }
-    }
-    fsys_futex4(&v_, FUTEX_WAIT_PRIVATE, v, nullptr);
-    v = std::atomic_ref(v_).load(std::memory_order_relaxed);
+  template <typename Foo, typename... Args>
+  void init(Foo&& foo, Args&&... args) noexcept(
+      noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
+    ig_.init(std::forward<Foo>(foo), std::forward<Args>(args)...);
   }
-}
 
-void InitGuard::guard_release(int v) noexcept {
-  int old_v = std::atomic_ref(v_).exchange(v, std::memory_order_release);
-  if (old_v == RUNNING_WAITING)
-    fsys_futex3(&v_, FUTEX_WAKE_PRIVATE, std::numeric_limits<int>::max());
-}
+ private:
+  static constexpr int negative_to_init(int fd) noexcept {
+    return fd >= 0 ? fd : InitGuard::INIT;
+  }
 
-void InitGuard::guard_abort() noexcept {
-  std::atomic_ref(v_).store(ABORTED, std::memory_order_release);
-  // Only need to wake up one, which (if existent) will retry construction
-  fsys_futex3(&v_, FUTEX_WAKE_PRIVATE, 1);
-}
+  static constexpr int negative_to_aborted(int fd) noexcept {
+    return fd >= 0 ? fd : InitGuard::ABORTED;
+  }
 
-}  // namespace cbu_init_guard
+ private:
+  InitGuard ig_;
+};
+
 }  // namespace cbu

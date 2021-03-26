@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,13 +29,12 @@
 #pragma once
 
 #include <atomic>
+#include <limits>
 #include <memory>
-#include <mutex>
 #include <new>
 
-#include "cbu/compat/atomic_ref.h"
 #include "cbu/common/defer.h"
-#include "cbu/sys/low_level_mutex.h"
+#include "cbu/compat/atomic_ref.h"
 
 namespace cbu {
 inline namespace cbu_init_guard {
@@ -47,49 +46,88 @@ class InitGuard {
   InitGuard(const InitGuard&) = delete;
   InitGuard& operator=(const InitGuard&) = delete;
 
+  // Low-level interface.  Only use this if you know exactly what you're doing.
+  enum struct LowLevelInit : int {};
+  explicit constexpr InitGuard(LowLevelInit v) noexcept
+      : v_(static_cast<int>(v)) {}
+
+  // This is the low-level interface, the callback should specify the
+  // value representing "DONE" to be stored in v_.
+  // Only use this if you know exactly what you're doing.
   template <typename Foo, typename... Args>
-  bool init(Foo&& foo, Args&&... args)
-      noexcept(noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
+  void init_with_reuse(Foo&& foo, Args&&... args) noexcept(
+      noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
     int v = std::atomic_ref(v_).load(std::memory_order_relaxed);
-    if (v != DONE && guard_lock(v)) {
-      bool normal = false;
-      CBU_DEFER(
-        if (normal)
-          guard_release();
+    if (!inited(v) && guard_lock(v)) {
+      int done_value = ABORTED;
+      CBU_DEFER({
+        if (inited(done_value))
+          guard_release(done_value);
         else
           guard_abort();
-      );
+      });
+      done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
+    }
+  }
+
+  // This is the normal interface you should use.
+  template <typename Foo, typename... Args>
+  void init(Foo&& foo, Args&&... args) noexcept(
+      noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
+    init_with_reuse([&]() noexcept(noexcept(
+                        std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
       std::forward<Foo>(foo)(std::forward<Args>(args)...);
-      normal = true;
+      return DEFAULT_DONE;
+    });
+  }
+
+  // IMPORTANT: The status may be changed after this function returns
+  bool inited() const noexcept {
+    return inited(std::atomic_ref(v_).load(std::memory_order_acquire));
+  }
+
+  bool inited_no_race() const noexcept { return inited(v_); }
+
+  // After unit, the status is modified to ABORTED
+  // (It's unsafe to reset it to INIT)
+  bool uninit() noexcept;
+
+  bool uninit_no_race() noexcept {
+    if (inited(v_)) {
+      v_ = ABORTED;
       return true;
     } else {
       return false;
     }
   }
 
-  // IMPORTANT: The status may be changed after this function returns
-  bool inited() const noexcept {
-    return std::atomic_ref(v_).load(std::memory_order_relaxed) == DONE;
-  }
+  static constexpr bool inited(int v) noexcept { return v >= MIN_DONE; }
 
-  bool inited_no_race() const noexcept {
-    return v_ == DONE;
-  }
+  // Use this only if you know exactly what you're doing
+  // Typically it's only used by LazyScopedFD and similar situations
+  constexpr const int* raw_value_ptr() const noexcept { return &v_; }
+  constexpr int* raw_value_ptr(int v) noexcept { return &v_; }
 
  private:
   bool guard_lock(int v) noexcept;
-  void guard_release() noexcept;
+  void guard_release(int v = DEFAULT_DONE) noexcept;
   void guard_abort() noexcept;
 
- private:
+ public:
+  // Intentionally use negative values, so that 0 and positive values can be
+  // used for other purposes (e.g. as FD)
   enum {
-    INIT = 0,
-    ABORTED = 1,
-    RUNNING = 2,
-    RUNNING_WAITING = 3,
-    DONE = 4,
+    INIT = std::numeric_limits<int>::min(),
+    ABORTED,
+    RUNNING,
+    RUNNING_WAITING,
+    MIN_DONE,
+    DEFAULT_DONE = 0,
+    // All other values are also considered "DONE"
   };
-  int v_ {INIT};
+
+ private:
+  int v_{INIT};
 };
 
 template <typename T>
@@ -102,21 +140,17 @@ class LazyInit {
   }
 
   template <typename... Args>
-  bool init(Args&&... args) noexcept(noexcept(T(std::forward<Args>(args)...))) {
-    return guard_.init([&, this]() {
+  void init(Args&&... args) noexcept(noexcept(T(std::forward<Args>(args)...))) {
+    guard_.init([&, this]() {
       // libc++ doesn't have std::construct_at yet
       new (pointer()) T(std::forward<Args>(args)...);
     });
   }
 
   // IMPORTANT: The status may be changed after this function returns
-  bool inited() const noexcept {
-    return guard_.inited();
-  }
+  bool inited() const noexcept { return guard_.inited(); }
 
-  T* pointer() noexcept {
-    return std::launder(reinterpret_cast<T*>(buffer_));
-  }
+  T* pointer() noexcept { return std::launder(reinterpret_cast<T*>(buffer_)); }
   const T* pointer() const noexcept {
     return std::launder(reinterpret_cast<const T*>(buffer_));
   }
@@ -130,5 +164,5 @@ class LazyInit {
   InitGuard guard_;
 };
 
-} // inline namespace cbu_init_guard
-} // namespace cbu
+}  // namespace cbu_init_guard
+}  // namespace cbu
