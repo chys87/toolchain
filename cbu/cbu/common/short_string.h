@@ -58,12 +58,17 @@ class short_string {
 
   constexpr short_string() noexcept : s_{}, l_{0} {}
 
-  template <std::size_t LenP1> requires (LenP1 - 1 <= MaxLen)
-  consteval short_string(const char (&src)[LenP1]) noexcept {
-    constexpr std::size_t Len = LenP1 - 1;
-    std::copy_n(src, LenP1, s_);
-    std::fill_n(s_ + LenP1, MaxLen + 1 - LenP1, 0);
-    l_ = Len;
+  template <std::size_t LenP1>
+  consteval short_string(const char (&src)[LenP1]) noexcept
+      : short_string(std::string_view(src, LenP1 - 1)) {
+    // Use a static assertion rather than a concept, to prevent
+    // longer strings from matching the following std::string_view overload.
+    static_assert(LenP1 <= MaxLen + 1);
+  }
+
+  constexpr short_string(std::string_view src) noexcept {
+    if (std::is_constant_evaluated()) std::fill_n(s_, MaxLen + 1, 0);
+    assign(src);
   }
 
   constexpr char (&buffer() noexcept)[MaxLen + 1] { return s_; }
