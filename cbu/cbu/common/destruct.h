@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,31 +38,47 @@ struct DestructNoDelete {
   void operator()(void *) const noexcept {}
 };
 
+template <std::size_t alignment = 0>
 struct DestructScalarDelete {
   void operator()(void *p) const noexcept {
-    ::operator delete(p);
+    if constexpr (alignment > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+      ::operator delete(p, std::align_val_t(alignment));
+    else
+      ::operator delete(p);
   }
 };
 
+template <std::size_t alignment = 0>
 struct DestructArrayDelete {
   void operator()(void *p) const noexcept {
-    ::operator delete[](p);
+    if constexpr (alignment > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+      ::operator delete[](p, std::align_val_t(alignment));
+    else
+      ::operator delete[](p);
   }
 };
 
+template <std::size_t alignment = 0>
 struct DestructSizedScalarDelete {
   std::size_t size;
 
   void operator()(void *p) const noexcept {
-    ::operator delete(p, size);
+    if constexpr (alignment > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+      ::operator delete(p, size, std::align_val_t(alignment));
+    else
+      ::operator delete(p, size);
   }
 };
 
+template <std::size_t alignment = 0>
 struct DestructSizedArrayDelete {
   std::size_t size;
 
   void operator()(void *p) const noexcept {
-    ::operator delete[](p, size);
+    if constexpr (alignment > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+      ::operator delete[](p, size, std::align_val_t(alignment));
+    else
+      ::operator delete[](p, size);
   }
 };
 
