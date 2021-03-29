@@ -320,6 +320,11 @@ inline constexpr T pow2_floor(T n) noexcept {
   return (std::make_unsigned_t<T>(1) << (8 * sizeof(T) - 1)) >> clz(n);
 }
 
+template <typename T> requires std::is_integral_v<T>
+inline constexpr T is_pow2(T n) noexcept {
+  return (n > 0 && (n & (n - 1)) == 0);
+}
+
 static_assert(pow2_ceil(0) == 1);
 static_assert(pow2_ceil(1) == 1);
 static_assert(pow2_ceil(2) == 2);
@@ -338,6 +343,11 @@ static_assert(pow2_floor(7) == 4);
 static_assert(pow2_floor(8) == 8);
 static_assert(pow2_floor(15) == 8);
 static_assert(pow2_floor(uint32_t(0xffff0f0f)) == 0x80000000);
+
+static_assert(!is_pow2(0));
+static_assert(is_pow2(1));
+static_assert(is_pow2(2));
+static_assert(!is_pow2(3));
 
 } // inline namespace cbu_bit
 } // namespace cbu
