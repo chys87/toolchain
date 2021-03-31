@@ -349,5 +349,121 @@ static_assert(is_pow2(1));
 static_assert(is_pow2(2));
 static_assert(!is_pow2(3));
 
-} // inline namespace cbu_bit
-} // namespace cbu
+template <typename T> requires (!std::is_enum_v<T> && std::is_signed_v<T>)
+inline constexpr std::make_unsigned_t<T> as_unsigned(const T& x) noexcept {
+  return x;
+}
+
+template <typename T> requires (!std::is_enum_v<T> && !std::is_signed_v<T>)
+inline constexpr const T& as_unsigned(const T& x) noexcept { return x; }
+
+template <typename T> requires std::is_enum_v<T>
+inline constexpr auto as_unsigned(const T& x) noexcept {
+  return static_cast<std::make_unsigned_t<std::underlying_type_t<T>>>(x);
+}
+
+namespace bit_mask_translate_detail {
+
+template <typename Type>
+struct NormalizeType {
+  using type = std::make_unsigned_t<Type>;
+};
+
+template <typename Type> requires std::is_enum_v<Type>
+struct NormalizeType<Type> {
+  using type = std::make_unsigned_t<std::underlying_type_t<Type>>;
+};
+
+template <auto... TABLE>
+struct TypeTraits;
+
+template <auto FROM, auto TO>
+struct TypeTraits<FROM, TO> {
+  using FromType = typename NormalizeType<decltype(FROM)>::type;
+  using ToType = typename NormalizeType<decltype(TO)>::type;
+};
+
+template <auto FROM, auto TO, auto FROM1, auto TO1, auto... MORE>
+struct TypeTraits<FROM, TO, FROM1, TO1, MORE...> {
+  using FromType =
+      std::common_type_t<typename TypeTraits<FROM, TO>::FromType,
+                         typename TypeTraits<FROM1, TO1, MORE...>::FromType>;
+  using ToType =
+      std::common_type_t<typename TypeTraits<FROM, TO>::ToType,
+                         typename TypeTraits<FROM1, TO1, MORE...>::ToType>;
+};
+
+template <typename FromType, typename ToType, auto... TABLE>
+struct IdentityMask;
+
+template <typename FromType, typename ToType>
+struct IdentityMask<FromType, ToType> {
+  static constexpr ToType IDENTITY_MASK = ToType();
+};
+
+template <typename FromType, typename ToType, auto FROM, auto TO, auto... MORE>
+struct IdentityMask<FromType, ToType, FROM, TO, MORE...> {
+  static constexpr ToType IDENTITY_MASK =
+      IdentityMask<FromType, ToType, MORE...>::IDENTITY_MASK |
+      (as_unsigned(FROM) == as_unsigned(TO) ? as_unsigned(TO) : ToType());
+};
+
+template <typename FromType, typename ToType, auto... TABLE>
+struct ResidualApply;
+
+template <typename FromType, typename ToType>
+struct ResidualApply<FromType, ToType> {
+  static constexpr ToType apply(ToType res, FromType input) noexcept {
+    return res;
+  }
+};
+
+template <typename FromType, typename ToType, auto FROM, auto TO, auto... MORE>
+struct ResidualApply<FromType, ToType, FROM, TO, MORE...> {
+  static constexpr ToType apply(ToType res, FromType input) noexcept {
+    constexpr auto UF = as_unsigned(FROM);
+    constexpr auto UT = as_unsigned(TO);
+    if constexpr (UF != UT) {
+      if constexpr (is_pow2(UF) && is_pow2(UT)) {
+        // TODO: This can be further optimized to combine many {FROM, TO}
+        // with the same shift distances together
+        if constexpr (UF > UT)
+          res |= (input / (UF / UT)) & UT;
+        else
+          res |= (input * (UT / UF)) & UT;
+      } else {
+        if (input & UF) res |= UT;
+      }
+    }
+    return ResidualApply<FromType, ToType, MORE...>::apply(res, input);
+  }
+};
+
+static_assert(std::is_same_v<typename TypeTraits<1u, 2, 4l, short(8)>::FromType,
+                             unsigned long>);
+static_assert(std::is_same_v<typename TypeTraits<1u, 2, 4l, short(8)>::ToType,
+                             unsigned int>);
+static_assert(IdentityMask<unsigned, unsigned, 1, 1, 4, 8>::IDENTITY_MASK == 1);
+
+}  // namespace bit_mask_translate_detail
+
+template <auto... TABLE>
+constexpr auto bit_mask_translate(
+    typename bit_mask_translate_detail::TypeTraits<TABLE...>::FromType
+        input) noexcept {
+  using namespace bit_mask_translate_detail;
+  using ToType = typename TypeTraits<TABLE...>::ToType;
+  using FromType = typename TypeTraits<TABLE...>::FromType;
+  ToType res =
+      ToType(input & IdentityMask<FromType, ToType, TABLE...>::IDENTITY_MASK);
+  return ResidualApply<FromType, ToType, TABLE...>::apply(res, input);
+}
+
+static_assert(bit_mask_translate<1, 1, 4, 8>(1) == 1);
+static_assert(bit_mask_translate<1, 1, 4, 8>(0) == 0);
+static_assert(bit_mask_translate<1, 1, 4, 8>(4) == 8);
+static_assert(bit_mask_translate<1, 1, 4, 8>(5) == 9);
+static_assert(bit_mask_translate<1, 1, 4, 8>(37) == 9);
+
+}  // namespace cbu_bit
+}  // namespace cbu
