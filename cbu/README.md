@@ -50,6 +50,7 @@ If you use anything else, you have to take care of it yourself.
 * `concepts.h`: Somewhat like C++20's [`<concepts>`](https://en.cppreference.com/w/cpp/header/concepts)
 * `defer.h`: Provides macro `CBU_DEFER` for easier [RAII](https://en.cppreference.com/w/cpp/language/raii)
 * `destruct.h`: Provides several destruction functions
+* `double_integer.h`: Emulated integer types of double size for constexpr evaluation
 * `encoding.h`: UTF-8 functions
 * `escape.h`: C/JSON style string escaping utilities
 * `fastarith.h`: Various C++ arithmetic functions
