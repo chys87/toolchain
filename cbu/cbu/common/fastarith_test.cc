@@ -27,10 +27,21 @@
  */
 
 #include "fastarith.h"
-#include <cmath>
+
 #include <gtest/gtest.h>
 
+#include <cmath>
+#include <iostream>
+
 namespace cbu {
+
+// We define it so that gtests prints more readable messages, but we don't
+// define it in the header to avoid including <iostream>
+template <typename T>
+std::ostream& operator<<(std::ostream& s, const SuperInteger<T>& v) {
+  if (!v.pos) s << '-';
+  return s << std::conditional_t<sizeof(T) == 1, unsigned int, T>(v.abs);
+}
 
 TEST(FastPowTest, Unsigned) {
   EXPECT_EQ(1, fast_powu(2, 0));
@@ -86,4 +97,128 @@ TEST(PowLog10, ILog10) {
   EXPECT_EQ(9, ilog10(4294967295));
 }
 
-} // namespace cbu
+TEST(SuperIntegerTest, ConversionAndCompare) {
+  SuperInteger a(5);
+  EXPECT_TRUE(a.pos);
+  EXPECT_EQ(a.abs, 5);
+
+  SuperInteger b(std::numeric_limits<int64_t>::min());
+  EXPECT_FALSE(b.pos);
+  EXPECT_EQ(b.abs, -uint64_t(std::numeric_limits<int64_t>::min()));
+
+  EXPECT_GT(a, b);
+  EXPECT_GE(a, b);
+  EXPECT_LE(b, a);
+  EXPECT_LT(b, a);
+
+  EXPECT_GT(SuperInteger(12345), SuperInteger(1));
+  EXPECT_LT(SuperInteger(-12345), SuperInteger(-1));
+
+  EXPECT_TRUE(SuperInteger<uint8_t>(uint8_t(255)).fits_in<uint8_t>());
+  EXPECT_FALSE(SuperInteger<uint8_t>(uint8_t(255)).fits_in<int8_t>());
+  EXPECT_TRUE(SuperInteger<uint8_t>(int8_t(-1)).fits_in<int8_t>());
+  EXPECT_FALSE(SuperInteger<uint8_t>(int8_t(-1)).fits_in<uint8_t>());
+  EXPECT_FALSE((-SuperInteger<uint8_t>(uint8_t(255))).fits_in<uint8_t>());
+  EXPECT_FALSE((-SuperInteger<uint8_t>(uint8_t(255))).fits_in<int8_t>());
+}
+
+TEST(SuperIntegerTest, AddOverflow) {
+  using S = SuperInteger<uint8_t>;
+
+  {
+    S a(uint8_t(255));
+    ASSERT_FALSE(a.add_overflow(uint8_t(0)));
+    ASSERT_EQ(a, uint8_t(255));
+
+    ASSERT_FALSE(a.add_overflow(int8_t(-1)));
+    ASSERT_EQ(a, uint8_t(254));
+
+    ASSERT_TRUE(a.add_overflow(int8_t(3)));
+    ASSERT_EQ(a, uint8_t(1));
+  }
+  {
+    S a = -S(uint8_t(255));
+    ASSERT_FALSE(a.add_overflow(uint8_t(1)));
+    ASSERT_EQ(a.abs, 254);
+
+    ASSERT_TRUE(a.add_overflow(int8_t(-3)));
+    ASSERT_FALSE(a.pos);
+    ASSERT_EQ(a.abs, 1);
+  }
+}
+
+TEST(SuperIntegerTest, MulOverflow) {
+  using S = SuperInteger<uint8_t>;
+  EXPECT_FALSE(S(uint8_t(255)).mul_overflow(int8_t(0)));
+  EXPECT_FALSE(S(uint8_t(255)).mul_overflow(int8_t(1)));
+  EXPECT_FALSE(S(uint8_t(255)).mul_overflow(int8_t(-1)));
+  EXPECT_TRUE(S(uint8_t(255)).mul_overflow(int8_t(-2)));
+  EXPECT_TRUE(S(uint8_t(255)).mul_overflow(int8_t(2)));
+}
+
+template <typename V, typename T, typename U>
+inline consteval std::pair<bool, V> add_wrap(T a, U b) noexcept {
+  V res;
+  bool overflow = add_overflow(a, b, &res);
+  return {overflow, res};
+}
+
+TEST(OverflowTest, ConstexprAddOverflow) {
+  {
+    constexpr auto a = add_wrap<uint32_t>(255, 1);
+    ASSERT_FALSE(a.first);
+    EXPECT_EQ(a.second, 256);
+  }
+  {
+    constexpr auto a = add_wrap<uint8_t>(255, 1);
+    ASSERT_TRUE(a.first);
+    EXPECT_EQ(a.second, 0);
+  }
+  {
+    constexpr auto a = add_wrap<uint8_t>(254, 1);
+    ASSERT_FALSE(a.first);
+    EXPECT_EQ(a.second, 255);
+  }
+  {
+    constexpr auto a = add_wrap<int8_t>(254, 1);
+    ASSERT_TRUE(a.first);
+    EXPECT_EQ(a.second, -1);
+  }
+}
+
+template <typename V, typename T, typename U>
+inline consteval std::pair<bool, V> mul_wrap(T a, U b) noexcept {
+  V res;
+  bool overflow = mul_overflow(a, b, &res);
+  return {overflow, res};
+}
+
+TEST(OverflowTest, ConstexprMulOverflow) {
+  {
+    constexpr auto a = mul_wrap<uint32_t>(128, 128);
+    ASSERT_FALSE(a.first);
+    ASSERT_EQ(a.second, 16384);
+  }
+  {
+    constexpr auto a = mul_wrap<uint8_t>(127, 2);
+    ASSERT_FALSE(a.first);
+    ASSERT_EQ(a.second, 254);
+  }
+  {
+    constexpr auto a = mul_wrap<int8_t>(127, 2);
+    ASSERT_TRUE(a.first);
+    ASSERT_EQ(a.second, -2);
+  }
+  {
+    constexpr auto a = mul_wrap<int8_t>(-64, 2);
+    ASSERT_FALSE(a.first);
+    ASSERT_EQ(a.second, -128);
+  }
+  {
+    constexpr auto a = mul_wrap<int8_t>(64, 2);
+    ASSERT_TRUE(a.first);
+    ASSERT_EQ(a.second, -128);
+  }
+}
+
+}  // namespace cbu

@@ -28,10 +28,14 @@
 
 #pragma once
 
-#include "bit_cast.h"
-#include "concepts.h"
-#include "cbu/compat/type_identity.h"
+#include <compare>
 #include <cstdint>
+#include <limits>
+#include <utility>
+
+#include "cbu/common/bit_cast.h"
+#include "cbu/common/concepts.h"
+#include "cbu/compat/type_identity.h"
 
 namespace cbu {
 inline namespace cbu_fastarith {
@@ -132,13 +136,162 @@ inline double uint64_to_double(std::uint64_t u) {
   }
 }
 
+// This class stores any signed or unsigned integer type precisely.
+// It's optimized for constexpr evaluation, and mainly used to help implement
+// constexpr overflow functions.
+template <typename T = std::uintmax_t>
+struct SuperInteger {
+  bool pos;
+  T abs;
+
+  template <Raw_integral U> requires(sizeof(U) <= sizeof(T))
+  constexpr SuperInteger(U x) noexcept
+      : pos(x >= 0), abs(std::make_unsigned_t<U>(x < 0 ? -x : x)) {}
+
+  constexpr SuperInteger(bool p, T a) noexcept : pos(a ? p : true), abs(a) {}
+
+  constexpr SuperInteger(const SuperInteger&) = default;
+  constexpr SuperInteger& operator=(const SuperInteger&) = default;
+
+  template <Raw_integral U>
+  constexpr bool fits_in() const noexcept {
+    if constexpr (std::is_signed_v<U>) {
+      if constexpr (sizeof(U) > sizeof(T)) {
+        return true;
+      } else if (pos) {
+        return abs <= std::numeric_limits<U>::max();
+      } else {
+        return abs <=
+               std::make_unsigned_t<U>(std::numeric_limits<U>::max()) + 1;
+      }
+    } else {
+      return pos && abs <= std::numeric_limits<U>::max();
+    }
+  }
+
+  template <Raw_integral U>
+  constexpr U cast() const noexcept {
+    return pos ? U(abs) : -U(abs);
+  }
+
+  template <Raw_integral U>
+  constexpr bool cast(U* res) const noexcept {
+    *res = cast<U>();
+    return fits_in<U>();
+  }
+
+  static constexpr bool base_add_overflow(T a, T b, T* c) noexcept {
+    *c = a + b;
+    return (*c < a || *c < b);
+  }
+
+  constexpr bool add_overflow(const SuperInteger& o) noexcept {
+    if (pos == o.pos) {
+      return base_add_overflow(abs, o.abs, &abs);
+    } else if (pos && !o.pos) {
+      if (abs >= o.abs) {
+        abs -= o.abs;
+        pos = true;
+      } else {
+        abs = o.abs - abs;
+        pos = false;
+      }
+      return false;
+    } else {
+      // !pos && o.pos
+      if (abs <= o.abs) {
+        abs = o.abs - abs;
+        pos = true;
+      } else {
+        abs -= o.abs;
+        pos = false;
+      }
+      return false;
+    }
+  }
+
+  constexpr bool sub_overflow(const SuperInteger& o) noexcept {
+    return add_overflow(-o);
+  }
+
+  constexpr bool mul_overflow(const SuperInteger& o) noexcept {
+    if (abs == 0 || o.abs == 0) {
+      abs = 0;
+      pos = true;
+      return false;
+    } else {
+      pos = (pos == o.pos);
+      bool overflow = abs > std::numeric_limits<T>::max() / o.abs;
+      abs *= o.abs;
+      return overflow;
+    }
+  }
+
+  constexpr void normalize() noexcept {
+    if (pos == 0) abs = true;
+  }
+
+  constexpr SuperInteger operator-() const noexcept {
+    return SuperInteger(abs ? !pos : true, abs);
+  }
+  constexpr SuperInteger operator+() const noexcept { return *this; }
+};
+
+template <typename T, typename U>
+inline constexpr bool operator==(const SuperInteger<T>& a,
+                                 const SuperInteger<U>& b) noexcept {
+  return (a.pos == b.pos && a.abs == b.abs);
+}
+
+template <typename T, Raw_integral U>
+inline constexpr bool operator==(const SuperInteger<T>& a, U b) noexcept {
+  return (a == SuperInteger<std::make_unsigned_t<U>>(b));
+}
+
+template <typename T, Raw_integral U>
+inline constexpr bool operator==(U b, const SuperInteger<T>& a) noexcept {
+  return (SuperInteger<std::make_unsigned_t<U>>(b) == a);
+}
+
+template <typename T, typename U>
+inline constexpr std::strong_ordering operator<=>(
+    const SuperInteger<T>& a, const SuperInteger<U>& b) noexcept {
+  if (a.pos != b.pos)
+    return static_cast<unsigned char>(a.pos) <=>
+           static_cast<unsigned char>(b.pos);
+  else if (a.pos)
+    return a.abs <=> b.abs;
+  else
+    return b.abs <=> a.abs;
+}
+
+template <typename T, Raw_integral U>
+inline constexpr auto operator<=>(const SuperInteger<T>& a, U b) noexcept {
+  return (a <=> SuperInteger<std::make_unsigned_t<U>>(b));
+}
+
+template <typename T, Raw_integral U>
+inline constexpr auto operator<=>(U b, const SuperInteger<T>& a) noexcept {
+  return (SuperInteger<std::make_unsigned_t<U>>(b) <=> a);
+}
+
 template <Raw_integral A, Raw_integral B, Raw_integral C>
-inline bool mul_overflow(A a, B b, C *c) noexcept {
+inline constexpr bool mul_overflow(A a, B b, C *c) noexcept {
+  if (std::is_constant_evaluated()) {
+    SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
+    bool overflow = si.mul_overflow(b);
+    return !si.cast(c) || overflow;
+  }
   return __builtin_mul_overflow(a, b, c);
 }
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
-inline bool add_overflow(A a, B b, C *c) noexcept {
+inline constexpr bool add_overflow(A a, B b, C *c) noexcept {
+  if (std::is_constant_evaluated()) {
+    SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
+    bool overflow = si.add_overflow(b);
+    return !si.cast(c) || overflow;
+  }
   return __builtin_add_overflow(a, b, c);
 }
 
@@ -155,7 +308,12 @@ inline bool add_overflow(T* a, std::size_t b, U** c) noexcept {
 }
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
-inline bool sub_overflow(A a, B b, C *c) noexcept {
+inline constexpr bool sub_overflow(A a, B b, C *c) noexcept {
+  if (std::is_constant_evaluated()) {
+    SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
+    bool overflow = si.sub_overflow(b);
+    return !si.cast(c) || overflow;
+  }
   return __builtin_sub_overflow(a, b, c);
 }
 
@@ -164,7 +322,12 @@ inline bool sub_overflow(A a, B b, C *c) noexcept {
     (defined __i386__ || defined __x86_64__)
 template <Raw_unsigned_integral U, Raw_integral V>
 requires (4 <= sizeof(U) and sizeof(V) <= sizeof(U))
-inline bool sub_overflow(U a, V b, U *c) noexcept {
+inline constexpr bool sub_overflow(U a, V b, U *c) noexcept {
+  if (std::is_constant_evaluated()) {
+    SuperInteger<std::make_unsigned_t<std::common_type_t<U, V>>> si(a);
+    bool overflow = si.sub_overflow(b);
+    return !si.cast(c) || overflow;
+  }
   if (std::is_signed<V>::value && (!__builtin_constant_p(b) || b < 0))
     return __builtin_sub_overflow(a, b, c);
   bool res;
