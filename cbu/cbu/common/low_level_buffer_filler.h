@@ -55,32 +55,33 @@ struct FillByEndian {
   }
 };
 
+template <Integral T>
+using FillLittleEndian = FillByEndian<T, std::endian::little>;
+template <Integral T>
+using FillBigEndian = FillByEndian<T, std::endian::big>;
+template <Integral T>
+using FillNativeEndian = FillByEndian<T, std::endian::native>;
+
 struct FillOptions {
-  std::uint64_t upper_bound = T();
+  std::uint64_t upper_bound = 0;
   unsigned width = 0;
   char fill = '0';
 
   template <typename Callback>
   constexpr FillOptions with(Callback cb) noexcept {
     FillOptions res = *this;
-    cb(res);
+    cb(&res);
     return res;
   }
 
-  constexpr FillOptions with_upper_bound(std::uint64_t x) noexcept {
-    return with([x](FillOptions * fo) noexcept constexpr {
-      fo->upper_bound = x;
-    });
-  }
-
   constexpr FillOptions with_width(unsigned width) noexcept {
-    return with([width](FillOptions * fo) noexcept constexpr {
+    return with([width](FillOptions * fo) constexpr noexcept {
       fo->width = width;
     });
   }
 
-  constexpr FillOptions with_will(char fill) noexcept {
-    return with([fill](FillOptions * fo) noexcept constexpr {
+  constexpr FillOptions with_fill(char fill) noexcept {
+    return with([fill](FillOptions * fo) constexpr noexcept {
       fo->fill = fill;
     });
   }
@@ -88,127 +89,81 @@ struct FillOptions {
 
 // FillDec converts an unsigned number to a decimal string.
 // The generated code is aggressively unrolled so it can be fairly bloated.
-template <FillOptions Options = FillOptions()>
+template <std::uint64_t UpperBound, FillOptions Options = FillOptions()>
 struct FillDec {
   std::uint64_t value;
 
   template <Raw_char_type Ch>
   constexpr Ch* operator()(Ch* p) const noexcept {
     if constexpr (Options.width > 0) {
-      conv_fixed_digit<Ch, Options.upper_bound>(value, p, Options.width);
+      conv_fixed_digit<UpperBound, Options.width>(value, p);
       return p + Options.width;
     } else {
-      Ch* q = conv_flexible_digit<Ch, Options.upper_bound>(value, p);
+      Ch* q = conv_flexible_digit(value, p);
       std::reverse(p, q);
       return q;
     }
   }
 
-  template <Raw_char_type Ch, std::uint32_t UpperBound, unsigned K>
-  static constexpr void conv_fixed_digit(std::uint32_t v,
-                                         Ch* p) const noexcept {
+  template <std::uint64_t UB, unsigned K, Raw_char_type Ch>
+  static constexpr void conv_fixed_digit(std::uint64_t v, Ch* p) noexcept {
     if constexpr (Options.fill != '0' && K < Options.width) {
       if (v == 0) {
-        for (unsigned k = K; k; --k) p[--k] = Ch(Options.fill);
+        for (unsigned k = K; k; --k) p[k - 1] = Options.fill;
         return;
       }
     }
 
-    if constexpr (UpperBound == 1) {
-      for (unsigned k = K; k; --k) p[--k] = Ch('0');
-      return;
+    std::uint64_t quot;
+    std::uint32_t rem;
+    if constexpr (UB == 0) {
+      quot = v / 10;
+      rem = v % 10;
+    } else {
+      quot = cbu::fastdiv<10, UB>(v);
+      rem = cbu::fastmod<10, UB>(v);
     }
 
     if constexpr (K <= 1) {
-      if constexpr (K == 1) {
-        std::uint32_t ones = (UpperBound > 0 && UpperBound <= 10) ? v
-                             : (UpperBound == 0)
-                                 ? v % 10
-                                 : cbu::fastmod<10, UpperBound>(v);
-        p[0] = Ch(ones + '0');
-      }
+      if constexpr (K == 1) p[0] = Ch(rem + '0');
       return;
     }
 
+    p[K - 1] = Ch(rem + '0');
+    // K - 1 should work (as K == 0 doesn't reach here), but GCC's template
+    // instantiater apparently doesn't know this.
+    constexpr unsigned NextK = K ? K - 1 : 0;
+    constexpr std::uint64_t NextUB =
+        UB == 0 ? std::uint64_t(-1) / 10 + 1 : (UB - 1) / 10 + 1;
+    conv_fixed_digit<NextUB, NextK>(quot, p);
+  }
+
+  template <Raw_char_type Ch>
+  static constexpr Ch* conv_flexible_digit(std::uint64_t v, Ch* p) noexcept {
     if constexpr (UpperBound == 0) {
-      std::uint32_t quot = v / 10;
-      std::uint32_t rem = v % 10;
-      p[K - 1] = Ch(rem + '0');
-      conv_fixed_digit<Ch, std::numeric_limits<std::uint32_t>() / 10 + 1,
-                       K - 1>(quot);
-      return;
-    }
-
-    auto [quot, rem] = cbu::fastdivmod<10, UpperBound>(v);
-    p[K - 1] = Ch(rem + '0');
-    conv_fixed_digit<Ch, (UpperBound - 1) / 10 + 1, K - 1>(quot);
-  }
-
-  template <Raw_char_type Ch, std::uint64_t UpperBound, unsigned K>
-  static constexpr void conv_fixed_digit(std::uint64_t v,
-                                         Ch* p) const noexcept {
-    if (UpperBound > 0 &&
-        UpperBound <= std::numeric_limits<std::uint32_t>::max()) {
-      conv_fixed_digit<Ch, std::uint32_t(UpperBound), K>(std::uint32_t(v), p);
-      return;
-    }
-
-    if constexpr (Options.fill != '0' && K < Options.width) {
-      if (v == 0) {
-        for (unsigned k = K; k; --k) p[--k] = Options.fill;
-        return;
-      }
-    }
-
-    if constexpr (K <= 1) {
-      if constexpr (K == 1) p[0] = Ch((v % 10) + '0');
-      return;
-    }
-
-    std::uint64_t quot = v / 10;
-    std::uint64_t rem = v % 10;
-    p[K - 1] = Ch(rem + '0');
-    conv_fixed_digit<Ch,
-                     (UpperBound == 0)
-                         ? std::numeric_limits<std::uint64_t>() / 10 + 1
-                         : (UpperBound - 1) / 10 + 1,
-                     K - 1>(quot);
-  }
-
-  template <Raw_char_type Ch, std::uint64_t UpperBound>
-  static constexpr Ch* conv_flexible_digit(std::uint32_t v,
-                                            Ch* p) const noexcept {
-    if (UpperBound == 0) {
       do {
         *p++ = Ch(v % 10 + '0');
       } while ((v /= 10) != 0);
-      return p;
+    } else {
+      do {
+        *p++ = Ch(cbu::fastmod<10, UpperBound>(v) + '0');
+      } while ((v = cbu::fastdiv<10, UpperBound>(v)) != 0);
     }
-
-    do {
-      *p++ = Ch(cbu::fastmod<10, UpperBound>(v) + '0');
-    }
-  }
-
-  template <Raw_char_type Ch, std::uint64_t UpperBound>
-  static constexpr Ch* conv_flexible_digit(std::uint64_t v,
-                                            Ch* p) const noexcept {
-    if constexpr (UpperBound > 0 &&
-                  UpperBound <= std::numeric_limits<std::uint32_t>::max())
-      return conv_flexible_digit(std::uint32_t(v), p);
-    do {
-      *p++ = Ch(v % 10 + '0');
-    } while ((v /= 10) != 0);
     return p;
   }
 };
 
-template <Integral T>
-using FillLittleEndian = FillByEndian<T, std::endian::little>;
-template <Integral T>
-using FillBigEndian = FillByEndian<T, std::endian::big>;
-template <Integral T>
-using FillNativeEndian = FillByEndian<T, std::endian::native>;
+template <typename T>
+FillDec(T) -> FillDec<
+    (sizeof(T) >= 8 ? 0 : std::make_unsigned_t<T>(-1) + std::uint64_t(1))>;
+
+struct FillSkip {
+  std::ptrdiff_t diff;
+  template <typename Ch>
+  constexpr Ch* operator()(Ch* p) const noexcept {
+    return p + diff;
+  }
+};
 
 // Low-level buffer filler
 template <Char_type Ch>
@@ -259,13 +214,12 @@ class LowLevelBufferFiller {
     { std::forward<Callback>(cb)(filler) } -> std::convertible_to<Ch*>;
   }
   constexpr LowLevelBufferFiller& operator<<(Callback&& cb) noexcept(
-      noexcept(noexcept(cb(*this))) {
+      noexcept(cb(std::declval<LowLevelBufferFiller>()))) {
     p_ = std::forward<Callback>(cb)(*this);
     return *this;
   }
 
-  constexpr Ch* pointer() const noexcept {
-    return p_; }
+  constexpr Ch* pointer() const noexcept { return p_; }
 
  private:
   Ch* p_;

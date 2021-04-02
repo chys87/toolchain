@@ -72,6 +72,42 @@ TEST(LowLevelBufferFillerTest, ConstExpr) {
   EXPECT_EQ("xyz\x02\x01\x01\x02"sv, std::string_view(sb.buffer, sb.n));
 }
 
+TEST(LowLevelBufferFillerTest, FillDec) {
+
+  {
+    char buffer[4096] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<0>(12345);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 5);
+    ASSERT_EQ(std::string(buffer, p - buffer), "12345");
+  }
+  {
+    char buffer[4096] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<99999>(12345);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 5);
+    ASSERT_EQ(std::string(buffer, p - buffer), "12345");
+  }
+  {
+    char buffer[4096] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<99999, FillOptions().with_width(5)>(123);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 5);
+    ASSERT_EQ(std::string(buffer, p - buffer), "00123");
+  }
+  {
+    char buffer[4096] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<99999, FillOptions().with_width(5).with_fill('@')>(123);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 5);
+    ASSERT_EQ(std::string(buffer, p - buffer), "@@123");
+  }
+}
+
 } // namespace
 } // inline namespace cbu_low_level_buffer_filler
 } // namespace cbu

@@ -148,7 +148,10 @@ template <typename Type, Type D, Type UB,
           Type M = fastdiv_detail::magic(D, UB).M,
           unsigned int N = fastdiv_detail::magic(D, UB).N>
 inline constexpr Type fastdiv(Type v) noexcept {
-  if constexpr (sizeof(Type) == 4) {
+  if constexpr (UB <= D) {
+    // Special case
+    return 0;
+  } else if constexpr (sizeof(Type) == 4) {
     if constexpr (M != 0) {
       return (v >> S) * M >> N;
     } else if constexpr (fastdiv_detail::use_div7_special_case<D, UB>()) {
@@ -160,7 +163,10 @@ inline constexpr Type fastdiv(Type v) noexcept {
       return (v / D);
     }
   } else {
-    if constexpr (M != 0) {
+    if constexpr (UB - 1 == std::numeric_limits<std::uint32_t>::max()) {
+      // Special case for exact uint32_t
+      return (uint32_t(v) / D);
+    } else if constexpr (M != 0) {
       return (v >> S) * M >> N;
     } else {
       return (v / D);
