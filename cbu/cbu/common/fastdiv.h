@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,23 +32,22 @@
 #include <limits>
 #include <utility>
 
+#include "cbu/common/double_integer.h"
+
 namespace cbu {
 inline namespace cbu_fastdiv {
 namespace fastdiv_detail {
 
+template <typename Type>
 struct Magic {
   // (v / D) == ((v >> S) * M) >> N;
   unsigned int S;
-  std::uint32_t M;
+  Type M;
   unsigned int N;
 };
 
 
-template <typename Type>
-inline consteval bool check(Type K, Type D, Type M, Type N) noexcept {
-  return (K / D == K * M >> N);
-}
-
+// Find max K, such that for all k, 0 <= k < K, k / D == k * M >> N
 template <typename Type>
 inline consteval Type get_k(Type D, Type M, Type N) noexcept {
   Type lo = 0; // Satisfies
@@ -56,7 +55,7 @@ inline consteval Type get_k(Type D, Type M, Type N) noexcept {
   do {
     while (hi - lo > 1) {
       Type mid = lo + (hi - lo) / 2;
-      if (check(mid, D, M, N)) {
+      if (mid / D == mid * M >> N) {
         lo = mid;
       } else {
         hi = mid;
@@ -86,19 +85,23 @@ inline consteval Type get_k(Type D, Type M, Type N) noexcept {
   return hi;
 }
 
-inline consteval Magic magic_base(std::uint32_t D,
-                                  std::uint32_t UB) noexcept {
-  for (unsigned int N = 1; N < 32; ++N) {
+template <typename Type>
+inline consteval Magic<Type> magic_base(Type D, Type UB) noexcept {
+  for (unsigned int N = 1; N < 8 * sizeof(Type); ++N) {
     // Find proper M, use this:
     // (D-1) / D == ((D - 1) * M) >> N == 0
     // D / D == (D * M) >> N == 1
-    std::uint32_t M = (std::uint64_t(1u << N) + D - 1) / D;
+    // Type M = (DoubleOf<Type>(Type(1) << N) + D - 1) / D;
+    Type M = ((Type(1) << N) - 1) / D + 1;  // This won't use DoubleInteger
     if (M % 2 == 0) {
       continue;
     }
-    if ((D - 1) * M < (1u << N) && (1u << N) <= std::uint64_t(D) * M) {
-      // Find proper K
-      unsigned K = get_k<std::uint32_t>(D, M, N);
+    if ((D - 1) * M < (Type(1) << N) &&
+        (Type(1) << N) <= DoubleUnsigned<Type>(D) * M) {
+      // Do a short circuit.  Remove this and it will still work
+      // (though compiler's constexpr evaluator will more likely explode)
+      if (UB > 0 && ((UB - 1) * M >> N) != (UB - 1) / D) continue;
+      unsigned K = get_k<Type>(D, M, N);
       if (K >= UB) {
         return {0, M, N};
       }
@@ -107,8 +110,10 @@ inline consteval Magic magic_base(std::uint32_t D,
   return {};
 }
 
-inline consteval Magic magic(std::uint32_t D, std::uint32_t UB) noexcept {
-  for (unsigned int S = 0; S < 32 && (D & ((1u << S) - 1)) == 0; ++S) {
+template <typename Type>
+inline consteval Magic<Type> magic(Type D, Type UB) noexcept {
+  for (unsigned int S = 0;
+       S < 8 * sizeof(Type) && (D & ((Type(1) << S) - 1)) == 0; ++S) {
     Magic mag = magic_base(D >> S, UB);
     if (mag.M != 0) {
       mag.S = S;
@@ -128,42 +133,75 @@ inline constexpr bool use_div7_special_case() {
 }
 
 template <std::uint32_t D, std::uint32_t UB> requires (D / 7 == 0)
-inline constexpr bool use_div7_special_case() {
-  return false;
-}
+inline constexpr bool use_div7_special_case() { return false; }
 
-} // namespace fastdiv_detail
+template <auto D, auto UB>
+using FastDivType =
+    std::conditional_t<D <= std::numeric_limits<std::uint32_t>::max() &&
+                           UB <= std::numeric_limits<std::uint32_t>::max(),
+                       std::uint32_t, uint64_t>;
 
 // Compute (v / D) (where v is unknown to be < UB)
 // We use tricks to have the compiler generate faster and/or smaller code
-template <std::uint32_t D, std::uint32_t UB,
+template <typename Type, Type D, Type UB,
           unsigned int S = fastdiv_detail::magic(D, UB).S,
-          std::uint32_t M = fastdiv_detail::magic(D, UB).M,
+          Type M = fastdiv_detail::magic(D, UB).M,
           unsigned int N = fastdiv_detail::magic(D, UB).N>
-inline constexpr std::uint32_t fastdiv(std::uint32_t v) noexcept {
-  if constexpr (M != 0) {
-    return (v >> S) * M >> N;
-  } else if constexpr (fastdiv_detail::use_div7_special_case<D, UB>()) {
-    // Special case
-    v /= D / 7;
-    std::uint32_t a = 9363 * v >> 16;
-    return ((a + ((v - a) >> 1)) >> 2);
+inline constexpr Type fastdiv(Type v) noexcept {
+  if constexpr (sizeof(Type) == 4) {
+    if constexpr (M != 0) {
+      return (v >> S) * M >> N;
+    } else if constexpr (fastdiv_detail::use_div7_special_case<D, UB>()) {
+      // Special case
+      v /= D / 7;
+      std::uint32_t a = 9363 * v >> 16;
+      return ((a + ((v - a) >> 1)) >> 2);
+    } else {
+      return (v / D);
+    }
   } else {
-    return (v / D);
+    if constexpr (M != 0) {
+      return (v >> S) * M >> N;
+    } else {
+      return (v / D);
+    }
   }
 }
 
-template <std::uint32_t D, std::uint32_t UB>
-inline constexpr std::uint32_t fastmod(std::uint32_t v) noexcept {
-  return (v - fastdiv<D, UB>(v) * D);
+template <typename Type, Type D, Type UB>
+inline constexpr Type fastmod(Type v) noexcept {
+  return (v - fastdiv<Type, D, UB>(v) * D);
 }
 
-template <std::uint32_t D, std::uint32_t UB>
-inline constexpr std::pair<std::uint32_t, std::uint32_t>
-    fastdivmod(std::uint32_t v) noexcept {
-  auto quo = fastdiv<D, UB>(v);
+template <typename Type, Type D, Type UB>
+inline constexpr std::pair<Type, Type> fastdivmod(Type v) noexcept {
+  auto quo = fastdiv<Type, D, UB>(v);
   return {quo, v - quo * D};
 }
 
-} // namespace cbu_fastdiv
-} // namespace cbu
+}  // namespace fastdiv_detail
+
+template <auto D, auto UB>
+inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
+    fastdiv_detail::FastDivType<D, UB> v) noexcept {
+  using Type = fastdiv_detail::FastDivType<D, UB>;
+  return fastdiv_detail::fastdiv<Type, Type(D), Type(UB)>(v);
+}
+
+template <auto D, auto UB>
+inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
+    fastdiv_detail::FastDivType<D, UB> v) noexcept {
+  using Type = fastdiv_detail::FastDivType<D, UB>;
+  return fastdiv_detail::fastmod<Type, Type(D), Type(UB)>(v);
+}
+
+template <auto D, auto UB>
+inline constexpr std::pair<fastdiv_detail::FastDivType<D, UB>,
+                           fastdiv_detail::FastDivType<D, UB>>
+fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
+  using Type = fastdiv_detail::FastDivType<D, UB>;
+  return fastdiv_detail::fastdivmod<Type, Type(D), Type(UB)>(v);
+}
+
+}  // namespace cbu_fastdiv
+}  // namespace cbu

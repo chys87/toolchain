@@ -32,20 +32,20 @@
 namespace cbu {
 
 TEST(FastDiv, Magics) {
-  auto p = fastdiv_detail::magic(3, 32);
+  auto p = fastdiv_detail::magic<uint32_t>(3, 32);
   EXPECT_EQ(0, p.S);
   EXPECT_EQ(11, p.M);
   EXPECT_EQ(5, p.N);
 
-  p = fastdiv_detail::magic(8, 0xffffffff);
+  p = fastdiv_detail::magic<uint32_t>(8, 0xffffffff);
   EXPECT_EQ(0, p.S);
   EXPECT_EQ(1, p.M);
   EXPECT_EQ(3, p.N);
 }
 
-template <uint32_t D, uint32_t UB>
+template <uint64_t D, uint64_t UB>
 inline void test_div() {
-  for (uint32_t v = 0; v < UB; v = v + 1 + v / 100) {
+  for (uint64_t v = 0; v < UB; v = v + 1 + v / 100) {
     ASSERT_EQ(v / D, (fastdiv<D, UB>(v)));
     ASSERT_EQ(v % D, (fastmod<D, UB>(v)));
   }
@@ -62,6 +62,13 @@ TEST(FastDiv, Div) {
   test_div<21, 65536>();
   test_div<13, 0x1111111>();
   test_div<13, 0x111>();
+  test_div<2, 0x123456789>();
+  test_div<3, 0x123456789abc>();
+  test_div<7, 0x123456789abc>();
+  test_div<11, 0x123456789abc>();
+  test_div<13, 0x123456789abc>();
+  test_div<17, 0x123456789abc>();
+  test_div<5, 0x1'0000'0001>();
 }
 
 } // namespace cbu
