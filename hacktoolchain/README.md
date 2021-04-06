@@ -22,4 +22,4 @@ I'd rather like
     jae .L1
 ```
 
-However, there are actually a small number of real optimizations, such as resolving repeated jumps and converting `and $255, %reg` to `movzx`.
+However, there are actually a small number of real optimizations, such as resolving repeated jumps and converting `and $255, %reg` to `movzx` when FLAGS are not used.
