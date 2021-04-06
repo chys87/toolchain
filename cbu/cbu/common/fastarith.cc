@@ -78,7 +78,7 @@ double map_uint64_to_double(uint64_t v) noexcept {
 }
 
 // Adapted from Hacker's Delight
-unsigned ilog10(uint32_t x) noexcept {
+unsigned ilog10_impl(uint32_t x) noexcept {
   if (x == 0) {
     return 0;
   }

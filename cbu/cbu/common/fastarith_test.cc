@@ -95,6 +95,19 @@ TEST(PowLog10, ILog10) {
   EXPECT_EQ(3, ilog10(9999));
   EXPECT_EQ(4, ilog10(10000));
   EXPECT_EQ(9, ilog10(4294967295));
+
+  EXPECT_EQ(0, ilog10_impl(0));
+  EXPECT_EQ(0, ilog10_impl(1));
+  EXPECT_EQ(0, ilog10_impl(2));
+  EXPECT_EQ(0, ilog10_impl(9));
+  EXPECT_EQ(1, ilog10_impl(10));
+  EXPECT_EQ(1, ilog10_impl(99));
+  EXPECT_EQ(2, ilog10_impl(100));
+  EXPECT_EQ(2, ilog10_impl(999));
+  EXPECT_EQ(3, ilog10_impl(1000));
+  EXPECT_EQ(3, ilog10_impl(9999));
+  EXPECT_EQ(4, ilog10_impl(10000));
+  EXPECT_EQ(9, ilog10_impl(4294967295));
 }
 
 TEST(SuperIntegerTest, ConversionAndCompare) {

@@ -350,8 +350,20 @@ constexpr std::uint32_t ipow10_array[10] = {
   1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000
 };
 
-unsigned int ilog10(std::uint32_t) noexcept __attribute__((__const__));
+unsigned int ilog10_impl(std::uint32_t) noexcept __attribute__((__const__));
 
+inline constexpr unsigned int ilog10(std::uint32_t x) noexcept {
+  if (std::is_constant_evaluated()) {
+    std::uint64_t p = 10;
+    unsigned int i = 0;
+    while (true) {
+      if (x <= p) return i;
+      p *= 10;
+      ++i;
+    }
+  }
+  return ilog10_impl(x);
+}
 
 } // inline namespace cbu_fastarith
 } // namespace cbu
