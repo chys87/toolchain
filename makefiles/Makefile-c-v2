@@ -293,12 +293,12 @@ ifeq "$(NOEXCEPTION)" "1"
  OPTIMIZEFLAGS += -fno-exceptions
 endif
 
-CFLAGS := $(OPTIMIZEFLAGS) $(COPTIMIZEFLAGS) $(ARCHFLAGS) $(CWARNINGFLAGS) $(CSTD) $(INCLUDES) $(DEFS) $(EXTRA_CFLAGS)
-CXXFLAGS := $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS)
-BASE_LDFLAGS := -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed \
+CFLAGS = $(OPTIMIZEFLAGS) $(COPTIMIZEFLAGS) $(ARCHFLAGS) $(CWARNINGFLAGS) $(CSTD) $(INCLUDES) $(DEFS) $(EXTRA_CFLAGS)
+CXXFLAGS = $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS)
+BASE_LDFLAGS = -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed \
   -Wl,-z,relro -Wl,-z,noexecstack \
   -Wl,-z,start-stop-visibility=hidden
-LDFLAGS := $(ARCHFLAGS) $(OPTIMIZEFLAGS) $(BASE_LDFLAGS) $(EXTRA_LDFLAGS)
+LDFLAGS = $(ARCHFLAGS) $(OPTIMIZEFLAGS) $(BASE_LDFLAGS) $(EXTRA_LDFLAGS)
 
 ifeq "$(DIR)" "."
  ifeq "$(BUILDDIR)" "build"
@@ -365,15 +365,15 @@ $(BIN): %.out:%.n.out
 endif
 
 # These target-specific flags, set on *.o, will be herited by *.s
-$(COBJS):   COMPILER := $(CC)
-$(COBJS):   FLAGS    := $(CFLAGS)
-$(COBJS):   NAME     := CC
-$(CXXOBJS): COMPILER := $(CXX)
-$(CXXOBJS): FLAGS    := $(CXXFLAGS)
-$(CXXOBJS): NAME     := CXX
-$(ASMOBJS): COMPILER := $(CC)
-$(ASMOBJS): FLAGS    := -Wa,--noexecstack $(CFLAGS)
-$(ASMOBJS): NAME     := ASM
+$(COBJS):   COMPILER = $(CC)
+$(COBJS):   FLAGS    = $(CFLAGS)
+$(COBJS):   NAME     = CC
+$(CXXOBJS): COMPILER = $(CXX)
+$(CXXOBJS): FLAGS    = $(CXXFLAGS)
+$(CXXOBJS): NAME     = CXX
+$(ASMOBJS): COMPILER = $(CC)
+$(ASMOBJS): FLAGS    = -Wa,--noexecstack $(CFLAGS)
+$(ASMOBJS): NAME     = ASM
 
 # We'll have to set it separately for *.P
 $(CDEPS) $(ASMDEPS): private COMPILER := $(CC)
