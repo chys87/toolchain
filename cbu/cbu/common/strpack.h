@@ -42,7 +42,7 @@ inline namespace cbu_strpack {
 template <typename T, T... chars>
 struct strpack {
   enum : std::size_t { n = sizeof...(chars) };
-  static constexpr T s[] = {chars..., T()};
+  static inline constexpr T s[] = {chars..., T()};
   static constexpr T* fill(T* p) noexcept {
     ((*p++ = chars), ...);
     return p;
@@ -56,7 +56,7 @@ constexpr strpack<T, chars...> operator""_strpack() {
 
 // This can be used as template argument!!
 template <typename T, T... chars>
-constexpr const T* operator""_str() {
+constexpr const T (&operator""_str())[sizeof...(chars) + 1] {
   return strpack<T, chars...>::s;
 }
 
