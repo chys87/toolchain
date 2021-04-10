@@ -3,7 +3,7 @@
 # vim:ts=8 sts=4 sw=4 expandtab ft=python
 
 #
-# Copyright (c) 2013, 2020, chys <admin@CHYS.INFO>
+# Copyright (c) 2013-2021, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -64,9 +64,11 @@ assert(len(_col_names) == I_COUNT)
 
 def detailed_size(file):
     data = [0] * I_COUNT
-    readelf = subprocess.check_output(['readelf', '-S', file])
-    if not isinstance(readelf, str):  # Convert to Unicode string (for Python3)
-        readelf = readelf.decode('ascii')
+
+    env = os.environ.copy()
+    env['LC_ALL'] = 'C'
+    readelf = subprocess.check_output(['readelf', '-S', file], env=env)
+    readelf = readelf.decode('ascii')
     readelf = readelf.replace('\n', ' ')
     for line in _pattern.findall(readelf):
         Name, Type, Size, Flag = line
@@ -87,7 +89,7 @@ def detailed_size(file):
             data[I_RODATA] += Size
         else:
             data[I_OTHERS] += Size
-    data[I_TOTAL] = sum(data[:I_TOTAL])
+    data[I_TOTAL] = sum(data)
     data[I_FILE] = os.stat(file).st_size
     return data
 

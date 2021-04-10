@@ -1,7 +1,7 @@
 #!/usr/bin/python3 -O
 
 #
-# Copyright (c) 2018, chys <admin@CHYS.INFO>
+# Copyright (c) 2018-2021, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -55,12 +55,14 @@ def sub_asterisks(m, len=len):
 RE_ASTERISKS = re.compile(br'^[ \t]*[\da-f]+:[ \t]*((?:[\da-f][\da-f] )*)',
                           re.M | re.A)
 RE_ADDRESS_FOR_SYM = re.compile(br'[\da-f]+ <', re.A)
-RE_OFFSET_FROM_SYM = re.compile(br'<([][ \w<>:@*&()~,.+\-*/=]+)[+\-]0x[\da-f]+>', re.A)
+RE_OFFSET_FROM_SYM = re.compile(
+    br'<([][ \w<>:@*&()~,.+\-*/=]+)[+\-]0x[\da-f]+>', re.A)
 RE_RIP_RELATIVE = re.compile(br'0x[\da-f]+\(%rip\)', re.A)
 RE_ABS_ADDR = re.compile(
     br'0x(?:[4-9a-f][\da-f]{4,5}|1[\da-f]{6}|8[0-4][\da-f]{5})(?![\da-f])',
     re.A)
-RE_GCC_GEN_FUNCTION_NAMES = re.compile(br'\.(isra|part|constprop|cold)\.\d+(?=[+>\-\.])')
+RE_GCC_GEN_FUNCTION_NAMES = re.compile(
+    br'\.(isra|part|constprop|cold)\.\d+(?=[+>\-\.])')
 
 
 def dump_filter(txt):
@@ -200,10 +202,8 @@ def do_diff(file1, file2):
     # Use a socket so that we can take advantage of MSG_PEEK
     (fs1, fs2) = socket.socketpair()
 
-    # Python 3.2 features are used here.
     diff = subprocess.Popen(
-        ('colordiff', '-U', '10',
-         '/dev/fd/{}'.format(fr1), '/dev/fd/{}'.format(fr2)),
+        ['colordiff', '-U', '10', f'/dev/fd/{fr1}', f'/dev/fd/{fr2}'],
         pass_fds=(fr1, fr2), stdout=fs2)
 
     os.close(fr1)

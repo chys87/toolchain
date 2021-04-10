@@ -60,25 +60,26 @@ def get_lines(it, count):
 
 
 def cppfilter(fi):
-    simple_replaces = ( # Don't use a dict. We want orders.
-            (b'(anonymous namespace)', b'(a)'),
-            (b'unsigned int', b'uint'),
-            (b'unsigned long', b'ulong'),
-            (b'unsigned short', b'ushort'),
-            (b'unsigned char', b'uchar'),
-            (b'> >', b'>>'),
-            (b'> >', b'>>'), # Do it again so "> > > >", etc. are substituted properly
+    simple_replaces = (  # Don't use a dict. We want orders.
+        (b'(anonymous namespace)', b'(a)'),
+        (b'unsigned int', b'uint'),
+        (b'unsigned long', b'ulong'),
+        (b'unsigned short', b'ushort'),
+        (b'unsigned char', b'uchar'),
+        (b'> >', b'>>'),
+        (b'> >', b'>>'),  # Do it again so "> > > >", etc. are substituted properly
 
-            (b'::less<void>', b'::less<>'),
-            (b'::greater<void>', b'::greater<>'),
-            (b'::equal_to<void>', b'::equal_to<>'),
+        (b'::less<void>', b'::less<>'),
+        (b'::greater<void>', b'::greater<>'),
+        (b'::equal_to<void>', b'::equal_to<>'),
 
-            (b'(__gnu_cxx::_Lock_policy)0', b'__gnu_cxx::_S_single'),
-            (b'(__gnu_cxx::_Lock_policy)1', b'__gnu_cxx::_S_mutex'),
-            (b'(__gnu_cxx::_Lock_policy)2', b'__gnu_cxx::_S_atomic'),
-        )
+        (b'(__gnu_cxx::_Lock_policy)0', b'__gnu_cxx::_S_single'),
+        (b'(__gnu_cxx::_Lock_policy)1', b'__gnu_cxx::_S_mutex'),
+        (b'(__gnu_cxx::_Lock_policy)2', b'__gnu_cxx::_S_atomic'),
+    )
 
-    __type = br'(?:[^,<>]|<(?:[^<>]+|<(?:[^<>]|<[^<>]+>)+>)>)+'  # This pattern catches templates up to 3 levels
+    # This pattern catches templates up to 3 levels
+    __type = br'(?:[^,<>]|<(?:[^<>]+|<(?:[^<>]|<[^<>]+>)+>)>)+'
 
     def __replacable_character_literal(c):
         return c.isalnum() or c == '_'
@@ -103,123 +104,133 @@ def cppfilter(fi):
         return b'cbu::"' + chars + b'"_str'
 
     pattern_replaces = (
-            (re.compile(br'::basic_string<char, std::(__\d+::)?char_traits<char>, std::(__\d+::)?allocator<char>>'), b'::string'),
-            (re.compile(br'::basic_string<wchar_t, std::(__\d+::)?char_traits<wchar_t>, std::(__\d+::)?allocator<wchar_t>>'), b'::wstring'),
-            (re.compile(br'::basic_string<char(\d+)_t, std::(__\d+::)?char_traits<char\1_t>, std::(__\d+::)?allocator<char\1_t>>'), br'::u\1string'),
-            (re.compile(br'::basic_string_view<char, std::(__\d+::)?char_traits<char>>'), b'::string_view'),
-            (re.compile(br'::basic_string_view<wchar_t, std::(__\d+::)?char_traits<wchar_t>>'), b'::wstring_view'),
-            (re.compile(br'::basic_string_view<char(\d+)_t, std::(__\d+::)?char_traits<char\1_t>>'), br'::u\1string_view'),
-            (re.compile(br' \[clone ([.\w]+)]'),
-                br'\1'),
-            (re.compile(br'::unique_ptr<(.+), std::default_delete<\1>>'),
-                br'::unique_ptr<\1>'),
-            (re.compile(br'::(vector|list|deque|forward_list|_List_base|_Vector_base)<(.+), std::(__\d+::)?allocator<\2>>'),
-                br'::\1<\2>'),
-            (re.compile(br'::(multimap|map)<(.+), (.+), std::less<\2>, std::(__\d+::)?allocator<std::pair<\2 const, \3>>>'),
-                br'::\1<\2, \3>'),
-            (re.compile(br'::(multimap|map)<(.+), (.+), std::less<>, std::(__\d+::)?allocator<std::pair<\2 const, \3>>>'),
-                br'::\1<\2, \3, std::less<>>'),
-            (re.compile(br'::(multimap|map)<(.+), (.+), (std::(__\d+::)?locale), std::(__\d+::)?allocator<std::pair<\2 const, \3>>>'),
-                br'::\1<\2, \3, \4>'),
-            (re.compile(br'::set<(.+), std::(__\d+::)?less<\1>, std::(__\d+::)?allocator<\1>>'),
-                br'::set<\1>'),
-            (re.compile(br'::set<(.+), std::(__\d+::)?less<>, std::(__\d+::)?allocator<\1>>'),
-                br'::set<\1, std::less<>>'),
-            (re.compile(br'::set<(.+), (std::(__\d+::)?locale), std::(__\d+::)?allocator<\1>>'),
-                br'::set<\1, \2>'),
-            (re.compile(br'::unordered_set<(.+), ([^<>]+), std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
-                br'::unordered_set<\1, \2>'),
-            (re.compile(br'::unordered_set<(.+), std::(__\d+::)?hash<\1>, std::equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
-                br'::unordered_set<\1>'),
-            (re.compile(br'::unordered_set<(.+), std::(__\d+::)?hash<\1 const&>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
-                br'::unordered_set<\1, std::hash<\1 const\&>>'),
-            (re.compile(br'::unordered_map<(.+), (.+), std::(__\d+::)?hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<std::pair<\1 const, \2>>>'),
-                br'::unordered_map<\1, \2>'),
-            (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\2>,'),
-                br'::_Rb_tree<\1, \2, std::_Select1st<(...)>,'),
-            (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\(\.\.\.\)>, std::less<\1>, std::allocator<\2>>'),
-                br'::_Rb_tree<\1, \2>'),
-            (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\(\.\.\.\)>, std::less<>, std::allocator<\2>>'),
-                br'::_Rb_tree<\1, \2, std::_Select1st<...>, std::less<>>'),
-            (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\1>,'),
-                br'::_Rb_tree<\1, \1, std::_Identity<(...)>,'),
-            (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\(\.\.\.\)>, std::less<\1>, std::allocator<\1>>'),
-                br'::_Rb_tree<\1, \1>'),
-            (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\(\.\.\.\)>, std::less<>, std::allocator<\1>>'),
-                br'::_Rb_tree<\1, \1, std::_Identity<...>, std::less<>>'),
-            (re.compile(br'::unordered_map<(.+), (.+), std::hash<\1 const&>, std::equal_to<\1>, std::allocator<std::pair<\1 const, \2>>>'),
-                br'::unordered_map<\1, \2, std::hash<\1 const\&>>'),
-            (re.compile(br'::(basic_[io]stream|endl|__copy_streambufs|__ostream_insert|[io]streambuf_iterator|basic_(?:stream|file)buf|basic_ios|operator>>|operator<< )<(.+), std::char_traits<\2>>'),
-                br'::\1<\2>'),
-            (re.compile(br'::(basic_stringbuf)<(.*), std::char_traits<\2>, std::allocator<\2>>'),
-                br'::\1<\2>'),
-            (re.compile(br'std::allocator<' + __type + br'>'), br'std::allocator<(...)>'),  # Do this after other STL replacements
-            (re.compile(br'::span<(' + __type + br'), (?:18446744073709551615ul|4294967295u)>'), br'::span<\1>'),
-            (re.compile(br'::span<(' + __type + br'), (?:18446744073709551615ul|4294967295u)>'), br'::span<\1>'),  # Repeat so we can catch nested spans
-            (re.compile(br'\{lambda\([^()]*\)'),
-                br'{lambda'),
-            (re.compile(br'float __vector\(4\)'),
-                br'__m128'),
-            (re.compile(br'long long __vector\(2\)'),
-                br'__m128i'),
-            (re.compile(br'char __vector\(16\)'),
-                br'__v16qi'),
-            (re.compile(br'long long __vector\(4\)'),
-                br'__m256i'),
-            (re.compile(br'\((char|wchar_t)\)(\d+)'), __replace_character_literals),
+        (re.compile(br'::basic_string<char, std::(__\d+::)?char_traits<char>, std::(__\d+::)?allocator<char>>'), b'::string'),
+        (re.compile(br'::basic_string<wchar_t, std::(__\d+::)?char_traits<wchar_t>, std::(__\d+::)?allocator<wchar_t>>'), b'::wstring'),
+        (re.compile(br'::basic_string<char(\d+)_t, std::(__\d+::)?char_traits<char\1_t>, std::(__\d+::)?allocator<char\1_t>>'), br'::u\1string'),
+        (re.compile(
+            br'::basic_string_view<char, std::(__\d+::)?char_traits<char>>'), b'::string_view'),
+        (re.compile(br'::basic_string_view<wchar_t, std::(__\d+::)?char_traits<wchar_t>>'), b'::wstring_view'),
+        (re.compile(br'::basic_string_view<char(\d+)_t, std::(__\d+::)?char_traits<char\1_t>>'),
+         br'::u\1string_view'),
+        (re.compile(br' \[clone ([.\w]+)]'),
+         br'\1'),
+        (re.compile(br'::unique_ptr<(.+), std::default_delete<\1>>'),
+         br'::unique_ptr<\1>'),
+        (re.compile(br'::(vector|list|deque|forward_list|_List_base|_Vector_base)<(.+), std::(__\d+::)?allocator<\2>>'),
+         br'::\1<\2>'),
+        (re.compile(br'::(multimap|map)<(.+), (.+), std::less<\2>, std::(__\d+::)?allocator<std::pair<\2 const, \3>>>'),
+         br'::\1<\2, \3>'),
+        (re.compile(br'::(multimap|map)<(.+), (.+), std::less<>, std::(__\d+::)?allocator<std::pair<\2 const, \3>>>'),
+         br'::\1<\2, \3, std::less<>>'),
+        (re.compile(br'::(multimap|map)<(.+), (.+), (std::(__\d+::)?locale), std::(__\d+::)?allocator<std::pair<\2 const, \3>>>'),
+         br'::\1<\2, \3, \4>'),
+        (re.compile(br'::set<(.+), std::(__\d+::)?less<\1>, std::(__\d+::)?allocator<\1>>'),
+         br'::set<\1>'),
+        (re.compile(br'::set<(.+), std::(__\d+::)?less<>, std::(__\d+::)?allocator<\1>>'),
+         br'::set<\1, std::less<>>'),
+        (re.compile(br'::set<(.+), (std::(__\d+::)?locale), std::(__\d+::)?allocator<\1>>'),
+         br'::set<\1, \2>'),
+        (re.compile(br'::unordered_set<(.+), ([^<>]+), std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
+         br'::unordered_set<\1, \2>'),
+        (re.compile(br'::unordered_set<(.+), std::(__\d+::)?hash<\1>, std::equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
+         br'::unordered_set<\1>'),
+        (re.compile(br'::unordered_set<(.+), std::(__\d+::)?hash<\1 const&>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
+         br'::unordered_set<\1, std::hash<\1 const\&>>'),
+        (re.compile(br'::unordered_map<(.+), (.+), std::(__\d+::)?hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<std::pair<\1 const, \2>>>'),
+         br'::unordered_map<\1, \2>'),
+        (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\2>,'),
+         br'::_Rb_tree<\1, \2, std::_Select1st<(...)>,'),
+        (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\(\.\.\.\)>, std::less<\1>, std::allocator<\2>>'),
+         br'::_Rb_tree<\1, \2>'),
+        (re.compile(br'::_Rb_tree<(.*), (std::pair<\1 const, (.*)>), std::_Select1st<\(\.\.\.\)>, std::less<>, std::allocator<\2>>'),
+         br'::_Rb_tree<\1, \2, std::_Select1st<...>, std::less<>>'),
+        (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\1>,'),
+         br'::_Rb_tree<\1, \1, std::_Identity<(...)>,'),
+        (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\(\.\.\.\)>, std::less<\1>, std::allocator<\1>>'),
+         br'::_Rb_tree<\1, \1>'),
+        (re.compile(br'::_Rb_tree<(.*), \1, std::_Identity<\(\.\.\.\)>, std::less<>, std::allocator<\1>>'),
+         br'::_Rb_tree<\1, \1, std::_Identity<...>, std::less<>>'),
+        (re.compile(br'::unordered_map<(.+), (.+), std::hash<\1 const&>, std::equal_to<\1>, std::allocator<std::pair<\1 const, \2>>>'),
+         br'::unordered_map<\1, \2, std::hash<\1 const\&>>'),
+        (re.compile(br'::(basic_[io]stream|endl|__copy_streambufs|__ostream_insert|[io]streambuf_iterator|basic_(?:stream|file)buf|basic_ios|operator>>|operator<< )<(.+), std::char_traits<\2>>'),
+         br'::\1<\2>'),
+        (re.compile(br'::(basic_stringbuf)<(.*), std::char_traits<\2>, std::allocator<\2>>'),
+         br'::\1<\2>'),
+        # Do this after other STL replacements
+        (re.compile(br'std::allocator<' + __type + br'>'),
+         br'std::allocator<(...)>'),
+        (re.compile(br'::span<(' + __type + \
+                    br'), (?:18446744073709551615ul|4294967295u)>'), br'::span<\1>'),
+        (re.compile(br'::span<(' + __type + br'), (?:18446744073709551615ul|4294967295u)>'),
+         br'::span<\1>'),  # Repeat so we can catch nested spans
+        (re.compile(br'\{lambda\([^()]*\)'),
+         br'{lambda'),
+        (re.compile(br'float __vector\(4\)'),
+         br'__m128'),
+        (re.compile(br'long long __vector\(2\)'),
+         br'__m128i'),
+        (re.compile(br'char __vector\(16\)'),
+         br'__v16qi'),
+        (re.compile(br'long long __vector\(4\)'),
+         br'__m256i'),
+        (re.compile(br'\((char|wchar_t)\)(\d+)'), __replace_character_literals),
 
-            # std::ratio
-            (re.compile(br'::ratio<1l*, 1000000000000000000000000l*>'), br'::yocto'),
-            (re.compile(br'::ratio<1l*, 1000000000000000000000l*>'), br'::zepto'),
-            (re.compile(br'::ratio<1l*, 1000000000000000000l*>'), br'::atto'),
-            (re.compile(br'::ratio<1l*, 1000000000000000l*>'), br'::femto'),
-            (re.compile(br'::ratio<1l*, 1000000000000l*>'), br'::pico'),
-            (re.compile(br'::ratio<1l*, 1000000000l*>'), br'::nano'),
-            (re.compile(br'::ratio<1l*, 1000000l*>'), br'::micro'),
-            (re.compile(br'::ratio<1l*, 1000l*>'), br'::milli'),
-            (re.compile(br'::ratio<1l*, 100l*>'), br'::centi'),
-            (re.compile(br'::ratio<1l*, 10l*>'), br'::deci'),
-            (re.compile(br'::ratio<10l*, 1l*>'), br'::deca'),
-            (re.compile(br'::ratio<100l*, 1l*>'), br'::hecto'),
-            (re.compile(br'::ratio<1000l*, 1l*>'), br'::kilo'),
-            (re.compile(br'::ratio<1000000l*, 1l*>'), br'::mega'),
-            (re.compile(br'::ratio<1000000000l*, 1l*>'), br'::giga'),
-            (re.compile(br'::ratio<1000000000000l*, 1l*>'), br'::tera'),
-            (re.compile(br'::ratio<1000000000000000l*, 1l*>'), br'::peta'),
-            (re.compile(br'::ratio<1000000000000000000l*, 1l*>'), br'::exa'),
-            (re.compile(br'::ratio<1000000000000000000000l*, 1l*>'), br'::zetta'),
-            (re.compile(br'::ratio<1000000000000000000000000l*, 1l*>'), br'::yotta'),
-            (re.compile(br'::ratio<(\d+l*), 1l*>'), br'::ratio<\1>'),
+        # std::ratio
+        (re.compile(br'::ratio<1l*, 1000000000000000000000000l*>'), br'::yocto'),
+        (re.compile(br'::ratio<1l*, 1000000000000000000000l*>'), br'::zepto'),
+        (re.compile(br'::ratio<1l*, 1000000000000000000l*>'), br'::atto'),
+        (re.compile(br'::ratio<1l*, 1000000000000000l*>'), br'::femto'),
+        (re.compile(br'::ratio<1l*, 1000000000000l*>'), br'::pico'),
+        (re.compile(br'::ratio<1l*, 1000000000l*>'), br'::nano'),
+        (re.compile(br'::ratio<1l*, 1000000l*>'), br'::micro'),
+        (re.compile(br'::ratio<1l*, 1000l*>'), br'::milli'),
+        (re.compile(br'::ratio<1l*, 100l*>'), br'::centi'),
+        (re.compile(br'::ratio<1l*, 10l*>'), br'::deci'),
+        (re.compile(br'::ratio<10l*, 1l*>'), br'::deca'),
+        (re.compile(br'::ratio<100l*, 1l*>'), br'::hecto'),
+        (re.compile(br'::ratio<1000l*, 1l*>'), br'::kilo'),
+        (re.compile(br'::ratio<1000000l*, 1l*>'), br'::mega'),
+        (re.compile(br'::ratio<1000000000l*, 1l*>'), br'::giga'),
+        (re.compile(br'::ratio<1000000000000l*, 1l*>'), br'::tera'),
+        (re.compile(br'::ratio<1000000000000000l*, 1l*>'), br'::peta'),
+        (re.compile(br'::ratio<1000000000000000000l*, 1l*>'), br'::exa'),
+        (re.compile(br'::ratio<1000000000000000000000l*, 1l*>'), br'::zetta'),
+        (re.compile(br'::ratio<1000000000000000000000000l*, 1l*>'), br'::yotta'),
+        (re.compile(br'::ratio<(\d+l*), 1l*>'), br'::ratio<\1>'),
 
-            # std::chrono
-            # We assume the standard library uses either long or long (in theory, this may mis-replace user-defined types)
-            (re.compile(br'::duration<long(?: long)?, std::(nano|micro|mini)>'), br'::\1seconds'),
-            (re.compile(br'::duration<long(?: long)?, std::ratio<1l*>>'), br'::seconds'),
-            (re.compile(br'::duration<long(?: long)?, std::ratio<60l*>>'), br'::minutes'),
-            (re.compile(br'::duration<long(?: long)?, std::ratio<3600l*>>'), br'::hours'),
-            (re.compile(br'::duration<long(?: long)?, std::ratio<86400l*>>'), br'::days'),
-            (re.compile(br'::duration<long(?: long)?, std::ratio<604800l*>>'), br'::weeks'),
+        # std::chrono
+        # We assume the standard library uses either long or long (in
+        # theory, this may mis-replace user-defined types)
+        (re.compile(br'::duration<long(?: long)?, std::(nano|micro|mini)>'),
+         br'::\1seconds'),
+        (re.compile(br'::duration<long(?: long)?, std::ratio<1l*>>'), br'::seconds'),
+        (re.compile(br'::duration<long(?: long)?, std::ratio<60l*>>'), br'::minutes'),
+        (re.compile(br'::duration<long(?: long)?, std::ratio<3600l*>>'), br'::hours'),
+        (re.compile(br'::duration<long(?: long)?, std::ratio<86400l*>>'), br'::days'),
+        (re.compile(br'::duration<long(?: long)?, std::ratio<604800l*>>'), br'::weeks'),
 
-            # absl specific
-            (re.compile(br'absl::flat_hash_set<(.+), absl::hash_internal::Hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
-             br'absl::flat_hash_set<\1>'),
+        # absl specific
+        (re.compile(br'absl::flat_hash_set<(.+), absl::hash_internal::Hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
+         br'absl::flat_hash_set<\1>'),
 
-            # cbu specific
-            (re.compile(br'\bcbu::cbu_\w+::'), br'cbu::'),  # Omit cbu's inline namespaces
-            (re.compile(br'\bcbu::strpack<char((?:, \'(?:\\\'|[^\']*)\')+)>::s'), __replace_cbu_strpack),
-        )
+        # cbu specific
+        # Omit cbu's inline namespaces
+        (re.compile(br'\bcbu::cbu_\w+::'), br'cbu::'),
+        (re.compile(
+            br'\bcbu::strpack<char((?:, \'(?:\\\'|[^\']*)\')+)>::s'), __replace_cbu_strpack),
+    )
 
     def do_replace(data):
         for old, new in simple_replaces:
             data = data.replace(old, new)
-        for pattern,replace in pattern_replaces:
+        for pattern, replace in pattern_replaces:
             data = pattern.sub(replace, data)
         return data
 
     data = b''
     for txt in fi:
         data += txt
-        if len(data) >= 8192: # An arbitrary threshold
+        if len(data) >= 8192:  # An arbitrary threshold
             yield do_replace(data)
             data = b''
     if data:
@@ -245,7 +256,7 @@ def read_header(filename):
 
 
 def syscall_replace(fi):
-    data = get_lines(fi, 3) # In cases of static libraries, we need 3 lines
+    data = get_lines(fi, 3)  # In cases of static libraries, we need 3 lines
 
     if b'x86-64' not in data:  # If not x86-64, skip the expensive steps
         yield data
@@ -254,13 +265,17 @@ def syscall_replace(fi):
 
     # x86-64 LP64 syscalls
     pattern = re.compile(br'^#define\s+__NR_(\w+)\s+(\d+)$', re.M)
-    table = {int(m.group(2)) : m.group(1) for m in pattern.finditer(read_header('unistd_64.h'))}
+    table = {int(m.group(2)): m.group(1)
+             for m in pattern.finditer(read_header('unistd_64.h'))}
 
     # x86-64 ILP32 (x32 ABI) syscalls
-    pattern = re.compile(br'^#define\s+__NR_([_a-z\d]+)\s+\(__X32_SYSCALL_BIT \+ (\d+)\)$', re.M)
-    table.update((int(m.group(2)) + 0x40000000, m.group(1)) for m in pattern.finditer(read_header('unistd_x32.h')))
+    pattern = re.compile(
+        br'^#define\s+__NR_([_a-z\d]+)\s+\(__X32_SYSCALL_BIT \+ (\d+)\)$', re.M)
+    table.update((int(m.group(2)) + 0x40000000, m.group(1))
+                 for m in pattern.finditer(read_header('unistd_x32.h')))
 
-    pattern = re.compile(br'(mov\s+\$0x)([a-f\d]+)(,%[er]?a[xl])\s*(?=\n(.+(lea|mov|xor|add|sub|clt|sh[lr]).+\n){,5}.+syscall)')
+    pattern = re.compile(
+        br'(mov\s+\$0x)([a-f\d]+)(,%[er]?a[xl])\s*(?=\n(.+(lea|mov|xor|add|sub|clt|sh[lr]).+\n){,5}.+syscall)')
 
     def sub(match):
         no = int(match.group(2), 16)
@@ -272,7 +287,7 @@ def syscall_replace(fi):
         return res
 
     while fi is not None:
-        newdata = get_lines(fi, 100) # An arbitrary threshold
+        newdata = get_lines(fi, 100)  # An arbitrary threshold
         if newdata.count(b'\n') < 100:
             fi = None
         if not newdata:
@@ -292,23 +307,26 @@ def syscall_replace(fi):
         yield data
 
 
-def safe_write(f,data): # Safe against broken pipe
+def safe_write(f, data):  # Safe against broken pipe
     try:
         f.write(data)
         return True
-    except BrokenPipeError: # Broken pipe
+    except BrokenPipeError:  # Broken pipe
         return False
 
 
 def main():
     locale.setlocale(locale.LC_ALL, 'C')
 
-    parser = argparse.ArgumentParser(description='Unassembly a program in a friendly way.')
+    parser = argparse.ArgumentParser(
+        description='Unassembly a program in a friendly way.')
     parser.add_argument('filename', help='File to unassembly')
     args = parser.parse_args()
 
     objdump = subprocess.Popen(['objdump', '-C', '-r', '-d', args.filename],
-                               close_fds=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                               close_fds=True,
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
     fi = objdump.stdout
     fi = cppfilter(fi)
 
@@ -322,7 +340,8 @@ def main():
 
     if not os.isatty(sys.stdout.fileno()):
         # Write to a pipe, whatever.
-        signal.signal(signal.SIGPIPE, signal.SIG_DFL) # Prevents message at SIGPIPE
+        # Prevents message at SIGPIPE
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
         data = b''
         for txt in fi:
             data += txt
@@ -335,7 +354,10 @@ def main():
     else:
         # We call less ourselves.
         # In this case, we should exit with 0 rather than SIGPIPE if we get it.
-        pager = subprocess.Popen(['less'], close_fds=True, stdin=subprocess.PIPE)
+        pager = subprocess.Popen(
+            ['less'],
+            close_fds=True,
+            stdin=subprocess.PIPE)
         fo = pager.stdin
         data = b''
         for txt in fi:
