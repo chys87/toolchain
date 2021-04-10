@@ -63,7 +63,6 @@ template <Integral T>
 using FillNativeEndian = FillByEndian<T, std::endian::native>;
 
 struct FillOptions {
-  std::uint64_t upper_bound = 0;
   unsigned width = 0;
   char fill = '0';
 
