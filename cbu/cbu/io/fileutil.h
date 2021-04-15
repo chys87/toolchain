@@ -34,6 +34,8 @@
 #include <sys/uio.h>
 #include <string_view>
 
+#include "cbu/common/zstring_view.h"
+
 namespace cbu {
 inline namespace cbu_fileutil {
 
@@ -51,6 +53,31 @@ class AtFile {
  private:
   int fd_;
   const char *name_;
+};
+
+// AtFile with known length, note that the string must still be null-terminated
+class AtFileWithLength {
+ public:
+  constexpr AtFileWithLength(int fd, cbu::zstring_view name) noexcept
+      : fd_(fd), l_(name.size()), name_(name.c_str()) {}
+  constexpr AtFileWithLength(cbu::zstring_view name) noexcept
+      : fd_(AT_FDCWD), l_(name.size()), name_(name.c_str()) {}
+  constexpr AtFileWithLength(AtFile af) noexcept
+      : fd_(af.fd()),
+        l_(std::string_view(af.name()).size()),
+        name_(af.name()) {}
+
+  explicit constexpr operator bool() const noexcept { return name(); }
+  constexpr operator AtFile() const noexcept { return {fd_, name_}; }
+  constexpr int fd() const noexcept { return fd_; }
+  constexpr const char* name() const noexcept { return name_; }
+  constexpr size_t length() const noexcept { return l_; }
+  constexpr cbu::zstring_view name_view() const noexcept { return {name_, l_}; }
+
+ private:
+  int fd_;
+  unsigned int l_;
+  const char* name_;
 };
 
 // If anything is wrong, returns 0
