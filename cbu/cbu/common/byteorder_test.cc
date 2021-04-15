@@ -31,11 +31,20 @@
 
 namespace cbu {
 
+static_assert(alignof(LittleEndian<int>) == alignof(int));
+static_assert(alignof(PackedLittleEndian<int>) == 1);
+
 TEST(ByteOrderTest, Bswap) {
   EXPECT_EQ(1, bswap(uint8_t(1)));
   EXPECT_EQ(0x0100, bswap(uint16_t(1)));
   EXPECT_EQ(0x01000000, bswap(uint32_t(1)));
   EXPECT_EQ(0x0100000000000000, bswap(uint64_t(1)));
+}
+
+TEST(ByteOrderTest, BigEndianRefTest) {
+  uint32_t v;
+  (BigEndianRef(&v) = 1);
+  EXPECT_EQ(uint32_t(LittleEndianRef(&v)), 0x1000000);
 }
 
 } // namespace cbu

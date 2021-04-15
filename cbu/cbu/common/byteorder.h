@@ -128,6 +128,31 @@ class FixByteOrder {
   T v_;
 };
 
+template <Bswappable T, std::endian byte_order>
+class FixByteOrderRef {
+ public:
+  explicit constexpr FixByteOrderRef(T* p) noexcept : p_(p) {}
+  constexpr FixByteOrderRef(const FixByteOrderRef&) noexcept = default;
+
+  constexpr T load() const noexcept { return bswap_for<byte_order>(*p_); }
+  constexpr void store(T v) noexcept { *p_ = bswap_for<byte_order>(v); }
+
+  constexpr operator T() const noexcept { return load(); }
+  constexpr FixByteOrderRef& operator=(T v) noexcept {
+    store(v);
+    return *this;
+  }
+
+  // Let it behave like real references (unlike std::reference_wrapper)
+  constexpr FixByteOrderRef& operator=(const FixByteOrderRef& other) noexcept {
+    store(other.load());
+    return *this;
+  }
+
+ private:
+  T* const p_;
+};
+
 template <Bswappable T> using PackedLittleEndian = PackedFixByteOrder<
     T, std::endian::little>;
 template <Bswappable T> using PackedBigEndian = PackedFixByteOrder<
@@ -137,5 +162,17 @@ template <Bswappable T> using LittleEndian = FixByteOrder<
 template <Bswappable T> using BigEndian = FixByteOrder<
     T, std::endian::big>;
 
-} // inline namespace cbu_byteorder
-} // namespace cbu
+// Template alias doesn't support deduction yet, so we define them as a
+// function for now
+template <Bswappable T>
+inline constexpr auto LittleEndianRef(T* p) noexcept {
+  return FixByteOrderRef<T, std::endian::little>(p);
+}
+
+template <Bswappable T>
+inline constexpr auto BigEndianRef(T* p) noexcept {
+  return FixByteOrderRef<T, std::endian::big>(p);
+}
+
+}  // namespace cbu_byteorder
+}  // namespace cbu
