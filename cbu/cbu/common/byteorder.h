@@ -128,8 +128,12 @@ class FixByteOrder {
   T v_;
 };
 
-template <Bswappable T, std::endian byte_order>
-class FixByteOrderRef {
+template <typename T, std::endian byte_order>
+class FixByteOrderRef;
+
+template <typename T, std::endian byte_order>
+requires Bswappable<T>
+class FixByteOrderRef<T, byte_order> {
  public:
   explicit constexpr FixByteOrderRef(T* p) noexcept : p_(p) {}
   constexpr FixByteOrderRef(const FixByteOrderRef&) noexcept = default;
@@ -153,6 +157,21 @@ class FixByteOrderRef {
   T* const p_;
 };
 
+template <typename T, std::endian byte_order>
+requires Bswappable<T>
+class FixByteOrderRef<const T, byte_order> {
+ public:
+  explicit constexpr FixByteOrderRef(const T* p) noexcept : p_(p) {}
+  constexpr FixByteOrderRef(const FixByteOrderRef&) noexcept = default;
+
+  constexpr T load() const noexcept { return bswap_for<byte_order>(*p_); }
+  constexpr operator T() const noexcept { return load(); }
+  constexpr FixByteOrderRef& operator=(const FixByteOrderRef&) = delete;
+
+ private:
+  const T* const p_;
+};
+
 template <Bswappable T> using PackedLittleEndian = PackedFixByteOrder<
     T, std::endian::little>;
 template <Bswappable T> using PackedBigEndian = PackedFixByteOrder<
@@ -164,12 +183,12 @@ template <Bswappable T> using BigEndian = FixByteOrder<
 
 // Template alias doesn't support deduction yet, so we define them as a
 // function for now
-template <Bswappable T>
+template <typename T>
 inline constexpr auto LittleEndianRef(T* p) noexcept {
   return FixByteOrderRef<T, std::endian::little>(p);
 }
 
-template <Bswappable T>
+template <typename T>
 inline constexpr auto BigEndianRef(T* p) noexcept {
   return FixByteOrderRef<T, std::endian::big>(p);
 }
