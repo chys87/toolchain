@@ -230,7 +230,7 @@ $(BUILDDIR)/$(1).n.out: private CLINKER = $(CXX)
 endif
 $(BUILDDIR)/$(1).n.out: private NAME := LD
 $(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(AUTO_GENERATED_HEADERS)
-	$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(LIBS) $$(LIBS-$(1))
+	+$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(LIBS) $$(LIBS-$(1))
 endef
 
 define define_target
@@ -269,11 +269,14 @@ ifeq "$(NOEXCEPTIONS)" "1"
  OPTIMIZEFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables
 endif
 ifeq "$(LTO)" "1"
+ ifeq "$(IS_CLANG)" "0"
+ EXTRA_CFLAGS += -flto -fuse-linker-plugin
+ EXTRA_CXXFLAGS += -flto -fuse-linker-plugin
+ EXTRA_LDFLAGS += -flto=jobserver -fuse-linker-plugin
+ else
  EXTRA_CFLAGS += -flto
  EXTRA_CXXFLAGS += -flto
- EXTRA_LDFLAGS += -flto -fuse-linker-plugin
- ifeq "$(IS_CLANG)" "0"
- EXTRA_LDFLAGS += -flto-partition=none
+ EXTRA_LDFLAGS += -flto
  endif
  OPTIMIZEFLAGS := $(subst -ffunction-sections,,$(OPTIMIZEFLAGS))
  OPTIMIZEFLAGS := $(subst -fdata-sections,,$(OPTIMIZEFLAGS))
