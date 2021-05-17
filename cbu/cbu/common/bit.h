@@ -93,52 +93,91 @@ static_assert(std::is_same_v<FastUIntTypeByBits<8>, std::uint32_t>);
 static_assert(std::is_same_v<UIntTypeByBits<32>, std::uint32_t>);
 static_assert(std::is_same_v<FastUIntTypeByBits<32>, std::uint32_t>);
 
+namespace cbu_bit_detail {
+
+template <typename T>
+inline constexpr unsigned ctz_const(T x) noexcept {
+  std::make_unsigned_t<T> y = x;
+  unsigned r = 0;
+  while ((y & 1) == 0) {
+    y >>= 1;
+    ++r;
+  }
+  return r;
+}
+
+template <typename T>
+inline constexpr unsigned clz_const(T x) noexcept {
+  using UT = std::make_unsigned_t<T>;
+  UT y = x;
+  unsigned r = 0;
+  while ((y & (UT(1) << (8 * sizeof(T) - 1))) == 0) {
+    y <<= 1;
+    ++r;
+  }
+  return r;
+}
+
+}  // namespace cbu_bit_detail
+
 // IMPORTANT: The following ctz/clz/bsr functions requires argument to be non-zero!!!
 inline constexpr unsigned ctz(unsigned x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
   return __builtin_ctz(x);
 }
 
 inline constexpr unsigned ctz(unsigned long x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
   return __builtin_ctzl(x);
 }
 
 inline constexpr unsigned ctz(unsigned long long x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
   return __builtin_ctzll(x);
 }
 
 inline constexpr unsigned ctz(int x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
   return __builtin_ctz(x);
 }
 
 inline constexpr unsigned ctz(long x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
   return __builtin_ctzl(x);
 }
 
 inline constexpr unsigned ctz(long long x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
   return __builtin_ctzll(x);
 }
 
 inline constexpr unsigned clz(unsigned x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
   return __builtin_clz(x);
 }
 
 inline constexpr unsigned clz(unsigned long x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
   return __builtin_clzl(x);
 }
 
 inline constexpr unsigned clz(unsigned long long x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
   return __builtin_clzll(x);
 }
 
 inline constexpr unsigned clz(int x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
   return __builtin_clz(x);
 }
 
 inline constexpr unsigned clz(long x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
   return __builtin_clzl(x);
 }
 
 inline constexpr unsigned clz(long long x) noexcept {
+  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
   return __builtin_clzll(x);
 }
 
@@ -310,6 +349,7 @@ inline constexpr std::make_unsigned_t<T> MAX_POW2 =
 // Undefined for n > MAX_POW2<T>
 template <typename T> requires std::is_integral_v<T>
 inline constexpr T pow2_ceil(T n) noexcept {
+  if (n <= 1) return 1;
   return (MAX_POW2<T> >> (clz(std::max(n, T(1)) - 1) - 1));
 }
 
