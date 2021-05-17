@@ -62,41 +62,31 @@ using FillBigEndian = FillByEndian<T, std::endian::big>;
 template <Integral T>
 using FillNativeEndian = FillByEndian<T, std::endian::native>;
 
+template <unsigned Width = 0, char Fill = '0'>
 struct FillOptions {
-  unsigned width = 0;
-  char fill = '0';
+  static inline constexpr unsigned width = Width;
+  static inline constexpr char fill = Fill;
 
-  template <typename Callback>
-  constexpr FillOptions with(Callback cb) noexcept {
-    FillOptions res = *this;
-    cb(&res);
-    return res;
-  }
+  template <unsigned NewWidth>
+  using with_width = FillOptions<NewWidth, Fill>;
 
-  constexpr FillOptions with_width(unsigned width) noexcept {
-    return with([width](FillOptions * fo) constexpr noexcept {
-      fo->width = width;
-    });
-  }
-
-  constexpr FillOptions with_fill(char fill) noexcept {
-    return with([fill](FillOptions * fo) constexpr noexcept {
-      fo->fill = fill;
-    });
-  }
+  template <char NewFill>
+  using with_fill = FillOptions<Width, NewFill>;
 };
 
 // FillDec converts an unsigned number to a decimal string.
 // The generated code is aggressively unrolled so it can be fairly bloated.
-template <std::uint64_t UpperBound, FillOptions Options = FillOptions()>
+template <std::uint64_t UpperBound, typename Options = FillOptions<>>
 struct FillDec {
   std::uint64_t value;
 
+  constexpr FillDec(std::uint64_t v) noexcept : value(v) {}
+
   template <Raw_char_type Ch>
   constexpr Ch* operator()(Ch* p) const noexcept {
-    if constexpr (Options.width > 0) {
-      conv_fixed_digit<UpperBound, Options.width>(value, p);
-      return p + Options.width;
+    if constexpr (Options::width > 0) {
+      conv_fixed_digit<UpperBound, Options::width>(value, p);
+      return p + Options::width;
     } else {
       Ch* q = conv_flexible_digit(value, p);
       std::reverse(p, q);
@@ -106,9 +96,9 @@ struct FillDec {
 
   template <std::uint64_t UB, unsigned K, Raw_char_type Ch>
   static constexpr void conv_fixed_digit(std::uint64_t v, Ch* p) noexcept {
-    if constexpr (Options.fill != '0' && K < Options.width) {
+    if constexpr (Options::fill != '0' && K < Options::width) {
       if (v == 0) {
-        for (unsigned k = K; k; --k) p[k - 1] = Options.fill;
+        for (unsigned k = K; k; --k) p[k - 1] = Options::fill;
         return;
       }
     }
@@ -158,6 +148,9 @@ FillDec(T) -> FillDec<
 
 struct FillSkip {
   std::ptrdiff_t diff;
+
+  constexpr FillSkip(std::ptrdiff_t v) noexcept : diff(v) {}
+
   template <typename Ch>
   constexpr Ch* operator()(Ch* p) const noexcept {
     return p + diff;

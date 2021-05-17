@@ -52,7 +52,9 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
   } else if (u < 0x10000) {
     if (u >= 0xd800 && u <= 0xdfff) {
       // UTF-16 surrogate pairs
+#ifndef __clang__
       [[unlikely]]
+#endif
       return nullptr;
     } else {
       // Most Chinese characters fall here
@@ -66,7 +68,9 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
 #endif
     }
   } else {
+#ifndef __clang__
     [[unlikely]]
+#endif
     if (u < 0x110000) {
 #if defined __BMI2__
       w = memdrop_be<uint32_t>(w, _pdep_u32(u, 0x073f3f3f) | 0xf0808080u);

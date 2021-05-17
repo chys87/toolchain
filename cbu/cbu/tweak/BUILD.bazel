@@ -32,7 +32,6 @@ cc_library(
   ],
   copts = [
     '-std=gnu++2a',
-    '-flto',
     '-Wall',
     '-Werror',
     '-fdiagnostics-color=always',
@@ -53,7 +52,6 @@ cc_library(
   ],
   copts = [
     '-std=gnu++2a',
-    '-flto',
     '-Wall',
     '-Werror',
     '-fdiagnostics-color=always',
@@ -71,7 +69,6 @@ cc_library(
   ],
   copts = [
     '-std=gnu++2a',
-    '-flto',
     '-Wall',
     '-Werror',
     '-fdiagnostics-color=always',

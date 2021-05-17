@@ -43,8 +43,8 @@ TEST(LowLevelBufferFillerTest, NonConstExpr) {
   LowLevelBufferFiller filler{buffer.get()};
   filler << 'x'
     << "yz"sv
-    << FillLittleEndian(uint16_t(258))
-    << FillBigEndian(uint16_t(258));
+    << FillLittleEndian<uint16_t>(uint16_t(258))
+    << FillBigEndian<uint16_t>(uint16_t(258));
 
   char* p = filler.pointer();
   auto size = p - buffer.get();
@@ -58,13 +58,13 @@ struct StaticBuffer {
 };
 
 TEST(LowLevelBufferFillerTest, ConstExpr) {
-  constexpr StaticBuffer sb = []() {
-    StaticBuffer res;
+  constexpr StaticBuffer sb = []() constexpr noexcept {
+    StaticBuffer res{};
     LowLevelBufferFiller filler{res.buffer};
     filler << 'x'
       << "yz"sv
-      << FillLittleEndian(uint16_t(258))
-      << FillBigEndian(uint16_t(258));
+      << FillLittleEndian<uint16_t>(uint16_t(258))
+      << FillBigEndian<uint16_t>(uint16_t(258));
     res.n = filler.pointer() - res.buffer;
     return res;
   }();
@@ -93,7 +93,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[4096] = {};
     LowLevelBufferFiller filler{buffer};
-    filler << FillDec<99999, FillOptions().with_width(5)>(123);
+    filler << FillDec<99999, FillOptions<>::with_width<5>>(123);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 5);
     ASSERT_EQ(std::string(buffer, p - buffer), "00123");
@@ -101,7 +101,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[4096] = {};
     LowLevelBufferFiller filler{buffer};
-    filler << FillDec<99999, FillOptions().with_width(5).with_fill('@')>(123);
+    filler << FillDec<99999, FillOptions<>::with_width<5>::with_fill<'@'>>(123);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 5);
     ASSERT_EQ(std::string(buffer, p - buffer), "@@123");

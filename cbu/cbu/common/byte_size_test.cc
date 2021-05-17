@@ -30,7 +30,7 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-namespace cbu_byte_size {
+inline namespace cbu_byte_size {
 
 TEST(ByteSizeTest, ByteDistanceTest) {
   char x[5];
@@ -60,5 +60,5 @@ TEST(ByteSizeTest, ByteSizeTypeTest) {
 
 }
 
-} // inline namespace cbu_byte_size
-} // namespace cbu
+}  // namespace cbu_byte_size
+}  // namespace cbu

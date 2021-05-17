@@ -211,11 +211,18 @@ class OutlinableArray {
   constexpr ~OutlinableArray() noexcept {
     std::destroy_n(ptr_, size_);
     if (allocated_) {
+#ifdef __cpp_sized_deallocation
       if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
         ::operator delete[](ptr_, size_ * sizeof(T),
                             std::align_val_t(alignof(T)));
       else
         ::operator delete[](ptr_, size_ * sizeof(T));
+#else
+      if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+        ::operator delete[](ptr_, std::align_val_t(alignof(T)));
+      else
+        ::operator delete[](ptr_);
+#endif
     }
   }
 
