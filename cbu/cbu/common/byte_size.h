@@ -38,8 +38,8 @@ inline namespace cbu_byte_size {
 
 template <typename U>
 inline constexpr std::ptrdiff_t byte_distance(const U* p, const U* q) {
-  if (std::is_constant_evaluated()) {
-    if constexpr (!std::is_void_v<U>)
+  if constexpr (!std::is_void_v<U>) {
+    if (std::is_constant_evaluated())
       return (q - p) * std::ptrdiff_t(sizeof(U));
   }
   return (reinterpret_cast<std::intptr_t>(q) -
@@ -48,20 +48,18 @@ inline constexpr std::ptrdiff_t byte_distance(const U* p, const U* q) {
 
 template <typename U>
 inline constexpr U* byte_advance(U* p, std::ptrdiff_t u) noexcept {
-  if (std::is_constant_evaluated() && !std::is_void_v<U>) {
-    if constexpr (!std::is_void_v<U>) {
+  if constexpr (!std::is_void_v<U>) {
+    if (std::is_constant_evaluated() && u % std::ptrdiff_t(sizeof(U)) == 0)
       return (p + u / std::ptrdiff_t(sizeof(U)));
-    }
   }
   return reinterpret_cast<U *>(reinterpret_cast<std::intptr_t>(p) + u);
 }
 
 template<typename U>
 inline constexpr U* byte_back(U* p, std::ptrdiff_t u) {
-  if (std::is_constant_evaluated()) {
-    if constexpr (!std::is_void_v<U>) {
+  if constexpr (!std::is_void_v<U>) {
+    if (std::is_constant_evaluated() && u % std::ptrdiff_t(sizeof(U)) == 0)
       return (p - u / std::ptrdiff_t(sizeof(U)));
-    }
   }
   return reinterpret_cast<U *>(reinterpret_cast<std::intptr_t>(p) - u);
 }
