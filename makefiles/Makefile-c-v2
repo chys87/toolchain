@@ -379,10 +379,10 @@ $(ASMOBJS): FLAGS    = -Wa,--noexecstack $(CFLAGS)
 $(ASMOBJS): NAME     = ASM
 
 # We'll have to set it separately for *.P
-$(CDEPS) $(ASMDEPS): private COMPILER := $(CC)
-$(CDEPS) $(ASMDEPS): private FLAGS    := $(CFLAGS)
-$(CXXDEPS):          private COMPILER := $(CXX)
-$(CXXDEPS):          private FLAGS    := $(CXXFLAGS)
+$(CDEPS) $(ASMDEPS): private COMPILER = $(CC)
+$(CDEPS) $(ASMDEPS): private FLAGS    = $(CFLAGS)
+$(CXXDEPS):          private COMPILER = $(CXX)
+$(CXXDEPS):          private FLAGS    = $(CXXFLAGS)
 
 # If a dep file is missing, also remove the corresponding .s/.o file
 EXISTING_DEPS := $(wildcard $(DEPS))
