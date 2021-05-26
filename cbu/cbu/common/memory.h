@@ -81,12 +81,12 @@ template <typename T, bool DEFAULT_INIT>
 inline T* new_and_init_array(std::size_t n) {
   std::size_t bytes = n * sizeof(T);
   T* p;
-  if (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
     p = static_cast<T*>(::operator new[](bytes, std::align_val_t(alignof(T))));
   else
     p = static_cast<T*>(::operator new[](bytes));
   try {
-    if (DEFAULT_INIT)
+    if constexpr (DEFAULT_INIT)
       std::uninitialized_default_construct_n(p, n);
     else
       std::uninitialized_value_construct_n(p, n);
