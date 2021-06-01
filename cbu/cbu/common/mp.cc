@@ -242,6 +242,17 @@ size_t from_dec(Word *r, const char *s, size_t n) noexcept {
   size_t rn = 0;
 
   while (n >= 8) {
+#ifdef __SSE4_1__
+    uint64_t v64;
+    memcpy(&v64, s, 8);
+    __m128i vh = _mm_sub_epi16(_mm_cvtepu8_epi16(__m128i(__v2du{v64, 0})),
+                               _mm_set1_epi16('0'));
+    vh =
+        _mm_mullo_epi16(vh, _mm_setr_epi16(1000, 100, 10, 1, 1000, 100, 10, 1));
+    vh = _mm_hadd_epi16(vh, vh);
+    vh = _mm_hadd_epi16(vh, vh);
+    uint32_t v = __v8hu(vh)[0] * 10000 + __v8hu(vh)[1];
+#else
     uint32_t v =
       ((s[0] - '0') * 10 +
        (s[1] - '0')) * 100 +
@@ -252,6 +263,7 @@ size_t from_dec(Word *r, const char *s, size_t n) noexcept {
        (s[5] - '0')) * 100 +
       ((s[6] - '0') * 10 +
        (s[7] - '0'));
+#endif
 
     rn = Madd(r, r, rn, 100000000, v);
 
