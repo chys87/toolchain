@@ -106,13 +106,6 @@ inline std::pair<Word, Word> Div(Word hi, Word lo, Word b) noexcept {
   return std::make_pair(a / b, a % b);
 }
 
-inline Word add_carry(Word a, Word b, Word c, Word *res) noexcept {
-  Word tmp;
-  bool c1 = add_overflow(a, b, &tmp);
-  bool c2 = add_overflow(tmp, c, res);
-  return (c1 || c2);
-}
-
 inline std::pair<size_t, Word> Div(Word *r, const Word *a, size_t na,
                                    Word b) noexcept {
   Word c = 0;
@@ -176,7 +169,7 @@ size_t add(Word *r, const Word *a, size_t na,
   size_t nr = 0;
   Word carry = 0;
   for (; nb; --nb, --na) {
-    carry = add_carry(*a++, *b++, carry, &r[nr++]);
+    r[nr++] = addc(*a++, *b++, carry, &carry);
   }
   if (na > 0) {
     nr += Madd(r + nr, a, na, 1, carry);

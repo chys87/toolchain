@@ -37,6 +37,10 @@
 #include "cbu/common/concepts.h"
 #include "cbu/compat/type_identity.h"
 
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+
 namespace cbu {
 inline namespace cbu_fastarith {
 
@@ -315,6 +319,44 @@ inline constexpr bool sub_overflow(A a, B b, C *c) noexcept {
     return !si.cast(c) || overflow;
   }
   return __builtin_sub_overflow(a, b, c);
+}
+
+template <Raw_integral A>
+inline constexpr A addc(A x, A y, A carryin, A* carryout) noexcept {
+  if (!std::is_constant_evaluated()) {
+    if constexpr (std::is_unsigned_v<A>) {
+      // Currently Clang has these addc builtins
+#define CBU_ADDC(Type, Builtin)              \
+  if constexpr (sizeof(A) == sizeof(Type)) { \
+    Type o;                                  \
+    A ret = Builtin(x, y, carryin, &o);      \
+    *carryout = o;                           \
+    return ret;                              \
+  }
+#if __has_builtin(__builtin_addcb)
+      CBU_ADDC(unsigned char, __builtin_addcb)
+#endif
+#if __has_builtin(__builtin_addcs)
+      CBU_ADDC(unsigned short, __builtin_addcs)
+#endif
+#if __has_builtin(__builtin_addc)
+      CBU_ADDC(unsigned, __builtin_addc)
+#endif
+#if __has_builtin(__builtin_addcl)
+      CBU_ADDC(unsigned long, __builtin_addcl)
+#endif
+#if __has_builtin(__builtin_addcll)
+      CBU_ADDC(unsigned long long, __builtin_addcll)
+#endif
+#undef CBU_ADDC
+    }
+  }
+  A tmp;
+  bool c1 = add_overflow(x, y, &tmp);
+  A res;
+  bool c2 = add_overflow(tmp, carryin, &res);
+  *carryout = c1 || c2;
+  return res;
 }
 
  // GCC's builtin generates bad code
