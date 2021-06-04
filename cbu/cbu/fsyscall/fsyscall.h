@@ -77,22 +77,15 @@ struct fsys_linux_dirent64 {
 # define fsys_inline static __inline__ __attribute__((__always_inline__))
 #endif
 
-#define def_fsys_base(funcname,sysname,rettype,clobbermem,argc,...) \
-  fsys_inline                                                       \
-  rettype fsys_##funcname(FSYS_FUNC_ARGS_##argc(__VA_ARGS__)) {     \
-    rettype r;                                                      \
-    FSYS_LOAD_REGS_##argc(__VA_ARGS__);                             \
-    if (__NR_##sysname == 0)                                        \
-      __asm__ __volatile__ ("xorl\t%k0, %k0\n\tsyscall" :           \
-          "=&a"(r) :                                                \
-          "i"(0) FSYS_ASM_REGS_##argc :                             \
-          FSYS_MEMORY_##clobbermem "cc", "r11", "cx");              \
-    else                                                            \
-      __asm__ __volatile__ ("movl\t%1,%k0\n\tsyscall" :             \
-          "=&a"(r) :                                                \
-          "i"(__NR_##sysname) FSYS_ASM_REGS_##argc :                \
-          FSYS_MEMORY_##clobbermem "cc", "r11", "cx");              \
-    return r;                                                       \
+#define def_fsys_base(funcname, sysname, rettype, clobbermem, argc, ...)    \
+  fsys_inline rettype fsys_##funcname(FSYS_FUNC_ARGS_##argc(__VA_ARGS__)) { \
+    rettype r;                                                              \
+    FSYS_LOAD_REGS_##argc(__VA_ARGS__);                                     \
+    __asm__ __volatile__("syscall"                                          \
+                         : "=a"(r)                                          \
+                         : "a"(__NR_##sysname)FSYS_ASM_REGS_##argc          \
+                         : FSYS_MEMORY_##clobbermem "cc", "r11", "cx");     \
+    return r;                                                               \
   }
 #define def_fsys(funcname,sysname,rettype,argc,...)                 \
   def_fsys_base(funcname,sysname,rettype,1,argc,##__VA_ARGS__)
