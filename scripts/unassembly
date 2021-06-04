@@ -255,6 +255,21 @@ def read_header(filename):
         sys.exit(f'Unable to find a proper header file {filename}')
 
 
+def split_tail_lines(data: bytes, k: int = 1):
+    r'''
+    Split the last k lines from the bytes
+    E.g. split_tail_lines(b'a\nb\nc\n', 2) --> (b'a\n', b'b\nc\n')
+    If the number of lines is <= k, returns (b'', data)
+    '''
+    idx = -1
+    for _ in range(k):
+        next_idx = data.rfind(b'\n', 0, idx)
+        if next_idx < 0:
+            return b'', data
+        idx = next_idx
+    return data[:idx+1], data[idx+1:]
+
+
 def syscall_replace(fi):
     data = get_lines(fi, 3)  # In cases of static libraries, we need 3 lines
 
@@ -275,10 +290,14 @@ def syscall_replace(fi):
                  for m in pattern.finditer(read_header('unistd_x32.h')))
 
     pattern = re.compile(
-        br'(mov\s+\$0x)([a-f\d]+)(,%[er]?a[xl])\s*(?=\n(.+(lea|mov|xor|add|sub|clt|sh[lr]).+\n){,5}.+syscall)')
+            br'(?:mov\s+\$0x([a-f\d]+),%[er]?a[xl]|xor\s+%[er]ax,%[er]ax)\s*(?=\n(.+(lea|mov|xor|add|sub|clt|sh[lr]).+\n){,5}.+syscall)')
 
     def sub(match):
-        no = int(match.group(2), 16)
+        no_str = match.group(1)
+        if no_str:
+            no = int(no_str, 16)
+        else:
+            no = 0  # XOR EAX, EAX
         res = match.group(0)
         try:
             res += b'\t\t  # ' + table[no]
@@ -295,12 +314,11 @@ def syscall_replace(fi):
         data += newdata
         data = pattern.sub(sub, data)
 
-        # Yield all lines except the last one
-        i = data.rfind(b'\n', 0, -1)
-        if i >= 0:
-            i += 1
-            yield data[:i]
-            data = data[i:]
+        # Yield all lines except the last 6
+        yield_data, data = split_tail_lines(data, 6)
+        if yield_data:
+            yield yield_data
+
     # Yield remaining things
     if data:
         data = pattern.sub(sub, data)
