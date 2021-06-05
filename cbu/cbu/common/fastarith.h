@@ -359,28 +359,9 @@ inline constexpr A addc(A x, A y, A carryin, A* carryout) noexcept {
   return res;
 }
 
- // GCC's builtin generates bad code
-#if defined __GCC_ASM_FLAG_OUTPUTS__ && \
-    (defined __i386__ || defined __x86_64__)
-template <Raw_unsigned_integral U, Raw_integral V>
-requires (4 <= sizeof(U) and sizeof(V) <= sizeof(U))
-inline constexpr bool sub_overflow(U a, V b, U *c) noexcept {
-  if (std::is_constant_evaluated()) {
-    SuperInteger<std::make_unsigned_t<std::common_type_t<U, V>>> si(a);
-    bool overflow = si.sub_overflow(b);
-    return !si.cast(c) || overflow;
-  }
-  if (std::is_signed<V>::value && (!__builtin_constant_p(b) || b < 0))
-    return __builtin_sub_overflow(a, b, c);
-  bool res;
-  asm ("sub %[b], %[a]" : "=@ccc"(res), "=r"(*c) : [a]"1"(a), [b]"g"(b));
-  return res;
-}
-#endif // __GCC_ASM_FLAG_OUTPUTS__ && (__i386__ || __x86_64__)
-
 template <Integral U, Integral V>
-inline bool sub_overflow(U *a, V b) noexcept {
-	return sub_overflow(*a, b, a);
+inline bool sub_overflow(U* a, V b) noexcept {
+  return sub_overflow(*a, b, a);
 }
 
 // Map uint32_t or uint64_t to floating point values in [0, 1)
