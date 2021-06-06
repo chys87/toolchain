@@ -56,6 +56,12 @@ void* store(void* dst, __m256i value) noexcept;
 
 void* copy(void* dst, const void* src, size_t size) noexcept;
 
+// dst must be aligned to sizeof(value) bytes
+void* fill(void* dst, uint8_t value, size_t size) noexcept;
+void* fill(void* dst, uint16_t value, size_t size) noexcept;
+void* fill(void* dst, uint32_t value, size_t size) noexcept;
+void* fill(void* dst, uint64_t value, size_t size) noexcept;
+
 void fence() noexcept;
 
 } // namespace cacheless

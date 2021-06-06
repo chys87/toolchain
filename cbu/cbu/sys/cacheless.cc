@@ -36,6 +36,8 @@
 
 #include <string.h>
 
+#include <algorithm>
+
 #include "cbu/common/faststr.h"
 #include "cbu/compat/string.h"
 
@@ -166,6 +168,83 @@ void* copy(void* dst, const void* src, size_t size) noexcept {
   return d + size;
 }
 
+namespace {
+
+// v128 and v64 must be the repeatition of the "minimal unit";
+// and bytes must be multiple of the "minimal unit";
+// and dst must be aligned to size of "minimal unit".
+void* fill_with_sse(void* dst, __m128i v128, uint64_t v64,
+                    size_t bytes) noexcept {
+  char* d = static_cast<char*>(dst);
+  if (bytes < 16) {
+    if (bytes < 4) {
+      if (bytes & 2) memdrop(d, uint16_t(v64));
+      if (bytes & 1) d[bytes - 1] = uint8_t(v64);
+    } else if (bytes < 8) {
+      store(d, uint32_t(v64));
+      store(d + bytes - 4, uint32_t(v64));
+    } else {
+      store(d, v64);
+      store(d + bytes - 8, v64);
+    }
+    return d + bytes;
+  }
+
+  // movntdq requires aligned memory, so we use movnti
+  store(d, v64);
+  store(d + 8, v64);
+
+  uintptr_t misalign = uintptr_t(d) & 15;
+  d += 16 - misalign;
+  bytes -= 16 - misalign;
+
+  while (bytes >= 64) {
+    _mm_stream_si128((__m128i*)d, v128);
+    _mm_stream_si128((__m128i*)(d + 16), v128);
+    _mm_stream_si128((__m128i*)(d + 32), v128);
+    _mm_stream_si128((__m128i*)(d + 48), v128);
+    d += 64;
+    bytes -= 64;
+  }
+  if (bytes & 32) {
+    _mm_stream_si128((__m128i*)d, v128);
+    _mm_stream_si128((__m128i*)(d + 16), v128);
+    d += 32;
+    bytes -= 32;
+  }
+  if (bytes & 16) {
+    _mm_stream_si128((__m128i*)d, v128);
+    d += 16;
+    bytes -= 16;
+  }
+  if (bytes) {
+    store(d + bytes - 16, v64);
+    store(d + bytes - 8, v64);
+  }
+  return d + bytes;
+}
+
+} // namespace
+
+void* fill(void* dst, uint8_t value, size_t size) noexcept {
+  __m128i v = _mm_set1_epi8(value);
+  return fill_with_sse(dst, v, __v2du(v)[0], size);
+}
+
+void* fill(void* dst, uint16_t value, size_t size) noexcept {
+  __m128i v = _mm_set1_epi16(value);
+  return fill_with_sse(dst, v, __v2du(v)[0], size * 2);
+}
+
+void* fill(void* dst, uint32_t value, size_t size) noexcept {
+  __m128i v = _mm_set1_epi32(value);
+  return fill_with_sse(dst, v, __v2du(v)[0], size * 4);
+}
+
+void* fill(void* dst, uint64_t value, size_t size) noexcept {
+  return fill_with_sse(dst, _mm_set1_epi64x(value), value, size * 8);
+}
+
 void fence() noexcept {
   _mm_sfence();
 }
@@ -182,6 +261,22 @@ void* store(void* dst, uint64_t value) noexcept {
 
 void* copy(void* dst, const void* src, size_t size) noexcept {
   return mempcpy(dst, src, size);
+}
+
+void* fill(void* dst, uint8_t value, size_t size) noexcept {
+  return std::fill_n(static_cast<uint8_t*>(dst), size, value);
+}
+
+void* fill(void* dst, uint16_t value, size_t size) noexcept {
+  return std::fill_n(static_cast<uint16_t*>(dst), size, value);
+}
+
+void* fill(void* dst, uint32_t value, size_t size) noexcept {
+  return std::fill_n(static_cast<uint32_t*>(dst), size, value);
+}
+
+void* fill(void* dst, uint64_t value, size_t size) noexcept {
+  return std::fill_n(static_cast<uint64_t*>(dst), size, value);
 }
 
 void fence() noexcept {

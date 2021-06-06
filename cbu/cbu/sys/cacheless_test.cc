@@ -42,15 +42,17 @@ namespace {
 
 class CachelessTest : public testing::Test {
  public:
-  void Reset() {
-    memset(dst_, 0, sizeof(dst_));
+  void ResetDst() { memset(dst_, 0, sizeof(dst_)); }
+  void ResetSrc() {
     unsigned i = 0;
-    for (char& c : src_) {
-      c = 'A' + (i % 26);
-    }
+    for (char& c : src_) c = 'A' + (i++ % 26);
+  }
+  void Reset() {
+    ResetDst();
+    ResetSrc();
   }
 
-  void Verify(size_t off, size_t size) {
+  void VerifyCopy(size_t off, size_t size) {
     for (size_t i = 0; i < off; ++i) {
       ASSERT_EQ(dst_[i], '\0')
         << "i=" << i << ", off=" << off << ", size=" << size;
@@ -62,6 +64,23 @@ class CachelessTest : public testing::Test {
     for (size_t i = off + size; i < off + size + 64; ++i) {
       ASSERT_EQ(dst_[i], '\0')
         << "i=" << i << ", off=" << off << ", size=" << size;
+    }
+  }
+
+  template <typename T>
+  void VerifyFill(size_t off, size_t size, T value) {
+    for (size_t i = 0; i < off; ++i) {
+      ASSERT_EQ(dst_[i], '\0')
+          << "i=" << i << ", off=" << off << ", size=" << size;
+    }
+    for (size_t i = 0; i < size; ++i) {
+      ASSERT_EQ(*reinterpret_cast<const T*>(dst_ + off + i * sizeof(T)), value)
+          << "i=" << i << ", off=" << off << ", size=" << size;
+    }
+    for (size_t i = off + size * sizeof(T); i < off + size * sizeof(T) + 64;
+         ++i) {
+      ASSERT_EQ(dst_[i], '\0')
+          << "i=" << i << ", off=" << off << ", size=" << size;
     }
   }
 
@@ -77,11 +96,28 @@ TEST_F(CachelessTest, CopyTest) {
     for (size_t size = 0; size < N; size += size / 64 + size / 128 * 71 + 1) {
       Reset();
       ASSERT_EQ(copy(dst_ + off, src_ + off, size), dst_ + off + size);
-      Verify(off, size);
+      VerifyCopy(off, size);
     }
   }
+}
 
+TEST_F(CachelessTest, FillTest) {
+  for (size_t off = 0; off < 32; off += off / 16 * 3 + 1) {
+    for (size_t size = 0; size < N; size += size / 64 + size / 128 * 71 + 1) {
+      auto do_it = [&](auto value) {
+        constexpr size_t U = sizeof(value);
+        ResetDst();
+        ASSERT_EQ(fill(dst_ + off / U * U, value, size / U),
+                  dst_ + off / U * U + size / U * U);
+        VerifyFill(off / U * U, size / U, value);
+      };
 
+      do_it(uint8_t(42));
+      do_it(uint16_t(2554));
+      do_it(uint32_t(25542554));
+      do_it(uint64_t(2554255425542554ULL));
+    }
+  }
 }
 
 } // namespace
