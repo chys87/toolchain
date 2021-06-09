@@ -112,11 +112,26 @@ void* copy(void* dst, const void* src, size_t size) noexcept {
   size -= 16 - misalign;
 
   if (size >= 512) {
-    _mm_prefetch(s + 64, _MM_HINT_T0);
-    _mm_prefetch(s + 128, _MM_HINT_T0);
-    _mm_prefetch(s + 192, _MM_HINT_T0);
+#ifdef __AVX2__
+    if (uintptr_t(d) & 16) {
+      __m128i A = *(const __m128i_u*)s;
+      _mm_stream_si128((__m128i*)d, A);
+      s += 16;
+      d += 16;
+      size -= 16;
+    }
+#endif
+    _mm_prefetch(s + 64, _MM_HINT_NTA);
+    _mm_prefetch(s + 128, _MM_HINT_NTA);
+    _mm_prefetch(s + 192, _MM_HINT_NTA);
     while (size >= 64) {
-      _mm_prefetch(s + 256, _MM_HINT_T0);
+      _mm_prefetch(s + 256, _MM_HINT_NTA);
+#ifdef __AVX2__
+      __m256i A = *(const __m256i_u*)s;
+      __m256i B = *(const __m256i_u*)(s + 32);
+      _mm256_stream_si256((__m256i*)d, A);
+      _mm256_stream_si256((__m256i*)(d + 32), B);
+#else
       __m128i A = *(const __m128i_u*)s;
       __m128i B = *(const __m128i_u*)(s + 16);
       __m128i C = *(const __m128i_u*)(s + 32);
@@ -125,6 +140,7 @@ void* copy(void* dst, const void* src, size_t size) noexcept {
       _mm_stream_si128((__m128i*)(d + 16), B);
       _mm_stream_si128((__m128i*)(d + 32), C);
       _mm_stream_si128((__m128i*)(d + 48), D);
+#endif
       d += 64;
       s += 64;
       size -= 64;
@@ -224,25 +240,103 @@ void* fill_with_sse(void* dst, __m128i v128, uint64_t v64,
   return d + bytes;
 }
 
+#ifdef __AVX2__
+// v256 and v64 must be the repeatition of the "minimal unit";
+// and bytes must be multiple of the "minimal unit";
+// and dst must be aligned to size of "minimal unit".
+void* fill_with_avx2(void* dst, __m256i v256, uint64_t v64,
+                     size_t bytes) noexcept {
+  char* d = static_cast<char*>(dst);
+  if (bytes < 16) {
+    if (bytes < 4) {
+      if (bytes & 2) memdrop(d, uint16_t(v64));
+      if (bytes & 1) d[bytes - 1] = uint8_t(v64);
+    } else if (bytes < 8) {
+      store(d, uint32_t(v64));
+      store(d + bytes - 4, uint32_t(v64));
+    } else {
+      store(d, v64);
+      store(d + bytes - 8, v64);
+    }
+    return d + bytes;
+  }
+
+  // movntdq requires aligned memory, so we use movnti
+  store(d, v64);
+  store(d + 8, v64);
+
+  uintptr_t misalign = uintptr_t(d) & 15;
+  d += 16 - misalign;
+  bytes -= 16 - misalign;
+
+  if (bytes >= 32 && (uintptr_t(d) & 16)) {
+    _mm_stream_si128((__m128i*)d, _mm256_extracti128_si256(v256, 0));
+    d += 16;
+    bytes -= 16;
+  }
+
+  while (bytes >= 64) {
+    _mm256_stream_si256((__m256i*)d, v256);
+    _mm256_stream_si256((__m256i*)(d + 32), v256);
+    d += 64;
+    bytes -= 64;
+  }
+  if (bytes & 32) {
+    _mm256_stream_si256((__m256i*)d, v256);
+    d += 32;
+    bytes -= 32;
+  }
+  if (bytes & 16) {
+    _mm_stream_si128((__m128i*)d, _mm256_extracti128_si256(v256, 0));
+    d += 16;
+    bytes -= 16;
+  }
+  if (bytes) {
+    store(d + bytes - 16, v64);
+    store(d + bytes - 8, v64);
+  }
+  return d + bytes;
+}
+#endif  // __AVX2__
+
 } // namespace
 
 void* fill(void* dst, uint8_t value, size_t size) noexcept {
+#ifdef __AVX2__
+  __m256i v = _mm256_set1_epi8(value);
+  return fill_with_avx2(dst, v, __v4du(v)[0], size);
+#else
   __m128i v = _mm_set1_epi8(value);
   return fill_with_sse(dst, v, __v2du(v)[0], size);
+#endif
 }
 
 void* fill(void* dst, uint16_t value, size_t size) noexcept {
+#ifdef __AVX2__
+  __m256i v = _mm256_set1_epi16(value);
+  return fill_with_avx2(dst, v, __v4du(v)[0], size * 2);
+#else
   __m128i v = _mm_set1_epi16(value);
   return fill_with_sse(dst, v, __v2du(v)[0], size * 2);
+#endif
 }
 
 void* fill(void* dst, uint32_t value, size_t size) noexcept {
+#ifdef __AVX2__
+  __m256i v = _mm256_set1_epi32(value);
+  return fill_with_avx2(dst, v, __v4du(v)[0], size * 4);
+#else
   __m128i v = _mm_set1_epi32(value);
   return fill_with_sse(dst, v, __v2du(v)[0], size * 4);
+#endif
 }
 
 void* fill(void* dst, uint64_t value, size_t size) noexcept {
+#ifdef __AVX2__
+  return fill_with_avx2(dst, _mm256_set1_epi64x(value), value, size * 8);
+#else
   return fill_with_sse(dst, _mm_set1_epi64x(value), value, size * 8);
+#endif
 }
 
 void fence() noexcept {
