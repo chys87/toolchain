@@ -117,7 +117,7 @@ OPTIMIZEFLAGS ?= -O2 \
 #				 -fweb -funsafe-loop-optimizations \
 # -Wunsafe-loop-optimizations
 COPTIMIZEFLAGS ?=
-CXXOPTIMIZEFLAGS ?= -fstrict-enums -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0
+CXXOPTIMIZEFLAGS ?= -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0
 ARCHFLAGS := -march=native
 # -Wabi
 GENERIC_WARNINGFLAGS := -Wall -Wextra -Wshadow=local -Wwrite-strings \
