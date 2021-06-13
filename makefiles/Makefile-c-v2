@@ -106,16 +106,11 @@ INSTDIR := /usr/local/bin
 CSTD ?= -std=gnu99
 CXXSTD ?=
 # -pipe does more harm than good since we mount /tmp as a tmpfs
-OPTIMIZEFLAGS ?= -O2 \
+OPTIMIZEFLAGS ?= -O2 -ggdb \
 				 -fmerge-all-constants -fno-common \
 				 -fno-ident \
 				 -ffunction-sections -fdata-sections \
 				 -Qn
-#				 -ftree-vectorize \
-#				 -fgcse-sm -fgcse-lm -fgcse-las \
-#				 -frename-registers -fpredictive-commoning -fgcse-after-reload \
-#				 -fweb -funsafe-loop-optimizations \
-# -Wunsafe-loop-optimizations
 COPTIMIZEFLAGS ?=
 CXXOPTIMIZEFLAGS ?= -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0
 ARCHFLAGS := -march=native
