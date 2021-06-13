@@ -59,7 +59,7 @@ RE_OFFSET_FROM_SYM = re.compile(
     br'<([][ \w<>:@*&()~,.+\-*/=]+)[+\-]0x[\da-f]+>', re.A)
 RE_RIP_RELATIVE = re.compile(br'0x[\da-f]+\(%rip\)', re.A)
 RE_ABS_ADDR = re.compile(
-    br'0x(?:[4-9a-f][\da-f]{4,5}|1[\da-f]{6}|8[0-4][\da-f]{5})(?![\da-f])',
+    br'0x(?:[1-9a-f][\da-f]{4,5}|1[\da-f]{6}|8[0-4][\da-f]{5})(?![\da-f])',
     re.A)
 RE_GCC_GEN_FUNCTION_NAMES = re.compile(
     br'\.(isra|part|constprop|cold)\.\d+(?=[+>\-\.])')
