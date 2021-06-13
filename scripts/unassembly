@@ -38,6 +38,8 @@ import locale
 import os
 import platform
 import re
+import shlex
+import shutil
 import signal
 import subprocess
 import sys
@@ -290,14 +292,14 @@ def syscall_replace(fi):
                  for m in pattern.finditer(read_header('unistd_x32.h')))
 
     pattern_syscall_instruction = re.compile(
-            br'(?:mov\s+\$0x([a-f\d]+),%[er]?a[xl]|xor\s+%[er]ax,%[er]ax)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.+\ssyscall)')
+            br'(?:mov[blq]?\s+\$((?:0x)?[a-f\d]+),\s*%[er]?a[xl]|xor[lq]?\s+%[er]ax,\s*%[er]ax)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.+\ssyscall)')
     pattern_syscall_function = re.compile(
-            br'(?:mov\s+\$0x([a-f\d]+),%[er]?dil?|xor\s+%[er]dx,%[er]dx)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.+<syscall)')
+            br'(?:mov[blq]?\s+\$((?:0x)?[a-f\d]+),\s*%[er]?dil?|xor[lq]?\s+%[er]dx,\s*%[er]dx)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.+<syscall)')
 
     def sub(match):
         no_str = match.group(1)
         if no_str:
-            no = int(no_str, 16)
+            no = int(no_str, 0)
         else:
             no = 0  # XOR EAX, EAX
         res = match.group(0)
@@ -336,6 +338,22 @@ def safe_write(f, data):  # Safe against broken pipe
         return False
 
 
+def find_objdump():
+    argv = ['objdump']
+    objdump = os.environ.get('OBJDUMP')
+    if objdump:
+        argv = shlex.split(objdump)
+    else:
+        objdump = shutil.which('llvm-objdump')
+        if objdump:
+            argv = [objdump, '--print-imm-hex']
+
+    objdump_flags = os.environ.get('OBJDUMPFLAGS')
+    if objdump_flags:
+        argv += shlex.split(objdump_flags)
+    return argv
+
+
 def main():
     locale.setlocale(locale.LC_ALL, 'C')
 
@@ -344,7 +362,7 @@ def main():
     parser.add_argument('filename', help='File to unassembly')
     args = parser.parse_args()
 
-    objdump = subprocess.Popen(['objdump', '-C', '-r', '-d', args.filename],
+    objdump = subprocess.Popen(find_objdump() + ['-C', '-r', '-d', args.filename],
                                close_fds=True,
                                stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)

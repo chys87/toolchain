@@ -48,13 +48,14 @@ import stat
 UNASSEMBLY = 'unassembly'
 
 
-def sub_asterisks(m, len=len):
-    return b'** ** ** ** ** ** ** ** ** ** ** ** '[:len(m.group(1))]
+def sub_asterisks(m, *, rex=re.compile(b'[\da-f]', re.A)):
+    return rex.sub(b'*', m.group(1))
 
 
-RE_ASTERISKS = re.compile(br'^[ \t]*[\da-f]+:[ \t]*((?:[\da-f][\da-f] )*)',
+RE_ASTERISKS = re.compile(br'^[ \t]*[\da-f]+:[ \t]*((?:[\da-f][\da-f]\s)*)',
                           re.M | re.A)
-RE_ADDRESS_FOR_SYM = re.compile(br'[\da-f]+ <', re.A)
+RE_ADDRESS_FOR_SYM = re.compile(br'[\da-f]+\s+<', re.A)
+RE_RESOLVED_ABS_ADDR = re.compile(br'# [\da-f]+$', re.M | re.A)
 RE_OFFSET_FROM_SYM = re.compile(
     br'<([][ \w<>:@*&()~,.+\-*/=]+)[+\-]0x[\da-f]+>', re.A)
 RE_RIP_RELATIVE = re.compile(br'0x[\da-f]+\(%rip\)', re.A)
@@ -70,6 +71,8 @@ def dump_filter(txt):
     txt = RE_ASTERISKS.sub(sub_asterisks, txt)
     # Remove addresses before '<'
     txt = RE_ADDRESS_FOR_SYM.sub(b'<', txt)
+    # Remove resolved addresses for ...(%rip) (llvm-objdump only)
+    txt = RE_RESOLVED_ABS_ADDR.sub(b'', txt)
     # Remove offsets relative to symbols
     txt = RE_OFFSET_FROM_SYM.sub(br'<\1+0x....>', txt)
     # Remove offsets relative to RIP
