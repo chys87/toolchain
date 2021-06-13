@@ -276,7 +276,7 @@ ifeq "$(LTO)" "1"
  else
  EXTRA_CFLAGS += -flto
  EXTRA_CXXFLAGS += -flto
- EXTRA_LDFLAGS += -flto
+ EXTRA_LDFLAGS += -flto -fuse-ld=lld
  endif
  OPTIMIZEFLAGS := $(subst -ffunction-sections,,$(OPTIMIZEFLAGS))
  OPTIMIZEFLAGS := $(subst -fdata-sections,,$(OPTIMIZEFLAGS))
