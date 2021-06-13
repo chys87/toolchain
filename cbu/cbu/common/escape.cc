@@ -125,6 +125,9 @@ inline char* encode_by_mask(char* w, const char* s,
     bmsk = bzhi(bmsk, until);
   }
   for (std::uint32_t offset : set_bits(bmsk)) {
+#ifdef __clang__
+#pragma clang loop vectorize(disable) unroll(disable)
+#endif
     while (from < offset) {
       *w++ = *s++;
       ++from;
@@ -132,6 +135,9 @@ inline char* encode_by_mask(char* w, const char* s,
     w = escape_char(w, *s++, style);
     ++from;
   }
+#ifdef __clang__
+#pragma clang loop vectorize(disable) unroll(disable)
+#endif
   while (from < until) {
     *w++ = *s++;
     ++from;
@@ -174,7 +180,7 @@ char* escape_string(char* w, std::string_view src,
   }
   n -= 32;
 
-  while (n & -32) {
+  while (n >= 32) {
     __m256i chars = *(const __m256i*)s;
     __m256i msk = get_encoding_mask(chars, options.style);
     if (_mm256_testz_si256(msk, msk)) {
@@ -235,6 +241,9 @@ std::tuple<char, char*, const char*> copy_until_backslash(
       dst += 32;
     } else {
       unsigned off = ctz(_mm256_movemask_epi8(mask));
+#ifdef __clang__
+#pragma clang loop vectorize(disable) unroll(disable)
+#endif
       for (unsigned i = off; i; --i)
         *dst++ = *src++;
       return {*src, dst, src};
