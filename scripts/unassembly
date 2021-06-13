@@ -289,8 +289,10 @@ def syscall_replace(fi):
     table.update((int(m.group(2)) + 0x40000000, m.group(1))
                  for m in pattern.finditer(read_header('unistd_x32.h')))
 
-    pattern = re.compile(
-            br'(?:mov\s+\$0x([a-f\d]+),%[er]?a[xl]|xor\s+%[er]ax,%[er]ax)\s*(?=\n(.+(lea|mov|xor|add|sub|clt|sh[lr]).+\n){,5}.+syscall)')
+    pattern_syscall_instruction = re.compile(
+            br'(?:mov\s+\$0x([a-f\d]+),%[er]?a[xl]|xor\s+%[er]ax,%[er]ax)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.+\ssyscall)')
+    pattern_syscall_function = re.compile(
+            br'(?:mov\s+\$0x([a-f\d]+),%[er]?dil?|xor\s+%[er]dx,%[er]dx)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.+<syscall)')
 
     def sub(match):
         no_str = match.group(1)
@@ -312,7 +314,8 @@ def syscall_replace(fi):
         if not newdata:
             break
         data += newdata
-        data = pattern.sub(sub, data)
+        data = pattern_syscall_instruction.sub(sub, data)
+        data = pattern_syscall_function.sub(sub, data)
 
         # Yield all lines except the last 6
         yield_data, data = split_tail_lines(data, 6)
