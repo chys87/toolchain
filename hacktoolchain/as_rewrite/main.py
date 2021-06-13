@@ -37,7 +37,7 @@ def init_as(argv):
     for (i, arg) in enumerate(argv):
         if skip_next:
             skip_next = False
-        elif arg.startswith('-m') or arg in ('--noexecstack', '-W'):
+        elif arg.startswith(('-m', '--gdwarf')) or arg in ('--noexecstack', '-W'):
             args.append (arg)
         elif arg in ('--64', '--x32'):  # --32 is not supported
             opt.abi = arg[2:]
