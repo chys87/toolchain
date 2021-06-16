@@ -7,6 +7,7 @@
 # error "Don't include me directly. Include tinyx32.h instead."
 #endif
 
+#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -31,8 +32,10 @@ inline void *operator new[](std::size_t n) { return operator new(n); }
 inline void operator delete[](void *p) noexcept { operator delete(p); }
 inline void operator delete[](void *p, std::size_t) { operator delete[](p); }
 
+#if 0  // <new> already has them
 inline void *operator new(std::size_t, void *p) noexcept { return p; }
 inline void operator delete(void *, void *) noexcept {}
+#endif
 
 template <typename T> requires std::is_trivially_copyable<T>::value
 inline T *Memcpy(T *dst, const void *src, size_t n) {
@@ -114,8 +117,8 @@ public:
 
   template <typename T>
     requires (requires(const T &s) {
-        { s.data() } -> const char *;
-        { s.length() } -> size_t;
+        { static_cast<const char*>(s.data()) };
+        { static_cast<size_t>(s.length()) };
       })
   ChainMemcpy &operator << (const T &s) {
     this->p_ = Mempcpy(this->p_, s.data(), s.length());

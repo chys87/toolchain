@@ -4,7 +4,9 @@
 
 import argparse
 import glob
+import hashlib
 import os
+import pickle
 import sys
 
 
@@ -23,10 +25,10 @@ argv0 = {argv0}
 NINJA_TEMPLATE = r'''
 {name}cc = {cc}
 {name}cxx = {cxx}
-{name}cppflags = -DTX32_PREFERRED_STACK_BOUNDARY={stack_alignment} -I{tinyx32_dir} -D _GNU_SOURCE -D NDEBUG -D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS -D __NO_MATH_INLINES -U _FORTIFY_SOURCE
-{name}commonflags = -O2 -march=native -mx32 -mpreferred-stack-boundary={stack_alignment} -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-vzeroupper
-{name}cflags = -std=gnu11
-{name}cxxflags = -fno-exceptions -fno-rtti -std=gnu++17 -fconcepts
+{name}cppflags = -I{tinyx32_dir} -D _GNU_SOURCE -D NDEBUG -D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS -D __NO_MATH_INLINES -U _FORTIFY_SOURCE
+{name}commonflags = -O2 -march=native -mx32 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-vzeroupper
+{name}cflags = -std=gnu17
+{name}cxxflags = -fno-exceptions -fno-rtti -std=gnu++20
 {name}ldflags = -nostdlib -static -fuse-linker-plugin -flto-partition=none -Wl,--gc-sections
 {name}libs = -lgcc
 {name}builddir = {builddir}
@@ -101,10 +103,12 @@ def find_compilers():
 
 
 class Binary:
-    __slots__ = 'name', 'srcs', 'stack_alignment'
+    __slots__ = 'name', 'srcs',
 
-    def build_hash(self):
-        return f'{self.stack_alignment}'
+    def build_hash(self, **kwargs):
+        hash_bytes = pickle.dumps(
+                (sorted(kwargs), open(__file__, 'rb').read()))
+        return hashlib.md5(hash_bytes).hexdigest()
 
 
 class BuildFile:
@@ -130,11 +134,10 @@ class BuildFile:
         if not self.binaries:
             sys.exit(f'No target is specified in {filename}')
 
-    def __callback_binary(self, *, name, srcs, stack_alignment=4):
+    def __callback_binary(self, *, name, srcs):
         binary = Binary()
         binary.name = name
         binary.srcs = srcs
-        binary.stack_alignment = stack_alignment
         self.binaries.append(binary)
 
     def gen_ninja(self):
@@ -149,7 +152,7 @@ class BuildFile:
         for binary in self.binaries:
             name = binary.name
             builddir = os.path.realpath(os.path.join('build', name))
-            safe_replace(os.path.join(builddir, '__hash'), binary.build_hash())
+            safe_replace(os.path.join(builddir, '__hash'), binary.build_hash(cc=cc, cxx=cxx))
 
             # obj: src
             objs = {}
@@ -173,7 +176,6 @@ class BuildFile:
             ninja_content += NINJA_TEMPLATE.format(
                 tinyx32_dir=tinyx32_dir, instdir=instdir,
                 name=binary.name, cc=cc, cxx=cxx, builddir=builddir,
-                stack_alignment=binary.stack_alignment,
                 objs=' '.join(sorted(objs)), rules=rules)
 
         return ninja_content
