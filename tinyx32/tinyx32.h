@@ -61,19 +61,60 @@ void *mempcpy(void *dst, const void *src, size_t n) __attribute__((__nonnull__(1
 void *memmove(void *dst, const void *src, size_t n) __attribute__((__nonnull__(1, 2)));
 size_t strlen(const char *s) __attribute__((__pure__, __nonnull__(1)));
 int memcmp(const void *, const void *, size_t) __attribute__((__pure__, __nonnull__(1, 2)));
-void *memchr(const void *, int, size_t) __attribute__((__pure__, __nonnull__(1)));
-void *memrchr(const void *, int, size_t) __attribute__((__pure__, __nonnull__(1)));
-void *rawmemchr(const void *, int) __attribute__((__pure__, __nonnull__(1)));
-char *strchr(const char *, int) __attribute__((__pure__, __nonnull__(1)));
-char *strchrnul(const char *, int) __attribute__((__pure__, __nonnull__(1)));
-char *strrchr(const char *, int) __attribute__((__pure__, __nonnull__(1)));
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#ifdef __cplusplus
+#define TX32_DISPATCH_CXX_STRING_FUNCTION(func, ret_ptr_type, params, \
+                                          const_params, attrs)        \
+  ret_ptr_type* func params __asm__(#func) __attribute__(attrs);      \
+  const ret_ptr_type* func const_params __asm__(#func) __attribute__(attrs)
+#else
+#define TX32_DISPATCH_CXX_STRING_FUNCTION(func, ret_ptr_type, params, \
+                                          const_params, attrs)        \
+  ret_ptr_type* func const_params __attribute__(attrs)
+#endif
+TX32_DISPATCH_CXX_STRING_FUNCTION(memchr, void, (void*, int, size_t),
+                                  (const void*, int, size_t),
+                                  (__pure__, __nonnull__(1)));
+TX32_DISPATCH_CXX_STRING_FUNCTION(memrchr, void, (void*, int, size_t),
+                                  (const void*, int, size_t),
+                                  (__pure__, __nonnull__(1)));
+TX32_DISPATCH_CXX_STRING_FUNCTION(rawmemchr, void, (void*, int),
+                                  (const void*, int),
+                                  (__pure__, __nonnull__(1)));
+TX32_DISPATCH_CXX_STRING_FUNCTION(strchr, char, (char*, int),
+                                  (const char*, int),
+                                  (__pure__, __nonnull__(1)));
+TX32_DISPATCH_CXX_STRING_FUNCTION(strchrnul, char, (char*, int),
+                                  (const char*, int),
+                                  (__pure__, __nonnull__(1)));
+TX32_DISPATCH_CXX_STRING_FUNCTION(strrchr, char, (char*, int),
+                                  (const char*, int),
+                                  (__pure__, __nonnull__(1)));
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 int strcmp(const char *, const char *) __attribute__((__pure__, __nonnull__(1, 2)));
 int strncmp(const char *, const char *, size_t) __attribute__((__pure__, __nonnull__(1, 2)));
 
 // Non-standard string.c
 char *utoa10(unsigned value, char *str);
 char *itoa10(int value, char *str);
-char *basename(const char *) __attribute__((__pure__, __nonnull__(1)));
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+TX32_DISPATCH_CXX_STRING_FUNCTION(basename, char, (char*), (const char*),
+                                  (__pure__, __nonnull__(1)));
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct Strtou {
     unsigned val;
