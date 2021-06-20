@@ -49,19 +49,8 @@ union Description {
   struct {
     RbLink<Description> link_ad;
     RbLink<Description> link_szad;
-    union {
-      struct {
-        Page* addr;
-        size_t size;
-      };
-#if defined __x86_64__
-#if defined __ILP32__
-      uint64_t addr_size;
-#else
-      unsigned __int128 addr_size;
-#endif
-#endif
-    };
+    Page* addr;
+    size_t size;
   };
   struct {
     Description *next;
@@ -151,9 +140,6 @@ struct DescriptionSzAdRbAccessor {
       return 1;
   }
   static bool lt(const Node *a, const Node *b) noexcept {
-#if defined __x86_64__
-    return (a->addr_size < b->addr_size);
-#endif
     return (a->size < b->size) || (a->size == b->size && a->addr < b->addr);
   }
 };
