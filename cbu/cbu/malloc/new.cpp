@@ -27,8 +27,11 @@
  */
 
 #include "cbu/malloc/new.h"
+
 #include <stdlib.h>
+
 #include <new>
+
 #include "cbu/malloc/malloc.h"
 #include "cbu/malloc/private.h"
 
@@ -163,7 +166,6 @@ void operator delete[](void* p, std::align_val_t, const std::nothrow_t&)
 }
 
 namespace cbu {
-inline namespace cbu_malloc {
 
 void* new_realloc(void* ptr, size_t n) {
   if (n == 0)
@@ -187,5 +189,4 @@ void* new_aligned_realloc(void* ptr, size_t n, size_t alignment) {
   return ptr;
 }
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace cbu

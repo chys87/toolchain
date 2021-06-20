@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@
 // responsibility to guarantee.
 
 namespace cbu {
-inline namespace cbu_malloc {
+namespace malloc_details {
 
 template <typename Node>
 struct RbLink {
@@ -635,5 +635,5 @@ auto Rb<Accessor>::remove(Node *node) noexcept -> Node * {
   return node;
 }
 
-} // namespace cbu_malloc
+} // namespace malloc_details
 } // namespace cbu

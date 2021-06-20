@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@
 #include <mutex>
 
 namespace cbu {
-inline namespace cbu_malloc {
+namespace malloc_details {
 
 // size must be non-0, and multiple of pagesize
 void* get_pages_for_perma(size_t size) noexcept;
@@ -203,5 +203,5 @@ public:
   inline void free(T* ptr) { Base::free(ptr); }
 };
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace malloc_details
+}  // namespace cbu

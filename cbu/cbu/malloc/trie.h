@@ -29,15 +29,16 @@
 #pragma once
 #include <assert.h>
 #include <string.h>
+
 #include <memory>
+
 #include "cbu/common/bit.h"
 #include "cbu/compat/atomic_ref.h"
 #include "cbu/malloc/permanent.h"
 #include "cbu/tweak/tweak.h"
 
 namespace cbu {
-inline namespace cbu_malloc {
-namespace detail {
+namespace malloc_details {
 
 template <typename Node>
 Node* ensure_node_heavy(Node **ptr, SimplePermaAlloc<Node> &allocator) {
@@ -81,8 +82,6 @@ inline constexpr unsigned const_log2(size_t n) noexcept {
   return i;
 }
 
-} // namespace detail
-
 template <unsigned TotalBits, typename ValueType = uintptr_t>
 requires (TotalBits >= 8 and TotalBits <= sizeof(uintptr_t) * 8 and
           (sizeof(ValueType) & (sizeof(ValueType) - 1)) == 0)
@@ -90,10 +89,9 @@ class Trie {
  private:
   union Node;
   static constexpr unsigned NodeSize = 64;
-  static constexpr unsigned LevelBits = detail::const_log2(
-      NodeSize / sizeof(uintptr_t));
-  static constexpr unsigned LeafBits = detail::const_log2(
-      NodeSize / sizeof(ValueType));
+  static constexpr unsigned LevelBits =
+      const_log2(NodeSize / sizeof(uintptr_t));
+  static constexpr unsigned LeafBits = const_log2(NodeSize / sizeof(ValueType));
   static constexpr unsigned Levels = (TotalBits - LeafBits) / LevelBits;
   static constexpr unsigned TopBits = (TotalBits - LeafBits) % LevelBits;
 
@@ -140,7 +138,7 @@ ValueType* Trie<TotalBits, ValueType>::lookup(uintptr_t v) {
   Node** pnode = &head_[TopBits ? (v >> (Levels * LevelBits + LeafBits)) : 0];
   Node* node = *pnode;
   for (int i = Levels * LevelBits; ;) {
-    node = detail::ensure_node(pnode, allocator_);
+    node = ensure_node(pnode, allocator_);
     i -= LevelBits;
     if (i < 0)
       break;
@@ -149,5 +147,5 @@ ValueType* Trie<TotalBits, ValueType>::lookup(uintptr_t v) {
   return &node->tbl[v & ((1 << LeafBits) - 1)];
 }
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace malloc_details
+}  // namespace cbu

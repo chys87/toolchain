@@ -39,7 +39,7 @@
 #include "cbu/sys/low_level_mutex.h"
 
 namespace cbu {
-inline namespace cbu_malloc {
+namespace malloc_details {
 
 void fatal(const char* s) noexcept {
   size_t n = fsys_write(2, s, strlen(s));
@@ -122,5 +122,5 @@ void* raw_mmap_alloc(size_t size) noexcept {
   return allocator.alloc(size);
 }
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace malloc_details
+}  // namespace cbu

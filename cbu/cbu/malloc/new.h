@@ -31,7 +31,6 @@
 #include <new>
 
 namespace cbu {
-inline namespace cbu_malloc {
 
 struct ReNew {
   void* ptr;
@@ -43,8 +42,7 @@ struct ReNew {
 void* new_realloc(void* ptr, std::size_t n);
 void* new_aligned_realloc(void* ptr, std::size_t n, std::size_t alignment);
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace cbu
 
 inline void* operator new(std::size_t n, cbu::ReNew nr) {
   return cbu::new_realloc(nr.ptr, n);

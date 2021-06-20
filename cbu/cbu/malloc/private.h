@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,7 @@
 #include "cbu/malloc/pagesize.h"
 
 namespace cbu {
-inline namespace cbu_malloc {
+namespace malloc_details {
 
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
 inline constexpr bool true_no_fail(bool) { return true; }
@@ -172,5 +172,5 @@ void fatal(const char* msg) noexcept;
 void* raw_mmap_alloc(size_t) noexcept
   __attribute__((__malloc__, __alloc_size__(1)));
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace malloc_details
+}  // namespace cbu

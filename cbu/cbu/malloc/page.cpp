@@ -43,7 +43,7 @@
 #include <mutex>
 
 namespace cbu {
-inline namespace cbu_malloc {
+namespace malloc_details {
 
 union Description {
   struct {
@@ -692,6 +692,6 @@ void large_trim(size_t pad) noexcept {
   arena->munmap_description_list(clean_list);
 }
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace malloc_details
+}  // namespace cbu
 // vim: fdm=marker:

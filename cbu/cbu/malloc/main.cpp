@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,7 +37,7 @@
 #include <algorithm>
 
 namespace cbu {
-inline namespace cbu_malloc {
+namespace malloc_details {
 namespace {
 
 // Naive realloc, for debugging purpose only
@@ -47,23 +47,23 @@ void* naive_realloc(void* ptr, size_t newsize) {
     cbu_free(ptr);
     return nullptr;
   } else if (ptr == nullptr) {
-    return ::cbu_malloc(newsize);
+    return cbu_malloc(newsize);
   } else {
     size_t oldsize = (uintptr_t(ptr) % pagesize) ?
       small_allocated_size(ptr) :
       large_allocated_size(ptr);
-    void* nptr = ::cbu_malloc(newsize);
+    void* nptr = cbu_malloc(newsize);
     memcpy(nptr, ptr, std::min(oldsize, newsize));
     cbu_free(ptr);
     return nptr;
   }
 }
 
-} // namespace
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace
+}  // namespace cbu_malloc
+}  // namespace cbu
 
-using namespace cbu::cbu_malloc;
+using namespace cbu::malloc_details;
 
 extern "C" void* cbu_malloc(size_t n) noexcept {
   void* ptr;

@@ -33,7 +33,7 @@
 #endif
 
 namespace cbu {
-inline namespace cbu_malloc {
+namespace malloc_details {
 
 #ifdef PAGE_SHIFT
 constexpr unsigned pagesize_bits = PAGE_SHIFT;
@@ -50,5 +50,5 @@ constexpr unsigned hugepagesize = 2048 * 1024;
 constexpr unsigned hugepagesize = 0;
 #endif
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace malloc_details
+}  // namespace cbu

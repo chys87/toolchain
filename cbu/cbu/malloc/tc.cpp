@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
 #include "cbu/common/once.h"
 
 namespace cbu {
-inline namespace cbu_malloc {
+namespace malloc_details {
 
 __thread ThreadCache thread_cache;
 
@@ -51,5 +51,5 @@ void ThreadCache::do_prepare() noexcept {
   pthread_setspecific(key, this);
 }
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace malloc_details
+}  // namespace cbu

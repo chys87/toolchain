@@ -34,7 +34,7 @@
 #include "cbu/malloc/private.h"
 
 namespace cbu {
-inline namespace cbu_malloc {
+namespace malloc_details {
 namespace {
 
 constexpr size_t pseudo_hugepagesize =
@@ -149,5 +149,5 @@ void *get_pages_for_perma(size_t size) noexcept {
   return ptr;
 }
 
-} // namespace cbu_malloc
-} // namespace cbu
+}  // namespace malloc_details
+}  // namespace cbu
