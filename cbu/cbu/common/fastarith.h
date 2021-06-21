@@ -148,9 +148,13 @@ struct SuperInteger {
   bool pos;
   T abs;
 
+  // Note: Cast x to T because negation helps preventing undfined behavior
+  // related to signed overflow (if the original value is equal to
+  // std::numeric_limits<U>::min()), in which case clang may evaluate the
+  // resulting absolute value to 0
   template <Raw_integral U> requires(sizeof(U) <= sizeof(T))
   constexpr SuperInteger(U x) noexcept
-      : pos(x >= 0), abs(std::make_unsigned_t<U>(x < 0 ? -x : x)) {}
+      : pos(x >= 0), abs(std::make_unsigned_t<U>(x < 0 ? -T(x) : T(x))) {}
 
   constexpr SuperInteger(bool p, T a) noexcept : pos(a ? p : true), abs(a) {}
 
