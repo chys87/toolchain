@@ -122,17 +122,15 @@ UniqueCache<CacheClass>::grab(CachePool<CacheClass>* pool) noexcept {
       }
     }
 
-    for (;;) {
-      if (max_concurrency >= kHardMaxConcurrency) {
-        fsys_sched_yield();
-        break;
-      }
-
-      if (g_used_max_concurrency.compare_exchange_strong(
-              max_concurrency, max_concurrency + 1, std::memory_order_relaxed,
-              std::memory_order_relaxed))
-        break;
+    if (max_concurrency >= kHardMaxConcurrency) {
+      fsys_sched_yield();
+      continue;
     }
+
+    if (g_used_max_concurrency.compare_exchange_strong(
+            max_concurrency, max_concurrency + 1, std::memory_order_relaxed,
+            std::memory_order_relaxed))
+      ++max_concurrency;
   }
 }
 
