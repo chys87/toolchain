@@ -28,38 +28,37 @@
 
 #pragma once
 
-#include "cbu/fsyscall/fsyscall.h"
-#include "cbu/malloc/private.h"
-#include "cbu/sys/low_level_mutex.h"
 #include <algorithm>
 #include <mutex>
 
-namespace cbu {
-namespace malloc_details {
+#include "cbu/alloc/alloc.h"
+#include "cbu/alloc/private.h"
+#include "cbu/fsyscall/fsyscall.h"
+#include "cbu/sys/low_level_mutex.h"
 
-// size must be non-0, and multiple of pagesize
-void* get_pages_for_perma(size_t size) noexcept;
+namespace cbu {
+namespace alloc {
 
 // Type T must have next (T *) and count (unsigned) members
-template <typename T>
-requires (sizeof(T) <= pagesize and alignof(T) <= pagesize)
+template <typename T, bool AllowThp = true>
 class PermaAlloc {
-public:
-  T* alloc ();
+ public:
+  static_assert(sizeof(T) <= kPageSize && alignof(T) <= kPageSize);
+
+  T* alloc();
   void free(T* ptr) noexcept;
 
   // Always return exactly preferred_count nodes
   T* alloc_list(unsigned preferred_count);
   void free_list(T* ptr) noexcept;
 
-private:
+ private:
   LowLevelMutex lock_;
   T* list_ = nullptr;
 };
 
-template <typename T>
-requires (sizeof(T) <= pagesize and alignof(T) <= pagesize)
-T* PermaAlloc<T>::alloc() {
+template <typename T, bool AllowThp>
+T* PermaAlloc<T, AllowThp>::alloc() {
   if (std::lock_guard locker(lock_); list_) {
     T* node = list_;
     unsigned old_count = node->count;
@@ -77,11 +76,11 @@ T* PermaAlloc<T>::alloc() {
 
   // Nothing available. Allocate new
   constexpr size_t alloc_size = pagesize_ceil(4 * sizeof(T));
-  void* np = get_pages_for_perma(alloc_size);
-  if (false_no_fail(np == NULL))
-    return NULL;
+  void* np =
+      RawPageAllocator::instance<AllowThp, PermaAlloc<T>>.allocate(alloc_size);
+  if (false_no_fail(np == nullptr)) return NULL;
 
-  T* node = static_cast<T *>(np);
+  T* node = static_cast<T*>(np);
   T* rnode = node + 1;
 
   // Put rnode in list
@@ -92,15 +91,14 @@ T* PermaAlloc<T>::alloc() {
   return node;
 }
 
-template <typename T>
-requires (sizeof(T) <= pagesize and alignof(T) <= pagesize)
-T *PermaAlloc<T>::alloc_list(unsigned preferred_count) {
+template <typename T, bool AllowThp>
+T* PermaAlloc<T, AllowThp>::alloc_list(unsigned preferred_count) {
   unsigned count = 0;
   using Ptr = decltype(T::next);
   Ptr ret;
   Ptr* tail = &ret;
 
-  for (std::lock_guard locker(lock_); list_ && (count < preferred_count); ) {
+  for (std::lock_guard locker(lock_); list_ && (count < preferred_count);) {
     T* node = list_;
     *tail = node;
     unsigned old_count = node->count;
@@ -125,7 +123,8 @@ T *PermaAlloc<T>::alloc_list(unsigned preferred_count) {
 
     unsigned need_count = preferred_count - count;
     const size_t alloc_size = pagesize_ceil(need_count * sizeof(T));
-    void* np = get_pages_for_perma(alloc_size);
+    void* np = RawPageAllocator::instance<AllowThp, PermaAlloc<T>>.allocate(
+        alloc_size);
     if (false_no_fail(np == nullptr)) {
       if (ret) {
         std::lock_guard locker(lock_);
@@ -140,7 +139,7 @@ T *PermaAlloc<T>::alloc_list(unsigned preferred_count) {
     node->count = need_count;
     tail = &node->next;
     if (allocated_count > need_count) {
-      T *rnode = node + need_count;
+      T* rnode = node + need_count;
       rnode->count = allocated_count - need_count;
       std::lock_guard locker(lock_);
       rnode->next = list_;
@@ -152,56 +151,55 @@ T *PermaAlloc<T>::alloc_list(unsigned preferred_count) {
   return ret;
 }
 
-template <typename T>
-requires (sizeof(T) <= pagesize and alignof(T) <= pagesize)
-void PermaAlloc<T>::free(T* ptr) noexcept {
+template <typename T, bool AllowThp>
+void PermaAlloc<T, AllowThp>::free(T* ptr) noexcept {
   std::lock_guard locker(lock_);
   ptr->next = list_;
   ptr->count = 1;
   list_ = ptr;
 }
 
-template <typename T>
-requires (sizeof(T) <= pagesize and alignof(T) <= pagesize)
-void PermaAlloc<T>::free_list(T* ptr) noexcept {
-  if (!ptr)
-    return;
+template <typename T, bool AllowThp>
+void PermaAlloc<T, AllowThp>::free_list(T* ptr) noexcept {
+  if (!ptr) return;
   T* tail = ptr;
-  while (tail->next)
-    tail = tail->next;
+  while (tail->next) tail = tail->next;
   std::lock_guard locker(lock_);
   tail->next = list_;
   list_ = ptr;
 }
 
+// This class allocates with a given size and alignment margin without requiring
+// a type with proper next and count members
 template <size_t Size, size_t Align>
-requires (Size <= pagesize)
-class SizedPermaAlloc
-{
+class SizedPermaAlloc {
+  static_assert(Size <= kPageSize);
   union Node {
     alignas(Align) char memory[Size];
     struct {
-      Node *next;
+      Node* next;
       unsigned count;
     };
   };
 
   PermaAlloc<Node> allocator_;
 
-public:
-  inline void* alloc () { return allocator_.alloc(); }
+ public:
+  inline void* alloc() { return allocator_.alloc(); }
   inline void free(void* ptr) { allocator_.free(static_cast<Node*>(ptr)); }
 };
 
+// This class allocates with a given typewithout requiring proper next and count
+// members
 template <typename T>
 class SimplePermaAlloc : public SizedPermaAlloc<sizeof(T), alignof(T)> {
-private:
+ private:
   using Base = SizedPermaAlloc<sizeof(T), alignof(T)>;
 
-public:
+ public:
   inline T* alloc() { return static_cast<T*>(Base::alloc()); }
   inline void free(T* ptr) { Base::free(ptr); }
 };
 
-}  // namespace malloc_details
+}  // namespace alloc
 }  // namespace cbu

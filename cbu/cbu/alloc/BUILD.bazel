@@ -1,5 +1,5 @@
 # cbu - chys's basic utilities
-# Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+# Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,12 +25,14 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cc_library(
-  name = 'malloc',
-  srcs = glob(['*.cc', '*.cpp'],
-              exclude=['*_test.*']),
-  hdrs = glob(['*.h']),
+  name = 'alloc',
+  srcs = glob(['*.cpp', '*.h'],
+              exclude=['*_test.*', 'alloc.h', 'pagesize.h']),
+  # Only alloc.h and pagesize.h are public interfaces
+  hdrs = glob(['alloc.h', 'pagesize.h']),
   deps = [
-    '//cbu/alloc:alloc',
+    '//cbu/common:common',
+    '//cbu/compat:compat',
     '//cbu/fsyscall:fsyscall',
     '//cbu/sys:sys',
     '//cbu/tweak:tweak',

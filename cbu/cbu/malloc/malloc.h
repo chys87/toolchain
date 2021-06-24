@@ -29,6 +29,7 @@
 #pragma once
 
 #include <stddef.h>
+
 #include "cbu/malloc/visibility.h"
 
 extern "C" {
@@ -41,17 +42,12 @@ void cbu_free(void *) noexcept cbu_malloc_visibility_default;
 
 void cbu_cfree(void *) noexcept cbu_malloc_visibility_default;
 
-void cbu_sized_free(void *, size_t) noexcept cbu_malloc_visibility_default;
-
 void *cbu_calloc(size_t, size_t) noexcept
   __attribute__((__malloc__)) cbu_malloc_visibility_default;
 
 void *cbu_realloc(void *, size_t) noexcept cbu_malloc_visibility_default;
 
 void *cbu_reallocarray(void *, size_t, size_t) noexcept
-  cbu_malloc_visibility_default;
-
-void *cbu_aligned_realloc(void *, size_t, size_t) noexcept
   cbu_malloc_visibility_default;
 
 void *cbu_aligned_alloc (size_t, size_t) noexcept

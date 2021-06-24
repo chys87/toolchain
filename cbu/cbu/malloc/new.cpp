@@ -32,17 +32,18 @@
 
 #include <new>
 
-#include "cbu/malloc/malloc.h"
-#include "cbu/malloc/private.h"
+#include "cbu/alloc/alloc.h"
+#include "cbu/malloc/visibility.h"
 
 namespace {
+
+namespace alloc = cbu::alloc;
 
 void* new_nothrow(size_t n) noexcept {
   // C standard says malloc(0) may or may not return NULL
   // C++ standard says ::operator new(0) must reutrn a non-NULL pointer
-  if (n == 0)
-    n = 1;
-  return cbu_malloc(n);
+  if (n == 0) n = 1;
+  return alloc::allocate(n);
 }
 
 void* new_throw(size_t n) {
@@ -54,7 +55,7 @@ void* new_throw(size_t n) {
   return r;
 }
 
-} // namespace
+}  // namespace
 
 // Regular new/delete
 cbu_malloc_visibility_default
@@ -64,20 +65,20 @@ cbu_malloc_visibility_default
 void* operator new[](size_t n) { return new_throw(n); }
 
 cbu_malloc_visibility_default
-void operator delete(void* p) noexcept { cbu_free(p); }
+void operator delete(void* p) noexcept { alloc::reclaim(p); }
 
 cbu_malloc_visibility_default
-void operator delete[](void* p) noexcept { cbu_free(p); }
+void operator delete[](void* p) noexcept { alloc::reclaim(p); }
 
 // sized delete
-cbu_malloc_visibility_default
-void operator delete(void* p, size_t size) noexcept {
-  cbu_sized_free(p, size);
+cbu_malloc_visibility_default void operator delete(void* p,
+                                                   size_t size) noexcept {
+  alloc::reclaim(p, size);
 }
 
-cbu_malloc_visibility_default
-void operator delete[](void* p, size_t size) noexcept {
-  cbu_sized_free(p, size);
+cbu_malloc_visibility_default void operator delete[](void* p,
+                                                     size_t size) noexcept {
+  alloc::reclaim(p, size);
 }
 
 // nothrow new/delete
@@ -91,14 +92,14 @@ void* operator new[](size_t n, const std::nothrow_t&) noexcept {
   return new_nothrow(n);
 }
 
-cbu_malloc_visibility_default
-void operator delete(void* p, const std::nothrow_t&) noexcept {
-  cbu_free(p);
+cbu_malloc_visibility_default void operator delete(
+    void* p, const std::nothrow_t&) noexcept {
+  alloc::reclaim(p);
 }
 
-cbu_malloc_visibility_default
-void operator delete[](void* p, const std::nothrow_t&) noexcept {
-  cbu_free(p);
+cbu_malloc_visibility_default void operator delete[](
+    void* p, const std::nothrow_t&) noexcept {
+  alloc::reclaim(p);
 }
 
 // aligned new/delete
@@ -106,11 +107,23 @@ cbu_malloc_visibility_default
 void* operator new(size_t n, std::align_val_t alignment) {
   if (n == 0)
     n = 1;
-  void* ptr = cbu_memalign(size_t(alignment), n);
-#ifndef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-  if (ptr == nullptr)
+  if (size_t(alignment) - 1 >= alloc::kPageSize) {
+#ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
+    alloc::fatal("Invalid aligned allocation");
+#else
     throw std::bad_alloc();
 #endif
+  }
+  void* ptr = alloc::allocate(
+      n, alloc::AllocateOptions().with_align(size_t(alignment)));
+  if (ptr == nullptr) {
+#ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
+    // Can fail because of invalid alignment
+    alloc::fatal("Invalid aligned allocation");
+#else
+    throw std::bad_alloc();
+#endif
+  }
   return ptr;
 }
 
@@ -121,20 +134,21 @@ void* operator new[] (size_t n, std::align_val_t align) {
 
 cbu_malloc_visibility_default
 void operator delete(void* ptr, std::align_val_t) noexcept {
-  cbu_free(ptr);
+  alloc::reclaim(ptr);
 }
 
 cbu_malloc_visibility_default
 void operator delete [] (void* ptr, std::align_val_t) noexcept {
-  cbu_free(ptr);
+  alloc::reclaim(ptr);
 }
 
 cbu_malloc_visibility_default
 void* operator new(size_t n, std::align_val_t alignment,
                    const std::nothrow_t&) noexcept {
-  if (n == 0)
-    n = 1;
-  return cbu_memalign(size_t(alignment), n);
+  if (n == 0) n = 1;
+  if (size_t(alignment) - 1 >= alloc::kPageSize) return nullptr;
+  return alloc::allocate(
+      n, alloc::AllocateOptions().with_align(size_t(alignment)));
 }
 
 cbu_malloc_visibility_default
@@ -145,24 +159,22 @@ void* operator new[](size_t n, std::align_val_t alignment,
 
 cbu_malloc_visibility_default
 void operator delete(void* ptr, size_t size, std::align_val_t) noexcept {
-  cbu_sized_free(ptr, size);
+  alloc::reclaim(ptr, size);
 }
 
 cbu_malloc_visibility_default
 void operator delete [] (void* ptr, size_t size, std::align_val_t) noexcept {
-  cbu_sized_free(ptr, size);
+  alloc::reclaim(ptr, size);
 }
 
-cbu_malloc_visibility_default
-void operator delete(void* p, std::align_val_t, const std::nothrow_t&)
-    noexcept {
-  cbu_free(p);
+cbu_malloc_visibility_default void operator delete(
+    void* p, std::align_val_t, const std::nothrow_t&) noexcept {
+  alloc::reclaim(p);
 }
 
-cbu_malloc_visibility_default
-void operator delete[](void* p, std::align_val_t, const std::nothrow_t&)
-    noexcept {
-  cbu_free(p);
+cbu_malloc_visibility_default void operator delete[](
+    void* p, std::align_val_t, const std::nothrow_t&) noexcept {
+  alloc::reclaim(p);
 }
 
 namespace cbu {
@@ -170,7 +182,7 @@ namespace cbu {
 void* new_realloc(void* ptr, size_t n) {
   if (n == 0)
     n = 1;
-  ptr = cbu_realloc(ptr, n);
+  ptr = alloc::reallocate(ptr, n);
 #ifndef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
   if (ptr == NULL)
     throw std::bad_alloc();
@@ -179,13 +191,24 @@ void* new_realloc(void* ptr, size_t n) {
 }
 
 void* new_aligned_realloc(void* ptr, size_t n, size_t alignment) {
-  if (n == 0)
-    n = 1;
-  ptr = cbu_aligned_realloc(ptr, n, alignment);
-#ifndef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-  if (ptr == nullptr)
+  if (n == 0) n = 1;
+  if (size_t(alignment) - 1 >= alloc::kPageSize) {
+#ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
+    alloc::fatal("Invalid aligned allocation");
+#else
     throw std::bad_alloc();
 #endif
+  }
+  ptr = alloc::reallocate(
+      ptr, n, alloc::AllocateOptions().with_align(size_t(alignment)));
+  if (ptr == nullptr) {
+#ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
+    // Can fail because of invalid alignment
+    alloc::fatal("Invalid aligned allocation");
+#else
+    throw std::bad_alloc();
+#endif
+  }
   return ptr;
 }
 

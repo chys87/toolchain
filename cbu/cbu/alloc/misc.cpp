@@ -26,56 +26,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-#include <pthread.h>
-
-#include <type_traits>
-
-#include "cbu/malloc/private.h"
-#include "cbu/tweak/tweak.h"
+#include "cbu/alloc/alloc.h"
+#include "cbu/fsyscall/fsyscall.h"
 
 namespace cbu {
-namespace malloc_details {
+namespace alloc {
 
-struct ThreadCache {
-  enum struct Status : unsigned char {
-    INITIAL = 0,
-    NORMAL = 1,
-    FINAL = 2,
-  };
-  Status status {Status::INITIAL};
+void fatal(const char* s) noexcept {
+  size_t n = fsys_write(2, s, strlen(s));
+  (void)n;
+  abort();
+}
 
-  DescriptionThreadCache description {};
-  PageThreadCache page {};
-  ThreadSmallCache small {};
+void memory_corrupt() noexcept {
+  fatal("Memory corrupt\n");
+}
 
-  void destroy() noexcept {
-    small.destroy();
-    page.destroy();
-    description.destroy();
-  }
+std::nullptr_t nomem() noexcept {
+#ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
+  fatal("Insufficient memory\n");
+#else
+  errno = ENOMEM;
+  return nullptr;
+#endif
+}
 
-  bool is_active() const noexcept { return status == Status::NORMAL; }
-
-  // The caller must react properly when prepare returns false.
-  // On the one hand, single-threaded applications don't need to use prepare;
-  // On the other hand, the order in which pthread_key destructors are called
-  // is unspecified, so we can't expect that prepare will never be called after
-  // its destruction.
-  bool prepare() noexcept {
-    if (tweak::SINGLE_THREADED)
-      return false;
-    if (status == Status::NORMAL)
-      return true;
-    do_prepare();
-    return (status == Status::NORMAL);
-  }
-
-  void do_prepare() noexcept;
-};
-
-extern __thread ThreadCache thread_cache;
-
-}  // namespace malloc_details
+}  // namespace alloc
 }  // namespace cbu

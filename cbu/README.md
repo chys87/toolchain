@@ -31,6 +31,10 @@ If you use anything else, you have to take care of it yourself.
 
 ## List
 
+### cbu/alloc
+
+[`cbu/alloc`](cbu/alloc): Basic memory allocation library.  Used by [`cbu/malloc`](cbu/malloc); can also be separately used.
+
 ### cbu/common
 
 [`cbu/common`](cbu/common): Common utilities

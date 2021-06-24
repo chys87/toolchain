@@ -26,25 +26,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/malloc/private.h"
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+
+#include "cbu/alloc/alloc.h"
+#include "cbu/alloc/private.h"
+#include "cbu/alloc/tc.h"
 #include "cbu/common/byte_size.h"
 #include "cbu/compat/atomic_ref.h"
-#include "cbu/malloc/tc.h"
 #include "cbu/sys/low_level_mutex.h"
 #include "cbu/tweak/tweak.h"
 
 namespace cbu {
-namespace malloc_details {
+namespace alloc {
+namespace {
 
 struct Block {
-  Block *next;  // In free list
+  Block* next;  // In free list
   unsigned count;
 };
 
-namespace {
+struct ThreadCategory {
+  Block* free;
+  unsigned count_free;
+};
+
+struct SmallCache {
+  ThreadCategory category[kNumCategories] = {};
+
+  void clear() noexcept;
+};
+
+CachePool<SmallCache> small_cache_pool;
 
 // Allocated on a page
 struct Run {
@@ -55,52 +69,48 @@ struct Run {
 static_assert(sizeof(Block) <= category_to_size(0), "Block too large");
 static_assert(sizeof(Run) <= category_to_size(0), "Run too large");
 
-inline Run *block2run(Block *ptr) {
-  return (Run *)pagesize_floor(ptr);
-}
+inline Run* block2run(Block* ptr) { return (Run*)pagesize_floor(ptr); }
 
-void free_small_list(Block *ptr) {
+void free_small_list(Block* ptr) {
   while (ptr) {
-    Block *p = std::exchange(ptr, ptr->next);
+    Block* p = std::exchange(ptr, ptr->next);
 
-    Run *run = block2run(p);
+    Run* run = block2run(p);
     auto count = p->count;
-    int remain = cbu::tweak::SINGLE_THREADED ?
-      (run->allocated -= count) :
-      std::atomic_ref(run->allocated).fetch_sub(
-        count, std::memory_order_release) - count;
+    int remain = cbu::tweak::SINGLE_THREADED
+                     ? (run->allocated -= count)
+                     : std::atomic_ref(run->allocated)
+                               .fetch_sub(count, std::memory_order_release) -
+                           count;
     if (remain <= 0) {
-      if (remain < 0)
-        memory_corrupt();
-      reclaim_page((Page *)run, pagesize);
+      if (remain < 0) memory_corrupt();
+      reclaim_page((Page*)run, kPageSize);
     }
   }
 }
 
 // Use fallback_cache when thread_cache is unusable
-ThreadSmallCache fallback_cache {};
-LowLevelMutex fallback_cache_lock {};
+constinit SmallCache fallback_cache{};
+constinit LowLevelMutex fallback_cache_lock{};
 
-void *alloc_small_category_with_cache(ThreadSmallCache *cache, unsigned cat) {
-  ThreadCategory *catp = &cache->category[cat];
-  if (Block *free = catp->free) {
+void* alloc_small_category_with_cache(SmallCache* cache, unsigned cat) {
+  ThreadCategory* catp = &cache->category[cat];
+  if (Block* free = catp->free) {
     catp->count_free--;
     unsigned remaining = --(free->count);
-    Block *p = byte_advance(free, multiply_by_category_size(remaining, cat));
-    if (remaining == 0)
-      catp->free = free->next;
+    Block* p = byte_advance(free, multiply_by_category_size(remaining, cat));
+    if (remaining == 0) catp->free = free->next;
     return p;
   }
 
-  Run *run = (Run *)alloc_page(pagesize);
-  if (false_no_fail(run == nullptr))
-    return nullptr;
-  unsigned cap = divide_by_category_size(pagesize, cat) - 1;
+  Run* run = (Run*)allocate_page(kPageSize);
+  if (false_no_fail(run == nullptr)) return nullptr;
+  unsigned cap = divide_by_category_size(kPageSize, cat) - 1;
   run->cat = cat;
   run->allocated = cap;
 
-  Block *p = byte_advance((Block *)run, category_to_size(cat));
-  Block *np = byte_advance(p, category_to_size(cat));
+  Block* p = byte_advance((Block*)run, category_to_size(cat));
+  Block* np = byte_advance(p, category_to_size(cat));
   np->next = nullptr;
   np->count = cap - 1;
   catp->free = np;
@@ -108,17 +118,15 @@ void *alloc_small_category_with_cache(ThreadSmallCache *cache, unsigned cat) {
   return p;
 }
 
-void free_small_with_cache(ThreadSmallCache *cache, void *ptr) {
-  Block *p = static_cast<Block *>(ptr);
+void free_small_with_cache(SmallCache* cache, void* ptr) {
+  Block* p = static_cast<Block*>(ptr);
 
   unsigned cat = block2run(p)->cat;
-  if (cat > max_category)
-    memory_corrupt();
+  if (cat > kMaxCategory) memory_corrupt();
 
-  if (uintptr_t(p) & (category_to_size(cat) - 1))
-    memory_corrupt();
+  if (uintptr_t(p) & (category_to_size(cat) - 1)) memory_corrupt();
 
-  ThreadCategory *catp = &cache->category[cat];
+  ThreadCategory* catp = &cache->category[cat];
   p->count = 1;
   if (catp->count_free >= 256) {
     p->next = nullptr;
@@ -131,62 +139,60 @@ void free_small_with_cache(ThreadSmallCache *cache, void *ptr) {
   }
 }
 
-} // namespace
-
-void ThreadSmallCache::destroy() noexcept {
-  for (ThreadCategory &catg: category) {
+void SmallCache::clear() noexcept {
+  for (ThreadCategory& catg : category) {
     catg.count_free = 0;
     free_small_list(std::exchange(catg.free, nullptr));
   }
 }
 
-void *alloc_small_category(unsigned cat) noexcept {
-  if (thread_cache.prepare()) {
-    return alloc_small_category_with_cache(&thread_cache.small, cat);
+}  // namespace
+
+void* alloc_small_category(unsigned cat) noexcept {
+  if (UniqueCache unique_cache(&small_cache_pool); unique_cache) {
+    return alloc_small_category_with_cache(unique_cache.get(), cat);
   } else {
     std::lock_guard locker(fallback_cache_lock);
     return alloc_small_category_with_cache(&fallback_cache, cat);
   }
 }
 
-void *alloc_small(size_t size) noexcept {
+void* alloc_small(size_t size) noexcept {
   return alloc_small_category(size_to_category(size));
 }
 
-void free_small(void *ptr) noexcept {
-  if (thread_cache.prepare()) {
-    free_small_with_cache(&thread_cache.small, ptr);
+void free_small(void* ptr) noexcept {
+  if (UniqueCache unique_cache(&small_cache_pool); unique_cache) {
+    free_small_with_cache(unique_cache.get(), ptr);
   } else {
     std::lock_guard locker(fallback_cache_lock);
     free_small_with_cache(&fallback_cache, ptr);
   }
 }
 
-void free_small(void *ptr, size_t size) noexcept {
-  if (size > small_allocated_size(ptr))
-    memory_corrupt();
+void free_small(void* ptr, size_t size) noexcept {
+  if (size > small_allocated_size(ptr)) memory_corrupt();
   return free_small(ptr);
 }
 
-unsigned small_allocated_category(void *ptr) noexcept {
-  Block *p = static_cast<Block *>(ptr);
-  Run *run = block2run(p);
+unsigned small_allocated_category(void* ptr) noexcept {
+  Block* p = static_cast<Block*>(ptr);
+  Run* run = block2run(p);
   return run->cat;
 }
 
-size_t small_allocated_size(void *ptr) noexcept {
+size_t small_allocated_size(void* ptr) noexcept {
   return category_to_size(small_allocated_category(ptr));
 }
 
-void small_trim(size_t pad) noexcept {
-  (void)pad;
-  // FIXME: We are only able to trim the cache of the current thread
-  if (thread_cache.is_active())
-    thread_cache.small.destroy();
-
-  std::lock_guard locker(fallback_cache_lock);
-  fallback_cache.destroy();
+void small_trim(size_t) noexcept {
+  UniqueCache<SmallCache>::visit_all(
+      &small_cache_pool, [](SmallCache* cache) noexcept { cache->clear(); });
+  {
+    std::lock_guard locker(fallback_cache_lock);
+    fallback_cache.clear();
+  }
 }
 
-}  // namespace malloc_details
+}  // namespace alloc
 }  // namespace cbu

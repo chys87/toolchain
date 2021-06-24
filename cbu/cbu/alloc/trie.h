@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,13 +32,14 @@
 
 #include <memory>
 
+#include "cbu/alloc/alloc.h"
+#include "cbu/alloc/permanent.h"
 #include "cbu/common/bit.h"
 #include "cbu/compat/atomic_ref.h"
-#include "cbu/malloc/permanent.h"
 #include "cbu/tweak/tweak.h"
 
 namespace cbu {
-namespace malloc_details {
+namespace alloc {
 
 template <typename Node>
 Node* ensure_node_heavy(Node **ptr, SimplePermaAlloc<Node> &allocator) {
@@ -147,5 +148,5 @@ ValueType* Trie<TotalBits, ValueType>::lookup(uintptr_t v) {
   return &node->tbl[v & ((1 << LeafBits) - 1)];
 }
 
-}  // namespace malloc_details
+}  // namespace alloc
 }  // namespace cbu

@@ -26,30 +26,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/malloc/tc.h"
-#include "cbu/common/once.h"
+#pragma once
+
+#if __has_include(<sys/user.h>)
+# include <sys/user.h>
+#endif
 
 namespace cbu {
-namespace malloc_details {
+namespace alloc {
 
-__thread ThreadCache thread_cache;
+#ifdef PAGE_SHIFT
+constexpr unsigned kPageSizeBits = PAGE_SHIFT;
+constexpr unsigned kPageSize = 1 << kPageSizeBits;
+#else
+constexpr unsigned kPageSizeBits = 12;
+constexpr unsigned kPageSize = 1 << kPageSizeBits;
+static_assert(kPageSize == 4096);
+#endif
 
-void ThreadCache::do_prepare() noexcept {
-  if (status != Status::INITIAL) {
-    return;
-  }
+// Transparent Huge Page size
+#if (defined __x86_64__ || defined __i386__) && defined __linux__
+constexpr unsigned kTHPSize = 2048 * 1024;
+#else
+constexpr unsigned kTHPSize = 0;
+#endif
 
-  static pthread_key_t key;
-  CBU_ONCE(
-    pthread_key_create(&key, [](void *p) {
-      ThreadCache *self = static_cast<ThreadCache *>(p);
-      self->status = Status::FINAL;
-      self->destroy();
-    })
-  );
-  status = Status::NORMAL;
-  pthread_setspecific(key, this);
-}
+// Cache line
+// We know for sure modern x86 has 64-byte cache lines.
+// This is probably also a good guess for other architectures.
+constexpr unsigned kCacheLineSize = 64;
 
-}  // namespace malloc_details
+}  // namespace alloc
 }  // namespace cbu

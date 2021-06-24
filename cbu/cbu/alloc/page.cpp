@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,24 +26,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/hint.h"
-#include "cbu/fsyscall/fsyscall.h"
-#include "cbu/malloc/permanent.h"
-#include "cbu/malloc/private.h"
-#include "cbu/malloc/rb.h"
-#include "cbu/malloc/tc.h"
-#include "cbu/malloc/trie.h"
-#include "cbu/common/byte_size.h"
 #include <errno.h>
 #include <pthread.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/mman.h>
+#include <unistd.h>
+
 #include <atomic>
 #include <mutex>
 
+#include "cbu/alloc/alloc.h"
+#include "cbu/alloc/private.h"
+#include "cbu/alloc/rb.h"
+#include "cbu/alloc/tc.h"
+#include "cbu/alloc/trie.h"
+#include "cbu/common/byte_size.h"
+#include "cbu/common/hint.h"
+#include "cbu/fsyscall/fsyscall.h"
+
 namespace cbu {
-namespace malloc_details {
+namespace alloc {
+namespace {
 
 union Description {
   struct {
@@ -53,33 +56,40 @@ union Description {
     size_t size;
   };
   struct {
-    Description *next;
+    Description* next;
     unsigned count;
   };
 };
 
-namespace {
+struct DescriptionCache {
+  // Description cache
+  Description* desc_list = nullptr;
+  unsigned desc_count = 0;
+  static constexpr size_t kPreferredCount = 16;
 
-// Description allocation {{{
+  void clear() noexcept;
+};
+
+CachePool<DescriptionCache> description_cache_pool;
+
 PermaAlloc<Description> description_allocator;
 
-Description *alloc_description() {
-  if (!thread_cache.prepare())
-    return description_allocator.alloc();
+Description* alloc_description() {
+  UniqueCache unique_cache(&description_cache_pool);
+  if (!unique_cache) return description_allocator.alloc();
 
-  DescriptionThreadCache &description_cache = thread_cache.description;
+  DescriptionCache& description_cache = *unique_cache;
 
-  Description *node = description_cache.desc_list;
+  Description* node = description_cache.desc_list;
   if (node == nullptr) {
-    constexpr size_t preferred_count = DescriptionThreadCache::preferred_count;
-    node = description_allocator.alloc_list(preferred_count);
-    if (false_no_fail(!node))
-      return nullptr;
-    description_cache.desc_count = preferred_count;
+    constexpr size_t kPreferredCount = DescriptionCache::kPreferredCount;
+    node = description_allocator.alloc_list(kPreferredCount);
+    if (false_no_fail(!node)) return nullptr;
+    description_cache.desc_count = kPreferredCount;
   }
   description_cache.desc_count--;
   if (node->count > 1) {
-    Description *rnode = node + 1;
+    Description* rnode = node + 1;
     rnode->next = node->next;
     rnode->count = node->count - 1;
     description_cache.desc_list = rnode;
@@ -89,16 +99,17 @@ Description *alloc_description() {
   return node;
 }
 
-void free_description(Description *desc) {
-  if (!thread_cache.prepare()) {
+void free_description(Description* desc) {
+  UniqueCache unique_cache(&description_cache_pool);
+  if (!unique_cache) {
     description_allocator.free(desc);
     return;
   }
 
-  DescriptionThreadCache &description_cache = thread_cache.description;
+  DescriptionCache& description_cache = *unique_cache;
 
   if (description_cache.desc_count >=
-      DescriptionThreadCache::preferred_count * 4 - 1) {
+      DescriptionCache::kPreferredCount * 4 - 1) {
     description_allocator.free_list(description_cache.desc_list);
     description_cache.desc_list = nullptr;
     description_cache.desc_count = 0;
@@ -110,13 +121,11 @@ void free_description(Description *desc) {
   description_cache.desc_list = desc;
 }
 
-// }}}
-
 struct DescriptionAdRbAccessor {
   using Node = Description;
   static constexpr auto link = &Node::link_ad;
 
-  static int cmp(const Page* a, const Node *b) noexcept {
+  static int cmp(const Page* a, const Node* b) noexcept {
     if (a < b->addr)
       return -1;
     else if (a == b->addr)
@@ -124,7 +133,7 @@ struct DescriptionAdRbAccessor {
     else
       return 1;
   }
-  static bool lt(const Node *a, const Node *b) noexcept {
+  static bool lt(const Node* a, const Node* b) noexcept {
     return a->addr < b->addr;
   }
 };
@@ -133,43 +142,41 @@ struct DescriptionSzAdRbAccessor {
   using Node = Description;
   static constexpr auto link = &Node::link_szad;
 
-  static int cmp(size_t size, const Node *b) noexcept {
+  static int cmp(size_t size, const Node* b) noexcept {
     if (size <= b->size)
       return -1;
     else
       return 1;
   }
-  static bool lt(const Node *a, const Node *b) noexcept {
+  static bool lt(const Node* a, const Node* b) noexcept {
     return (a->size < b->size) || (a->size == b->size && a->addr < b->addr);
   }
 };
-
 
 struct PageTree {
   Rb<DescriptionAdRbAccessor> ad;
   Rb<DescriptionSzAdRbAccessor> szad;
 };
 
-// Page cache {{{
-class PageCache {
-public:
-  constexpr PageCache() noexcept = default;
-  PageCache(const PageCache&) = delete;
-  PageCache& operator=(const PageCache&) = delete;
+class PageTreeAllocator {
+ public:
+  constexpr PageTreeAllocator() noexcept = default;
+  PageTreeAllocator(const PageTreeAllocator&) = delete;
+  PageTreeAllocator& operator=(const PageTreeAllocator&) = delete;
 
   Page* allocate(size_t size) noexcept;
-  bool reclaim(Page* page, size_t size, uint32_t nomerge) noexcept;
+  bool reclaim(Page* page, size_t size, uint32_t option_bitmask) noexcept;
   bool reclaim_nomerge(Page* page, size_t size) noexcept;
   bool extend_nomove(Page* ptr, size_t old, size_t grow) noexcept;
 
-  Description *get_deallocate_candidates(size_t threshold) noexcept;
+  Description* get_deallocate_candidates(size_t threshold) noexcept;
 
-private:
+ private:
   PageTree tree_;
 };
 
-Page* PageCache::allocate(size_t size) noexcept {
-  Description *desc = tree_.szad.nsearch(size);
+Page* PageTreeAllocator::allocate(size_t size) noexcept {
+  Description* desc = tree_.szad.nsearch(size);
   if (desc) {
     assert(desc->size >= size);
     Page* ret;
@@ -191,28 +198,29 @@ Page* PageCache::allocate(size_t size) noexcept {
   }
 }
 
-bool PageCache::reclaim(Page* page, size_t size, uint32_t nomerge) noexcept {
+bool PageTreeAllocator::reclaim(Page* page, size_t size,
+                                uint32_t option_bitmask) noexcept {
   CBU_HINT_ASSERT(page != nullptr);
   assert(size != 0);
-  assert(size % pagesize == 0);
+  assert(size % kPageSize == 0);
 
-  Description *desc;
+  Description* desc;
 
   // Can we merge right?
-  Description *succ = (nomerge & NOMERGE_RIGHT) ? nullptr :
-    tree_.ad.search(byte_advance(page, size));
-  if (succ)
-    succ = tree_.szad.remove(succ);
+  Description* succ = (option_bitmask & RECLAIM_PAGE_NOMERGE_RIGHT)
+                          ? nullptr
+                          : tree_.ad.search(byte_advance(page, size));
+  if (succ) succ = tree_.szad.remove(succ);
 
   // Can we merge left?
-  Description *prec = (nomerge & NOMERGE_LEFT) ? nullptr :
-    tree_.ad.psearch(page);
-  if (prec && byte_advance(prec->addr, prec->size) != page)
-    prec = nullptr;
+  Description* prec = (option_bitmask & RECLAIM_PAGE_NOMERGE_LEFT)
+                          ? nullptr
+                          : tree_.ad.psearch(page);
+  if (prec && byte_advance(prec->addr, prec->size) != page) prec = nullptr;
 
-  if (prec) { // Can merge backward.
+  if (prec) {  // Can merge backward.
     prec = tree_.szad.remove(prec);
-    if (succ) { // Both!
+    if (succ) {  // Both!
       size += succ->size;
       succ = tree_.ad.remove(succ);
       free_description(succ);
@@ -220,15 +228,14 @@ bool PageCache::reclaim(Page* page, size_t size, uint32_t nomerge) noexcept {
     }
     prec->size += size;
     desc = prec;
-  } else if (succ) { // Forward only
+  } else if (succ) {  // Forward only
     // succ's position in tree.ad needs no change.
     succ->addr = page;
     succ->size += size;
     desc = succ;
-  } else { // Neither.
+  } else {  // Neither.
     desc = alloc_description();
-    if (false_no_fail(!desc))
-      return false;
+    if (false_no_fail(!desc)) return false;
     desc->addr = page;
     desc->size = size;
     desc = tree_.ad.insert(desc);
@@ -238,14 +245,13 @@ bool PageCache::reclaim(Page* page, size_t size, uint32_t nomerge) noexcept {
   return true;
 }
 
-bool PageCache::reclaim_nomerge(Page* page, size_t size) noexcept {
+bool PageTreeAllocator::reclaim_nomerge(Page* page, size_t size) noexcept {
   CBU_HINT_ASSERT(page != nullptr);
   assert(size != 0);
-  assert(size % pagesize == 0);
+  assert(size % kPageSize == 0);
 
-  Description *desc = alloc_description();
-  if (false_no_fail(!desc))
-    return false;
+  Description* desc = alloc_description();
+  if (false_no_fail(!desc)) return false;
   desc->addr = page;
   desc->size = size;
   desc = tree_.ad.insert(desc);
@@ -253,17 +259,18 @@ bool PageCache::reclaim_nomerge(Page* page, size_t size) noexcept {
   return true;
 }
 
-bool PageCache::extend_nomove(Page* ptr, size_t old, size_t grow) noexcept {
+bool PageTreeAllocator::extend_nomove(Page* ptr, size_t old,
+                                      size_t grow) noexcept {
   CBU_HINT_ASSERT(ptr != nullptr);
   CBU_HINT_ASSERT(old != 0);
   CBU_HINT_ASSERT(grow != 0);
-  CBU_HINT_ASSERT(uintptr_t(ptr) % pagesize == 0);
-  CBU_HINT_ASSERT(old % pagesize == 0);
-  CBU_HINT_ASSERT(grow % pagesize == 0);
+  CBU_HINT_ASSERT(uintptr_t(ptr) % kPageSize == 0);
+  CBU_HINT_ASSERT(old % kPageSize == 0);
+  CBU_HINT_ASSERT(grow % kPageSize == 0);
 
   Page* target = byte_advance(ptr, old);
 
-  Description *succ = tree_.ad.search(target);
+  Description* succ = tree_.ad.search(target);
   if (succ && (succ->size >= grow)) {
     // Yes
     succ = tree_.szad.remove(succ);
@@ -284,36 +291,36 @@ bool PageCache::extend_nomove(Page* ptr, size_t old, size_t grow) noexcept {
   }
 }
 
-Description *PageCache::get_deallocate_candidates(size_t threshold) noexcept {
-  Description *list = nullptr;
+Description* PageTreeAllocator::get_deallocate_candidates(
+    size_t threshold) noexcept {
+  Description* list = nullptr;
 
-  Description *p = tree_.szad.last();
+  Description* p = tree_.szad.last();
 
   while (p && (p->size >= threshold)) {
-    Description *q = tree_.szad.prev(p);
+    Description* q = tree_.szad.prev(p);
 
     p = tree_.szad.remove(p);
     p = tree_.ad.remove(p);
 
-    if (hugepagesize && hugepagesize * 2 < threshold) {
+    if (kTHPSize && kTHPSize * 2 < threshold) {
       // If we assume the kernel has support for transparent huge pages,
       // it's best if we always do allocations on hugepage boundaries
 
       // Split from right
       Page* end = byte_advance(p->addr, p->size);
-      if (size_t offset = uintptr_t(end) % hugepagesize) {
+      if (size_t offset = uintptr_t(end) % kTHPSize) {
         p->size -= offset;
         reclaim_nomerge(byte_back(end, offset), offset);
       }
 
       // Split from left
-      if (size_t adjust = (-uintptr_t(p->addr)) % hugepagesize) {
+      if (size_t adjust = (-uintptr_t(p->addr)) % kTHPSize) {
         Page* addr = p->addr;
         p->addr = byte_advance(p->addr, adjust);
         p->size -= adjust;
         reclaim_nomerge(addr, adjust);
       }
-
     }
 
     p->link_ad.left(list);
@@ -325,22 +332,17 @@ Description *PageCache::get_deallocate_candidates(size_t threshold) noexcept {
   return list;
 }
 
-// }}} Page cache
+struct alignas(kCacheLineSize) Arena {
+  bool allow_thp;
+  LowLevelMutex lock{};
+  PageTreeAllocator tree{};
 
-// Arenas {{{
-
-struct Arena {
-  LowLevelMutex lock {};
-  PageCache cache {};
-
-  static constexpr unsigned initial_mmap_size =
-    (hugepagesize > pagesize) ? hugepagesize / 2 : 1024 * 1024u; // 1 MiB
-  static constexpr unsigned target_mmap_size = 8 * 1024 * 1024;
-  static constexpr size_t munmap_threshold = 16 * 1024 * 1024;
+  static constexpr size_t kPreferredAllocSize =
+      kTHPSize ? kTHPSize * 4 : kPageSize * 2048;
+  static constexpr size_t kMunmapThreshold = 16 * 1024 * 1024;
 
   // Count it so that we can determine when to try to do munmap
   size_t reclaim_count = 0;
-  unsigned preferred_mmap_size = initial_mmap_size;
 
   // Use nomerge if we're sure it's not mergeable
   void reclaim_unlocked(Page* page, size_t size, uint32_t nomerge = 0) noexcept;
@@ -351,38 +353,36 @@ struct Arena {
   // Reclaim a list of pages, each of the same size.
   void reclaim_list(Page* page, size_t size) noexcept;
 
-  bool extend_nomove(Page* , size_t oldsize, size_t growsize) noexcept;
-  void do_munmap(Page* , size_t) noexcept;
-  Page* do_mmap_alloc(size_t, size_t *) noexcept;
+  bool extend_nomove(Page*, size_t oldsize, size_t growsize) noexcept;
+  void do_munmap(Page*, size_t) noexcept;
 
   // Returns a linked list (linked with link_ad.left)
-  Description *check_munmap_unlocked(
-      size_t threshold = munmap_threshold) noexcept;
-  void munmap_description_list(Description *) noexcept;
+  Description* check_munmap_unlocked(
+      size_t threshold = kMunmapThreshold) noexcept;
+  void munmap_description_list(Description*) noexcept;
 };
 
-
-Arena *get_arena_mmap () { static Arena arena; return &arena; }
-
-// Implementations {{{
+constinit Arena arena_default{true};
+constinit Arena arena_no_thp{false};
 
 Page* Arena::allocate(size_t size) noexcept {
   assert(size != 0);
-  assert(size % pagesize == 0);
+  assert(size % kPageSize == 0);
 
   std::lock_guard locker(lock);
 
-  Page* page = cache.allocate(size);
+  Page* page = tree.allocate(size);
   if (!page) {
     // Must do actual allocation.
-    size_t alloc_size = 0;
-    page = do_mmap_alloc(size, &alloc_size);
-    if (page == nullptr)
-      return nomem();
+    size_t alloc_size = cbu::pow2_ceil(size, kPreferredAllocSize);
+    page = (kTHPSize && !allow_thp ? RawPageAllocator::instance<false, Arena>
+                                   : RawPageAllocator::instance<true, Arena>)
+               .allocate(alloc_size);
+    if (page == nullptr) return nomem();
     assert(size <= alloc_size);
     if (size < alloc_size)
-      reclaim_unlocked(byte_advance(page, size),
-                       alloc_size - size, NOMERGE_LEFT);
+      reclaim_unlocked(byte_advance(page, size), alloc_size - size,
+                       RECLAIM_PAGE_NOMERGE_LEFT);
   }
   return page;
 }
@@ -390,12 +390,11 @@ Page* Arena::allocate(size_t size) noexcept {
 void Arena::reclaim_unlocked(Page* page, size_t size,
                              uint32_t nomerge) noexcept {
   reclaim_count += size;
-  if (false_no_fail(!cache.reclaim(page, size, nomerge)))
-    do_munmap(page, size);
+  if (false_no_fail(!tree.reclaim(page, size, nomerge))) do_munmap(page, size);
 }
 
 void Arena::reclaim(Page* page, size_t size, uint32_t nomerge) noexcept {
-  Description *clean;
+  Description* clean;
   {
     std::lock_guard locker(lock);
     reclaim_unlocked(page, size, nomerge);
@@ -406,7 +405,7 @@ void Arena::reclaim(Page* page, size_t size, uint32_t nomerge) noexcept {
 }
 
 void Arena::reclaim_list(Page* page, size_t size) noexcept {
-  Description *clean;
+  Description* clean;
   {
     std::lock_guard locker(lock);
     while (page) {
@@ -416,8 +415,7 @@ void Arena::reclaim_list(Page* page, size_t size) noexcept {
       // This should be pretty common in practice
       while (byte_advance(next, size) == page ||
              next == byte_advance(page, this_size)) {
-        if (byte_advance(next, size) == page)
-          page = next;
+        if (byte_advance(next, size) == page) page = next;
         this_size += size;
         next = next->next;
       }
@@ -436,67 +434,46 @@ void Arena::do_munmap(Page* ptr, size_t size) noexcept {
 
 bool Arena::extend_nomove(Page* ptr, size_t old, size_t grow) noexcept {
   std::lock_guard locker(lock);
-  return cache.extend_nomove(ptr, old, grow);
-}
-
-Page* Arena::do_mmap_alloc(size_t size, size_t *psize) noexcept {
-  // Try to be hugepage friendly, but don't do so for the first call,
-  // so that we won't use hugepage for applications requiring very little memory
-  unsigned hint_size = preferred_mmap_size;
-  if (preferred_mmap_size < target_mmap_size) {
-    preferred_mmap_size = target_mmap_size;
-    if (size > initial_mmap_size)
-      hint_size = target_mmap_size;
-  }
-  size_t alloc_size = cbu::pow2_ceil(size, hint_size);
-  *psize = alloc_size;
-  void *p = raw_mmap_alloc(alloc_size);
-  return static_cast<Page* >(p);
+  return tree.extend_nomove(ptr, old, grow);
 }
 
 Description* Arena::check_munmap_unlocked(size_t threshold) noexcept {
-  if (reclaim_count < threshold * 2)
-    return nullptr;
+  if (reclaim_count < threshold * 2) return nullptr;
   reclaim_count = 0;
-  return cache.get_deallocate_candidates(threshold);
+  return tree.get_deallocate_candidates(threshold);
 }
 
-void Arena::munmap_description_list(Description *clean) noexcept {
+void Arena::munmap_description_list(Description* clean) noexcept {
   while (clean) {
-    Description *cur = clean;
+    Description* cur = clean;
     do_munmap(cur->addr, cur->size);
     clean = cur->link_ad.left();
     free_description(cur);
   }
 }
 
-// }}} Implementations
-
-// }}} Arenas
-
 #if defined __x86_64__ && defined __LP64__
-constexpr size_t ptr_bits = 47;
+constexpr size_t kPointerValidBits = 47;
 #else
-constexpr size_t ptr_bits = sizeof(void *) * 8;
+constexpr size_t kPointerValidBits = sizeof(void*) * 8;
 #endif
 
 // uint32_t is absolutely sufficient (4G * 4K is 16384 Gigabytes)
-Trie<ptr_bits - pagesize_bits, uint32_t> large_block_trie;
+Trie<kPointerValidBits - kPageSizeBits, uint32_t> large_block_trie;
 
 uint32_t* lookup_large_block(const Page* page) {
-  return large_block_trie.lookup(
-      reinterpret_cast<uintptr_t>(page) >> pagesize_bits);
+  return large_block_trie.lookup(reinterpret_cast<uintptr_t>(page) >>
+                                 kPageSizeBits);
 }
 
 uint32_t* lookup_large_block_fail_crash(const Page* page) {
-  return large_block_trie.lookup_fail_crash(
-      reinterpret_cast<uintptr_t>(page) >> pagesize_bits);
+  return large_block_trie.lookup_fail_crash(reinterpret_cast<uintptr_t>(page) >>
+                                            kPageSizeBits);
 }
 
 bool add_large_block_size(Page* page, size_t n) {
   uint32_t* ptr = lookup_large_block(page);
-  if (false_no_fail(ptr == nullptr))
-    return false;
+  if (false_no_fail(ptr == nullptr)) return false;
   std::atomic_ref(*ptr).store(n, std::memory_order_release);
   return true;
 }
@@ -506,82 +483,117 @@ size_t lookup_large_block_size_fail_crash(Page* page) {
   return std::atomic_ref(*ptr).load(std::memory_order_acquire);
 }
 
-Page* alloc_page_uncached(size_t size) {
-  return get_arena_mmap()->allocate(size);
+Page* allocate_page_uncached(size_t size, AllocateOptions options) {
+  return (kTHPSize && !options.allow_thp ? arena_no_thp : arena_default)
+      .allocate(size);
 }
 
-} // namespace
+struct PageCategoryCache {
+  // Cache of small pages
+  static constexpr unsigned kPageMaxCategory = 7;
+  static constexpr unsigned kPageCategories = kPageMaxCategory + 1;
+  static constexpr unsigned kPagePreferredCount = 4;
+  Page* page_list[kPageCategories] = {};
+  unsigned char page_count[kPageCategories] = {};
 
-void DescriptionThreadCache::destroy() noexcept {
+  static constexpr unsigned size_to_page_category(size_t size) {
+    return (size - kPageSize) / kPageSize;
+  }
+  static constexpr size_t page_category_to_size(unsigned cat) {
+    return (unsigned(kPageSize) * (cat + 1));
+  }
+
+  void clear(Arena* arena) noexcept;
+};
+
+CachePool<PageCategoryCache> page_category_cache_pool;
+CachePool<PageCategoryCache> page_category_cache_pool_no_thp;
+
+}  // namespace
+
+#if 0
+void DescriptionCache::clear() noexcept {
   desc_count = 0;
   description_allocator.free_list(std::exchange(desc_list, nullptr));
 }
+#endif
 
-void PageThreadCache::destroy() noexcept {
-  std::lock_guard locker_b(get_arena_mmap()->lock);
-  for (unsigned i = 0; i < page_categories; ++i) {
+void PageCategoryCache::clear(Arena* arena) noexcept {
+  std::lock_guard locker_b(arena->lock);
+  for (unsigned i = 0; i < kPageCategories; ++i) {
     Page* page = std::exchange(page_list[i], nullptr);
     page_count[i] = 0;
     while (page) {
       Page* next = page->next;
-      get_arena_mmap()->reclaim_unlocked(page, page_category_to_size(i));
+      arena->reclaim_unlocked(page, page_category_to_size(i));
       page = next;
     }
   }
 }
 
-void reclaim_page(Page* page, size_t size, uint32_t nomerge) noexcept {
+void reclaim_page(Page* page, size_t size, uint32_t option_bitmask) noexcept {
   CBU_HINT_ASSERT(page != nullptr);
   assert(size != 0);
-  assert(size % pagesize == 0);
+  assert(size % kPageSize == 0);
 
-  if (size <= PageThreadCache::page_category_to_size(
-        PageThreadCache::page_max_category)) {
-    if (thread_cache.prepare()) {
-      PageThreadCache &page_cache = thread_cache.page;
+  bool use_no_thp = kTHPSize && (option_bitmask & RECLAIM_PAGE_NO_THP);
 
-      size_t cat = PageThreadCache::size_to_page_category(size);
+  Arena* arena = use_no_thp ? &arena_no_thp : &arena_default;
+
+  if (size <= PageCategoryCache::page_category_to_size(
+                  PageCategoryCache::kPageMaxCategory)) {
+    UniqueCache unique_cache(use_no_thp ? &page_category_cache_pool_no_thp
+                                        : &page_category_cache_pool);
+    if (unique_cache) {
+      PageCategoryCache& page_cache = *unique_cache;
+
+      size_t cat = PageCategoryCache::size_to_page_category(size);
 
       Page* cache_head = page_cache.page_list[cat];
       page->next = cache_head;
 
       if (page_cache.page_count[cat] <
-          PageThreadCache::page_preferred_count * 2) {
+          PageCategoryCache::kPagePreferredCount * 2) {
         page_cache.page_count[cat]++;
         page_cache.page_list[cat] = page;
       } else {
         // Keep some, and free the rest
-        page_cache.page_count[cat] -= PageThreadCache::page_preferred_count;
+        page_cache.page_count[cat] -= PageCategoryCache::kPagePreferredCount;
 
         Page* check = cache_head;
-        for (unsigned count = 1;
-             count < PageThreadCache::page_preferred_count; ++count)
+        for (unsigned count = 1; count < PageCategoryCache::kPagePreferredCount;
+             ++count)
           check = check->next;
         page_cache.page_list[cat] = std::exchange(check->next, nullptr);
 
-        get_arena_mmap()->reclaim_list(page, size);
+        arena->reclaim_list(page, size);
       }
       return;
     }
   }
 
-  get_arena_mmap()->reclaim(page, size, nomerge);
+  arena->reclaim(page, size, option_bitmask);
 }
 
-void reclaim_page(Page* page, Page* end, uint32_t nomerge) noexcept {
-  reclaim_page(page, byte_distance(page, end), nomerge);
+void reclaim_page(Page* ptr, size_t size, AllocateOptions options) noexcept {
+  reclaim_page(ptr, size, options.allow_thp ? 0 : RECLAIM_PAGE_NO_THP);
 }
 
-// Allocate contiguous pages of n bytes
-Page* alloc_page(size_t size) noexcept {
+// Allocate contiguous pages of size bytes
+Page* allocate_page(size_t size, AllocateOptions options) noexcept {
   assert(size != 0);
-  assert(size % pagesize == 0);
+  assert(size % kPageSize == 0);
 
-  if (size <= PageThreadCache::page_category_to_size(PageThreadCache::page_max_category)) {
-    if (thread_cache.prepare()) {
-      PageThreadCache &page_cache = thread_cache.page;
+  bool use_no_thp = kTHPSize && !options.allow_thp;
 
-      size_t cat = PageThreadCache::size_to_page_category(size);
+  if (size <= PageCategoryCache::page_category_to_size(
+                  PageCategoryCache::kPageMaxCategory)) {
+    UniqueCache unique_cache(use_no_thp ? &page_category_cache_pool_no_thp
+                                        : &page_category_cache_pool);
+    if (unique_cache) {
+      PageCategoryCache& page_cache = *unique_cache;
+
+      size_t cat = PageCategoryCache::size_to_page_category(size);
       if (page_cache.page_list[cat]) {
         Page* ret = page_cache.page_list[cat];
         page_cache.page_list[cat] = ret->next;
@@ -591,9 +603,8 @@ Page* alloc_page(size_t size) noexcept {
 
       // Let's allocate 2 and cache the other
       const size_t alloc_size = size * 2;
-      Page* page = alloc_page_uncached(alloc_size);
-      if (false_no_fail(page == nullptr))
-        return nullptr;
+      Page* page = allocate_page_uncached(alloc_size, options);
+      if (false_no_fail(page == nullptr)) return nullptr;
       Page* rpage = byte_advance(page, size);
       page_cache.page_count[cat] = 1;
       rpage->next = nullptr;  // page_cache.page_list[cat];
@@ -602,20 +613,18 @@ Page* alloc_page(size_t size) noexcept {
     }
   }
 
-  return alloc_page_uncached(size);
+  return allocate_page_uncached(size, options);
 }
 
-void *alloc_large(size_t n) noexcept {
+void* alloc_large(size_t n) noexcept {
   n = pagesize_ceil(n);
-  if constexpr (sizeof(void *) > 4) {
+  if constexpr (sizeof(void*) > 4) {
     // We don't support allocating more than 4 gigabytes at one time
-    if (n != uint32_t(n))
-      return nomem();
+    if (n != uint32_t(n)) return nomem();
     n = uint32_t(n);
   }
-  Page* page = alloc_page(n);
-  if (false_no_fail(!page))
-    return nullptr;
+  Page* page = allocate_page(n);
+  if (false_no_fail(!page)) return nullptr;
   if (!add_large_block_size(page, n)) {
     reclaim_page(page, n);
     return nullptr;
@@ -623,40 +632,40 @@ void *alloc_large(size_t n) noexcept {
   return page;
 }
 
-void free_large (void *ptr) noexcept
-{
-  Page* page = static_cast<Page* >(ptr);
+void free_large(void* ptr) noexcept {
+  Page* page = static_cast<Page*>(ptr);
   size_t size = lookup_large_block_size_fail_crash(page);
   reclaim_page(page, size);
 }
 
-void free_large(void *ptr, size_t size) noexcept {
-  Page* page = static_cast<Page* >(ptr);
+void free_large(void* ptr, size_t size) noexcept {
+  Page* page = static_cast<Page*>(ptr);
   size = pagesize_ceil(size);
   reclaim_page(page, size);
 }
 
-void *realloc_large (void *ptr, size_t newsize) noexcept {
+void* realloc_large(void* ptr, size_t newsize) noexcept {
   // Caller guarantees newsize is not 0
   newsize = pagesize_ceil(newsize);
-  Page* page = (Page* )ptr;
-  uint32_t *desc = lookup_large_block_fail_crash((Page* )ptr);
+  Page* page = (Page*)ptr;
+  uint32_t* desc = lookup_large_block_fail_crash((Page*)ptr);
   size_t oldsize = std::atomic_ref(*desc).load(std::memory_order_acquire);
   if (oldsize == newsize) {
     return ptr;
   } else if (oldsize > newsize) {
     // Shrink
     std::atomic_ref(*desc).store(newsize, std::memory_order_release);
-    reclaim_page(byte_advance(page, newsize), oldsize - newsize, NOMERGE_LEFT);
+    reclaim_page(byte_advance(page, newsize), oldsize - newsize,
+                 RECLAIM_PAGE_NOMERGE_LEFT);
     return ptr;
   } else {
     // Extend
-    Arena *arena = get_arena_mmap();
-    if (arena->extend_nomove((Page* )ptr, oldsize, newsize - oldsize)) {
+    Arena* arena = &arena_default;
+    if (arena->extend_nomove((Page*)ptr, oldsize, newsize - oldsize)) {
       std::atomic_ref(*desc).store(newsize, std::memory_order_release);
       return ptr;
     } else {
-      void *nptr = alloc_large(newsize);
+      void* nptr = alloc_large(newsize);
       if (true_no_fail(nptr)) {
         // std::atomic_ref(*desc).store(0, std::memory_order_release);
         nptr = memcpy(nptr, ptr, oldsize);
@@ -667,31 +676,37 @@ void *realloc_large (void *ptr, size_t newsize) noexcept {
   }
 }
 
-size_t large_allocated_size (const void *ptr) noexcept {
+size_t large_allocated_size(const void* ptr) noexcept {
   return *lookup_large_block((const Page*)ptr);
 }
 
 void large_trim(size_t pad) noexcept {
-  // FIXME: We are only able to trim the cache of the current thread
+  UniqueCache<PageCategoryCache>::visit_all(
+      &page_category_cache_pool,
+      [](PageCategoryCache* tc) noexcept { tc->clear(&arena_default); });
+  if constexpr (kTHPSize > 0)
+    UniqueCache<PageCategoryCache>::visit_all(
+        &page_category_cache_pool_no_thp,
+        [](PageCategoryCache* tc) noexcept { tc->clear(&arena_no_thp); });
 
-  if (thread_cache.is_active())
-    thread_cache.page.destroy();
-
-  // Doesn't make much sense to free description_cache - that's allocated from PermaAlloc and never returned to system
-#if 0
-  if (thread_cache.is_active())
-    thread_cache.description.destroy();
-#endif
-
-  Arena *arena = get_arena_mmap();
-  Description *clean_list;
   {
-    std::lock_guard locker_b(arena->lock);
-    clean_list = arena->check_munmap_unlocked(pad);
+    Arena* arena = &arena_default;
+    Description* clean_list =
+        (std::lock_guard(arena->lock), arena->check_munmap_unlocked(pad));
+    arena->munmap_description_list(clean_list);
   }
-  arena->munmap_description_list(clean_list);
+
+  if constexpr (kTHPSize > 0) {
+    Arena* arena = &arena_no_thp;
+    Description* clean_list =
+        (std::lock_guard(arena->lock), arena->check_munmap_unlocked(pad));
+    arena->munmap_description_list(clean_list);
+  }
+
+  // Doesn't make much sense to free description_cache - that's allocated from
+  // PermaAlloc and never returned to system
 }
 
-}  // namespace malloc_details
+}  // namespace alloc
 }  // namespace cbu
 // vim: fdm=marker:
