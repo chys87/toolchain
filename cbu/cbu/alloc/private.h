@@ -34,6 +34,7 @@
 
 #include "cbu/alloc/pagesize.h"
 #include "cbu/common/bit.h"
+#include "cbu/sys/low_level_mutex.h"
 
 namespace cbu {
 namespace alloc {
@@ -95,6 +96,8 @@ static_assert(alignof(Page) == kPageSize);
 constexpr uint32_t RECLAIM_PAGE_NOMERGE_LEFT = 1;
 constexpr uint32_t RECLAIM_PAGE_NOMERGE_RIGHT = 2;
 constexpr uint32_t RECLAIM_PAGE_NO_THP = 4;
+// Use this if the caller knows the page is clean
+constexpr uint32_t RECLAIM_PAGE_CLEAN = 8;
 
 void reclaim_page(Page*, size_t, uint32_t option_bitmask) noexcept;
 bool extend_page_nomove(Page*, size_t, size_t) noexcept;
@@ -109,12 +112,41 @@ size_t small_allocated_size(void*) noexcept;
 void small_trim(size_t) noexcept;
 
 // Large allocator
-void* alloc_large(size_t size) noexcept;
+void* alloc_large(size_t size, bool zero) noexcept;
 void free_large(void* ptr) noexcept;
 void free_large(void* ptr, size_t size) noexcept;
 void* realloc_large(void* ptr, size_t newsize) noexcept;
 size_t large_allocated_size(const void*) noexcept;
 void large_trim(size_t) noexcept;
+
+// Raw page allocation
+// No corresponding deallocation is provided.  Caller should either keep
+// the memory or munmap it.
+// This allocator does do some caching to reduce the number of mmap calls
+// and reduce defragmentation.
+// This allocator guarantees returned pages are zero initialized
+class RawPageAllocator {
+ public:
+  constexpr RawPageAllocator(bool allow_thp) noexcept
+      : allow_thp_(allow_thp) {}
+
+  Page* allocate(size_t size) noexcept;
+
+  template <bool AllowThp, typename... Tags>
+  static RawPageAllocator instance;
+
+ private:
+  struct CachedPage;
+
+  CachedPage* cached_page_ = nullptr;
+  LowLevelMutex lock_;
+  bool allow_thp_;
+  bool hint_downward_ = false;
+  void* hint_address_ = nullptr;
+};
+
+template <bool AllowThp, typename... Tags>
+inline constinit RawPageAllocator RawPageAllocator::instance{AllowThp};
 
 }  // namespace alloc
 }  // namespace cbu

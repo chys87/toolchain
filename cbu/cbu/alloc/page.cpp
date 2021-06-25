@@ -153,11 +153,6 @@ struct DescriptionSzAdRbAccessor {
   }
 };
 
-struct PageTree {
-  Rb<DescriptionAdRbAccessor> ad;
-  Rb<DescriptionSzAdRbAccessor> szad;
-};
-
 class PageTreeAllocator {
  public:
   constexpr PageTreeAllocator() noexcept = default;
@@ -169,28 +164,41 @@ class PageTreeAllocator {
   bool reclaim_nomerge(Page* page, size_t size) noexcept;
   bool extend_nomove(Page* ptr, size_t old, size_t grow) noexcept;
 
+  // Returns a linked list of Description (linked with link_ad.left),
+  // so that the caller may decide to free it.
   Description* get_deallocate_candidates(size_t threshold) noexcept;
 
+  // Just remove the page from the tree
+  void remove_by_range(Page* page, size_t size) noexcept;
+  // Likewise, but calls a callback on the removed subrange
+  template <typename Callback>
+  void remove_by_range(Page* page, size_t size, Callback callback) noexcept;
+  // Just remove a list of ranges (linked with link_ad.left).
+  // The list itself is not removed.
+  void remove_by_list(const Description* list) noexcept;
+
  private:
-  PageTree tree_;
+  Rb<DescriptionAdRbAccessor> ad_;
+  Rb<DescriptionSzAdRbAccessor> szad_;
 };
 
 Page* PageTreeAllocator::allocate(size_t size) noexcept {
-  Description* desc = tree_.szad.nsearch(size);
+  Description* desc = (size == kPageSize) ? szad_.first() : szad_.nsearch(size);
   if (desc) {
     assert(desc->size >= size);
     Page* ret;
-    desc = tree_.szad.remove(desc);
+    desc = szad_.remove(desc);
     if (desc->size == size) {
       // Perfect size.
-      desc = tree_.ad.remove(desc);
+      desc = ad_.remove(desc);
       ret = desc->addr;
       free_description(desc);
     } else {
-      // Use the latter portion, and return the rest
-      ret = byte_advance(desc->addr, desc->size - size);
+      // We always prefer smaller addresses
+      ret = desc->addr;
+      desc->addr = byte_advance(desc->addr, size);
       desc->size -= size;
-      desc = tree_.szad.insert(desc);
+      szad_.insert(desc);
     }
     return ret;
   } else {
@@ -209,20 +217,20 @@ bool PageTreeAllocator::reclaim(Page* page, size_t size,
   // Can we merge right?
   Description* succ = (option_bitmask & RECLAIM_PAGE_NOMERGE_RIGHT)
                           ? nullptr
-                          : tree_.ad.search(byte_advance(page, size));
-  if (succ) succ = tree_.szad.remove(succ);
+                          : ad_.search(byte_advance(page, size));
+  if (succ) succ = szad_.remove(succ);
 
   // Can we merge left?
   Description* prec = (option_bitmask & RECLAIM_PAGE_NOMERGE_LEFT)
                           ? nullptr
-                          : tree_.ad.psearch(page);
+                          : ad_.psearch(page);
   if (prec && byte_advance(prec->addr, prec->size) != page) prec = nullptr;
 
   if (prec) {  // Can merge backward.
-    prec = tree_.szad.remove(prec);
+    prec = szad_.remove(prec);
     if (succ) {  // Both!
       size += succ->size;
-      succ = tree_.ad.remove(succ);
+      succ = ad_.remove(succ);
       free_description(succ);
       // prec's position in tree.ad needs no change.
     }
@@ -238,10 +246,10 @@ bool PageTreeAllocator::reclaim(Page* page, size_t size,
     if (false_no_fail(!desc)) return false;
     desc->addr = page;
     desc->size = size;
-    desc = tree_.ad.insert(desc);
+    desc = ad_.insert(desc);
   }
 
-  tree_.szad.insert(desc);
+  szad_.insert(desc);
   return true;
 }
 
@@ -254,8 +262,8 @@ bool PageTreeAllocator::reclaim_nomerge(Page* page, size_t size) noexcept {
   if (false_no_fail(!desc)) return false;
   desc->addr = page;
   desc->size = size;
-  desc = tree_.ad.insert(desc);
-  tree_.szad.insert(desc);
+  desc = ad_.insert(desc);
+  szad_.insert(desc);
   return true;
 }
 
@@ -270,20 +278,20 @@ bool PageTreeAllocator::extend_nomove(Page* ptr, size_t old,
 
   Page* target = byte_advance(ptr, old);
 
-  Description* succ = tree_.ad.search(target);
+  Description* succ = ad_.search(target);
   if (succ && (succ->size >= grow)) {
     // Yes
-    succ = tree_.szad.remove(succ);
+    succ = szad_.remove(succ);
     if (succ->size == grow) {
       // Perfect size.
-      succ = tree_.ad.remove(succ);
+      succ = ad_.remove(succ);
       free_description(succ);
       return true;
     } else {
       // Return the higher portion to tree
       succ->size -= grow;
       succ->addr = byte_advance(target, grow);
-      succ = tree_.szad.insert(succ);
+      succ = szad_.insert(succ);
       return true;
     }
   } else {
@@ -295,13 +303,13 @@ Description* PageTreeAllocator::get_deallocate_candidates(
     size_t threshold) noexcept {
   Description* list = nullptr;
 
-  Description* p = tree_.szad.last();
+  Description* p = szad_.last();
 
   while (p && (p->size >= threshold)) {
-    Description* q = tree_.szad.prev(p);
+    Description* q = szad_.prev(p);
 
-    p = tree_.szad.remove(p);
-    p = tree_.ad.remove(p);
+    p = szad_.remove(p);
+    p = ad_.remove(p);
 
     if (kTHPSize && kTHPSize * 2 < threshold) {
       // If we assume the kernel has support for transparent huge pages,
@@ -332,23 +340,106 @@ Description* PageTreeAllocator::get_deallocate_candidates(
   return list;
 }
 
-struct alignas(kCacheLineSize) Arena {
-  bool allow_thp;
-  LowLevelMutex lock{};
-  PageTreeAllocator tree{};
+void PageTreeAllocator::remove_by_range(Page* page, size_t size) noexcept {
+  remove_by_range(page, size, [](void*, size_t) noexcept {});
+}
 
-  static constexpr size_t kPreferredAllocSize =
-      kTHPSize ? kTHPSize * 4 : kPageSize * 2048;
-  static constexpr size_t kMunmapThreshold = 16 * 1024 * 1024;
+template <typename Callback>
+void PageTreeAllocator::remove_by_range(Page* page, size_t size,
+                                        Callback callback) noexcept {
+  Page* end = byte_advance(page, size);
 
-  // Count it so that we can determine when to try to do munmap
-  size_t reclaim_count = 0;
+  Description* p = ad_.psearch(page);
 
-  // Use nomerge if we're sure it's not mergeable
-  void reclaim_unlocked(Page* page, size_t size, uint32_t nomerge = 0) noexcept;
+  if (p) {
+    // The first node should be handled differently
+    if (page <= p->addr) {
+      // Nothing to do.  Fall through to the regular logic.
+    } else {
+      Page* p_end = byte_advance(p->addr, p->size);
+      if (page < p_end) {
+        if (end < p_end) {
+          // Special case - the range is in the middle of p_prev
+          callback(page, size);
+          p = szad_.remove(p);
+          p->size = byte_distance(p->addr, page);
+          szad_.insert(p);
 
-  Page* allocate(size_t size) noexcept;
-  void reclaim(Page* page, size_t size, uint32_t nomerge = 0) noexcept;
+          // There is nothing we can really do if alloc_description fails.
+          // So we simply ignore the error.
+          Description* p_new = alloc_description();
+          if (true_no_fail(p_new)) {
+            p_new->addr = end;
+            p_new->size = byte_distance(end, p_end);
+            p_new = ad_.insert(p_new);
+            p_new = szad_.insert(p_new);
+          }
+          return;
+
+        } else {
+          // The range covers a suffix of the node
+          callback(page, byte_distance(page, p_end));
+          p = szad_.remove(p);
+          p->size = byte_distance(p->addr, page);
+          szad_.insert(p);
+          if (end == p_end) return;
+        }
+      }
+      p = ad_.next(p);
+    }
+  } else {
+    p = ad_.first();
+  }
+
+  while (p) {
+    // Handle and skip the gap
+    if (end <= p->addr) return;
+    page = p->addr;
+
+    Page* p_end = byte_advance(p->addr, p->size);
+
+    // Now we have guarantee that page == p->addr
+    if (end < p_end) {
+      // The range is prefix of the node -- modify node and return
+      p = szad_.remove(p);
+      p->addr = end;
+      p->size = byte_distance(end, p_end);
+      p = szad_.insert(p);
+      callback(page, byte_distance(page, end));
+      return;
+    } else {
+      // Otheriwse, we should remove the whole node
+      callback(page, p->size);
+      auto next_p = ad_.next(p);
+      p = ad_.remove(p);
+      p = szad_.remove(p);
+      free_description(p);
+      p = next_p;
+      page = p_end;
+    }
+  }
+}
+
+void PageTreeAllocator::remove_by_list(const Description* list) noexcept {
+  while (list) {
+    remove_by_range(list->addr, list->size);
+    list = list->link_ad.left();
+  }
+}
+
+class alignas(kCacheLineSize) Arena {
+ public:
+  constexpr Arena(RawPageAllocator* allocator) noexcept
+      : raw_page_allocator_(allocator) {}
+
+  // Set option_bitmask with NOMERGE_LEFT/NOMERGE_RIGHT if we're sure it's not
+  // mergeable.
+  // Set RECLAIM_PAGE_CLEAN if the caller can guarantee the page is clean
+  void reclaim_unlocked(Page* page, size_t size,
+                        uint32_t option_bitmask = 0) noexcept;
+
+  Page* allocate(size_t size, bool zero) noexcept;
+  void reclaim(Page* page, size_t size, uint32_t option_bitmask = 0) noexcept;
 
   // Reclaim a list of pages, each of the same size.
   void reclaim_list(Page* page, size_t size) noexcept;
@@ -359,45 +450,99 @@ struct alignas(kCacheLineSize) Arena {
   // Returns a linked list (linked with link_ad.left)
   Description* check_munmap_unlocked(
       size_t threshold = kMunmapThreshold) noexcept;
+
+  Description* check_munmap(size_t threshold = kMunmapThreshold) noexcept;
+
   void munmap_description_list(Description*) noexcept;
+
+  friend struct PageCategoryCache;
+
+ private:
+  RawPageAllocator* const raw_page_allocator_;
+  LowLevelMutex lock_{};
+
+  // Count it so that we can determine when to try to do munmap
+  size_t reclaim_count_ = 0;
+
+  // tree_clean holds pages that we know are zero initialized
+  PageTreeAllocator tree_clean_{};
+  PageTreeAllocator tree_dirty_{};
+  PageTreeAllocator tree_all_{};
+
+  static constexpr size_t kPreferredAllocSize =
+      kTHPSize ? kTHPSize * 4 : kPageSize * 2048;
+  static_assert((kPreferredAllocSize & (kPreferredAllocSize - 1)) == 0);
+
+  static constexpr size_t kMunmapThreshold = 16 * 1024 * 1024;
 };
 
-constinit Arena arena_default{true};
-constinit Arena arena_no_thp{false};
+// No additional tag types are given to RawPageAllocator::instance, meaning the
+// "default" allocator.
+constinit Arena arena_default{&RawPageAllocator::instance<true>};
+constinit Arena arena_no_thp{&RawPageAllocator::instance<false>};
 
-Page* Arena::allocate(size_t size) noexcept {
+Page* Arena::allocate(size_t size, bool zero) noexcept {
   assert(size != 0);
   assert(size % kPageSize == 0);
 
-  std::lock_guard locker(lock);
+  std::lock_guard locker(lock_);
 
-  Page* page = tree.allocate(size);
+  // First try allocating from one of tree_clean_ and tree_dirty_,
+  Page* page = (zero ? tree_clean_ : tree_dirty_).allocate(size);
+
+  if (page) {
+    // Remove pages from tree_all as well
+    tree_all_.remove_by_range(page, size);
+  } else {
+    // If allocatings from tree_clean/tree_dirty fail, try allocating from
+    // tree_all
+    page = tree_all_.allocate(size);
+    if (page) {
+      tree_clean_.remove_by_range(page, size);
+      if (zero) {
+        tree_dirty_.remove_by_range(page, size,
+                                    [](Page* subrange, size_t subsize) {
+                                      memset(subrange, 0, subsize);
+                                    });
+      } else {
+        tree_dirty_.remove_by_range(page, size);
+      }
+    }
+  }
+
   if (!page) {
-    // Must do actual allocation.
     size_t alloc_size = cbu::pow2_ceil(size, kPreferredAllocSize);
-    page = (kTHPSize && !allow_thp ? RawPageAllocator::instance<false, Arena>
-                                   : RawPageAllocator::instance<true, Arena>)
-               .allocate(alloc_size);
+    page = raw_page_allocator_->allocate(alloc_size);
     if (page == nullptr) return nomem();
-    assert(size <= alloc_size);
     if (size < alloc_size)
       reclaim_unlocked(byte_advance(page, size), alloc_size - size,
-                       RECLAIM_PAGE_NOMERGE_LEFT);
+                       RECLAIM_PAGE_NOMERGE_LEFT | RECLAIM_PAGE_CLEAN);
   }
   return page;
 }
 
 void Arena::reclaim_unlocked(Page* page, size_t size,
-                             uint32_t nomerge) noexcept {
-  reclaim_count += size;
-  if (false_no_fail(!tree.reclaim(page, size, nomerge))) do_munmap(page, size);
+                             uint32_t option_bitmask) noexcept {
+  if (!(option_bitmask & RECLAIM_PAGE_CLEAN)) reclaim_count_ += size;
+
+  if (false_no_fail(!tree_all_.reclaim(page, size, option_bitmask))) {
+    do_munmap(page, size);
+    return;
+  }
+
+  auto& tree =
+      (option_bitmask & RECLAIM_PAGE_CLEAN) ? tree_clean_ : tree_dirty_;
+  if (false_no_fail(!tree.reclaim(page, size, option_bitmask))) {
+    tree_all_.remove_by_range(page, size);
+    do_munmap(page, size);
+  }
 }
 
-void Arena::reclaim(Page* page, size_t size, uint32_t nomerge) noexcept {
+void Arena::reclaim(Page* page, size_t size, uint32_t option_bitmask) noexcept {
   Description* clean;
   {
-    std::lock_guard locker(lock);
-    reclaim_unlocked(page, size, nomerge);
+    std::lock_guard locker(lock_);
+    reclaim_unlocked(page, size, option_bitmask);
     // Check for whether we can do some clean up work.
     clean = check_munmap_unlocked();
   }
@@ -407,7 +552,7 @@ void Arena::reclaim(Page* page, size_t size, uint32_t nomerge) noexcept {
 void Arena::reclaim_list(Page* page, size_t size) noexcept {
   Description* clean;
   {
-    std::lock_guard locker(lock);
+    std::lock_guard locker(lock_);
     while (page) {
       Page* next = page->next;
       size_t this_size = size;
@@ -433,14 +578,28 @@ void Arena::do_munmap(Page* ptr, size_t size) noexcept {
 }
 
 bool Arena::extend_nomove(Page* ptr, size_t old, size_t grow) noexcept {
-  std::lock_guard locker(lock);
-  return tree.extend_nomove(ptr, old, grow);
+  std::lock_guard locker(lock_);
+  // Try tree_clean first, which is more likely to succeed
+  if (!tree_clean_.extend_nomove(ptr, old, grow) &&
+               !tree_dirty_.extend_nomove(ptr, old, grow))
+    return false;
+  tree_all_.remove_by_range(byte_advance(ptr, old), grow);
+  return true;
 }
 
 Description* Arena::check_munmap_unlocked(size_t threshold) noexcept {
-  if (reclaim_count < threshold * 2) return nullptr;
-  reclaim_count = 0;
-  return tree.get_deallocate_candidates(threshold);
+  if (reclaim_count_ < threshold * 2) return nullptr;
+  reclaim_count_ = 0;
+  // We only check tree_dirty.  This is probably OK.
+  // Pages in tree_clean_ are most likely not populated by kernel yet.
+  Description* list = tree_dirty_.get_deallocate_candidates(threshold);
+  tree_all_.remove_by_list(list);
+  return list;
+}
+
+Description* Arena::check_munmap(size_t threshold) noexcept {
+  std::lock_guard locker(lock_);
+  return check_munmap_unlocked(threshold);
 }
 
 void Arena::munmap_description_list(Description* clean) noexcept {
@@ -485,7 +644,7 @@ size_t lookup_large_block_size_fail_crash(Page* page) {
 
 Page* allocate_page_uncached(size_t size, AllocateOptions options) {
   return (kTHPSize && !options.allow_thp ? arena_no_thp : arena_default)
-      .allocate(size);
+      .allocate(size, options.zero);
 }
 
 struct PageCategoryCache {
@@ -519,7 +678,7 @@ void DescriptionCache::clear() noexcept {
 #endif
 
 void PageCategoryCache::clear(Arena* arena) noexcept {
-  std::lock_guard locker_b(arena->lock);
+  std::lock_guard locker_b(arena->lock_);
   for (unsigned i = 0; i < kPageCategories; ++i) {
     Page* page = std::exchange(page_list[i], nullptr);
     page_count[i] = 0;
@@ -586,8 +745,8 @@ Page* allocate_page(size_t size, AllocateOptions options) noexcept {
 
   bool use_no_thp = kTHPSize && !options.allow_thp;
 
-  if (size <= PageCategoryCache::page_category_to_size(
-                  PageCategoryCache::kPageMaxCategory)) {
+  if (!options.zero && size <= PageCategoryCache::page_category_to_size(
+                                   PageCategoryCache::kPageMaxCategory)) {
     UniqueCache unique_cache(use_no_thp ? &page_category_cache_pool_no_thp
                                         : &page_category_cache_pool);
     if (unique_cache) {
@@ -600,30 +759,20 @@ Page* allocate_page(size_t size, AllocateOptions options) noexcept {
         page_cache.page_count[cat]--;
         return ret;
       }
-
-      // Let's allocate 2 and cache the other
-      const size_t alloc_size = size * 2;
-      Page* page = allocate_page_uncached(alloc_size, options);
-      if (false_no_fail(page == nullptr)) return nullptr;
-      Page* rpage = byte_advance(page, size);
-      page_cache.page_count[cat] = 1;
-      rpage->next = nullptr;  // page_cache.page_list[cat];
-      page_cache.page_list[cat] = rpage;
-      return page;
     }
   }
 
   return allocate_page_uncached(size, options);
 }
 
-void* alloc_large(size_t n) noexcept {
+void* alloc_large(size_t n, bool zero) noexcept {
   n = pagesize_ceil(n);
   if constexpr (sizeof(void*) > 4) {
     // We don't support allocating more than 4 gigabytes at one time
     if (n != uint32_t(n)) return nomem();
     n = uint32_t(n);
   }
-  Page* page = allocate_page(n);
+  Page* page = allocate_page(n, alloc::AllocateOptions().with_zero(zero));
   if (false_no_fail(!page)) return nullptr;
   if (!add_large_block_size(page, n)) {
     reclaim_page(page, n);
@@ -665,7 +814,7 @@ void* realloc_large(void* ptr, size_t newsize) noexcept {
       std::atomic_ref(*desc).store(newsize, std::memory_order_release);
       return ptr;
     } else {
-      void* nptr = alloc_large(newsize);
+      void* nptr = alloc_large(newsize, false);
       if (true_no_fail(nptr)) {
         // std::atomic_ref(*desc).store(0, std::memory_order_release);
         nptr = memcpy(nptr, ptr, oldsize);
@@ -691,15 +840,13 @@ void large_trim(size_t pad) noexcept {
 
   {
     Arena* arena = &arena_default;
-    Description* clean_list =
-        (std::lock_guard(arena->lock), arena->check_munmap_unlocked(pad));
+    Description* clean_list = arena->check_munmap(pad);
     arena->munmap_description_list(clean_list);
   }
 
   if constexpr (kTHPSize > 0) {
     Arena* arena = &arena_no_thp;
-    Description* clean_list =
-        (std::lock_guard(arena->lock), arena->check_munmap_unlocked(pad));
+    Description* clean_list = arena->check_munmap(pad);
     arena->munmap_description_list(clean_list);
   }
 

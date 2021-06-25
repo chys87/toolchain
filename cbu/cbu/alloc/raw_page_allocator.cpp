@@ -40,6 +40,22 @@
 
 namespace cbu {
 namespace alloc {
+namespace {
+
+void* raw_mmap_pages(size_t size, bool allow_thp, void* hint) noexcept {
+  void* p = fsys_mmap(hint, size, PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  if (false_no_fail(fsys_mmap_failed(p))) {
+    p = nullptr;
+  } else {
+#ifdef MADV_NOHUGEPAGE
+    if (kTHPSize && !allow_thp) fsys_madvise(p, size, MADV_NOHUGEPAGE);
+#endif
+  }
+  return p;
+}
+
+}  // namespace
 
 struct RawPageAllocator::CachedPage {
   CachedPage* next;
@@ -116,20 +132,6 @@ Page* RawPageAllocator::allocate(size_t size) noexcept {
   }
 
   return static_cast<Page*>(np);
-}
-
-void* RawPageAllocator::raw_mmap_pages(size_t size, bool allow_thp,
-                                       void* hint) noexcept {
-  void* p = fsys_mmap(hint, size, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (false_no_fail(fsys_mmap_failed(p))) {
-    p = nullptr;
-  } else {
-#ifdef MADV_NOHUGEPAGE
-    if (kTHPSize && !allow_thp) fsys_madvise(p, size, MADV_NOHUGEPAGE);
-#endif
-  }
-  return p;
 }
 
 }  // namespace alloc

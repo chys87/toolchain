@@ -39,8 +39,10 @@
 namespace cbu {
 namespace alloc {
 
+struct PermaAllocTag;
+
 // Type T must have next (T *) and count (unsigned) members
-template <typename T, bool AllowThp = true>
+template <typename T>
 class PermaAlloc {
  public:
   static_assert(sizeof(T) <= kPageSize && alignof(T) <= kPageSize);
@@ -55,10 +57,13 @@ class PermaAlloc {
  private:
   LowLevelMutex lock_;
   T* list_ = nullptr;
+
+  static inline constexpr auto* raw_page_allocator_ =
+      &RawPageAllocator::instance<true, PermaAllocTag>;
 };
 
-template <typename T, bool AllowThp>
-T* PermaAlloc<T, AllowThp>::alloc() {
+template <typename T>
+T* PermaAlloc<T>::alloc() {
   if (std::lock_guard locker(lock_); list_) {
     T* node = list_;
     unsigned old_count = node->count;
@@ -76,8 +81,7 @@ T* PermaAlloc<T, AllowThp>::alloc() {
 
   // Nothing available. Allocate new
   constexpr size_t alloc_size = pagesize_ceil(4 * sizeof(T));
-  void* np =
-      RawPageAllocator::instance<AllowThp, PermaAlloc<T>>.allocate(alloc_size);
+  void* np = raw_page_allocator_->allocate(alloc_size);
   if (false_no_fail(np == nullptr)) return NULL;
 
   T* node = static_cast<T*>(np);
@@ -91,8 +95,8 @@ T* PermaAlloc<T, AllowThp>::alloc() {
   return node;
 }
 
-template <typename T, bool AllowThp>
-T* PermaAlloc<T, AllowThp>::alloc_list(unsigned preferred_count) {
+template <typename T>
+T* PermaAlloc<T>::alloc_list(unsigned preferred_count) {
   unsigned count = 0;
   using Ptr = decltype(T::next);
   Ptr ret;
@@ -123,8 +127,7 @@ T* PermaAlloc<T, AllowThp>::alloc_list(unsigned preferred_count) {
 
     unsigned need_count = preferred_count - count;
     const size_t alloc_size = pagesize_ceil(need_count * sizeof(T));
-    void* np = RawPageAllocator::instance<AllowThp, PermaAlloc<T>>.allocate(
-        alloc_size);
+    void* np = raw_page_allocator_->allocate(alloc_size);
     if (false_no_fail(np == nullptr)) {
       if (ret) {
         std::lock_guard locker(lock_);
@@ -151,16 +154,16 @@ T* PermaAlloc<T, AllowThp>::alloc_list(unsigned preferred_count) {
   return ret;
 }
 
-template <typename T, bool AllowThp>
-void PermaAlloc<T, AllowThp>::free(T* ptr) noexcept {
+template <typename T>
+void PermaAlloc<T>::free(T* ptr) noexcept {
   std::lock_guard locker(lock_);
   ptr->next = list_;
   ptr->count = 1;
   list_ = ptr;
 }
 
-template <typename T, bool AllowThp>
-void PermaAlloc<T, AllowThp>::free_list(T* ptr) noexcept {
+template <typename T>
+void PermaAlloc<T>::free_list(T* ptr) noexcept {
   if (!ptr) return;
   T* tail = ptr;
   while (tail->next) tail = tail->next;

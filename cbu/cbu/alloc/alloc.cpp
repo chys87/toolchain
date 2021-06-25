@@ -46,19 +46,19 @@ void* allocate(size_t size, AllocateOptions options) noexcept {
   }
 
   void* ptr = nullptr;
-  if (options.zero) {
-    if (size > category_to_size(kMaxCategory))
-      ptr = alloc_large(size);
-    else if (size != 0)
-      ptr = alloc_small(size);
+
+  if (size > category_to_size(kMaxCategory)) {
+    ptr = alloc_large(size, options.zero);
     if (false_no_fail(ptr == nullptr)) return nomem();
-    ptr = memset(ptr, 0, size);
-  } else {
-    if (size > category_to_size(kMaxCategory))
-      ptr = alloc_large(size);
-    else if (size != 0)
+  } else if (size != 0) {
+    if (options.zero) {
       ptr = alloc_small(size);
-    if (false_no_fail(ptr == nullptr)) return nomem();
+      if (false_no_fail(ptr == nullptr)) return nomem();
+      ptr = memset(ptr, 0, size);
+    } else {
+      ptr = alloc_small(size);
+      if (false_no_fail(ptr == nullptr)) return nomem();
+    }
   }
   return ptr;
 }
@@ -87,7 +87,7 @@ void* reallocate(void* ptr, size_t new_size, AllocateOptions options) noexcept {
       copy_size = std::min(old_size, new_size);
     } else {
       // Small to large
-      nptr = alloc_large(new_size);
+      nptr = alloc_large(new_size, false);
       copy_size = old_size;
     }
     // Copy

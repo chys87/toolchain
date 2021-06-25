@@ -33,6 +33,7 @@
 #include <new>
 
 #include "cbu/alloc/alloc.h"
+#include "cbu/alloc/pagesize.h"
 #include "cbu/malloc/visibility.h"
 
 namespace {

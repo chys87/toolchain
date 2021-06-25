@@ -31,8 +31,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "cbu/alloc/pagesize.h"
-#include "cbu/sys/low_level_mutex.h"
+#include <cstddef>
 
 namespace cbu {
 namespace alloc {
@@ -88,46 +87,12 @@ void trim(size_t pad) noexcept;
 // You can also just call munmap to free it -- though this is not recommended,
 // it can be required in certain circumstance, e.g., the pages have been
 // "gift'd" to the kernel with vmsplice SPLICE_F_GIFT
-// supported options: allow_thp
+// supported options: allow_thp; zero
 struct Page;
 Page* allocate_page(size_t bytes, AllocateOptions options = {}) noexcept;
 // Should use the same options with allocate_page for best performance
 void reclaim_page(Page* page, size_t bytes,
                   AllocateOptions options = {}) noexcept;
-
-// Lower-level interface -- raw page allocation
-// No corresponding deallocation is provided.  Caller should either keep
-// the memory or munmap it.
-// This allocator does do some caching to reduce the number of mmap calls
-// and reduce defragmentation.
-// This allocator also guarantees returned pages are zero initialized
-class RawPageAllocator {
- public:
-  constexpr RawPageAllocator(bool allow_thp) noexcept
-      : allow_thp_(allow_thp) {}
-
-  Page* allocate(size_t size) noexcept;
-
-  // Just allocate pages with mmap
-  // The returned memory is guaranteed to be zero initialized
-  static void* raw_mmap_pages(size_t size, bool allow_thp = true,
-                              void* hint = nullptr) noexcept;
-
-  template <bool AllowThp, typename... Tags>
-  static RawPageAllocator instance;
-
- private:
-  struct CachedPage;
-
-  CachedPage* cached_page_ = nullptr;
-  LowLevelMutex lock_;
-  bool allow_thp_;
-  bool hint_downward_ = false;
-  void* hint_address_ = nullptr;
-};
-
-template <bool AllowThp, typename... Tags>
-inline constinit RawPageAllocator RawPageAllocator::instance{AllowThp};
 
 // Misc functions, intended for use by wrappers (e.g. cbu/malloc) to provide
 // consistent error messages.

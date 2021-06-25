@@ -307,14 +307,22 @@ class Rb : public RbBase<typename Accessor::Node> {
   template <bool NSearch, typename Key>
   static Node* npsearch(const Node* root, Key key) noexcept;
 
+  // Search for a specified key, returns the pointer or nullptr
   template <typename Key>
   Node* search(Key key) const noexcept {
     return search<false>(root_, key);
   }
+  // Ditto, but caller's responsibility to guarantee the key exists;
+  // otheriwse it will segfault.
   template <typename Key>
   Node* usearch(Key key) const noexcept {
-    return usearch<true>(root_, key);
+    return search<true>(root_, key);
   }
+  // nsearch and psearch:
+  // Similar with search, but if the specified key doesn't exist,
+  // psearch returns the immediately smaller node the nsearch returns the
+  // immediately large.
+  // NOTE THAT THEY ARE NOT COUNTERPARTS OF STL'S lower_bound/upper_bound
   template <typename Key>
   Node* nsearch(Key key) const noexcept {
     return npsearch<true>(root_, key);

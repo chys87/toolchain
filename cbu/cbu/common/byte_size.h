@@ -46,6 +46,13 @@ inline constexpr std::ptrdiff_t byte_distance(const U* p, const U* q) {
       reinterpret_cast<std::intptr_t>(p));
 }
 
+// Same as byte_distance, but return value is unsigned
+template <typename U>
+inline constexpr std::make_unsigned_t<std::ptrdiff_t> byte_udistance(
+    const U* p, const U* q) {
+  return byte_distance(p, q);
+}
+
 template <typename U>
 inline constexpr U* byte_advance(U* p, std::ptrdiff_t u) noexcept {
   if constexpr (!std::is_void_v<U>) {
