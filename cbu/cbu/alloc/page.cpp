@@ -33,6 +33,7 @@
 #include <unistd.h>
 
 #include <atomic>
+#include <compare>
 #include <mutex>
 
 #include "cbu/alloc/alloc.h"
@@ -125,13 +126,8 @@ struct DescriptionAdRbAccessor {
   using Node = Description;
   static constexpr auto link = &Node::link_ad;
 
-  static int cmp(const Page* a, const Node* b) noexcept {
-    if (a < b->addr)
-      return -1;
-    else if (a == b->addr)
-      return 0;
-    else
-      return 1;
+  static std::weak_ordering cmp(const Page* a, const Node* b) noexcept {
+    return a <=> b->addr;
   }
   static bool lt(const Node* a, const Node* b) noexcept {
     return a->addr < b->addr;

@@ -410,7 +410,7 @@ template <bool Unsafe, typename Key>
 auto Rb<Accessor>::search(const Node* root, Key key) noexcept -> Node* {
   const Node* node = root;
   while (Unsafe || node) {
-    int cmp = Accessor::cmp(key, node);
+    auto cmp = Accessor::cmp(key, node);
     if (cmp == 0)
       break;
     else
@@ -425,7 +425,7 @@ auto Rb<Accessor>::npsearch(const Node* root, Key key) noexcept -> Node* {
   const Node* node = root;
   const Node* r = nullptr;
   while (node) {
-    int cmp = Accessor::cmp(key, node);
+    auto cmp = Accessor::cmp(key, node);
     if (cmp < 0) {
       if constexpr (NSearch) r = node;
       node = left(node);
