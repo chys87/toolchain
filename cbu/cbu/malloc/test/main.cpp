@@ -39,6 +39,9 @@
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#if __has_include(<x86intrin.h>)
+# include <x86intrin.h>
+#endif
 
 // Define a week "cbu_sized_free"
 // If we're not linking to cbu_malloc, use standard free
@@ -57,6 +60,50 @@ inline unsigned rand_r(unsigned *seed) {
 }
 
 bool check_const(const char *p, char c, size_t len) {
+#if defined __AVX2__
+  // Try to minimize overhead of check_** functions
+  __m256i vx = _mm256_set1_epi8(c);
+  while (len && (uintptr_t(p) & 31)) {
+    if (*p != c) return false;
+    ++p;
+    --len;
+  }
+  __m256i v = _mm256_setzero_si256();
+  while (len >= 16 * 32) {
+    len -= 16 * 32;
+    _mm_prefetch(p + 512, _MM_HINT_NTA);
+    _mm_prefetch(p + 512 + 1 * 64, _MM_HINT_NTA);
+    _mm_prefetch(p + 512 + 2 * 64, _MM_HINT_NTA);
+    _mm_prefetch(p + 512 + 3 * 64, _MM_HINT_NTA);
+    _mm_prefetch(p + 512 + 4 * 64, _MM_HINT_NTA);
+    _mm_prefetch(p + 512 + 5 * 64, _MM_HINT_NTA);
+    _mm_prefetch(p + 512 + 6 * 64, _MM_HINT_NTA);
+    _mm_prefetch(p + 512 + 7 * 64, _MM_HINT_NTA);
+    v |= vx ^ *(const __m256i*)p;
+    v |= vx ^ *(const __m256i*)(p + 1 * 32);
+    v |= vx ^ *(const __m256i*)(p + 2 * 32);
+    v |= vx ^ *(const __m256i*)(p + 3 * 32);
+    v |= vx ^ *(const __m256i*)(p + 4 * 32);
+    v |= vx ^ *(const __m256i*)(p + 5 * 32);
+    v |= vx ^ *(const __m256i*)(p + 6 * 32);
+    v |= vx ^ *(const __m256i*)(p + 7 * 32);
+    v |= vx ^ *(const __m256i*)(p + 8 * 32);
+    v |= vx ^ *(const __m256i*)(p + 9 * 32);
+    v |= vx ^ *(const __m256i*)(p + 10 * 32);
+    v |= vx ^ *(const __m256i*)(p + 11 * 32);
+    v |= vx ^ *(const __m256i*)(p + 12 * 32);
+    v |= vx ^ *(const __m256i*)(p + 13 * 32);
+    v |= vx ^ *(const __m256i*)(p + 14 * 32);
+    v |= vx ^ *(const __m256i*)(p + 15 * 32);
+    p += 16 * 32;
+  }
+  while (len >= 32) {
+    len -= 32;
+    v |= vx ^ *(const __m256i*)p;
+    p += 32;
+  }
+  if (!_mm256_testz_si256(v, v)) return false;
+#endif
   for (; len; --len)
     if (*p++ != c)
       return false;
@@ -64,10 +111,7 @@ bool check_const(const char *p, char c, size_t len) {
 }
 
 bool check_all_zeros(const char *p, size_t len) {
-  for (; len; --len)
-    if (*p++)
-      return false;
-  return true;
+  return check_const(p, 0, len);
 }
 
 template <size_t N, size_t MAXBLOCK>
@@ -171,7 +215,9 @@ void *realloc_check(void* = 0) {
 
 void* align_check(void* = 0) {
   for (size_t boundary = 8; boundary <= 4096; boundary *= 2) {
-    void *p = aligned_alloc(boundary, (rand_r (&seed) % 8192 + 1 + boundary - 1) / boundary * boundary);
+    void* p =
+        aligned_alloc(boundary, (rand_r(&seed) % 8192 + 1 + boundary - 1) /
+                                    boundary * boundary);
     if ((uintptr_t)p % boundary) {
       fprintf (stderr, "Misalign %p on %zu boundary.\n", p, boundary);
       return (void *)1;
@@ -397,7 +443,9 @@ int main (int argc, char **argv) {
       return 1;
 
     clock_gettime (CLOCK_MONOTONIC, &endtime);
-    printf ("multithreaded: %.3gs\n", (endtime.tv_sec - starttime.tv_sec) + 1.e-9 * (endtime.tv_nsec - starttime.tv_nsec));
+    printf("multithreaded: %.3gs\n",
+           (endtime.tv_sec - starttime.tv_sec) +
+               1.e-9 * (endtime.tv_nsec - starttime.tv_nsec));
 
     puts ("Now testing performance.");
 #define TEST(name,args...)	\
@@ -454,7 +502,8 @@ int main (int argc, char **argv) {
     waitpid(pid, nullptr, 0);
   };
 
-  snprintf(cmd, sizeof(cmd), "fgrep AnonHuge /proc/%u/smaps | fgrep -v ' 0 k'", getpid());
+  snprintf(cmd, sizeof(cmd), "fgrep AnonHuge /proc/%u/smaps | fgrep -v ' 0 k'",
+           getpid());
   puts("AnonHuge");
   sys();
 

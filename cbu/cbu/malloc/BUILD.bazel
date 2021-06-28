@@ -36,6 +36,7 @@ cc_library(
     '//cbu/tweak:tweak',
   ],
   copts = [
+    '-march=native',
     '-std=gnu++2a',
     '-Wall',
     '-Werror',
