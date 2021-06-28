@@ -162,7 +162,8 @@ class PageTreeAllocator {
 
   // Returns a linked list of Description (linked with link_ad.left),
   // so that the caller may decide to free it.
-  Description* get_deallocate_candidates(size_t threshold) noexcept;
+  Description* get_deallocate_candidates(size_t threshold,
+                                         bool thp_aware) noexcept;
 
   // Just remove the page from the tree
   void remove_by_range(Page* page, size_t size) noexcept;
@@ -296,7 +297,7 @@ bool PageTreeAllocator::extend_nomove(Page* ptr, size_t old,
 }
 
 Description* PageTreeAllocator::get_deallocate_candidates(
-    size_t threshold) noexcept {
+    size_t threshold, bool thp_aware) noexcept {
   Description* list = nullptr;
 
   Description* p = szad_.last();
@@ -307,7 +308,7 @@ Description* PageTreeAllocator::get_deallocate_candidates(
     p = szad_.remove(p);
     p = ad_.remove(p);
 
-    if (kTHPSize && kTHPSize * 2 < threshold) {
+    if (kTHPSize && thp_aware && kTHPSize * 2 < threshold) {
       // If we assume the kernel has support for transparent huge pages,
       // it's best if we always do allocations on hugepage boundaries
 
@@ -588,7 +589,8 @@ Description* Arena::check_munmap_unlocked(size_t threshold) noexcept {
   reclaim_count_ = 0;
   // We only check tree_dirty.  This is probably OK.
   // Pages in tree_clean_ are most likely not populated by kernel yet.
-  Description* list = tree_dirty_.get_deallocate_candidates(threshold);
+  Description* list = tree_dirty_.get_deallocate_candidates(
+      threshold, kTHPSize && raw_page_allocator_->allow_thp());
   tree_all_.remove_by_list(list);
   return list;
 }

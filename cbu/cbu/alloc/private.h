@@ -132,6 +132,8 @@ class RawPageAllocator {
 
   Page* allocate(size_t size) noexcept;
 
+  constexpr bool allow_thp() const noexcept { return allow_thp_; }
+
   template <bool AllowThp, typename... Tags>
   static RawPageAllocator instance;
 
