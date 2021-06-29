@@ -42,9 +42,9 @@ namespace cbu {
 namespace alloc {
 namespace {
 
-void* raw_mmap_pages(size_t size, bool allow_thp, void* hint) noexcept {
-  void* p = fsys_mmap(hint, size, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+void* raw_mmap_pages(size_t size, bool allow_thp) noexcept {
+  void* p = fsys_mmap(nullptr, size, PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (false_no_fail(fsys_mmap_failed(p))) {
     p = nullptr;
   } else {
@@ -96,33 +96,8 @@ Page* RawPageAllocator::allocate(size_t size) noexcept {
   bool use_thp = kTHPSize && allow_thp_;
   size_t alloc_size = cbu::pow2_ceil(size, use_thp ? kTHPSize : 32 * kPageSize);
 
-  uintptr_t hint_address = 0;
-  if (use_thp) {
-    hint_address = reinterpret_cast<uintptr_t>(hint_address_);
-    if (hint_address) {
-      if (hint_downward_)
-        hint_address = pow2_floor(hint_address - alloc_size, kTHPSize);
-      else
-        hint_address = pow2_ceil(hint_address, kTHPSize);
-    }
-  }
-
-  void* np = raw_mmap_pages(alloc_size, use_thp,
-                            reinterpret_cast<void*>(hint_address));
+  void* np = raw_mmap_pages(alloc_size, use_thp);
   if (false_no_fail(np == nullptr)) return nullptr;
-
-  if (use_thp) {
-    if (hint_address) {
-      if (uintptr_t(np) > hint_address)
-        hint_downward_ = false;
-      else if (uintptr_t(np) < hint_address)
-        hint_downward_ = true;
-    }
-    if (hint_downward_)
-      hint_address_ = np;
-    else
-      hint_address_ = static_cast<char*>(np) + alloc_size;
-  }
 
   if (alloc_size > size) {
     CachedPage* remaining = static_cast<CachedPage*>(byte_advance(np, size));

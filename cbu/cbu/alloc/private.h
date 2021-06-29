@@ -143,8 +143,6 @@ class RawPageAllocator {
   CachedPage* cached_page_ = nullptr;
   LowLevelMutex lock_;
   bool allow_thp_;
-  bool hint_downward_ = false;
-  void* hint_address_ = nullptr;
 };
 
 template <bool AllowThp, typename... Tags>

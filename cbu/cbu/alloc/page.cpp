@@ -35,6 +35,7 @@
 #include <atomic>
 #include <compare>
 #include <mutex>
+#include <optional>
 
 #include "cbu/alloc/alloc.h"
 #include "cbu/alloc/private.h"
@@ -51,8 +52,8 @@ namespace {
 
 union Description {
   struct {
-    RbLink<Description> link_ad;
-    RbLink<Description> link_szad;
+    RbLink<Description> rblink_1;
+    RbLink<Description> rblink_2;
     Page* addr;
     size_t size;
   };
@@ -122,9 +123,11 @@ void free_description(Description* desc) {
   description_cache.desc_list = desc;
 }
 
+template <int LinkIdx = 1>
 struct DescriptionAdRbAccessor {
   using Node = Description;
-  static constexpr auto link = &Node::link_ad;
+  static constexpr auto link =
+      (LinkIdx == 1) ? &Node::rblink_1 : &Node::rblink_2;
 
   static std::weak_ordering cmp(const Page* a, const Node* b) noexcept {
     return a <=> b->addr;
@@ -136,7 +139,7 @@ struct DescriptionAdRbAccessor {
 
 struct DescriptionSzAdRbAccessor {
   using Node = Description;
-  static constexpr auto link = &Node::link_szad;
+  static constexpr auto link = &Node::rblink_2;
 
   static int cmp(size_t size, const Node* b) noexcept {
     if (size <= b->size)
@@ -160,7 +163,7 @@ class PageTreeAllocator {
   bool reclaim_nomerge(Page* page, size_t size) noexcept;
   bool extend_nomove(Page* ptr, size_t old, size_t grow) noexcept;
 
-  // Returns a linked list of Description (linked with link_ad.left),
+  // Returns a linked list of Description (linked with rblink_1.left),
   // so that the caller may decide to free it.
   Description* get_deallocate_candidates(size_t threshold,
                                          bool thp_aware) noexcept;
@@ -170,21 +173,73 @@ class PageTreeAllocator {
   // Likewise, but calls a callback on the removed subrange
   template <typename Callback>
   void remove_by_range(Page* page, size_t size, Callback callback) noexcept;
-  // Just remove a list of ranges (linked with link_ad.left).
+  // Just remove a list of ranges (linked with rblink_1.left).
   // The list itself is not removed.
   void remove_by_list(const Description* list) noexcept;
 
  private:
-  Rb<DescriptionAdRbAccessor> ad_;
-  Rb<DescriptionSzAdRbAccessor> szad_;
+  Description* remove_from_szad(Description* desc) noexcept;
+  Description* insert_to_szad(Description* desc) noexcept;
+
+  static constexpr size_t small_size_to_idx(size_t size) noexcept {
+    // This is written in a way that helps x86-64 generate best code
+    return size_t(unsigned(size) / kPageSize) - 1;
+  }
+  static constexpr size_t small_idx_to_size(unsigned idx) noexcept {
+    return (idx + 1) * unsigned(kPageSize);
+  }
+
+ private:
+  Rb<DescriptionAdRbAccessor<1>> ad_;
+
+  static constexpr size_t kSmallCount = 4;
+  static constexpr size_t kSmallMaxSize = kSmallCount * kPageSize;
+  Rb<DescriptionAdRbAccessor<2>> szad_small_[kSmallCount];
+  Rb<DescriptionSzAdRbAccessor> szad_large_;
 };
 
+Description* PageTreeAllocator::remove_from_szad(Description* desc) noexcept {
+  if (desc->size <= kSmallMaxSize)
+    return szad_small_[small_size_to_idx(desc->size)].remove(desc);
+  else
+    return szad_large_.remove(desc);
+}
+
+Description* PageTreeAllocator::insert_to_szad(Description* desc) noexcept {
+  if (desc->size <= kSmallMaxSize)
+    return szad_small_[small_size_to_idx(desc->size)].insert(desc);
+  else
+    return szad_large_.insert(desc);
+}
+
 Page* PageTreeAllocator::allocate(size_t size) noexcept {
-  Description* desc = (size == kPageSize) ? szad_.first() : szad_.nsearch(size);
+  if (size <= kSmallMaxSize) {
+    size_t k = small_size_to_idx(size);
+    if (Description* desc = szad_small_[k].first()) {
+      desc = szad_small_[k].remove(desc);
+      desc = ad_.remove(desc);
+      Page* ret = desc->addr;
+      free_description(desc);
+      return ret;
+    }
+
+    while (++k < kSmallCount) {
+      if (Description* desc = szad_small_[k].first()) {
+        desc = szad_small_[k].remove(desc);
+        Page* ret = desc->addr;
+        desc->addr = byte_advance(ret, size);
+        desc->size = small_idx_to_size(k) - size;
+        szad_small_[small_size_to_idx(desc->size)].insert(desc);
+        return ret;
+      }
+    }
+  }
+
+  Description* desc = szad_large_.nsearch(size);
   if (desc) {
     assert(desc->size >= size);
     Page* ret;
-    desc = szad_.remove(desc);
+    desc = szad_large_.remove(desc);
     if (desc->size == size) {
       // Perfect size.
       desc = ad_.remove(desc);
@@ -195,7 +250,7 @@ Page* PageTreeAllocator::allocate(size_t size) noexcept {
       ret = desc->addr;
       desc->addr = byte_advance(desc->addr, size);
       desc->size -= size;
-      szad_.insert(desc);
+      insert_to_szad(desc);
     }
     return ret;
   } else {
@@ -215,7 +270,7 @@ bool PageTreeAllocator::reclaim(Page* page, size_t size,
   Description* succ = (option_bitmask & RECLAIM_PAGE_NOMERGE_RIGHT)
                           ? nullptr
                           : ad_.search(byte_advance(page, size));
-  if (succ) succ = szad_.remove(succ);
+  if (succ) succ = remove_from_szad(succ);
 
   // Can we merge left?
   Description* prec = (option_bitmask & RECLAIM_PAGE_NOMERGE_LEFT)
@@ -224,7 +279,7 @@ bool PageTreeAllocator::reclaim(Page* page, size_t size,
   if (prec && byte_advance(prec->addr, prec->size) != page) prec = nullptr;
 
   if (prec) {  // Can merge backward.
-    prec = szad_.remove(prec);
+    prec = remove_from_szad(prec);
     if (succ) {  // Both!
       size += succ->size;
       succ = ad_.remove(succ);
@@ -246,7 +301,7 @@ bool PageTreeAllocator::reclaim(Page* page, size_t size,
     desc = ad_.insert(desc);
   }
 
-  szad_.insert(desc);
+  insert_to_szad(desc);
   return true;
 }
 
@@ -260,7 +315,7 @@ bool PageTreeAllocator::reclaim_nomerge(Page* page, size_t size) noexcept {
   desc->addr = page;
   desc->size = size;
   desc = ad_.insert(desc);
-  szad_.insert(desc);
+  insert_to_szad(desc);
   return true;
 }
 
@@ -278,7 +333,7 @@ bool PageTreeAllocator::extend_nomove(Page* ptr, size_t old,
   Description* succ = ad_.search(target);
   if (succ && (succ->size >= grow)) {
     // Yes
-    succ = szad_.remove(succ);
+    succ = remove_from_szad(succ);
     if (succ->size == grow) {
       // Perfect size.
       succ = ad_.remove(succ);
@@ -288,7 +343,7 @@ bool PageTreeAllocator::extend_nomove(Page* ptr, size_t old,
       // Return the higher portion to tree
       succ->size -= grow;
       succ->addr = byte_advance(target, grow);
-      succ = szad_.insert(succ);
+      succ = insert_to_szad(succ);
       return true;
     }
   } else {
@@ -300,12 +355,12 @@ Description* PageTreeAllocator::get_deallocate_candidates(
     size_t threshold, bool thp_aware) noexcept {
   Description* list = nullptr;
 
-  Description* p = szad_.last();
+  Description* p = szad_large_.last();
 
   while (p && (p->size >= threshold)) {
-    Description* q = szad_.prev(p);
+    Description* q = szad_large_.prev(p);
 
-    p = szad_.remove(p);
+    p = szad_large_.remove(p);
     p = ad_.remove(p);
 
     if (kTHPSize && thp_aware && kTHPSize * 2 < threshold) {
@@ -328,10 +383,21 @@ Description* PageTreeAllocator::get_deallocate_candidates(
       }
     }
 
-    p->link_ad.left(list);
+    p->rblink_1.left(list);
     list = p;
 
     p = q;
+  }
+
+  for (size_t i = kSmallMaxSize; i > 0 && i >= threshold; i -= kPageSize) {
+    size_t idx = small_size_to_idx(i);
+    auto& tree = szad_small_[idx];
+    while (Description* p = tree.first()) {
+      p = tree.remove(p);
+      p = ad_.remove(p);
+      p->rblink_1.left(list);
+      list = p;
+    }
   }
 
   return list;
@@ -358,9 +424,9 @@ void PageTreeAllocator::remove_by_range(Page* page, size_t size,
         if (end < p_end) {
           // Special case - the range is in the middle of p_prev
           callback(page, size);
-          p = szad_.remove(p);
+          p = remove_from_szad(p);
           p->size = byte_distance(p->addr, page);
-          szad_.insert(p);
+          insert_to_szad(p);
 
           // There is nothing we can really do if alloc_description fails.
           // So we simply ignore the error.
@@ -369,16 +435,16 @@ void PageTreeAllocator::remove_by_range(Page* page, size_t size,
             p_new->addr = end;
             p_new->size = byte_distance(end, p_end);
             p_new = ad_.insert(p_new);
-            p_new = szad_.insert(p_new);
+            p_new = insert_to_szad(p_new);
           }
           return;
 
         } else {
           // The range covers a suffix of the node
           callback(page, byte_distance(page, p_end));
-          p = szad_.remove(p);
+          p = remove_from_szad(p);
           p->size = byte_distance(p->addr, page);
-          szad_.insert(p);
+          p = insert_to_szad(p);
           if (end == p_end) return;
         }
       }
@@ -398,10 +464,10 @@ void PageTreeAllocator::remove_by_range(Page* page, size_t size,
     // Now we have guarantee that page == p->addr
     if (end < p_end) {
       // The range is prefix of the node -- modify node and return
-      p = szad_.remove(p);
+      p = remove_from_szad(p);
       p->addr = end;
       p->size = byte_distance(end, p_end);
-      p = szad_.insert(p);
+      p = insert_to_szad(p);
       callback(page, byte_distance(page, end));
       return;
     } else {
@@ -409,7 +475,7 @@ void PageTreeAllocator::remove_by_range(Page* page, size_t size,
       callback(page, p->size);
       auto next_p = ad_.next(p);
       p = ad_.remove(p);
-      p = szad_.remove(p);
+      p = remove_from_szad(p);
       free_description(p);
       p = next_p;
       page = p_end;
@@ -420,7 +486,7 @@ void PageTreeAllocator::remove_by_range(Page* page, size_t size,
 void PageTreeAllocator::remove_by_list(const Description* list) noexcept {
   while (list) {
     remove_by_range(list->addr, list->size);
-    list = list->link_ad.left();
+    list = list->rblink_1.left();
   }
 }
 
@@ -444,11 +510,12 @@ class alignas(kCacheLineSize) Arena {
   bool extend_nomove(Page*, size_t oldsize, size_t growsize) noexcept;
   void do_munmap(Page*, size_t) noexcept;
 
-  // Returns a linked list (linked with link_ad.left)
-  Description* check_munmap_unlocked(
-      size_t threshold = kMunmapThreshold) noexcept;
+  // Returns a linked list (linked with rblink_1.left)
+  Description* trim_and_extract_unlocked(
+      std::optional<size_t> threshold = std::nullopt) noexcept;
 
-  Description* check_munmap(size_t threshold = kMunmapThreshold) noexcept;
+  Description* trim_and_extract(
+      std::optional<size_t> threshold = std::nullopt) noexcept;
 
   void munmap_description_list(Description*) noexcept;
 
@@ -460,17 +527,17 @@ class alignas(kCacheLineSize) Arena {
 
   // Count it so that we can determine when to try to do munmap
   size_t reclaim_count_ = 0;
+  size_t total_bytes_allocated_ = 0;
 
   // tree_clean holds pages that we know are zero initialized
   PageTreeAllocator tree_clean_{};
   PageTreeAllocator tree_dirty_{};
   PageTreeAllocator tree_all_{};
 
-  static constexpr size_t kPreferredAllocSize =
-      kTHPSize ? kTHPSize * 4 : kPageSize * 2048;
-  static_assert((kPreferredAllocSize & (kPreferredAllocSize - 1)) == 0);
-
-  static constexpr size_t kMunmapThreshold = 16 * 1024 * 1024;
+  static constexpr size_t kInitialAllocSize =
+      kTHPSize ? kTHPSize : kPageSize * 512;
+  static constexpr size_t kMaxAllocSize = 128 * 1024 * 1024;
+  static_assert((kInitialAllocSize & (kInitialAllocSize - 1)) == 0);
 };
 
 // No additional tag types are given to RawPageAllocator::instance, meaning the
@@ -491,7 +558,7 @@ Page* Arena::allocate(size_t size, bool zero) noexcept {
     // Remove pages from tree_all as well
     tree_all_.remove_by_range(page, size);
   } else {
-    // If allocatings from tree_clean/tree_dirty fail, try allocating from
+    // If allocation from tree_clean/tree_dirty fails, try allocating from
     // tree_all
     page = tree_all_.allocate(size);
     if (page) {
@@ -508,18 +575,23 @@ Page* Arena::allocate(size_t size, bool zero) noexcept {
   }
 
   if (!page) {
-    size_t alloc_size = cbu::pow2_ceil(size, kPreferredAllocSize);
+    size_t alloc_size = cbu::pow2_ceil(
+        std::max(std::min(total_bytes_allocated_, kMaxAllocSize), size),
+        kInitialAllocSize);
     page = raw_page_allocator_->allocate(alloc_size);
     if (page == nullptr) return nomem();
     if (size < alloc_size)
       reclaim_unlocked(byte_advance(page, size), alloc_size - size,
                        RECLAIM_PAGE_NOMERGE_LEFT | RECLAIM_PAGE_CLEAN);
   }
+  total_bytes_allocated_ += size;
   return page;
 }
 
 void Arena::reclaim_unlocked(Page* page, size_t size,
                              uint32_t option_bitmask) noexcept {
+  // Don't modify total_bytes_allocated_ here -- this function is also
+  // called from allocate.
   if (!(option_bitmask & RECLAIM_PAGE_CLEAN)) reclaim_count_ += size;
 
   if (false_no_fail(!tree_all_.reclaim(page, size, option_bitmask))) {
@@ -539,9 +611,10 @@ void Arena::reclaim(Page* page, size_t size, uint32_t option_bitmask) noexcept {
   Description* clean;
   {
     std::lock_guard locker(lock_);
+    total_bytes_allocated_ -= size;
     reclaim_unlocked(page, size, option_bitmask);
     // Check for whether we can do some clean up work.
-    clean = check_munmap_unlocked();
+    clean = trim_and_extract_unlocked();
   }
   munmap_description_list(clean);
 }
@@ -562,10 +635,11 @@ void Arena::reclaim_list(Page* page, size_t size) noexcept {
         next = next->next;
       }
 
+      total_bytes_allocated_ -= this_size;
       reclaim_unlocked(page, this_size);
       page = next;
     }
-    clean = check_munmap_unlocked();
+    clean = trim_and_extract_unlocked();
   }
   munmap_description_list(clean);
 }
@@ -584,7 +658,12 @@ bool Arena::extend_nomove(Page* ptr, size_t old, size_t grow) noexcept {
   return true;
 }
 
-Description* Arena::check_munmap_unlocked(size_t threshold) noexcept {
+Description* Arena::trim_and_extract_unlocked(
+    std::optional<size_t> threshold_opt) noexcept {
+  size_t threshold = threshold_opt
+                         ? *threshold_opt
+                         : std::max(total_bytes_allocated_, kInitialAllocSize);
+
   if (reclaim_count_ < threshold * 2) return nullptr;
   reclaim_count_ = 0;
   // We only check tree_dirty.  This is probably OK.
@@ -595,16 +674,16 @@ Description* Arena::check_munmap_unlocked(size_t threshold) noexcept {
   return list;
 }
 
-Description* Arena::check_munmap(size_t threshold) noexcept {
+Description* Arena::trim_and_extract(std::optional<size_t> threshold) noexcept {
   std::lock_guard locker(lock_);
-  return check_munmap_unlocked(threshold);
+  return trim_and_extract_unlocked(threshold);
 }
 
 void Arena::munmap_description_list(Description* clean) noexcept {
   while (clean) {
     Description* cur = clean;
     do_munmap(cur->addr, cur->size);
-    clean = cur->link_ad.left();
+    clean = cur->rblink_1.left();
     free_description(cur);
   }
 }
@@ -654,7 +733,7 @@ struct PageCategoryCache {
   unsigned char page_count[kPageCategories] = {};
 
   static constexpr unsigned size_to_page_category(size_t size) {
-    return (size - kPageSize) / kPageSize;
+    return unsigned(size - kPageSize) / kPageSize;
   }
   static constexpr size_t page_category_to_size(unsigned cat) {
     return (unsigned(kPageSize) * (cat + 1));
@@ -838,13 +917,13 @@ void large_trim(size_t pad) noexcept {
 
   {
     Arena* arena = &arena_default;
-    Description* clean_list = arena->check_munmap(pad);
+    Description* clean_list = arena->trim_and_extract(pad);
     arena->munmap_description_list(clean_list);
   }
 
   if constexpr (kTHPSize > 0) {
     Arena* arena = &arena_no_thp;
-    Description* clean_list = arena->check_munmap(pad);
+    Description* clean_list = arena->trim_and_extract(pad);
     arena->munmap_description_list(clean_list);
   }
 
