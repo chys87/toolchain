@@ -33,7 +33,6 @@
 #include <utility>
 
 namespace cbu {
-inline namespace cbu_scoped_fd {
 
 class ScopedFD {
  public:
@@ -70,5 +69,4 @@ class ScopedFD {
   int fd_;
 };
 
-} // inline namespace cbu_scoped_fd
 } // namespace cbu

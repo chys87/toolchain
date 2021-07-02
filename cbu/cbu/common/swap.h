@@ -65,7 +65,6 @@ inline constexpr void swap_impl(T (&a)[N], U (&b)[N])
 } // namespace cbu_swap_detail
 
 namespace cbu {
-inline namespace cbu_swap {
 
 template <typename T, typename U>
 inline constexpr void swap(T &a, U &b)
@@ -73,5 +72,4 @@ inline constexpr void swap(T &a, U &b)
   cbu_swap_detail::swap_impl(a, b);
 }
 
-} // namespace cbu_swap
 } // namespace cbu

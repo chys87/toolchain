@@ -45,7 +45,6 @@
 #endif
 
 namespace cbu {
-inline namespace cbu_encoding {
 
 char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
   if (u < 0x800) {
@@ -96,5 +95,4 @@ char* char32_to_utf8(char* dst, char32_t c) noexcept {
       char32_to_utf8(reinterpret_cast<char8_t*>(dst), c));
 }
 
-} // namepsace cbu_encoding
 } // namespace cbu

@@ -34,8 +34,6 @@
 #include "utility.h"
 
 namespace cbu {
-inline namespace cbu_bit {
-
 
 template <unsigned> struct UIntTypeByBitsTraits;
 
@@ -311,8 +309,7 @@ private:
 };
 
 template <typename T> requires std::is_integral<T>::value
-inline constexpr
-cbu_utility::IteratorRange<BitIterator<std::make_unsigned_t<T>>>
+inline constexpr IteratorRange<BitIterator<std::make_unsigned_t<T>>>
 set_bits(T v) {
   using UT = std::make_unsigned_t<T>;
   return {BitIterator<UT>(v), BitIterator<UT>(0)};
@@ -505,5 +502,4 @@ static_assert(bit_mask_translate<1, 1, 4, 8>(4) == 8);
 static_assert(bit_mask_translate<1, 1, 4, 8>(5) == 9);
 static_assert(bit_mask_translate<1, 1, 4, 8>(37) == 9);
 
-}  // namespace cbu_bit
 }  // namespace cbu

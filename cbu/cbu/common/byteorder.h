@@ -32,7 +32,6 @@
 #include <type_traits>
 
 namespace cbu {
-inline namespace cbu_byteorder {
 
 static_assert(
     std::endian::native == std::endian::little ||
@@ -193,5 +192,4 @@ inline constexpr auto BigEndianRef(T* p) noexcept {
   return FixByteOrderRef<T, std::endian::big>(p);
 }
 
-}  // namespace cbu_byteorder
 }  // namespace cbu

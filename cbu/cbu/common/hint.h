@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,6 @@
 #include <assert.h>
 
 namespace cbu {
-inline namespace cbu_hint {
 
 #ifndef __has_builtin
 # define __has_builtin(x) 0
@@ -53,7 +52,6 @@ template <typename T> inline T* hint_nonnull(T *ptr) noexcept {
   return ptr;
 }
 
-#define CBU_HINT_NONNULL ::cbu::cbu_hint::hint_nonnull
+#define CBU_HINT_NONNULL ::cbu::hint_nonnull
 
-} // namespace cbu_hint
 } // namespace cbu

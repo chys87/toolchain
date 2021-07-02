@@ -34,7 +34,6 @@
 #include "cbu/tweak/tweak.h"
 
 namespace cbu {
-inline namespace cbu_low_level_mutex {
 
 #define CBU_MUTEX_INLINE __attribute__((__always_inline__)) inline
 
@@ -201,5 +200,4 @@ CBU_MUTEX_INLINE void SpinLock::pause() noexcept {
 
 #undef CBU_MUTEX_INLINE
 
-}  // namespace cbu_low_level_mutex
 }  // namespace cbu

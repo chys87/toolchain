@@ -34,7 +34,6 @@
 #include "cbu/compat/string.h"
 
 namespace cbu {
-inline namespace cbu_escape {
 
 enum struct EscapeStyle : unsigned {
   C,
@@ -101,5 +100,4 @@ inline UnescapeStringResult unescape_string(char* dst,
   return unescape_string(dst, src.data(), src.data() + src.size());
 }
 
-} // inline namespace cbu_escape
 } // namespace cbu

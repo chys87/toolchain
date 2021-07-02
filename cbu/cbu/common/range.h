@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,6 @@
 #include <type_traits>
 
 namespace cbu {
-inline namespace cbu_range {
 
 template <typename T>
 class RangeIterator : public std::iterator<
@@ -144,5 +143,4 @@ static_assert(std::is_same_v<decltype(Range(1, 2l)), Range<long>>);
 static_assert(std::is_same_v<decltype(Range(1, 2u)), Range<unsigned int>>);
 static_assert(std::is_same_v<decltype(Range(7)), Range<int>>);
 
-} // namespace cbu_range
 } // namespace cbu

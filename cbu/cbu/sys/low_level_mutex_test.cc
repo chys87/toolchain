@@ -36,7 +36,6 @@
 
 
 namespace cbu {
-inline namespace cbu_low_level_mutex {
 
 TEST(LowLevelMutexTest, LockTest) {
   LowLevelMutex mutex;
@@ -92,5 +91,4 @@ TEST(LowLevelMutexTest, SpinLockTest) {
   EXPECT_GE(1.5, seconds);
 }
 
-}  // namespace cbu_low_level_mutex
 }  // namespace cbu

@@ -40,7 +40,6 @@
 // A null-terminator is **not** guaranteed if a string view is used.
 
 namespace cbu {
-inline namespace cbu_immutable_string {
 
 template <typename C>
 requires Std_string_char<C>
@@ -174,5 +173,4 @@ class ImmutableBasicString {
 using ImmutableString = ImmutableBasicString<char>;
 using ImmutableWString = ImmutableBasicString<wchar_t>;
 
-} // namespace cbu_immutable_string
 } // namespace cbu

@@ -41,7 +41,6 @@
 #include "cbu/common/faststr.h"
 
 namespace cbu {
-inline namespace cbu_low_level_buffer_filler {
 
 template <Integral T, std::endian Order>
 struct FillByEndian {
@@ -226,5 +225,4 @@ class LowLevelBufferFiller {
   Ch* p_;
 };
 
-} // inline namespace cbu_low_level_buffer_filler
 } // namespace cbu

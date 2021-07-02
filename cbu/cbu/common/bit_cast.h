@@ -35,7 +35,6 @@
 #include <utility>
 
 namespace cbu {
-inline namespace cbu_bit_cast {
 
 #if defined __cpp_lib_bit_cast && __cpp_lib_bit_cast >= 201805
 using std::bit_cast;
@@ -72,5 +71,4 @@ inline To bit_cast_ex(const From &src) noexcept {
   return u.to;
 }
 
-} // inline namespace cbu_bit_cast
 } // namespace cbu

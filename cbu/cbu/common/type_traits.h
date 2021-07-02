@@ -31,7 +31,6 @@
 #include <type_traits>
 
 namespace cbu {
-inline namespace cbu_type_traits {
 
 // Check whether a type is one of many types
 template <typename T, typename... C>
@@ -49,5 +48,4 @@ struct is_same<U, V...> : std::conjunction<std::is_same<U, V>...> {};
 template <typename... Types>
 inline constexpr bool is_same_v = is_same<Types...>::value;
 
-} // inline namespace cbu_type_traits
 } // namespace cbu

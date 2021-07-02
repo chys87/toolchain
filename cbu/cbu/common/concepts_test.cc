@@ -30,7 +30,6 @@
 #include <cstddef>
 
 namespace cbu {
-inline namespace cbu_concepts {
 
 static_assert(Char_type<char>);
 static_assert(Char_type<unsigned char>);
@@ -43,5 +42,4 @@ static_assert(!Char_type<bool>);
 static_assert(!Char_type<const bool>);
 static_assert(!Char_type<bool&>);
 
-} // namespace cbu_concepts
 } // namespace cbu

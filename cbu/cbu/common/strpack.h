@@ -36,7 +36,6 @@
 #endif
 
 namespace cbu {
-inline namespace cbu_strpack {
 
 // STRPACK: Convert a string literal to a template argument pack
 template <typename T, T... chars>
@@ -60,7 +59,6 @@ constexpr const T (&operator""_str())[sizeof...(chars) + 1] {
   return strpack<T, chars...>::s;
 }
 
-} // namespace cbu_strpack
 } // namespace cbu
 
 #ifdef __clang__

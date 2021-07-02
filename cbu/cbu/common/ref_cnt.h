@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +35,6 @@
 #include "cbu/tweak/tweak.h"
 
 namespace cbu {
-inline namespace cbu_ref_cnt {
 
 using ref_cnt_t = unsigned;
 // Assume single-threaded
@@ -146,5 +145,4 @@ class RefCntPtr {
   Node* p_;
 };
 
-} // inline namespace cbu_ref_cnt
 } // namespace cbu

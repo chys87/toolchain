@@ -33,7 +33,6 @@
 #include <type_traits>
 
 namespace cbu {
-inline namespace cbu_concepts {
 
 template <typename T>
 concept String_view_compat = requires (const T &t) {
@@ -115,5 +114,4 @@ concept Std_string_char = std::is_same_v<T, char> ||
 #endif
   ;
 
-} // namespace cbu_concepts
 } // namespace cbu

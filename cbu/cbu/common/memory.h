@@ -32,7 +32,6 @@
 #include <new>
 
 namespace cbu {
-inline namespace cbu_memory {
 
 // This function only deletes the raw memory, without invoking destructor
 template <typename T>
@@ -253,5 +252,4 @@ class OutlinableArray {
   bool allocated_;
 };
 
-}  // namespace cbu_memory
 }  // namespace cbu

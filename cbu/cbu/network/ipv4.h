@@ -38,11 +38,7 @@
 
 namespace cbu {
 
-inline namespace cbu_short_string {
 template <std::size_t> class short_string;
-};
-
-inline namespace cbu_ipv4 {
 
 inline constexpr std::endian network_endian = std::endian::big;
 inline constexpr std::endian native_endian = std::endian::native;
@@ -127,5 +123,4 @@ class IPv4 {
   std::uint32_t v_;
 };
 
-} // namespace cbu_ipv4
 } // namespace cbu

@@ -34,7 +34,6 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-inline namespace cbu_fifo_list {
 namespace {
 
 TEST(FifoListTest, FifoListTest) {
@@ -69,5 +68,4 @@ TEST(FifoListTest, FifoListTest) {
 }
 
 } // namespace
-} // inline namespace cbu_fifo_list
 } // namespace cbu

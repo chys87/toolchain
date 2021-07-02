@@ -37,7 +37,6 @@
 #include "cbu/compat/atomic_ref.h"
 
 namespace cbu {
-inline namespace cbu_init_guard {
 
 // Generic implementation
 class InitGuard {
@@ -164,5 +163,4 @@ class LazyInit {
   InitGuard guard_;
 };
 
-}  // namespace cbu_init_guard
 }  // namespace cbu

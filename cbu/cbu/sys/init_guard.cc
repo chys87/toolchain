@@ -34,7 +34,6 @@
 #include "cbu/fsyscall/fsyscall.h"
 
 namespace cbu {
-inline namespace cbu_init_guard {
 
 bool InitGuard::uninit() noexcept {
   int v = std::atomic_ref(v_).load(std::memory_order_acquire);
@@ -84,5 +83,4 @@ void InitGuard::guard_abort() noexcept {
   fsys_futex3(&v_, FUTEX_WAKE_PRIVATE, 1);
 }
 
-}  // namespace cbu_init_guard
 }  // namespace cbu

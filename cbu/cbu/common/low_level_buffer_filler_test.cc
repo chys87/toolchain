@@ -31,7 +31,6 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-inline namespace cbu_low_level_buffer_filler {
 namespace {
 
 using std::operator""sv;
@@ -109,5 +108,4 @@ TEST(LowLevelBufferFillerTest, FillDec) {
 }
 
 } // namespace
-} // inline namespace cbu_low_level_buffer_filler
 } // namespace cbu

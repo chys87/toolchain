@@ -33,7 +33,6 @@
 #include "cbu/fsyscall/fsyscall.h"
 
 namespace cbu {
-inline namespace cbu_low_level_mutex {
 
 void LowLevelMutex::wait(int c) noexcept {
   for (;;) {
@@ -66,5 +65,4 @@ void LowLevelMutex::yield() noexcept {
   }
 }
 
-} // namespace cbu_low_level_mutex
 } // namespace cbu

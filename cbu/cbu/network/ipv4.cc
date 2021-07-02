@@ -31,7 +31,6 @@
 #include "cbu/common/short_string.h"
 
 namespace cbu {
-inline namespace cbu_ipv4 {
 namespace {
 
 char* uint8_to_string(char* p, std::uint8_t v) noexcept {
@@ -127,6 +126,4 @@ std::optional<IPv4> IPv4::from_string(std::string_view s) noexcept {
   return IPv4(a, b, c, d);
 }
 
-
-} // namespace cbu_ipv4
 } // namespace cbu

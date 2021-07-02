@@ -32,7 +32,7 @@
 
 #include "cbu/common/short_string.h"
 
-namespace cbu::cbu_network {
+namespace cbu {
 
 static_assert(IPv4(1, 2, 3, 4).value(native_endian) == 0x01020304);
 static_assert(IPv4(1, 2, 3, 4).a() == 1);
@@ -70,5 +70,4 @@ TEST(IPv4Test, FromStringTest) {
   EXPECT_FALSE(IPv4::from_string("192.168.1..105").has_value());
 }
 
-
-} // namepsace cbu::cbu_network
+}  // namespace cbu

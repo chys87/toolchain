@@ -41,7 +41,6 @@
 // It also accepts explicit const void*
 
 namespace cbu {
-inline namespace cbu_bytes_view {
 
 namespace cbu_bytes_view_types {
 
@@ -189,5 +188,4 @@ class BytesView : public cbu_bytes_view_types::BytesViewImpl {
   constexpr BytesView(const BytesView&) noexcept = default;
 };
 
-} // namespace cbu_bytes_view
 } // namespace cbu

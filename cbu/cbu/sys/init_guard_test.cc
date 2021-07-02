@@ -35,7 +35,6 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-inline namespace cbu_init_guard {
 namespace {
 
 constexpr int sleep_unit = 300 * 1000;
@@ -104,5 +103,4 @@ TEST(InitGuardTest, LazyInit) {
 }
 
 } // namespace
-} // inline namespace cbu_init_guard
 } // namespace cbu

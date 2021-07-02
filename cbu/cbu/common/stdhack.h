@@ -33,7 +33,6 @@
 // Hacks standard containers to add more functionality
 
 namespace cbu {
-inline namespace cbu_stdhack {
 
 char *extend(std::string* buf, std::size_t n);
 wchar_t *extend(std::wstring* buf, std::size_t n);
@@ -92,5 +91,4 @@ inline void truncate(std::u8string* buf, std::size_t n) {
 }
 #endif
 
-} // namespace cbu_stdhack
 } // namespace cbu

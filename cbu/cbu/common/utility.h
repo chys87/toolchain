@@ -34,7 +34,6 @@
 #include <iterator>
 
 namespace cbu {
-inline namespace cbu_utility {
 
 
 // POD equivalent of std::pair
@@ -211,5 +210,4 @@ enumerate(const C& cont) {
                        EnumerateIterator(0, std::end(cont))};
 }
 
-} // inline namespace cbu_utility
 } // namespace cbu

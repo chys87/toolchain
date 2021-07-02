@@ -30,7 +30,6 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-inline namespace cbu_strpack {
 namespace {
 
 TEST(StrPackTest, MembersTest) {
@@ -65,5 +64,4 @@ TEST(StrPackTest, TemplateArgumentTest) {
 }
 
 } // namespace
-} // namespace cbu_strpack
 } // namespace cbu

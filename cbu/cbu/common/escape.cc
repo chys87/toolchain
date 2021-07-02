@@ -41,7 +41,6 @@
 #include "cbu/common/faststr.h"
 
 namespace cbu {
-inline namespace cbu_escape {
 namespace {
 
 inline consteval std::array<char, 32> make_special_escape_map() {
@@ -378,5 +377,4 @@ UnescapeStringResult unescape_string(char* dst, const char* src,
   }
 }
 
-} // inline namespace cbu_escape
 } // namespace cbu

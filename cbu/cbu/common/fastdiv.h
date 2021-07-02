@@ -35,7 +35,6 @@
 #include "cbu/common/double_integer.h"
 
 namespace cbu {
-inline namespace cbu_fastdiv {
 namespace fastdiv_detail {
 
 template <typename Type>
@@ -212,5 +211,4 @@ fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
                                     static_cast<Type>(UB)>(v);
 }
 
-}  // namespace cbu_fastdiv
 }  // namespace cbu

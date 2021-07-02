@@ -32,7 +32,6 @@
 #include <type_traits>
 
 namespace cbu {
-inline namespace cbu_destruct {
 
 struct DestructNoDelete {
   void operator()(void *) const noexcept {}
@@ -98,5 +97,4 @@ void destruct(T *begin, T *end, Deleter deleter = Deleter()) noexcept {
   deleter(begin);
 }
 
-} // namespace cbu_destruct
 } // namesapce cbu

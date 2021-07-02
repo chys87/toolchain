@@ -34,7 +34,6 @@
 #include "cbu/common/strutil.h"
 
 namespace cbu {
-inline namespace cbu_zstring_view {
 
 // zstring_view is like string_view, but the user can safely
 // assume a null terminator is present
@@ -154,5 +153,4 @@ static_assert("abc"_sv > "123"_sv);
 // TODO: Uncomment it when it's fixed.
 // static_assert("\xff"_sv > "aaa"_sv);
 
-} // namespace cbu_zstring_view
 } // namespace cbu

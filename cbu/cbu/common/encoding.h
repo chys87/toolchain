@@ -33,7 +33,6 @@
 #include <limits>
 
 namespace cbu {
-inline namespace cbu_encoding {
 
 // We follow RFC 3629, allowing UTF-8 only up to 4 bytes
 // (encoding Unicode up to U+10FFFF)
@@ -82,5 +81,4 @@ inline constexpr unsigned int utf8_leading_byte_to_trailing_length(
 char8_t* char32_to_utf8(char8_t* dst, char32_t c) noexcept;
 char* char32_to_utf8(char* dst, char32_t c) noexcept;
 
-} // inline namepsace cbu_encoding
 } // namespace cbu

@@ -35,7 +35,6 @@
 #include <type_traits>
 
 namespace cbu {
-inline namespace cbu_heapq {
 namespace heapq_detail {
 
 // Can be used to store the index into the positioned object
@@ -193,5 +192,4 @@ void heapq_remove(Heap &heap, std::size_t k, C comp = C(), P pos = P()) {
   heapq_detail::shrink_to(heap, n - 1);
 }
 
-} // inline namespace cbu_heapq
 } // namespace cbu

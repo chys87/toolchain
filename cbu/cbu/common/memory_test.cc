@@ -31,7 +31,6 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-inline namespace cbu_memory {
 
 struct alignas(256) OverAligned {
   int x;
@@ -165,5 +164,4 @@ TEST(MemoryTest, OutlinableArray) {
   }
 }
 
-}  // namespace cbu_memory
 }  // namespace cbu

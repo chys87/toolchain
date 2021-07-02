@@ -38,7 +38,6 @@
 #include "cbu/common/zstring_view.h"
 
 namespace cbu {
-inline namespace cbu_short_string {
 
 template <std::size_t MaxLen>
 using strlen_t = std::conditional_t<(MaxLen < 65536),
@@ -154,5 +153,4 @@ class fixed_length_string {
 template <std::size_t N>
 fixed_length_string(const char (&)[N]) -> fixed_length_string<N - 1>;
 
-} // namespace cbu_short_string
 } // namespace cbu

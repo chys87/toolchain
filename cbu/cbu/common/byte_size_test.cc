@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,6 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-inline namespace cbu_byte_size {
 
 TEST(ByteSizeTest, ByteDistanceTest) {
   char x[5];
@@ -57,8 +56,6 @@ TEST(ByteSizeTest, ByteSizeTypeTest) {
   ++size;
   EXPECT_EQ(6 * sizeof(int), size.bytes());
   EXPECT_EQ(12 * sizeof(int), (size * 2).bytes());
-
 }
 
-}  // namespace cbu_byte_size
 }  // namespace cbu

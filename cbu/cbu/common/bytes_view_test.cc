@@ -37,7 +37,6 @@
 
 
 namespace cbu {
-inline namespace cbu_bytes_view {
 
 using namespace cbu_bytes_view_types;
 
@@ -96,5 +95,4 @@ TEST(BytesViewTest, BasicTest) {
   EXPECT_EQ(4 * sizeof(int), vs.size());
 }
 
-} // namespace cbu_bytes_view
 } // namespace cbu

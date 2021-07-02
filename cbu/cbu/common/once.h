@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@
 #include <utility>
 
 namespace cbu {
-inline namespace once_detail {
+namespace once_detail {
 
 class Once {
  public:
@@ -41,8 +41,8 @@ class Once {
   }
 };
 
-} // namespace once_detail
-} // namespace cbu
+}  // namespace once_detail
+}  // namespace cbu
 
 #define CBU_ONCE(...) CBU_ONCE_(__COUNTER__, __VA_ARGS__)
 #define CBU_ONCE_(cnt, ...) CBU_ONCE__(cnt, __VA_ARGS__)

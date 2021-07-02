@@ -42,7 +42,6 @@
 // Hacks standard containers to add more functionality
 
 namespace cbu {
-inline namespace cbu_stdhack {
 namespace {
 
 template <typename T>
@@ -139,5 +138,4 @@ void truncate_unsafer(std::u8string* buf, std::size_t n) {
 }
 #endif
 
-} // namespace cbu_stdhack
 } // namespace cbu

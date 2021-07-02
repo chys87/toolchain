@@ -37,7 +37,6 @@
 #include <forward_list>
 
 namespace cbu {
-inline namespace cbu_fifo_list {
 
 template <typename T>
 class fifo_list {
@@ -112,5 +111,4 @@ void fifo_list<T>::pop_front() noexcept {
     back_it_ = fl_.before_begin();
 }
 
-} // inline namespace cbu_fifo_list
 } // namespace cbu
