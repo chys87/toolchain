@@ -47,4 +47,7 @@ inline T &shared_constinit() noexcept {
 }
 #endif
 
+template <typename T, auto... args>
+inline constexpr T shared_const{std::forward<decltype(args)>(args)...};
+
 } // namespace cbu

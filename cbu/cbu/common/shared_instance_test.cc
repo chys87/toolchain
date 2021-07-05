@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,9 +26,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "shared_instance.h"
+#include "cbu/common/shared_instance.h"
+
 #include <string>
-#include <gtest/gtest.h>
+#include <utility>
+
+#include "gtest/gtest.h"
 
 namespace cbu {
 
@@ -51,5 +54,12 @@ TEST(SharedInstanceTest, ConstInit) {
   EXPECT_EQ(5, (shared_constinit<int, 5>()));
 }
 #endif
+
+TEST(SharedInstanceTest, ConstexprTest) {
+  constexpr const std::pair<int, int>& p =
+      shared_const<std::pair<int, int>, 25, 54>;
+  static_assert(p.first == 25);
+  static_assert(p.second == 54);
+}
 
 } // namespace cbu
