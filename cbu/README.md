@@ -75,6 +75,7 @@ If you use anything else, you have to take care of it yourself.
 * `strutil.h`: Various string utilities, higher level than `faststr.h`
 * `swap.h`: Like [boost::swap](https://www.boost.org/doc/libs/1_64_0/libs/core/doc/html/core/swap.html), but also suports swapping by calling a member function named `swap`
 * `type_traits.h`: Adds some type traits missing from [`<type_traits>`](https://en.cppreference.com/w/cpp/header/type_traits)
+* `unit_prefix.h`: Handles SI and IEC prefixes (K, M, G, etc)
 * `utility.h`: Adds some generic utilities missing from [`<utility>`](https://en.cppreference.com/w/cpp/header/utility),
    e.g. POD pair type, `reversed` (like Python's counterpart), `enumerate` (like Python's counterpart)
 * `zstring_view.h`: Provides `cbu::zstring_view`, a subtype of `std::string_view` that assumes a null terminator is present
