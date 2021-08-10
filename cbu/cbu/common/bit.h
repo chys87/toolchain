@@ -31,7 +31,9 @@
 #include <cstdint>
 #include <iterator>
 #include <type_traits>
-#include "utility.h"
+#include <utility>
+
+#include "cbu/common/utility.h"
 
 namespace cbu {
 
