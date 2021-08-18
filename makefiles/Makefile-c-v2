@@ -106,10 +106,13 @@ INSTDIR := /usr/local/bin
 CSTD ?= -std=gnu99
 CXXSTD ?=
 # -pipe does more harm than good since we mount /tmp as a tmpfs
+# GCC defaults to -ffp-contract=fast, but clang defaults to -ffp-contract=on unless -ffast-math is set
+# We direct clang to use -ffp-contract=fast as well, even if -ffast-math isn't set
 OPTIMIZEFLAGS ?= -O2 -ggdb \
 				 -fmerge-all-constants -fno-common \
 				 -fno-ident \
 				 -ffunction-sections -fdata-sections \
+				 -ffp-contract=fast \
 				 -Qn
 COPTIMIZEFLAGS ?=
 CXXOPTIMIZEFLAGS ?= -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0
