@@ -81,7 +81,8 @@ constexpr SplitUnitPrefix split_unit_prefix_1000(std::uint64_t value) noexcept {
 
 constexpr SplitUnitPrefix split_unit_prefix_1024(std::uint64_t value) noexcept {
   if (value < 1024) return {static_cast<unsigned>(value), 0, 0};
-  unsigned prefix_idx = bsr(value) / 10;
+  // a / 10 == a * 13 >> 7 for all a < 69. avoid including fastarith.h
+  unsigned prefix_idx = (bsr(value) * 13) >> 7;
   return {static_cast<unsigned>(value >> (10 * prefix_idx)),
           static_cast<unsigned>(value >> (10 * prefix_idx - 10)) & 1023,
           prefix_idx};
