@@ -343,10 +343,12 @@ def find_objdump():
     objdump = os.environ.get('OBJDUMP')
     if objdump:
         argv = shlex.split(objdump)
-    else:
-        objdump = shutil.which('llvm-objdump')
-        if objdump:
-            argv = [objdump, '--print-imm-hex']
+    # commented out for now (llvm-objdump fails to demangle symbols followed
+    #                        by "@plt")
+    # else:
+    #     objdump = shutil.which('llvm-objdump')
+    #     if objdump:
+    #         argv = [objdump, '--print-imm-hex']
 
     objdump_flags = os.environ.get('OBJDUMPFLAGS')
     if objdump_flags:
