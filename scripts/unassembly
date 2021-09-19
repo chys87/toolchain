@@ -215,6 +215,11 @@ def cppfilter(fi):
         (re.compile(br'absl::flat_hash_set<(.+), absl::hash_internal::Hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
          br'absl::flat_hash_set<\1>'),
 
+        # fmtlib specific
+        (re.compile(br'fmt::(\w+)::basic_string_view<char>'), br'fmt::\1::string_view'),
+        (re.compile(br'fmt::(\w+)::basic_format_args<fmt::\1::basic_format_context<fmt::\1::appender, char>>'), br'fmt::\1::format_args'),
+        (re.compile(br'fmt::\w+::type_identity<(.*?)>::type'), br'\1'),
+
         # cbu specific
         # Omit cbu's inline namespaces
         (re.compile(br'\bcbu::cbu_\w+::'), br'cbu::'),
