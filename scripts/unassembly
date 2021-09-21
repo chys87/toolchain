@@ -81,7 +81,7 @@ def cppfilter(fi):
     )
 
     # This pattern catches templates up to 3 levels
-    __type = br'(?:[^,<>]|<(?:[^<>]+|<(?:[^<>]|<[^<>]+>)+>)>)+'
+    __type = br'(?:[^,<>]|<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>)+'
 
     def __replacable_character_literal(c):
         return c.isalnum() or c == '_'
@@ -211,6 +211,11 @@ def cppfilter(fi):
         (re.compile(br'::duration<long(?: long)?, std::ratio<86400l*>>'), br'::days'),
         (re.compile(br'::duration<long(?: long)?, std::ratio<604800l*>>'), br'::weeks'),
 
+        # type traits
+        (re.compile(br'std::is_same<(' + __type + br'), \1>::value'), br'true'),  # But we cannot reliably replace anything by false!!
+        (re.compile(br'std::conditional<true, (' + __type + br'), ' + __type + br'>::type'), br'\1'),
+        (re.compile(br'std::conditional<false, ' + __type + br', (' + __type + br')>::type'), br'\1'),
+
         # absl specific
         (re.compile(br'absl::flat_hash_set<(.+), absl::hash_internal::Hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
          br'absl::flat_hash_set<\1>'),
@@ -219,6 +224,7 @@ def cppfilter(fi):
         (re.compile(br'fmt::(\w+)::basic_string_view<char>'), br'fmt::\1::string_view'),
         (re.compile(br'fmt::(\w+)::basic_format_args<fmt::\1::basic_format_context<fmt::\1::appender, char>>'), br'fmt::\1::format_args'),
         (re.compile(br'fmt::\w+::type_identity<(.*?)>::type'), br'\1'),
+        (re.compile(br'fmt::(\w+)::basic_format_specs<char>'), br'fmt::\1::format_specs'),
 
         # cbu specific
         # Omit cbu's inline namespaces
@@ -228,10 +234,14 @@ def cppfilter(fi):
     )
 
     def do_replace(data):
-        for old, new in simple_replaces:
-            data = data.replace(old, new)
-        for pattern, replace in pattern_replaces:
-            data = pattern.sub(replace, data)
+        for _ in range(5):
+            bak = data
+            for old, new in simple_replaces:
+                data = data.replace(old, new)
+            for pattern, replace in pattern_replaces:
+                data = pattern.sub(replace, data)
+            if bak == data:
+                break
         return data
 
     data = b''
