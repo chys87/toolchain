@@ -364,7 +364,7 @@ Description* PageTreeAllocator::get_deallocate_candidates(
     p = szad_large_.remove(p);
     p = ad_.remove(p);
 
-    if constexpr (kTHPSize) {
+    if constexpr (kTHPSize > 0) {
       if (thp_aware && kTHPSize * 2 < threshold) {
         // Split from right
         Page* end = byte_advance(p->addr, p->size);
