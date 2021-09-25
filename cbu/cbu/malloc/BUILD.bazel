@@ -34,6 +34,7 @@ cc_library(
     '//cbu/fsyscall:fsyscall',
     '//cbu/sys:sys',
     '//cbu/tweak:tweak',
+    '//cbu/tweak:use_brk',
   ],
   copts = [
     '-march=native',

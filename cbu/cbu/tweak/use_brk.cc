@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,10 +29,7 @@
 namespace cbu {
 namespace tweak {
 
-extern bool SINGLE_THREADED;
-
-// Set this to true if cbu is used as the malloc implementation
-extern bool USE_BRK;
+bool USE_BRK = true;
 
 } // namespace tweak
 } // namespace cbu

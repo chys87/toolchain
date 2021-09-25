@@ -36,11 +36,40 @@
 #include "cbu/alloc/private.h"
 #include "cbu/common/bit.h"
 #include "cbu/common/byte_size.h"
+#include "cbu/common/hint.h"
 #include "cbu/fsyscall/fsyscall.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
 namespace {
+
+LowLevelMutex brk_mutex;
+void* brk_initial = nullptr;
+void* brk_cur = nullptr;
+
+#if FSYSCALL_USE
+inline void* linux_brk(void* ptr) {
+  return fsys_generic(__NR_brk, void*, 1, ptr);
+}
+#else
+inline void* linux_brk(void* ptr) {
+  return reinterpret_cast<void*>(syscall(__NR_brk, ptr));
+}
+#endif
+
+void* raw_brk_pages(size_t size, size_t* alloc_size) noexcept {
+  std::lock_guard locker(brk_mutex);
+  if (brk_cur == nullptr) brk_initial = brk_cur = linux_brk(nullptr);
+  size_t preferred_size =
+      std::max<size_t>(size, kTHPSize ? kTHPSize : 32 * kPageSize);
+  void* brk_target = byte_advance(brk_cur, preferred_size);
+  if (kTHPSize) brk_target = cbu::pow2_ceil(brk_target, kTHPSize);
+  *alloc_size = byte_distance(brk_cur, brk_target);
+  void* brk_new = linux_brk(brk_target);
+  if (brk_new != brk_target) return nullptr;
+  return CBU_HINT_NONNULL(std::exchange(brk_cur, brk_new));
+}
 
 void* raw_mmap_pages(size_t size, bool allow_thp) noexcept {
   void* p = fsys_mmap(nullptr, size, PROT_READ | PROT_WRITE,
@@ -66,7 +95,7 @@ Page* RawPageAllocator::allocate(size_t size) noexcept {
   // Let's just run the whole function while holding the lock, even when
   // we're calling mmap.
   // Memmory mapping is inherently not parallelizable, so this really is no
-  // penalty.  It also significantly simplifies our handling of address hints.
+  // penalty.  It also significantly simplifies our handling of brk.
   std::lock_guard locker(lock_);
 
   if (cached_page_) {
@@ -93,11 +122,19 @@ Page* RawPageAllocator::allocate(size_t size) noexcept {
     }
   }
 
-  bool use_thp = kTHPSize && allow_thp_;
-  size_t alloc_size = cbu::pow2_ceil(size, use_thp ? kTHPSize : 32 * kPageSize);
+  void* np;
+  size_t alloc_size;
 
-  void* np = raw_mmap_pages(alloc_size, use_thp);
-  if (false_no_fail(np == nullptr)) return nullptr;
+  if (use_brk_) {
+    np = raw_brk_pages(size, &alloc_size);
+    if (np == nullptr) return nullptr;
+  } else {
+    bool use_thp = kTHPSize && allow_thp_;
+    alloc_size = cbu::pow2_ceil(size, kTHPSize ? kTHPSize : 32 * kPageSize);
+
+    np = raw_mmap_pages(alloc_size, use_thp);
+    if (false_no_fail(np == nullptr)) return nullptr;
+  }
 
   if (alloc_size > size) {
     CachedPage* remaining = static_cast<CachedPage*>(byte_advance(np, size));
@@ -107,6 +144,10 @@ Page* RawPageAllocator::allocate(size_t size) noexcept {
   }
 
   return static_cast<Page*>(np);
+}
+
+bool RawPageAllocator::is_from_brk(void* ptr) noexcept {
+  return tweak::USE_BRK && ptr >= brk_initial && ptr < brk_cur;
 }
 
 }  // namespace alloc

@@ -41,10 +41,10 @@ struct AllocateOptions {
   uint16_t align = 0;
   // Almost all interfaces support this
   bool zero : 1 = false;
-  // By default, we try to take advantage of transparent huge pages if supported
-  // by the kernel, but in certain cases we may want to disable it, e.g.
-  // allocating for buffer for use with vmsplice.
-  bool allow_thp : 1 = true;
+  // Allow allocation from brk; This is only supported by allocate_page;
+  // Use this only if you will directly unmap the memory rather than call
+  // reclaim_page.  force_mmap always disables THP.
+  bool force_mmap : 1 = false;
 
   template <typename Modifier>
   constexpr AllocateOptions with(Modifier modifier) noexcept {
@@ -61,8 +61,8 @@ struct AllocateOptions {
     return with([&](AllocateOptions* o) noexcept { o->zero = z; });
   }
 
-  constexpr AllocateOptions with_thp(bool h) noexcept {
-    return with([&](AllocateOptions* o) noexcept { o->allow_thp = h; });
+  constexpr AllocateOptions with_force_mmap(bool m) noexcept {
+    return with([&](AllocateOptions* o) noexcept { o->force_mmap = m; });
   }
 };
 
@@ -84,10 +84,10 @@ void trim(size_t pad) noexcept;
 // Like mmap/munmap, and unlikely malloc/free, allocate_page and reclaim_page do
 // not need to be called in pairs.  You can well allocate two pages with
 // allocate_page, and reclaim just one of them with reclaim_page.
-// You can also just call munmap to free it -- though this is not recommended,
-// it can be required in certain circumstance, e.g., the pages have been
-// "gift'd" to the kernel with vmsplice SPLICE_F_GIFT
-// supported options: allow_thp; zero
+// You can also just call munmap to free it if force_mmap is true -- though
+// this is not recommended, it can be required in certain circumstance, e.g.,
+// the pages have been "gift'd" to the kernel with vmsplice SPLICE_F_GIFT
+// supported options: zero; force_mmap
 struct Page;
 Page* allocate_page(size_t bytes, AllocateOptions options = {}) noexcept;
 // Should use the same options with allocate_page for best performance

@@ -77,3 +77,20 @@ cc_library(
   alwayslink=True,
   visibility = ["//visibility:public"],
 )
+
+cc_library(
+  name = 'use_brk',
+  srcs = ['use_brk.cc'],
+  hdrs = [],
+  deps = [
+  ],
+  copts = [
+    '-std=gnu++2a',
+    '-Wall',
+    '-Werror',
+    '-fdiagnostics-color=always',
+  ],
+  linkstatic=True,
+  alwayslink=True,
+  visibility = ["//visibility:public"],
+)

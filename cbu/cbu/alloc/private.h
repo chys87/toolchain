@@ -121,32 +121,39 @@ void large_trim(size_t) noexcept;
 
 // Raw page allocation
 // No corresponding deallocation is provided.  Caller should either keep
-// the memory or munmap it.
+// the memory or munmap it (or in case of brk, use MADV_DONTNEED).
 // This allocator does do some caching to reduce the number of mmap calls
 // and reduce defragmentation.
 // This allocator guarantees returned pages are zero initialized
 class RawPageAllocator {
  public:
-  constexpr RawPageAllocator(bool allow_thp) noexcept
-      : allow_thp_(allow_thp) {}
+  constexpr RawPageAllocator(bool use_brk, bool allow_thp) noexcept
+      : use_brk_(use_brk), allow_thp_(use_brk || allow_thp) {}
 
   Page* allocate(size_t size) noexcept;
 
+  static bool is_from_brk(void* ptr) noexcept;
+
+  constexpr bool use_brk() const noexcept { return use_brk_; }
   constexpr bool allow_thp() const noexcept { return allow_thp_; }
 
-  template <bool AllowThp, typename... Tags>
-  static RawPageAllocator instance;
+  static RawPageAllocator instance_brk;
+  static RawPageAllocator instance_mmap;
+  static RawPageAllocator instance_mmap_no_thp;
 
  private:
   struct CachedPage;
 
   CachedPage* cached_page_ = nullptr;
   LowLevelMutex lock_;
+  bool use_brk_;
   bool allow_thp_;
 };
 
-template <bool AllowThp, typename... Tags>
-inline constinit RawPageAllocator RawPageAllocator::instance{AllowThp};
+inline constinit RawPageAllocator RawPageAllocator::instance_brk{true, true};
+inline constinit RawPageAllocator RawPageAllocator::instance_mmap{false, true};
+inline constinit RawPageAllocator RawPageAllocator::instance_mmap_no_thp{false,
+                                                                         false};
 
 }  // namespace alloc
 }  // namespace cbu

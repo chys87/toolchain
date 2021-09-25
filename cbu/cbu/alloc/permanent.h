@@ -35,6 +35,7 @@
 #include "cbu/alloc/private.h"
 #include "cbu/fsyscall/fsyscall.h"
 #include "cbu/sys/low_level_mutex.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -58,8 +59,10 @@ class PermaAlloc {
   LowLevelMutex lock_;
   T* list_ = nullptr;
 
-  static inline constexpr auto* raw_page_allocator_ =
-      &RawPageAllocator::instance<true, PermaAllocTag>;
+  static RawPageAllocator* raw_page_allocator() noexcept {
+    return tweak::USE_BRK ? &RawPageAllocator::instance_brk
+                          : &RawPageAllocator::instance_mmap;
+  }
 };
 
 template <typename T>
@@ -81,7 +84,7 @@ T* PermaAlloc<T>::alloc() {
 
   // Nothing available. Allocate new
   constexpr size_t alloc_size = pagesize_ceil(4 * sizeof(T));
-  void* np = raw_page_allocator_->allocate(alloc_size);
+  void* np = raw_page_allocator()->allocate(alloc_size);
   if (false_no_fail(np == nullptr)) return NULL;
 
   T* node = static_cast<T*>(np);
@@ -127,7 +130,7 @@ T* PermaAlloc<T>::alloc_list(unsigned preferred_count) {
 
     unsigned need_count = preferred_count - count;
     const size_t alloc_size = pagesize_ceil(need_count * sizeof(T));
-    void* np = raw_page_allocator_->allocate(alloc_size);
+    void* np = raw_page_allocator()->allocate(alloc_size);
     if (false_no_fail(np == nullptr)) {
       if (ret) {
         std::lock_guard locker(lock_);

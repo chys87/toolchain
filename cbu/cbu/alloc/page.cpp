@@ -45,6 +45,7 @@
 #include "cbu/common/byte_size.h"
 #include "cbu/common/hint.h"
 #include "cbu/fsyscall/fsyscall.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -363,23 +364,22 @@ Description* PageTreeAllocator::get_deallocate_candidates(
     p = szad_large_.remove(p);
     p = ad_.remove(p);
 
-    if (kTHPSize && thp_aware && kTHPSize * 2 < threshold) {
-      // If we assume the kernel has support for transparent huge pages,
-      // it's best if we always do allocations on hugepage boundaries
+    if constexpr (kTHPSize) {
+      if (thp_aware && kTHPSize * 2 < threshold) {
+        // Split from right
+        Page* end = byte_advance(p->addr, p->size);
+        if (size_t offset = uintptr_t(end) % kTHPSize) {
+          p->size -= offset;
+          reclaim_nomerge(byte_back(end, offset), offset);
+        }
 
-      // Split from right
-      Page* end = byte_advance(p->addr, p->size);
-      if (size_t offset = uintptr_t(end) % kTHPSize) {
-        p->size -= offset;
-        reclaim_nomerge(byte_back(end, offset), offset);
-      }
-
-      // Split from left
-      if (size_t adjust = (-uintptr_t(p->addr)) % kTHPSize) {
-        Page* addr = p->addr;
-        p->addr = byte_advance(p->addr, adjust);
-        p->size -= adjust;
-        reclaim_nomerge(addr, adjust);
+        // Split from left
+        if (size_t adjust = (-uintptr_t(p->addr)) % kTHPSize) {
+          Page* addr = p->addr;
+          p->addr = byte_advance(p->addr, adjust);
+          p->size -= adjust;
+          reclaim_nomerge(addr, adjust);
+        }
       }
     }
 
@@ -508,7 +508,7 @@ class alignas(kCacheLineSize) Arena {
   void reclaim_list(Page* page, size_t size) noexcept;
 
   bool extend_nomove(Page*, size_t oldsize, size_t growsize) noexcept;
-  void do_munmap(Page*, size_t) noexcept;
+  void discard(Page*, size_t) noexcept;
 
   // Returns a linked list (linked with rblink_1.left)
   Description* trim_and_extract_unlocked(
@@ -517,7 +517,7 @@ class alignas(kCacheLineSize) Arena {
   Description* trim_and_extract(
       std::optional<size_t> threshold = std::nullopt) noexcept;
 
-  void munmap_description_list(Description*) noexcept;
+  void clear_description_list(Description*) noexcept;
 
   friend struct PageCategoryCache;
 
@@ -542,8 +542,9 @@ class alignas(kCacheLineSize) Arena {
 
 // No additional tag types are given to RawPageAllocator::instance, meaning the
 // "default" allocator.
-constinit Arena arena_default{&RawPageAllocator::instance<true>};
-constinit Arena arena_no_thp{&RawPageAllocator::instance<false>};
+constinit Arena arena_brk{&RawPageAllocator::instance_brk};
+constinit Arena arena_mmap{&RawPageAllocator::instance_mmap};
+constinit Arena arena_mmap_no_thp{&RawPageAllocator::instance_mmap_no_thp};
 
 Page* Arena::allocate(size_t size, bool zero) noexcept {
   assert(size != 0);
@@ -579,7 +580,7 @@ Page* Arena::allocate(size_t size, bool zero) noexcept {
         std::max(std::min(total_bytes_allocated_, kMaxAllocSize), size),
         kInitialAllocSize);
     page = raw_page_allocator_->allocate(alloc_size);
-    if (page == nullptr) return nomem();
+    if (page == nullptr) return nullptr;
     if (size < alloc_size)
       reclaim_unlocked(byte_advance(page, size), alloc_size - size,
                        RECLAIM_PAGE_NOMERGE_LEFT | RECLAIM_PAGE_CLEAN);
@@ -595,7 +596,7 @@ void Arena::reclaim_unlocked(Page* page, size_t size,
   if (!(option_bitmask & RECLAIM_PAGE_CLEAN)) reclaim_count_ += size;
 
   if (false_no_fail(!tree_all_.reclaim(page, size, option_bitmask))) {
-    do_munmap(page, size);
+    discard(page, size);
     return;
   }
 
@@ -603,7 +604,7 @@ void Arena::reclaim_unlocked(Page* page, size_t size,
       (option_bitmask & RECLAIM_PAGE_CLEAN) ? tree_clean_ : tree_dirty_;
   if (false_no_fail(!tree.reclaim(page, size, option_bitmask))) {
     tree_all_.remove_by_range(page, size);
-    do_munmap(page, size);
+    discard(page, size);
   }
 }
 
@@ -616,7 +617,7 @@ void Arena::reclaim(Page* page, size_t size, uint32_t option_bitmask) noexcept {
     // Check for whether we can do some clean up work.
     clean = trim_and_extract_unlocked();
   }
-  munmap_description_list(clean);
+  clear_description_list(clean);
 }
 
 void Arena::reclaim_list(Page* page, size_t size) noexcept {
@@ -641,11 +642,14 @@ void Arena::reclaim_list(Page* page, size_t size) noexcept {
     }
     clean = trim_and_extract_unlocked();
   }
-  munmap_description_list(clean);
+  clear_description_list(clean);
 }
 
-void Arena::do_munmap(Page* ptr, size_t size) noexcept {
-  fsys_munmap(ptr, size);
+void Arena::discard(Page* ptr, size_t size) noexcept {
+  if (raw_page_allocator_->use_brk())
+    fsys_madvise(ptr, size, MADV_DONTNEED);
+  else
+    fsys_munmap(ptr, size);
 }
 
 bool Arena::extend_nomove(Page* ptr, size_t old, size_t grow) noexcept {
@@ -670,6 +674,9 @@ Description* Arena::trim_and_extract_unlocked(
   // Pages in tree_clean_ are most likely not populated by kernel yet.
   Description* list = tree_dirty_.get_deallocate_candidates(
       threshold, kTHPSize && raw_page_allocator_->allow_thp());
+  // Even if we use BRK, we still have to remove the memory out of tree_all_,
+  // and then add them back, because we will run madvise without holding the
+  // lock.
   tree_all_.remove_by_list(list);
   return list;
 }
@@ -679,12 +686,24 @@ Description* Arena::trim_and_extract(std::optional<size_t> threshold) noexcept {
   return trim_and_extract_unlocked(threshold);
 }
 
-void Arena::munmap_description_list(Description* clean) noexcept {
-  while (clean) {
-    Description* cur = clean;
-    do_munmap(cur->addr, cur->size);
-    clean = cur->rblink_1.left();
-    free_description(cur);
+void Arena::clear_description_list(Description* clean) noexcept {
+  if (raw_page_allocator_->use_brk()) {
+    for (Description* cur = clean; cur; cur = cur->rblink_1.left())
+      fsys_madvise(cur->addr, cur->size, MADV_DONTNEED);
+    std::lock_guard locker(lock_);
+    while (clean) {
+      Description* cur = clean;
+      reclaim_unlocked(cur->addr, cur->size, RECLAIM_PAGE_CLEAN);
+      clean = cur->rblink_1.left();
+      free_description(cur);
+    }
+  } else {
+    while (clean) {
+      Description* cur = clean;
+      fsys_munmap(cur->addr, cur->size);
+      clean = cur->rblink_1.left();
+      free_description(cur);
+    }
   }
 }
 
@@ -720,7 +739,11 @@ size_t lookup_large_block_size_fail_crash(Page* page) {
 }
 
 Page* allocate_page_uncached(size_t size, AllocateOptions options) {
-  return (kTHPSize && !options.allow_thp ? arena_no_thp : arena_default)
+  if (tweak::USE_BRK && !options.force_mmap) {
+    Page* page = arena_brk.allocate(size, options.zero);
+    if (page) return page;
+  }
+  return (kTHPSize && options.force_mmap ? arena_mmap_no_thp : arena_mmap)
       .allocate(size, options.zero);
 }
 
@@ -742,18 +765,6 @@ struct PageCategoryCache {
   void clear(Arena* arena) noexcept;
 };
 
-CachePool<PageCategoryCache> page_category_cache_pool;
-CachePool<PageCategoryCache> page_category_cache_pool_no_thp;
-
-}  // namespace
-
-#if 0
-void DescriptionCache::clear() noexcept {
-  desc_count = 0;
-  description_allocator.free_list(std::exchange(desc_list, nullptr));
-}
-#endif
-
 void PageCategoryCache::clear(Arena* arena) noexcept {
   std::lock_guard locker_b(arena->lock_);
   for (unsigned i = 0; i < kPageCategories; ++i) {
@@ -767,19 +778,49 @@ void PageCategoryCache::clear(Arena* arena) noexcept {
   }
 }
 
+CachePool<PageCategoryCache> page_category_cache_pool_brk;
+CachePool<PageCategoryCache> page_category_cache_pool;
+CachePool<PageCategoryCache> page_category_cache_pool_no_thp;
+
+Page* try_allocate_from_cache_pool(CachePool<PageCategoryCache>* pool,
+                                   size_t cat) {
+  UniqueCache unique_cache(pool);
+  if (unique_cache) {
+    PageCategoryCache& page_cache = *unique_cache;
+    if (page_cache.page_list[cat]) {
+      Page* ret = page_cache.page_list[cat];
+      page_cache.page_list[cat] = ret->next;
+      page_cache.page_count[cat]--;
+      return CBU_HINT_NONNULL(ret);
+    }
+  }
+  return nullptr;
+}
+
+}  // namespace
+
+#if 0
+void DescriptionCache::clear() noexcept {
+  desc_count = 0;
+  description_allocator.free_list(std::exchange(desc_list, nullptr));
+}
+#endif
+
 void reclaim_page(Page* page, size_t size, uint32_t option_bitmask) noexcept {
   CBU_HINT_ASSERT(page != nullptr);
   assert(size != 0);
   assert(size % kPageSize == 0);
 
+  bool from_brk = RawPageAllocator::is_from_brk(page);
   bool use_no_thp = kTHPSize && (option_bitmask & RECLAIM_PAGE_NO_THP);
 
-  Arena* arena = use_no_thp ? &arena_no_thp : &arena_default;
+  Arena* arena = use_no_thp ? &arena_mmap_no_thp : &arena_mmap;
 
   if (size <= PageCategoryCache::page_category_to_size(
                   PageCategoryCache::kPageMaxCategory)) {
-    UniqueCache unique_cache(use_no_thp ? &page_category_cache_pool_no_thp
-                                        : &page_category_cache_pool);
+    UniqueCache unique_cache(from_brk     ? &page_category_cache_pool_brk
+                             : use_no_thp ? &page_category_cache_pool_no_thp
+                                          : &page_category_cache_pool);
     if (unique_cache) {
       PageCategoryCache& page_cache = *unique_cache;
 
@@ -812,7 +853,7 @@ void reclaim_page(Page* page, size_t size, uint32_t option_bitmask) noexcept {
 }
 
 void reclaim_page(Page* ptr, size_t size, AllocateOptions options) noexcept {
-  reclaim_page(ptr, size, options.allow_thp ? 0 : RECLAIM_PAGE_NO_THP);
+  reclaim_page(ptr, size, options.force_mmap ? RECLAIM_PAGE_NO_THP : 0);
 }
 
 // Allocate contiguous pages of size bytes
@@ -820,25 +861,21 @@ Page* allocate_page(size_t size, AllocateOptions options) noexcept {
   assert(size != 0);
   assert(size % kPageSize == 0);
 
-  bool use_no_thp = kTHPSize && !options.allow_thp;
-
   if (!options.zero && size <= PageCategoryCache::page_category_to_size(
                                    PageCategoryCache::kPageMaxCategory)) {
-    UniqueCache unique_cache(use_no_thp ? &page_category_cache_pool_no_thp
-                                        : &page_category_cache_pool);
-    if (unique_cache) {
-      PageCategoryCache& page_cache = *unique_cache;
-
-      size_t cat = PageCategoryCache::size_to_page_category(size);
-      if (page_cache.page_list[cat]) {
-        Page* ret = page_cache.page_list[cat];
-        page_cache.page_list[cat] = ret->next;
-        page_cache.page_count[cat]--;
-        return ret;
-      }
+    size_t cat = PageCategoryCache::size_to_page_category(size);
+    if (tweak::USE_BRK && !options.force_mmap) {
+      Page* ret =
+          try_allocate_from_cache_pool(&page_category_cache_pool_brk, cat);
+      if (ret) return ret;
     }
-  }
 
+    auto* pool = (kTHPSize && options.force_mmap)
+                     ? &page_category_cache_pool_no_thp
+                     : &page_category_cache_pool;
+    Page* ret = try_allocate_from_cache_pool(pool, cat);
+    if (ret) return ret;
+  }
   return allocate_page_uncached(size, options);
 }
 
@@ -886,7 +923,7 @@ void* realloc_large(void* ptr, size_t newsize) noexcept {
     return ptr;
   } else {
     // Extend
-    Arena* arena = &arena_default;
+    Arena* arena = &arena_mmap;
     if (arena->extend_nomove((Page*)ptr, oldsize, newsize - oldsize)) {
       std::atomic_ref(*desc).store(newsize, std::memory_order_release);
       return ptr;
@@ -907,24 +944,35 @@ size_t large_allocated_size(const void* ptr) noexcept {
 }
 
 void large_trim(size_t pad) noexcept {
+  if (tweak::USE_BRK) {
+    UniqueCache<PageCategoryCache>::visit_all(
+        &page_category_cache_pool_brk,
+        [](PageCategoryCache* tc) noexcept { tc->clear(&arena_brk); });
+  }
   UniqueCache<PageCategoryCache>::visit_all(
       &page_category_cache_pool,
-      [](PageCategoryCache* tc) noexcept { tc->clear(&arena_default); });
+      [](PageCategoryCache* tc) noexcept { tc->clear(&arena_mmap); });
   if constexpr (kTHPSize > 0)
     UniqueCache<PageCategoryCache>::visit_all(
         &page_category_cache_pool_no_thp,
-        [](PageCategoryCache* tc) noexcept { tc->clear(&arena_no_thp); });
+        [](PageCategoryCache* tc) noexcept { tc->clear(&arena_mmap_no_thp); });
+
+  if (tweak::USE_BRK) {
+    Arena* arena = &arena_brk;
+    Description* clean_list = arena->trim_and_extract(pad);
+    arena->clear_description_list(clean_list);
+  }
 
   {
-    Arena* arena = &arena_default;
+    Arena* arena = &arena_mmap;
     Description* clean_list = arena->trim_and_extract(pad);
-    arena->munmap_description_list(clean_list);
+    arena->clear_description_list(clean_list);
   }
 
   if constexpr (kTHPSize > 0) {
-    Arena* arena = &arena_no_thp;
+    Arena* arena = &arena_mmap_no_thp;
     Description* clean_list = arena->trim_and_extract(pad);
-    arena->munmap_description_list(clean_list);
+    arena->clear_description_list(clean_list);
   }
 
   // Doesn't make much sense to free description_cache - that's allocated from
