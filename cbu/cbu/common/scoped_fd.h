@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,8 @@ namespace cbu {
 
 class ScopedFD {
  public:
-  explicit constexpr ScopedFD(int fd = -1) noexcept : fd_(fd) {}
+  constexpr ScopedFD() noexcept : fd_(-1) {}
+  explicit constexpr ScopedFD(int fd) noexcept : fd_(fd) {}
   ScopedFD(const ScopedFD &) = delete;
   ScopedFD(ScopedFD &&other) noexcept : fd_(other.release()) {}
   ~ScopedFD() noexcept { if (fd_ >= 0) ::fsys_close(fd_); }
