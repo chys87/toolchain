@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <compare>
 #include <cstdint>
 #include <limits>
@@ -83,16 +84,20 @@ inline constexpr bool unequal(A a, B b) noexcept(noexcept(a != b)) {
 }
 #pragma GCC diagnostic pop
 
-template <Raw_floating_point T>
+template <typename T>
 inline constexpr T clamp(T v,
                          compat::type_identity_t<T> m,
                          compat::type_identity_t<T> M) noexcept {
   // 1) If v is NaN, the result is v
   // 2) M and/or m are ignored if NaN
-  T r = v;
-  r = (m > r) ? m : r; // Generates maxss with SSE
-  r = (M < r) ? M : r; // Generates minss with SSE
-  return r;
+  if constexpr (std::is_floating_point_v<T>) {
+    T r = v;
+    r = (m > r) ? m : r;  // Generates maxss with SSE
+    r = (M < r) ? M : r;  // Generates minss with SSE
+    return r;
+  } else {
+    return std::min(std::max(v, m), M);
+  }
 }
 
 namespace fastarith_detail {
