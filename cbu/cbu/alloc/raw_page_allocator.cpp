@@ -60,11 +60,12 @@ inline void* linux_brk(void* ptr) {
 
 void* raw_brk_pages(size_t size, size_t* alloc_size) noexcept {
   std::lock_guard locker(brk_mutex);
-  if (brk_cur == nullptr) brk_initial = brk_cur = linux_brk(nullptr);
+  if (brk_cur == nullptr)
+    brk_initial = brk_cur = cbu::pow2_ceil(linux_brk(nullptr), kPageSize);
   size_t preferred_size =
       std::max<size_t>(size, kTHPSize ? kTHPSize : 32 * kPageSize);
   void* brk_target = byte_advance(brk_cur, preferred_size);
-  if (kTHPSize) brk_target = cbu::pow2_ceil(brk_target, kTHPSize);
+  if constexpr (kTHPSize > 0) brk_target = cbu::pow2_ceil(brk_target, kTHPSize);
   *alloc_size = byte_distance(brk_cur, brk_target);
   void* brk_new = linux_brk(brk_target);
   if (brk_new != brk_target) return nullptr;

@@ -43,6 +43,7 @@
 #include "cbu/alloc/tc.h"
 #include "cbu/alloc/trie.h"
 #include "cbu/common/byte_size.h"
+#include "cbu/common/fastarith.h"
 #include "cbu/common/hint.h"
 #include "cbu/fsyscall/fsyscall.h"
 #include "cbu/tweak/tweak.h"
@@ -537,7 +538,13 @@ class alignas(kCacheLineSize) Arena {
   static constexpr size_t kInitialAllocSize =
       kTHPSize ? kTHPSize : kPageSize * 512;
   static constexpr size_t kMaxAllocSize = 128 * 1024 * 1024;
-  static_assert((kInitialAllocSize & (kInitialAllocSize - 1)) == 0);
+
+  // Make sure kMinTrimThreshold is > 2 * kTHPSize so that we always do
+  // trimming on THP boundary
+  static constexpr size_t kMinTrimThreshold =
+      kTHPSize ? 3 * kTHPSize : kPageSize * 1536;
+  static constexpr size_t kMaxTrimThreshold = 128 * 1024 * 1024;
+  static_assert(kMinTrimThreshold < kMaxTrimThreshold);
 };
 
 // No additional tag types are given to RawPageAllocator::instance, meaning the
@@ -664,9 +671,10 @@ bool Arena::extend_nomove(Page* ptr, size_t old, size_t grow) noexcept {
 
 Description* Arena::trim_and_extract_unlocked(
     std::optional<size_t> threshold_opt) noexcept {
-  size_t threshold = threshold_opt
-                         ? *threshold_opt
-                         : std::max(total_bytes_allocated_, kInitialAllocSize);
+  size_t threshold =
+      threshold_opt
+          ? *threshold_opt
+          : clamp(total_bytes_allocated_, kMinTrimThreshold, kMaxTrimThreshold);
 
   if (reclaim_count_ < threshold * 2) return nullptr;
   reclaim_count_ = 0;
@@ -814,7 +822,9 @@ void reclaim_page(Page* page, size_t size, uint32_t option_bitmask) noexcept {
   bool from_brk = RawPageAllocator::is_from_brk(page);
   bool use_no_thp = kTHPSize && (option_bitmask & RECLAIM_PAGE_NO_THP);
 
-  Arena* arena = use_no_thp ? &arena_mmap_no_thp : &arena_mmap;
+  Arena* arena = from_brk     ? &arena_brk
+                 : use_no_thp ? &arena_mmap_no_thp
+                              : &arena_mmap;
 
   if (size <= PageCategoryCache::page_category_to_size(
                   PageCategoryCache::kPageMaxCategory)) {
