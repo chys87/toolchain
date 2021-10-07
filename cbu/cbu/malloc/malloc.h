@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,8 +62,8 @@ void *cbu_valloc(size_t) noexcept
 void *cbu_pvalloc(size_t) noexcept
   __attribute__((__cold__, __malloc__)) cbu_malloc_visibility_default;
 
-int cbu_posix_memalign(void **, size_t, size_t) noexcept
-  __attribute__((__cold__, __nonnull__(1))) cbu_malloc_visibility_default;
+int cbu_posix_memalign(void**, size_t, size_t) noexcept
+    __attribute__((__nonnull__(1))) cbu_malloc_visibility_default;
 
 size_t cbu_malloc_usable_size(void *) noexcept
   __attribute__((__cold__, __pure__)) cbu_malloc_visibility_default;

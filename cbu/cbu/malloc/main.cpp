@@ -87,11 +87,11 @@ extern "C" void cbu_free(void* ptr) noexcept { alloc::reclaim(ptr); }
 
 extern "C" void cbu_cfree(void* ) noexcept __attribute__((alias("cbu_free")));
 
-extern "C" int cbu_posix_memalign(void* *pret, size_t boundary,
+extern "C" int cbu_posix_memalign(void** pret, size_t boundary,
                                   size_t n) noexcept {
   if (boundary & (boundary - 1))
     return EINVAL;
-  if (boundary < sizeof(void* )) // POSIX so requires
+  if (boundary < sizeof(void*))  // POSIX so requires
     return EINVAL;
   void* ptr = cbu_memalign(boundary, n);
   *pret = ptr;
@@ -139,9 +139,8 @@ void* valloc(size_t) noexcept
 void* pvalloc(size_t) noexcept
   __attribute__((alias("cbu_pvalloc"), malloc, cold))
   cbu_malloc_visibility_default;
-int posix_memalign (void**, size_t, size_t) noexcept
-  __attribute__((alias("cbu_posix_memalign"), cold))
-  cbu_malloc_visibility_default;
+int posix_memalign(void**, size_t, size_t) noexcept
+    __attribute__((alias("cbu_posix_memalign"))) cbu_malloc_visibility_default;
 size_t malloc_usable_size(void*) noexcept
   __attribute__((alias("cbu_malloc_usable_size"), pure, cold))
   cbu_malloc_visibility_default;
