@@ -105,6 +105,7 @@ This one is just a hobby - a crazy one.
 
 [`cbu/storage`](cbu/storage): Storage-related utilities
 
+* `string_pack.h`: Implements a high-performance storage for a list of strings
 * `vlq.h`: Implements unsigned [VLQ (variable-length quantity) encoding](https://en.wikipedia.org/wiki/Variable-length_quantity)
 
 ### cbu/sys
