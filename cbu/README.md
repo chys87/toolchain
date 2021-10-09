@@ -101,6 +101,12 @@ This one is just a hobby - a crazy one.
 
 * `ipv4.h`: Provides a simple `IPv4` class and related utility functions
 
+### cbu/storage
+
+[`cbu/storage`](cbu/storage): Storage-related utilities
+
+* `vlq.h`: Implements unsigned [VLQ (variable-length quantity) encoding](https://en.wikipedia.org/wiki/Variable-length_quantity)
+
 ### cbu/sys
 
 [`cbu/sys`](cbu/sys): System utilities
