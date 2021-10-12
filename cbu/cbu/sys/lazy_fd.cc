@@ -26,58 +26,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "cbu/sys/lazy_fd.h"
 
-#include <atomic>
-#include <limits>
-#include <memory>
-#include <new>
+#include <unistd.h>
 
-#include "cbu/compat/atomic_ref.h"
-#include "cbu/sys/init_guard.h"
+#include "cbu/fsyscall/fsyscall.h"
 
 namespace cbu {
 
-// Like ScopedFD, but supports atomic lazy initialization
-class LazyFD {
- public:
-  explicit constexpr LazyFD(int fd = -1) noexcept
-      : ig_(InitGuard::LowLevelInit(negative_to_init(fd))) {}
+void LazyFD::do_close(int fd) noexcept { fsys_close(fd); }
 
-  ~LazyFD() noexcept {
-    int fd = *ig_.raw_value_ptr();
-    if (fd >= 0) do_close(fd);
-  }
-
-  LazyFD(const LazyFD&) = delete;
-  LazyFD& operator=(const LazyFD&) = delete;
-
-  constexpr int fd() const noexcept { return *ig_.raw_value_ptr(); }
-  constexpr operator int() const noexcept { return fd(); }
-  explicit operator bool() const = delete;
-
-  template <typename Foo, typename... Args>
-  void init(Foo&& foo, Args&&... args) noexcept(
-      noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
-    ig_.init_with_reuse(std::forward<Foo>(foo), std::forward<Args>(args)...);
-  }
-
- private:
-  static constexpr int negative_to_init(int fd) noexcept {
-    return fd >= 0 ? fd : InitGuard::INIT;
-  }
-
-  static constexpr int negative_to_aborted(int fd) noexcept {
-    return fd >= 0 ? fd : InitGuard::ABORTED;
-  }
-
- private:
-  // Do it in lazy_fd.cc so that this file doesn't need to include
-  // fsyscall.h or unistd.h
-  static void do_close(int fd) noexcept;
-
- private:
-  InitGuard ig_;
-};
-
-}  // namespace cbu
+}  // cbu
