@@ -54,11 +54,13 @@ struct EncodedVlq {
   std::uint8_t l;
   char buffer[sizeof(std::uint64_t) * 8 / 7 + 1];
 
-  std::string_view as_string_view() const noexcept {
+  constexpr std::string_view as_string_view() const noexcept {
     return {buffer + from, l};
   }
 
-  std::span<const char> as_span() const noexcept { return {buffer + from, l}; }
+  constexpr std::span<const char> as_span() const noexcept {
+    return {buffer + from, l};
+  }
 };
 
 constexpr unsigned vlq_encode_length(std::uint64_t v) noexcept {
@@ -68,7 +70,7 @@ constexpr unsigned vlq_encode_length(std::uint64_t v) noexcept {
 }
 
 constexpr EncodedVlq vlq_encode(uint64_t v) noexcept {
-  EncodedVlq res;
+  EncodedVlq res{};
   std::size_t k = sizeof(res.buffer);
   res.buffer[--k] = (v & 0x7f);
   while (v >>= 7) res.buffer[--k] = (v & 0x7f) | 0x80;
@@ -81,7 +83,7 @@ constexpr EncodedVlq vlq_encode(uint64_t v) noexcept {
 constexpr EncodedVlq vlq_encode_small(uint64_t v) noexcept {
 #ifdef __BMI2__
   if (!std::is_constant_evaluated()) {
-    EncodedVlq res;
+    EncodedVlq res{};
     v = bswap_be(_pdep_u64(v, 0x7f7f7f7f7f7f7f7f));
     cbu::memdrop(res.buffer + sizeof(res.buffer) - 8,
                  v | bswap_be(std::uint64_t(0x8080808080808000)));

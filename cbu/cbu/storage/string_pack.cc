@@ -154,8 +154,8 @@ std::size_t common_suffix_max_7(std::string_view a, std::string_view b) {
 
 #if defined __SSE4_1__
   if (l >= 8) {
-    __m128i eq = _mm_cmpeq_epi8(_mm_cvtsi64x_si128(mempick8(pa - 7)),
-                                _mm_cvtsi64x_si128(mempick8(pb - 7)));
+    __m128i eq = _mm_cmpeq_epi8(_mm_cvtsi64_si128(mempick8(pa - 7)),
+                                _mm_cvtsi64_si128(mempick8(pb - 7)));
     std::uint32_t mask = std::uint16_t(~_mm_movemask_epi8(eq));
     if (mask == 0) return 7;
     return 32 - clz(mask);
