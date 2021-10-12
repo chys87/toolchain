@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,10 @@
  */
 
 #include "cbu/network/ipv4.h"
+
+#include <limits>
+
+#include "cbu/common/fastarith.h"
 #include "cbu/common/fastdiv.h"
 #include "cbu/common/short_string.h"
 
@@ -54,14 +58,14 @@ _j:
   return p;
 }
 
+template <typename T>
 struct ParseResult {
   bool ok;
-  std::uint8_t v;
+  T v;
   const char* s;
 };
 
-ParseResult parse_uint8(
-    const char* s, const char* e) noexcept {
+ParseResult<std::uint8_t> parse_uint8(const char* s, const char* e) noexcept {
   if (s >= e) {
     return {false};
   }
@@ -83,6 +87,63 @@ ParseResult parse_uint8(
   return {true, std::uint8_t(x), s};
 }
 
+inline std::optional<unsigned> parse_hex_digit(unsigned char c) {
+  static_assert('A' == 65, "This implementation requires ASCII");
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  else if (unsigned C = c | 0x20; C >= 'a' && C <= 'f')
+    return C - 'a' + 10;
+  else
+    return std::nullopt;
+}
+
+ParseResult<std::uint32_t> parse_any_uint32(const char* s,
+                                            const char* e) noexcept {
+  if (s >= e) return {false};
+  if (*s >= '1' && *s <= '9') [[likely]] {
+    // Decimal
+    std::uint32_t r = *s++ - '0';
+    while (s < e && (*s >= '0' && *s <= '9')) {
+      if (r > std::numeric_limits<std::uint32_t>::max() / 10) return {false};
+      r *= 10;
+      if (add_overflow(r, *s++ - '0', &r)) return {false};
+    }
+    return {true, r, s};
+  } else if (*s == '0') {
+    ++s;
+    if (s >= e) {
+      // simply 0
+      return {true, 0, s};
+    }
+    if (*s == 'x' || *s == 'X') {
+      // Hexadecimal
+      ++s;
+      auto first_digit_opt = parse_hex_digit(*s);
+      if (!first_digit_opt) return {false};
+      std::uint32_t r = *first_digit_opt;
+      while (++s < e) {
+        auto digit_opt = parse_hex_digit(*s);
+        if (!digit_opt) break;
+        // Overflow?
+        if (r & ~(std::uint32_t(-1) >> 4)) return {false};
+        r = (r << 4) + *digit_opt;
+      }
+      return {true, r, s};
+    } else {
+      // Octal or simply "0"
+      std::uint32_t r = 0;
+      while (s < e && *s >= '0' && *s <= '7') {
+        // Overflow?
+        if (r & ~(std::uint32_t(-1) >> 3)) return {false};
+        r = (r << 3) + (*s++ - '0');
+      }
+      return {true, r, s};
+    }
+  } else {
+    return {false};
+  }
+}
+
 } // namespace
 
 char* IPv4::to_string(char* p) const noexcept {
@@ -102,7 +163,7 @@ short_string<15> IPv4::to_string() const {
   return res;
 }
 
-std::optional<IPv4> IPv4::from_string(std::string_view s) noexcept {
+std::optional<IPv4> IPv4::from_common_string(std::string_view s) noexcept {
   const char* p = s.data();
   const char* e = p + s.size();
   auto [a_ok, a, a_s] = parse_uint8(p, e);
@@ -124,6 +185,44 @@ std::optional<IPv4> IPv4::from_string(std::string_view s) noexcept {
   if (!d_ok || d_s != e) return std::nullopt;
 
   return IPv4(a, b, c, d);
+}
+
+std::optional<IPv4> IPv4::from_string(std::string_view s) noexcept {
+  if (s.empty()) return std::nullopt;
+
+  const char* p = s.data();
+  const char* e = p + s.size();
+
+  std::uint32_t ip = 0;
+  std::uint32_t unfilled_bits = 32;
+
+  for (;;) {
+    auto [ok, v, endptr] = parse_any_uint32(p, e);
+    p = endptr;
+    if (!ok) return std::nullopt;
+
+    if (p >= e) {
+      // Last component
+      if (unfilled_bits < 32 && (v & (-1u << unfilled_bits)))
+        return std::nullopt;
+      ip += v;
+      break;
+    } else if (*p == '.' && unfilled_bits >= 16) {
+      ++p;
+      if (v >= 256) return std::nullopt;
+      ip |= (v << (unfilled_bits -= 8));
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  return IPv4(ip);
+}
+
+void IPv4::output_to(std::ostream& os) const {
+  char buffer[16];
+  char* p = to_string(buffer);
+  os << std::string_view(buffer, p - buffer);
 }
 
 } // namespace cbu

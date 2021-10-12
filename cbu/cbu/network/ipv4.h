@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 #include <bit>
 #include <cstdint>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <string_view>
 
@@ -51,42 +52,29 @@ struct BrokeIPv4 {
 };
 
 // Represents an IPv4 address
-// The storage is in network-endian
 class IPv4 {
  public:
-  static constexpr bool IS_NATIVE_ORDER = (native_endian == network_endian);
-  static constexpr int A_SHIFT = IS_NATIVE_ORDER ? 24 : 0;
-  static constexpr int B_SHIFT = IS_NATIVE_ORDER ? 16 : 8;
-  static constexpr int C_SHIFT = IS_NATIVE_ORDER ? 8 : 16;
-  static constexpr int D_SHIFT = IS_NATIVE_ORDER ? 0 : 24;
-
   constexpr IPv4() noexcept : v_(0) {}
-  constexpr IPv4(std::endian byte_order, std::uint32_t v) noexcept :
-    v_(may_bswap(byte_order, network_endian, v)) {}
+  constexpr explicit IPv4(std::uint32_t v,
+                          std::endian byte_order = native_endian) noexcept
+      : v_(may_bswap(byte_order, native_endian, v)) {}
   constexpr IPv4(BrokeIPv4 ip) noexcept : IPv4(ip.a, ip.b, ip.c, ip.d) {}
-  constexpr IPv4(std::uint8_t a, std::uint8_t b,
-                 std::uint8_t c, std::uint8_t d) noexcept :
-    v_(a << A_SHIFT | b << B_SHIFT | c << C_SHIFT | d << D_SHIFT) {}
+  constexpr IPv4(std::uint8_t a, std::uint8_t b, std::uint8_t c,
+                 std::uint8_t d) noexcept
+      : v_(a << 24 | b << 16 | c << 8 | d) {}
   constexpr IPv4(const IPv4&) noexcept = default;
 
   constexpr IPv4& operator=(const IPv4&) noexcept = default;
 
-  constexpr std::uint32_t value(std::endian byte_order) const noexcept {
-    return may_bswap(byte_order, network_endian, v_);
+  constexpr std::uint32_t value(
+      std::endian byte_order = native_endian) const noexcept {
+    return may_bswap(byte_order, native_endian, v_);
   }
 
-  constexpr std::uint8_t a() const noexcept {
-    return std::uint8_t(v_ >> A_SHIFT);
-  }
-  constexpr std::uint8_t b() const noexcept {
-    return std::uint8_t(v_ >> B_SHIFT);
-  }
-  constexpr std::uint8_t c() const noexcept {
-    return std::uint8_t(v_ >> C_SHIFT);
-  }
-  constexpr std::uint8_t d() const noexcept {
-    return std::uint8_t(v_ >> D_SHIFT);
-  }
+  constexpr std::uint8_t a() const noexcept { return std::uint8_t(v_ >> 24); }
+  constexpr std::uint8_t b() const noexcept { return std::uint8_t(v_ >> 16); }
+  constexpr std::uint8_t c() const noexcept { return std::uint8_t(v_ >> 8); }
+  constexpr std::uint8_t d() const noexcept { return std::uint8_t(v_); }
 
   constexpr operator BrokeIPv4() const noexcept {
     return BrokeIPv4{a(), b(), c(), d()};
@@ -95,13 +83,21 @@ class IPv4 {
   char* to_string(char* buffer) const noexcept;
   short_string<15> to_string() const;
 
+  // from_common_string supports only the common "a.b.c.d" format
+  static std::optional<IPv4> from_common_string(std::string_view s) noexcept;
+  // from_string supports all legal formats,
+  // e.g. "127.0.0.1" may be represented as any of the following:
+  // "127.0.0.1", "127.0.1", "127.1", "2130706433", "0x7f000001", "0x7f.0.0.1",
+  // "017700000001", and so on...
+  // However, some implementation doesn't check for overflowed values, but we
+  // do it strictly.
   static std::optional<IPv4> from_string(std::string_view s) noexcept;
 
-  constexpr IPv4& operator &= (const IPv4& o) noexcept {
+  constexpr IPv4& operator&=(const IPv4& o) noexcept {
     v_ &= o.v_;
     return *this;
   }
-  constexpr IPv4& operator |= (const IPv4& o) noexcept {
+  constexpr IPv4& operator|=(const IPv4& o) noexcept {
     v_ |= o.v_;
     return *this;
   }
@@ -112,12 +108,20 @@ class IPv4 {
   }
   friend inline constexpr IPv4 operator&(const IPv4& lhs,
                                          const IPv4& rhs) noexcept {
-    return IPv4(network_endian, lhs.v_ & rhs.v_);
+    return IPv4(lhs.v_ & rhs.v_);
   }
   friend inline constexpr IPv4 operator|(const IPv4& lhs,
                                          const IPv4& rhs) noexcept {
-    return IPv4(network_endian, lhs.v_ | rhs.v_);
+    return IPv4(lhs.v_ | rhs.v_);
   }
+
+  friend std::ostream& operator<<(std::ostream& os, const IPv4& ip) {
+    ip.output_to(os);
+    return os;
+  }
+
+ private:
+  void output_to(std::ostream& os) const;
 
  private:
   std::uint32_t v_;
