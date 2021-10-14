@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,15 +34,15 @@
 
 namespace cbu {
 
-template <typename T>
+template <typename T, typename C = char>
 concept String_view_compat = requires (const T &t) {
-  { t.data() } -> std::convertible_to<const char *>;
+  { t.data() } -> std::convertible_to<const C*>;
   { t.length() } -> std::convertible_to<std::size_t>;
 };
 
-template <typename T>
+template <typename T, typename C = char>
 concept Zstring_view_compat = requires (const T &t) {
-  { t.c_str() } -> std::convertible_to<const char *>;
+  { t.c_str() } -> std::convertible_to<const C*>;
   { t.length() } -> std::convertible_to<std::size_t>;
 };
 

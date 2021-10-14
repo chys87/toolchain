@@ -231,6 +231,11 @@ def cppfilter(fi):
         (re.compile(br'\bcbu::cbu_\w+::'), br'cbu::'),
         (re.compile(
             br'\bcbu::strpack<char((?:, \'(?:\\\'|[^\']*)\')+)>::s'), __replace_cbu_strpack),
+        (re.compile(br'\bcbu::basic_zstring_view<(.+), std::(__\d+::)?char_traits<\1>>'),
+         br'cbu::basic_zstring_view<\1>'),
+        (re.compile(br'cbu::basic_zstring_view<char>'), b'cbu::zstring_view'),
+        (re.compile(br'cbu::basic_zstring_view<wchar_t>'), b'cbu::wzstring_view'),
+        (re.compile(br'cbu::basic_zstring_view<char(\d+)_t>'), br'cbu::u\1zstring_view'),
     )
 
     def do_replace(data):
