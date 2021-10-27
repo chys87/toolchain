@@ -189,8 +189,8 @@ namespace {
 // v128 and v64 must be the repeatition of the "minimal unit";
 // and bytes must be multiple of the "minimal unit";
 // and dst must be aligned to size of "minimal unit".
-void* fill_with_sse(void* dst, __m128i v128, uint64_t v64,
-                    size_t bytes) noexcept {
+[[maybe_unused]] void* fill_with_sse(void* dst, __m128i v128, uint64_t v64,
+                                     size_t bytes) noexcept {
   char* d = static_cast<char*>(dst);
   if (bytes < 16) {
     if (bytes < 4) {
@@ -373,10 +373,9 @@ void* fill(void* dst, uint64_t value, size_t size) noexcept {
   return std::fill_n(static_cast<uint64_t*>(dst), size, value);
 }
 
-void fence() noexcept {
-}
+void fence() noexcept {}
 
-#endif
+#endif  // __x86_64__
 
-} // namespace cacheless
-} // namespace cbu
+}  // namespace cacheless
+}  // namespace cbu
