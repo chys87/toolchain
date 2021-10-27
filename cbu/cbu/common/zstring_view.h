@@ -109,18 +109,25 @@ template <typename C, typename T>
 inline const basic_zstring_view<C, T>&
 basic_zstring_view<C, T>::empty_instance() noexcept {
   if constexpr (std::is_same_v<C, char>) {
-    return {"", std::size_t(0)};
+    static constinit const basic_zstring_view<C, T> empty{"", std::size_t(0)};
+    return empty;
   } else if constexpr (std::is_same_v<C, wchar_t>) {
-    return {L"", std::size_t(0)};
+    static constinit const basic_zstring_view<C, T> empty{L"", std::size_t(0)};
+    return empty;
   } else if constexpr (std::is_same_v<C, char8_t>) {
-    return {u8"", std::size_t(0)};
+    static constinit const basic_zstring_view<C, T> empty{u8"", std::size_t(0)};
+    return empty;
   } else if constexpr (std::is_same_v<C, char16_t>) {
-    return {u"", std::size_t(0)};
+    static constinit const basic_zstring_view<C, T> empty{u"", std::size_t(0)};
+    return empty;
   } else if constexpr (std::is_same_v<C, char32_t>) {
-    return {U"", std::size_t(0)};
+    static constinit const basic_zstring_view<C, T> empty{U"", std::size_t(0)};
+    return empty;
   } else {
-    static const C empty[1] = {};
-    return {empty, std::size_t(0)};
+    static constinit const C empty_str[1] = {};
+    static constinit const basic_zstring_view<C, T> empty{empty_str,
+                                                          std::size_t(0)};
+    return empty;
   }
 }
 
