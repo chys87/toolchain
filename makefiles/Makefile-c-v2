@@ -91,6 +91,7 @@ DEPS    := $(sort $(CDEPS) $(CXXDEPS) $(ASMDEPS))
 
 CC := gcc
 CXX := g++
+AR := gcc-ar
 
 INCLUDES := -iquote $(DIR) -iquote $(BUILDDIR) $(foreach x,$(AUTO_GENERATED_HEADERS),-iquote $(dir $(x)))
 LIBS :=
@@ -98,7 +99,8 @@ DEFS := -D _GNU_SOURCE -D NDEBUG \
 	-D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS \
 	-D __NO_MATH_INLINES
 
-AR := ar
+ARFLAGS := crs
+
 STRIP := strip --strip-unneeded -R .comment -R .GCC.command.line
 INSTALL := install -m755 -C -T -v
 INSTDIR := /usr/local/bin
@@ -196,9 +198,12 @@ INST_TARGETS :=
 NBIN :=
 BIN :=
 UT_SUCCESS_FILES :=
+STATIC_LIBRARY_TARGETS :=
+STATIC_LIBRARY_FILES :=
 
 # $(1): Target name; $(2): Dependencies (without .o)
 # $(3): Options (ut)
+# $(4): Dependent static libraries
 # Must set INSTDIR/CC/CXX etc before using define_target
 define define_target_impl
 TARGETS += $(1)
@@ -227,12 +232,29 @@ else
 $(BUILDDIR)/$(1).n.out: private CLINKER = $(CXX)
 endif
 $(BUILDDIR)/$(1).n.out: private NAME := LD
-$(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(AUTO_GENERATED_HEADERS)
-	+$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(LIBS) $$(LIBS-$(1))
+$(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(4:%=$(BUILDDIR)/lib%.a) $(AUTO_GENERATED_HEADERS)
+	+$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ \
+		$(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) \
+		-Wl,--start-group $(4:%=$(BUILDDIR)/lib%.a) -Wl,--end-group \
+		$(LIBS) $$(LIBS-$(1))
 endef
 
 define define_target
-$(call define_target_impl,$(1),$(patsubst %.proto,%.pb.cc,$(patsubst %.py,%,$(2))),$(3))
+$(call define_target_impl,$(1),$(patsubst %.proto,%.pb.cc,$(patsubst %.py,%,$(2))),$(3),$(4))
+endef
+
+# $(1): Target name; $(2) Dependencies (without .o)
+define define_static_library_impl
+STATIC_LIBRARY_TARGETS += $(1)
+STATIC_LIBRARY_FILES += $(BUILDDIR)/lib$(1).a
+SRCS-$(1) := $(sort $(foreach c,$(2),$(call strip_src,$(c:%.py=%))))
+$(BUILDDIR)/lib$(1).a: private NAME := AR
+$(BUILDDIR)/lib$(1).a: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o))
+	+$$(Q)rm -f $$@ && $$(AR) $$(ARFLAGS) $$@ $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o))
+endef
+
+define define_static_library
+$(call define_static_library_impl,$(1),$(patsubst %.proto,%.pb.cc,$(patsubst %.py,%,$(2))))
 endef
 
 # Make sure headers are generated earlier than everything else
