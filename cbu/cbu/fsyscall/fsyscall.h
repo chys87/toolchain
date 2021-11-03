@@ -437,14 +437,10 @@ fsys_inline int fsys_sched_getcpu(void) {
 # define fsys_sched_getcpu sched_getcpu
 #endif
 
-#if defined __GNUC__ && (__GNUC__ * 100 + __GNUC_MINOR__ >= 405)
 fsys_inline void fsys__exit (int x) {
   fsys_exit_group (x);
   __builtin_trap ();
 }
-#else
-# define fsys__exit _exit
-#endif
 
 fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
                                    __OFF64_T_TYPE len, int advice) {
