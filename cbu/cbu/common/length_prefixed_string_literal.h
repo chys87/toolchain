@@ -39,9 +39,9 @@
 
 namespace cbu {
 
-template <typename C, typename Len>
+template <typename C, typename LenT>
 struct LengthPrefixedStringLiteral {
-  Len len;
+  LenT len;
   C buffer[0];
 
   using string_view = std::basic_string_view<C>;
@@ -50,43 +50,32 @@ struct LengthPrefixedStringLiteral {
   constexpr string_view view() const noexcept { return {buffer, len}; }
 };
 
-template <typename C, typename Len, C... chars>
-struct LengthPrefixedStringLiteralInstance
-    : LengthPrefixedStringLiteral<C, Len> {
-  static_assert(Len(sizeof...(chars)) == sizeof...(chars), "Len is too small");
+template <typename C, typename LenT, LenT Len>
+struct LengthPrefixedStringLiteralImpl : LengthPrefixedStringLiteral<C, LenT> {
+  C real_buffer[Len];
 
-  C real_buffer[sizeof...(chars)]{chars...};
-
-  using string_view = typename LengthPrefixedStringLiteral<C, Len>::string_view;
-
-  constexpr LengthPrefixedStringLiteralInstance() noexcept
-      : LengthPrefixedStringLiteral<C, Len>{Len(sizeof...(chars))} {}
+  using string_view =
+      typename LengthPrefixedStringLiteral<C, LenT>::string_view;
 
   constexpr operator string_view() const noexcept { return view(); }
-  constexpr string_view view() const noexcept {
-    return {real_buffer, sizeof...(chars)};
-  }
+  constexpr string_view view() const noexcept { return {real_buffer, Len}; }
 };
 
-template <typename C, typename Len, C... chars>
-inline constexpr LengthPrefixedStringLiteralInstance<C, Len, chars...>
-    kLengthPrefixedStringLiteralInstance;
+template <typename C, typename LenT, C... chars>
+inline constexpr LengthPrefixedStringLiteralImpl<C, LenT, sizeof...(chars)>
+    kLengthPrefixedStringLiteralInstance{{sizeof...(chars), {}}, {chars...}};
 
 template <typename C, C... chars>
 constexpr const auto& operator""_lpsl() noexcept {
-  using T = LengthPrefixedStringLiteralInstance<C, std::uint8_t, chars...>;
   using B = LengthPrefixedStringLiteral<C, std::uint8_t>;
-  static_assert(sizeof(B) == 1);
-  static_assert(sizeof(T) == sizeof(B) + sizeof...(chars) * sizeof(C));
+  static_assert(offsetof(B, buffer) == sizeof(B));
   return kLengthPrefixedStringLiteralInstance<C, std::uint8_t, chars...>;
 }
 
 template <typename C, C... chars>
 constexpr const auto& operator""_lpsl16() noexcept {
-  using T = LengthPrefixedStringLiteralInstance<C, std::uint16_t, chars...>;
   using B = LengthPrefixedStringLiteral<C, std::uint16_t>;
-  static_assert(sizeof(B) == 2);
-  static_assert(sizeof(T) == sizeof(B) + sizeof...(chars) * sizeof(C));
+  static_assert(offsetof(B, buffer) == sizeof(B));
   return kLengthPrefixedStringLiteralInstance<C, std::uint16_t, chars...>;
 }
 

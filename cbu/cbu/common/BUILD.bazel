@@ -26,9 +26,8 @@
 
 cc_library(
   name = 'common',
-  srcs = glob(['*.cc'],
-              exclude=['*_test.cc']),
-  hdrs = glob(['*.h']),
+  srcs = glob(['*.cc'], exclude=['*_test.cc']),
+  hdrs = glob(['*.h'], exclude=['*_test.h']),
   deps = [
     '//cbu/compat',
     '//cbu/fsyscall',
@@ -50,7 +49,7 @@ cc_library(
 
 cc_test(
   name = 'common-tests',
-  srcs = glob(['*_test.cc']),
+  srcs = glob(['*_test.cc', '*_test.h']),
   deps = [
     ':common',
     '@com_google_googletest//:gtest_main',
