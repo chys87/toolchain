@@ -39,6 +39,7 @@
 namespace {
 
 namespace alloc = cbu::alloc;
+using cbu::operator""_lpsl;
 
 void* new_nothrow(size_t n) noexcept {
   // C standard says malloc(0) may or may not return NULL
@@ -110,7 +111,7 @@ void* operator new(size_t n, std::align_val_t alignment) {
     n = 1;
   if (size_t(alignment) - 1 >= alloc::kPageSize) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-    alloc::fatal("Invalid aligned allocation");
+    alloc::fatal("Invalid aligned allocation"_lpsl);
 #else
     throw std::bad_alloc();
 #endif
@@ -120,7 +121,7 @@ void* operator new(size_t n, std::align_val_t alignment) {
   if (ptr == nullptr) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
     // Can fail because of invalid alignment
-    alloc::fatal("Invalid aligned allocation");
+    alloc::fatal("Invalid aligned allocation"_lpsl);
 #else
     throw std::bad_alloc();
 #endif
@@ -195,7 +196,7 @@ void* new_aligned_realloc(void* ptr, size_t n, size_t alignment) {
   if (n == 0) n = 1;
   if (size_t(alignment) - 1 >= alloc::kPageSize) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-    alloc::fatal("Invalid aligned allocation");
+    alloc::fatal("Invalid aligned allocation"_lpsl);
 #else
     throw std::bad_alloc();
 #endif
@@ -205,7 +206,7 @@ void* new_aligned_realloc(void* ptr, size_t n, size_t alignment) {
   if (ptr == nullptr) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
     // Can fail because of invalid alignment
-    alloc::fatal("Invalid aligned allocation");
+    alloc::fatal("Invalid aligned allocation"_lpsl);
 #else
     throw std::bad_alloc();
 #endif

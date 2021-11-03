@@ -37,19 +37,20 @@
 namespace cbu {
 namespace alloc {
 
-void fatal(const char* s) noexcept {
-  size_t n = fsys_write(2, s, strlen(s));
-  (void)n;
+void fatal(const LengthPrefixedStringLiteral<char, uint8_t>& msg) noexcept {
+  auto s = msg.view();
+  size_t n = fsys_write(2, s.data(), s.size());
+  static_cast<void>(n);
   abort();
 }
 
 void memory_corrupt() noexcept {
-  fatal("Memory corrupt\n");
+  fatal("Memory corrupt\n"_lpsl);
 }
 
 std::nullptr_t nomem() noexcept {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-  fatal("Insufficient memory\n");
+  fatal("Insufficient memory\n"_lpsl);
 #else
   errno = ENOMEM;
   return nullptr;

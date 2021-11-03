@@ -33,6 +33,8 @@
 
 #include <cstddef>
 
+#include "cbu/common/length_prefixed_string_literal.h"
+
 namespace cbu {
 namespace alloc {
 
@@ -106,7 +108,8 @@ void reclaim_page(Page* page, size_t bytes,
 std::nullptr_t
 nomem() noexcept;
 
-[[noreturn, gnu::cold]] void fatal(const char* msg) noexcept;
+[[noreturn, gnu::cold]] void fatal(
+    const LengthPrefixedStringLiteral<char, uint8_t>& msg) noexcept;
 
 }  // namespace alloc
 }  // namespace cbu
