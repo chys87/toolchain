@@ -48,13 +48,14 @@ AUTO_GENERATOR_PROTOBUF := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.proto))
 AUTO_GENERATED_PROTOBUF_SRCS := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILDDIR)/%.pb.cc)
 AUTO_GENERATED_PROTOBUF_HEADERS := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILDDIR)/%.pb.h)
 AUTO_GENERATED_PROTOBUF_DEPS := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILDDIR)/%.proto.P)
+AUTO_GENERATED_PROTOBUF_PYTHON := $(AUTO_GENERATOR_PROTOBUF:$(DIR)/%.proto=$(BUILDDIR)/%_pb2.py)
 
 AUTO_GENERATOR_FLATBUF := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.fbs))
 AUTO_GENERATED_FLATBUF_HEADERS := $(AUTO_GENERATOR_FLATBUF:$(DIR)/%.fbs=$(BUILDDIR)/%_generated.h)
 AUTO_GENERATED_FLATBUF_DEPS := $(AUTO_GENERATOR_FLATBUF:$(DIR)/%.fbs=$(BUILDDIR)/%.fbs.P)
 
 AUTO_GENERATOR := $(AUTO_GENERATOR_PYTHON) $(AUTO_GENERATOR_PYTHON)
-AUTO_GENERATED := $(AUTO_GENERATED_PYTHON) $(AUTO_GENERATED_PROTOBUF_SRCS) $(AUTO_GENERATED_PROTOBUF_HEADERS) $(AUTO_GENERATED_FLATBUF_HEADERS)
+AUTO_GENERATED := $(AUTO_GENERATED_PYTHON) $(AUTO_GENERATED_PROTOBUF_SRCS) $(AUTO_GENERATED_PROTOBUF_HEADERS) $(AUTO_GENERATED_PROTOBUF_PYTHON) $(AUTO_GENERATED_FLATBUF_HEADERS)
 AUTO_GENERATED_DEPS := $(AUTO_GENERATED_PYTHON_DEPS) $(AUTO_GENERATED_PROTOBUF_DEPS) $(AUTO_GENERATED_FLATBUF_DEPS)
 AUTO_GENERATED_SRCS := $(filter %.c %.cc %.cpp %.C %.cxx %.S, $(AUTO_GENERATED))
 AUTO_GENERATED_HEADERS := $(filter %.h %.hpp, $(AUTO_GENERATED))
@@ -186,6 +187,7 @@ CXXWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
 	-Wsuggest-final-methods \
 	-Werror=suggest-override
 FLATCFLAGS := --scoped-enums --gen-object-api --cpp-std c++17 --natural-utf8
+PROTOCFLAGS := --experimental_allow_proto3_optional
 PIE := 0
 NOPLT := 0
 LTO := 0
@@ -445,15 +447,19 @@ $(AUTO_GENERATED_PYTHON): $(BUILDDIR)/%: | $(BUILDDIR)/%.py.P
 
 $(AUTO_GENERATED_PROTOBUF_SRCS): private NAME := PROTOC
 $(AUTO_GENERATED_PROTOBUF_SRCS): $(BUILDDIR)/%.pb.cc:$(DIR)/%.proto
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< protoc --dependency_out=$(@:%.pb.cc=%.proto.P) --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< protoc $(PROTOCFLAGS) --dependency_out=$(@:%.pb.cc=%.proto.P) --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 $(AUTO_GENERATED_PROTOBUF_HEADERS): private NAME := PROTOC
 $(AUTO_GENERATED_PROTOBUF_HEADERS): $(BUILDDIR)/%.pb.h:$(DIR)/%.proto
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< protoc --dependency_out=$(@:%.pb.h=%.proto.P) --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< protoc $(PROTOCFLAGS) --dependency_out=$(@:%.pb.h=%.proto.P) --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 $(AUTO_GENERATED_PROTOBUF_DEPS): private NAME := PROTOC
 $(AUTO_GENERATED_PROTOBUF_DEPS): $(BUILDDIR)/%.proto.P:$(DIR)/%.proto
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< protoc --dependency_out=$@ --cpp_out=$(BUILDDIR) --proto_path=$(DIR) $<
+	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< protoc $(PROTOCFLAGS) --dependency_out=$@ --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
+
+$(AUTO_GENERATED_PROTOBUF_PYTHON): private NAME := PROTOC
+$(AUTO_GENERATED_PROTOBUF_PYTHON): $(BUILDDIR)/%_pb2.py:$(DIR)/%.proto
+	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< protoc $(PROTOCFLAGS) --dependency_out=$(@:%_pb2.py=%.proto.P) --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 # flatc prints error message to stdout!!! So we have to cat $@
 $(AUTO_GENERATED_FLATBUF_DEPS): private NAME := FLATCDEP
