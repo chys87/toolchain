@@ -165,6 +165,8 @@ class BytesViewImpl {
       l_(sizeof(*std::data(std::forward<T>(obj))) *
          std::size(std::forward<T>(obj))) {}
 
+  constexpr BytesViewImpl(const BytesViewImpl&) noexcept = default;
+
   constexpr BytesViewImpl& operator=(const BytesViewImpl&) noexcept = default;
 
   constexpr pointer data() const noexcept { return pointer(p_); }
