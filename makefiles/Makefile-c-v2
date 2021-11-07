@@ -114,7 +114,6 @@ CXXSTD ?=
 OPTIMIZEFLAGS ?= -O2 -ggdb \
 				 -fmerge-all-constants -fno-common \
 				 -fno-ident \
-				 -ffunction-sections -fdata-sections \
 				 -ffp-contract=fast \
 				 -Qn
 COPTIMIZEFLAGS ?=
@@ -300,8 +299,8 @@ ifeq "$(LTO)" "1"
  EXTRA_CXXFLAGS += -flto
  EXTRA_LDFLAGS += -flto -fuse-ld=lld
  endif
- OPTIMIZEFLAGS := $(subst -ffunction-sections,,$(OPTIMIZEFLAGS))
- OPTIMIZEFLAGS := $(subst -fdata-sections,,$(OPTIMIZEFLAGS))
+else
+ OPTIMIZEFLAGS += -ffunction-sections -fdata-sections
 endif
 ifeq "$(PIE)" "1"
  OPTIMIZEFLAGS += -fpie
@@ -328,7 +327,8 @@ CFLAGS = $(OPTIMIZEFLAGS) $(COPTIMIZEFLAGS) $(ARCHFLAGS) $(CWARNINGFLAGS) $(CSTD
 CXXFLAGS = $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS)
 BASE_LDFLAGS = -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed \
   -Wl,-z,relro -Wl,-z,noexecstack \
-  -Wl,-z,start-stop-visibility=hidden
+  -Wl,-z,start-stop-visibility=hidden \
+  -Wl,-z,nostart-stop-gc
 LDFLAGS = $(ARCHFLAGS) $(OPTIMIZEFLAGS) $(BASE_LDFLAGS) $(EXTRA_LDFLAGS)
 
 ifeq "$(DIR)" "."
