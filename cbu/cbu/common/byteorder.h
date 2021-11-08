@@ -108,6 +108,8 @@ class [[gnu::packed]] PackedFixByteOrder {
  public:
   constexpr PackedFixByteOrder(T v) noexcept : v_(bswap_for<byte_order>(v)) {}
   constexpr PackedFixByteOrder(const PackedFixByteOrder &) noexcept = default;
+  constexpr PackedFixByteOrder& operator=(const PackedFixByteOrder&) noexcept =
+      default;
 
   constexpr operator T () const noexcept { return bswap_for<byte_order>(v_); }
 
@@ -121,6 +123,7 @@ class FixByteOrder {
   constexpr FixByteOrder() noexcept = default;
   constexpr FixByteOrder(T v) noexcept : v_(bswap_for<byte_order>(v)) {}
   constexpr FixByteOrder(const FixByteOrder &) noexcept = default;
+  constexpr FixByteOrder& operator=(const FixByteOrder&) noexcept = default;
 
   constexpr operator T() const noexcept { return bswap_for<byte_order>(v_); }
 
