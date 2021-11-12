@@ -78,4 +78,65 @@ TEST(StrUtilTest, StrCmpLengthFirst) {
   EXPECT_GT(strcmp_length_first("aaa", "zz"), 0);
 }
 
-} // namespace cbu
+inline size_t naive_common_prefix(std::string_view a, std::string_view b) {
+  size_t k = 0;
+  while (k < a.length() && k < b.length() && a[k] == b[k]) ++k;
+  return k;
+}
+
+TEST(StrUtilTest, CommonPrefix) {
+  constexpr unsigned N = 4096;
+  char bytes[N];
+  srand(0);
+
+  for (size_t i = 0; i < N; ++i) bytes[i] = 'a' + (i & 3);
+  for (size_t i = 0; i < N; ++i) {
+    size_t k = rand() % (N - i);
+    memmove(bytes + i + k, bytes + i, N - i - k);
+
+    std::string_view a = {bytes + i, N - i};
+    for (size_t j = i + 1; j < N; ++j) {
+      std::string_view b = {bytes + j, N - j};
+      size_t naive = naive_common_prefix(a, b);
+      ASSERT_EQ(naive, common_prefix(a, b));
+    }
+  }
+}
+
+TEST(StrUtilTest, CommonPrefix_Utf8) {
+  EXPECT_EQ(common_prefix(u8"一丁", u8"一一"), 3);
+  EXPECT_EQ(common_prefix((const char*)u8"一丁", (const char*)u8"一一"), 5);
+}
+
+inline size_t naive_common_suffix(std::string_view a, std::string_view b) {
+  size_t k = 0;
+  while (k < a.length() && k < b.length() && a.end()[-k - 1] == b.end()[-k - 1])
+    ++k;
+  return k;
+}
+
+TEST(StrUtilTest, CommonSuffix) {
+  constexpr unsigned N = 4096;
+  char bytes[N];
+  srand(0);
+
+  for (size_t i = 0; i < N; ++i) bytes[i] = 'a' + (i & 3);
+  for (size_t i = 0; i < N; ++i) {
+    size_t k = rand() % (N - i);
+    memmove(bytes + i, bytes + i + k, N - i - k);
+
+    std::string_view a = {bytes, i};
+    for (size_t j = i + 1; j < N; ++j) {
+      std::string_view b = {bytes, j};
+      size_t naive = naive_common_suffix(a, b);
+      ASSERT_EQ(naive, common_suffix(a, b));
+    }
+  }
+}
+
+TEST(StrUtilTest, CommonSuffix_Utf8) {
+  EXPECT_EQ(common_suffix(u8"帀一", u8"一一"), 3);
+  EXPECT_EQ(common_suffix((const char*)u8"帀一", (const char*)u8"一一"), 5);
+}
+
+}  // namespace cbu

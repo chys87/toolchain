@@ -26,21 +26,23 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "strutil.h"
+#include "cbu/common/strutil.h"
+
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <type_traits>
 #if __has_include(<x86intrin.h>)
-# include <x86intrin.h>
+#  include <x86intrin.h>
 #endif
-#include "bit.h"
-#include "byteorder.h"
-#include "fastarith.h"
-#include "faststr.h"
+
+#include "cbu/common/bit.h"
+#include "cbu/common/byteorder.h"
+#include "cbu/common/encoding.h"
+#include "cbu/common/fastarith.h"
+#include "cbu/common/faststr.h"
 
 namespace cbu {
-inline namespace cbu_strutil {
 
 using std::uint32_t;
 using std::uint64_t;
@@ -273,7 +275,8 @@ int compare_string_view(std::string_view a, std::string_view b) noexcept {
   }
 }
 
-int compare_string_view_for_lt(std::string_view a, std::string_view b) noexcept {
+int compare_string_view_for_lt(std::string_view a,
+                               std::string_view b) noexcept {
   if (a.length() >= b.length()) {
     return memcmp(a.data(), b.data(), b.length());
   } else {
@@ -284,5 +287,104 @@ int compare_string_view_for_lt(std::string_view a, std::string_view b) noexcept 
   }
 }
 
-} // namespace cbu_strutil
-} // namespace cbu
+size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl,
+                        bool utf8) noexcept {
+  const char* a = static_cast<const char*>(pa);
+  const char* b = static_cast<const char*>(pb);
+  size_t k = 0;
+
+#if defined __AVX2__ && defined __BMI__
+  if (maxl >= 32) {
+    __m256i ones = _mm256_set1_epi8(-1);
+    __m256i va = *(const __m256i_u*)a;
+    __m256i vb = *(const __m256i_u*)b;
+    __m256i vc = _mm256_cmpeq_epi8(va, vb);
+    if (_mm256_testc_si256(vc, ones)) {
+      k = 32 - (uintptr_t(a) & 31);
+      for (;;) {
+        if (k >= maxl - 32) {
+          va = *(const __m256i_u*)(a + maxl - 32);
+          vb = *(const __m256i_u*)(b + maxl - 32);
+          vc = _mm256_cmpeq_epi8(va, vb);
+          k = maxl - 32 + _tzcnt_u32(~_mm256_movemask_epi8(vc));
+          break;
+        }
+        va = *(const __m256i*)(a + k);
+        vb = *(const __m256i_u*)(b + k);
+        vc = _mm256_cmpeq_epi8(va, vb);
+        if (!_mm256_testc_si256(vc, ones)) {
+          k += ctz(~_mm256_movemask_epi8(vc));
+          break;
+        }
+        k += 32;
+      }
+    } else {
+      k = ctz(~_mm256_movemask_epi8(vc));
+    }
+  } else
+#endif
+  {
+    while ((k < maxl) && a[k] == b[k]) ++k;
+  }
+
+  if (utf8 && (k < maxl)) {
+    while (k && utf8_byte_type(a[k]) == cbu::Utf8ByteType::TRAILING) --k;
+  }
+
+  return k;
+}
+
+size_t common_suffix_ex(const void* pa, const void* pb, size_t maxl,
+                        bool utf8) noexcept {
+  const char* a = static_cast<const char*>(pa);
+  const char* b = static_cast<const char*>(pb);
+  const char* aend = a;
+
+  const char* min_a = a - maxl;
+  ptrdiff_t d = b - a;
+
+#if defined __AVX2__
+  if (maxl >= 32) {
+    __m256i ones = _mm256_set1_epi8(-1);
+    a -= 32;
+    __m256i va = *(const __m256i_u*)a;
+    __m256i vb = *(const __m256i_u*)(a + d);
+    __m256i vc = _mm256_cmpeq_epi8(va, vb);
+    if (_mm256_testc_si256(vc, ones)) {
+      uintptr_t misalign = -uintptr_t(a) & 31;
+      a += misalign;
+      for (;;) {
+        if (a <= min_a + 32) {
+          va = *(const __m256i_u*)min_a;
+          vb = *(const __m256i_u*)(min_a + d);
+          vc = _mm256_cmpeq_epi8(va, vb);
+          a = min_a + 32 - _lzcnt_u32(~_mm256_movemask_epi8(vc));
+          break;
+        }
+        a -= 32;
+        va = *(const __m256i*)a;
+        vb = *(const __m256i_u*)(a + d);
+        vc = _mm256_cmpeq_epi8(va, vb);
+        if (!_mm256_testc_si256(vc, ones)) {
+          a += 32l - _lzcnt_u32(~_mm256_movemask_epi8(vc));
+          break;
+        }
+      }
+    } else {
+      a += 32l - _lzcnt_u32(~_mm256_movemask_epi8(vc));
+    }
+
+  } else
+#endif
+  {
+    while (a > min_a && a[-1] == (a + d)[-1]) --a;
+  }
+
+  if (utf8) {
+    while (a < aend && int8_t(*a) < int8_t(0xc0)) ++a;
+  }
+
+  return aend - a;
+}
+
+}  // namespace cbu

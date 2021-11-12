@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <concepts>
 #include <cstdarg>
 #include <cstddef>
@@ -35,7 +36,6 @@
 #include <string_view>
 
 namespace cbu {
-inline namespace cbu_strutil {
 
 // Always return the number of characters actually filled.
 // Function name taken from Linux kernel.
@@ -119,5 +119,45 @@ struct StrLessLengthFirst {
   }
 };
 
-} // namespace cbu_strutil
-} // namespace cbu
+// Return the length of common prefix.
+// If utf8 is true, always cut on UTF-8 character boundaries.
+[[gnu::pure]] size_t common_prefix_ex(const void*, const void*, size_t,
+                                      bool utf8) noexcept;
+[[gnu::pure]] size_t common_suffix_ex(const void*, const void*, size_t,
+                                      bool utf8) noexcept;
+
+inline size_t common_prefix(std::string_view sa, std::string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  return common_prefix_ex(sa.data(), sb.data(), maxl, false);
+}
+
+inline size_t common_prefix_utf8(std::string_view sa,
+                                 std::string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  return common_prefix_ex(sa.data(), sb.data(), maxl, true);
+}
+
+inline size_t common_prefix(std::u8string_view sa,
+                            std::u8string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  return common_prefix_ex(sa.data(), sb.data(), maxl, true);
+}
+
+inline size_t common_suffix(std::string_view sa, std::string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  return common_suffix_ex(sa.end(), sb.end(), maxl, false);
+}
+
+inline size_t common_suffix_utf8(std::string_view sa,
+                                 std::string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  return common_suffix_ex(sa.end(), sb.end(), maxl, true);
+}
+
+inline size_t common_suffix(std::u8string_view sa,
+                            std::u8string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  return common_suffix_ex(sa.end(), sb.end(), maxl, true);
+}
+
+}  // namespace cbu
