@@ -39,6 +39,7 @@ If you use anything else, you have to take care of it yourself.
 
 [`cbu/common`](cbu/common): Common utilities
 
+* `arch.h`: Architecture-specific helper functions
 * `bit_cast.h`: An (incomplete) implementation of C++20 [`std::bit_cast`](https://en.cppreference.com/w/cpp/numeric/bit_cast)
 * `bit.h`: Bit manipulation code
   - `ctz`, `clz`, `bsr`, `popcnt`: type-generic bit manipulation functions
