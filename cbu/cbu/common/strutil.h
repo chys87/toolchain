@@ -35,7 +35,24 @@
 #include <cstring>
 #include <string_view>
 
+#include "cbu/common/concepts.h"
+
 namespace cbu {
+namespace strutil_detail {
+
+// Extract traits_type
+template <typename T, typename C>
+struct CharTraitsType {
+  using type = std::char_traits<C>;
+};
+
+template <typename T, typename C>
+requires requires() { typename T::traits_type; }
+struct CharTraitsType<T, C> {
+  using type = typename T::traits_type;
+};
+
+}  // namespace strutil_detail
 
 // Always return the number of characters actually filled.
 // Function name taken from Linux kernel.
@@ -91,30 +108,63 @@ int compare_string_view(std::string_view a, std::string_view b) noexcept
 int compare_string_view_for_lt(std::string_view a, std::string_view b) noexcept
   __attribute__((__pure__));
 
+// Convert anything to a string_view, useful in templates.
+template <Std_string_char C>
+inline constexpr std::basic_string_view<C> any_to_string_view(
+    const C* str) noexcept {
+  return str;
+};
+
+template <typename T>
+requires requires(const T& obj) {
+  { std::data(obj) } -> Pointer;
+  requires Std_string_char<std::remove_cvref_t<decltype(*obj.data())>>;
+  { std::size(obj) } -> std::convertible_to<std::size_t>;
+}
+inline constexpr auto any_to_string_view(const T& obj) noexcept {
+  using C = std::remove_cvref_t<decltype(*obj.data())>;
+  using Traits = typename strutil_detail::CharTraitsType<T, C>::type;
+  return std::basic_string_view<C, Traits>(std::data(obj), std::size(obj));
+};
+
+template <typename T>
+concept Any_to_string_view_compat = requires(const T& a) {
+  {any_to_string_view(a)};
+};
+
 // First compare by length, then by string content
 // Suitable for use in map and set
-constexpr int strcmp_length_first(
-    std::string_view a, std::string_view b) noexcept {
-  if (a.length() < b.length())
+template <Any_to_string_view_compat T, Any_to_string_view_compat U>
+requires requires(const T& a, const U& b) {
+  requires std::is_same_v<decltype(any_to_string_view(a)),
+                          decltype(any_to_string_view(b))>;
+}
+inline constexpr int strcmp_length_first(const T& a, const U& b) noexcept {
+  auto sv_a = any_to_string_view(a);
+  auto sv_b = any_to_string_view(b);
+  if (sv_a.length() < sv_b.length())
     return -1;
-  else if (a.length() > b.length())
+  else if (sv_a.length() > sv_b.length())
     return 1;
   else
-    return std::memcmp(a.data(), b.data(), a.length());
+    return decltype(sv_a)::traits_type::compare(sv_a.data(), sv_b.data(),
+                                                sv_a.length());
 }
 
 struct StrCmpLengthFirst {
   using is_transparent = void;
-  constexpr int operator()(std::string_view a,
-                           std::string_view b) const noexcept {
+
+  template <typename T, typename U>
+  constexpr int operator()(const T& a, const U& b) const noexcept {
     return strcmp_length_first(a, b);
   }
 };
 
 struct StrLessLengthFirst {
   using is_transparent = void;
-  constexpr bool operator()(std::string_view a,
-                            std::string_view b) const noexcept {
+
+  template <typename T, typename U>
+  constexpr bool operator()(const T& a, const U& b) const noexcept {
     return strcmp_length_first(a, b) < 0;
   }
 };

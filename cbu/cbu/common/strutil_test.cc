@@ -26,10 +26,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "strutil.h"
+#include "cbu/common/strutil.h"
+
 #include <string>
 #include <string_view>
+
 #include <gtest/gtest.h>
+
+#include "cbu/debug/gtest_formatters.h"
 
 namespace cbu {
 
@@ -69,6 +73,15 @@ TEST(StrUtilTest, StrNumCmp) {
   EXPECT_GT(0, strnumcmp("abcd12a", "abcd23a"));
 }
 
+TEST(StrUtilTest, AnyToStringView) {
+  EXPECT_EQ(any_to_string_view("xyz"), "xyz"sv);
+  EXPECT_EQ(any_to_string_view((const char8_t*)u8"一二"), u8"一二"sv);
+  EXPECT_EQ(any_to_string_view(u8"一二"), u8"一二"sv);
+  EXPECT_EQ(any_to_string_view(std::u16string_view(u"一二")), u"一二"sv);
+  std::u32string s = U"🀄️";
+  EXPECT_EQ(any_to_string_view(s), U"🀄️"sv);
+}
+
 TEST(StrUtilTest, StrCmpLengthFirst) {
   EXPECT_LT(strcmp_length_first("z", "ab"), 0);
   EXPECT_LT(strcmp_length_first("ab", "zz"), 0);
@@ -76,6 +89,12 @@ TEST(StrUtilTest, StrCmpLengthFirst) {
   EXPECT_GT(strcmp_length_first("zz", "ab"), 0);
   EXPECT_GT(strcmp_length_first("zzz", "ab"), 0);
   EXPECT_GT(strcmp_length_first("aaa", "zz"), 0);
+
+  EXPECT_GT(strcmp_length_first("中"sv, "xy"sv), 0);
+  EXPECT_GT(strcmp_length_first(u8"中"sv, u8"xy"sv), 0);
+  EXPECT_LT(strcmp_length_first(L"中"sv, L"xy"s), 0);
+  EXPECT_LT(strcmp_length_first(u"中", u"xy"sv), 0);
+  EXPECT_LT(strcmp_length_first(U"中"sv, U"xy"sv), 0);
 }
 
 inline size_t naive_common_prefix(std::string_view a, std::string_view b) {
