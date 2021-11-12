@@ -34,12 +34,10 @@ namespace cbu {
 static_assert(Char_type<char>);
 static_assert(Char_type<unsigned char>);
 static_assert(Char_type<signed char>);
-#if defined __cpp_char8_t && __cpp_char8_t >= 201811
 static_assert(Char_type<char8_t>);
-#endif
 static_assert(!Char_type<std::byte>);
 static_assert(!Char_type<bool>);
 static_assert(!Char_type<const bool>);
 static_assert(!Char_type<bool&>);
 
-} // namespace cbu
+}  // namespace cbu

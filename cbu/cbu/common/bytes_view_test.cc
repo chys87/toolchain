@@ -44,12 +44,8 @@ using namespace cbu_bytes_view_types;
 static_assert(is_implicit_type_v<char>);
 static_assert(is_implicit_type_v<unsigned char>);
 static_assert(is_implicit_type_v<signed char>);
-#if defined __cpp_char8_t && __cpp_char8_t >= 201811
 static_assert(is_implicit_type_v<char8_t>);
-#endif
-#if defined __cpp_lib_byte && __cpp_lib_byte >= 201603
 static_assert(is_implicit_type_v<std::byte>);
-#endif
 static_assert(!is_implicit_type_v<bool>);
 static_assert(!is_implicit_type_v<int>);
 enum struct MyByte : unsigned char {};

@@ -33,6 +33,7 @@
 #include <cstdarg>
 #include <cstddef>
 #include <cstring>
+#include <cwchar>
 #include <string_view>
 
 #include "cbu/common/concepts.h"
@@ -142,13 +143,23 @@ requires requires(const T& a, const U& b) {
 inline constexpr int strcmp_length_first(const T& a, const U& b) noexcept {
   auto sv_a = any_to_string_view(a);
   auto sv_b = any_to_string_view(b);
-  if (sv_a.length() < sv_b.length())
+  if (sv_a.length() < sv_b.length()) {
     return -1;
-  else if (sv_a.length() > sv_b.length())
+  } else if (sv_a.length() > sv_b.length()) {
     return 1;
-  else
-    return decltype(sv_a)::traits_type::compare(sv_a.data(), sv_b.data(),
-                                                sv_a.length());
+  } else {
+    using Traits = typename decltype(sv_a)::traits_type;
+    // Explicitly use std::memcmp to make GCC and clang generate better code
+    if (!std::is_constant_evaluated()) {
+      if constexpr (std::is_same_v<Traits, std::char_traits<char>> ||
+                    std::is_same_v<Traits, std::char_traits<char8_t>>) {
+        return std::memcmp(sv_a.data(), sv_b.data(), sv_a.length());
+      } else if constexpr (std::is_same_v<Traits, std::char_traits<wchar_t>>) {
+        return std::wmemcmp(sv_a.data(), sv_b.data(), sv_a.length());
+      }
+    }
+    return Traits::compare(sv_a.data(), sv_b.data(), sv_a.length());
+  }
 }
 
 struct StrCmpLengthFirst {

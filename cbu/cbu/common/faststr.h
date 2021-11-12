@@ -323,11 +323,9 @@ inline std::u32string concat(std::initializer_list<std::u32string_view> il) {
   return concat(std::span<const std::u32string_view>(il.begin(), il.size()));
 }
 
-#if defined __cpp_char8_t && __cpp_char8_t >= 201811
 inline std::u8string concat(std::initializer_list<std::u8string_view> il) {
   return concat(std::span<const std::u8string_view>(il.begin(), il.size()));
 }
-#endif
 
 // Convert a hexadecimal digit to number
 inline constexpr std::optional<unsigned> convert_xdigit(

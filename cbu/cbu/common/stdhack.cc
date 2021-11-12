@@ -96,11 +96,9 @@ char32_t *extend(std::u32string* buf, std::size_t n) {
   return extend_impl(buf, n);
 }
 
-#if defined __cpp_char8_t && __cpp_char8_t >= 201811
 char8_t *extend(std::u8string* buf, std::size_t n) {
   return extend_impl(buf, n);
 }
-#endif
 
 void truncate_unsafe(std::string* buf, std::size_t n) {
   truncate_unsafe_impl(buf, n);
@@ -114,11 +112,9 @@ void truncate_unsafe(std::u16string* buf, std::size_t n) {
 void truncate_unsafe(std::u32string* buf, std::size_t n) {
   truncate_unsafe_impl(buf, n);
 }
-#if defined __cpp_char8_t && __cpp_char8_t >= 201811
 void truncate_unsafe(std::u8string* buf, std::size_t n) {
   truncate_unsafe_impl(buf, n);
 }
-#endif
 
 void truncate_unsafer(std::string* buf, std::size_t n) {
   truncate_unsafer_impl(buf, n);
@@ -132,10 +128,8 @@ void truncate_unsafer(std::u16string* buf, std::size_t n) {
 void truncate_unsafer(std::u32string* buf, std::size_t n) {
   truncate_unsafer_impl(buf, n);
 }
-#if defined __cpp_char8_t && __cpp_char8_t >= 201811
 void truncate_unsafer(std::u8string* buf, std::size_t n) {
   truncate_unsafer_impl(buf, n);
 }
-#endif
 
-} // namespace cbu
+}  // namespace cbu

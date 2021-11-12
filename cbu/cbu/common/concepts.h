@@ -104,14 +104,7 @@ concept EqualityComparable = requires (T a, U b) {
 
 template <typename T>
 concept Std_string_char = std::is_same_v<T, char> ||
-  std::is_same_v<T, wchar_t> ||
-  std::is_same_v<T, char16_t> ||
-  std::is_same_v<T, char32_t> ||
-#if defined __cpp_char8_t && __cpp_char8_t >= 201811
-  std::is_same_v<T, char8_t>
-#else
-  false
-#endif
-  ;
+    std::is_same_v<T, wchar_t> || std::is_same_v<T, char16_t> ||
+    std::is_same_v<T, char32_t> || std::is_same_v<T, char8_t>;
 
 } // namespace cbu

@@ -50,12 +50,8 @@ template <> struct is_implicit_type<char> : std::true_type {};
 template <> struct is_implicit_type<signed char> : std::true_type {};
 template <> struct is_implicit_type<unsigned char> :
     std::true_type {};
-#if defined __cpp_char8_t && __cpp_char8_t >= 201811
 template <> struct is_implicit_type<char8_t> : std::true_type {};
-#endif
-#if defined __cpp_lib_byte && __cpp_lib_byte >= 201603
 template <> struct is_implicit_type<std::byte> : std::true_type {};
-#endif
 template <typename T>
 inline constexpr bool is_implicit_type_v = is_implicit_type<T>::value;
 
@@ -127,16 +123,12 @@ class pointer {
   constexpr operator const signed char* () const noexcept {
     return get<signed char>();
   }
-#if defined __cpp_char8_t && __cpp_char8_t >= 201811
   constexpr operator const char8_t* () const noexcept {
     return get<char8_t>();
   }
-#endif
-#if defined __cpp_lib_byte && __cpp_lib_byte >= 201603
   constexpr operator const std::byte* () const noexcept {
     return get<std::byte>();
   }
-#endif
 
  private:
   const void* p_;
@@ -144,11 +136,7 @@ class pointer {
 
 class BytesViewImpl {
  public:
-#if defined __cpp_lib_byte && __cpp_lib_byte >= 201603
   using value_type = const std::byte;
-#else
-  using value_type = const char;
-#endif
 
  public:
   constexpr BytesViewImpl() noexcept : p_(nullptr), l_(0) {}
@@ -182,7 +170,7 @@ class BytesViewImpl {
   std::size_t l_;
 };
 
-} // namespace cbu_bytes_view_types
+}  // namespace cbu_bytes_view_types
 
 class BytesView : public cbu_bytes_view_types::BytesViewImpl {
  public:
@@ -190,4 +178,4 @@ class BytesView : public cbu_bytes_view_types::BytesViewImpl {
   constexpr BytesView(const BytesView&) noexcept = default;
 };
 
-} // namespace cbu
+}  // namespace cbu
