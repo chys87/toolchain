@@ -28,14 +28,34 @@
 
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <tuple>
+#include <string_view>
 
 namespace cbu {
 
 // We follow RFC 3629, allowing UTF-8 only up to 4 bytes
 // (encoding Unicode up to U+10FFFF)
+
+// Also see http://www.unicode.org/versions/Unicode6.0.0/ch03.pdf - page 94
+//
+//  Code Points        1st       2s       3s       4s
+// U+0000..U+007F     00..7F
+// U+0080..U+07FF     C2..DF   80..BF
+// U+0800..U+0FFF     E0       A0..BF   80..BF
+// U+1000..U+CFFF     E1..EC   80..BF   80..BF
+// U+D000..U+D7FF     ED       80..9F   80..BF
+// U+E000..U+FFFF     EE..EF   80..BF   80..BF
+// U+10000..U+3FFFF   F0       90..BF   80..BF   80..BF
+// U+40000..U+FFFFF   F1..F3   80..BF   80..BF   80..BF
+// U+100000..U+10FFFF F4       80..8F   80..BF   80..BF
+//
+// Note that U+D800..U+DFFF are invalid code points.  They're used as UTF-16
+// surrogate pairs.
+
 enum struct Utf8ByteType {
   ASCII,
   LEADING,
@@ -46,9 +66,9 @@ enum struct Utf8ByteType {
 inline constexpr Utf8ByteType utf8_byte_type(std::uint8_t c) noexcept {
   if (std::int8_t(c) >= 0) {
     return Utf8ByteType::ASCII;
-  } else if (std::int8_t(c) < std::int8_t(0xc0) /* c >= 0x80 && c < 0xc0 */ ) {
+  } else if (std::int8_t(c) < std::int8_t(0xc2) /* c >= 0x80 && c < 0xc2 */ ) {
     return Utf8ByteType::TRAILING;
-  } else if (c >= 0xc0 && c < 0xf4) {
+  } else if (c >= 0xc2 && c <= 0xf4) {
     return Utf8ByteType::LEADING;
   } else {
     return Utf8ByteType::INVALID;
@@ -77,8 +97,58 @@ inline constexpr unsigned int utf8_leading_byte_to_trailing_length(
           (std::numeric_limits<unsigned int>::digits - 7));
 }
 
+// Returns true if c is a code point reserved for UTF-16 surrogate pairs
+inline constexpr bool is_in_utf16_surrogate_range(std::uint32_t c) noexcept {
+  return (c >= 0xd800 && c <= 0xdfff);
+}
+
+namespace encoding_detail {
+
+constexpr std::array<std::uint8_t, 128> make_utf8_second_byte_ranges() {
+  std::array<std::uint8_t, 128> res;
+  for (auto& c : res) c = 0xf0;  // All invalid
+  for (auto [lo, hi, range] : std::initializer_list<
+           std::tuple<std::uint8_t, std::uint8_t, std::uint8_t>>{
+           {0xc2, 0xdf, 0x8b},
+           {0xe0, 0xe0, 0xab},
+           {0xe1, 0xec, 0x8b},
+           {0xed, 0xed, 0x89},
+           {0xee, 0xef, 0x8b},
+           {0xf0, 0xf0, 0x9b},
+           {0xf1, 0xf3, 0x8b},
+           {0xf4, 0xf4, 0x88}}) {
+    for (int i = lo; i <= hi; ++i) res[i - 0x80] = range;
+  }
+  return res;
+}
+
+inline constexpr auto kUtf8SecondByteRanges = make_utf8_second_byte_ranges();
+
+}  // namespace encoding_detail
+
+inline constexpr bool validate_utf8_two_bytes(std::uint8_t a,
+                                              std::uint8_t b) noexcept {
+  if (!(a & 0x80)) return true;
+  std::uint8_t range = encoding_detail::kUtf8SecondByteRanges[a - 0x80];
+  return (b >= (range & 0xf0) && (b >> 4) <= (range & 0xf));
+}
+
 // If c is out of range (> U+10FFFF) or is a UTF-16 surrogate, return nullptr
 char8_t* char32_to_utf8(char8_t* dst, char32_t c) noexcept;
 char* char32_to_utf8(char* dst, char32_t c) noexcept;
+
+// Verify if the memory range contains valid UTF-8.
+// This function makes use of AVX-2 to accelerate.
+// If you want even more agressive optimizations then simdjson::validate_utf8
+// is the way to go.
+[[gnu::pure]] bool validate_utf8(const void* ptr, std::size_t size) noexcept;
+
+inline bool validate_utf8(std::string_view bytes) noexcept {
+  return validate_utf8(bytes.data(), bytes.size());
+}
+
+inline bool validate_utf8(std::u8string_view bytes) noexcept {
+  return validate_utf8(bytes.data(), bytes.size());
+}
 
 } // namespace cbu
