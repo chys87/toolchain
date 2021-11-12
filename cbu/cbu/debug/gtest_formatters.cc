@@ -41,7 +41,7 @@ void PrintTo(std::u8string_view s, std::ostream* os) {
 }
 
 void PrintTo(std::u16string_view s, std::ostream* os) {
-  auto buffer = make_unique_for_overwrite<char[]>(s.size() * 6);
+  auto buffer = cbu::make_unique_for_overwrite<char[]>(s.size() * 6);
   char* p = buffer.get();
   for (char16_t c : s) {
     // FIXME: This is actually incorrect -- treating char16_t as though it
@@ -56,7 +56,7 @@ void PrintTo(std::u16string_view s, std::ostream* os) {
 }
 
 void PrintTo(std::u32string_view s, std::ostream* os) {
-  auto buffer = make_unique_for_overwrite<char[]>(s.size() * 6);
+  auto buffer = cbu::make_unique_for_overwrite<char[]>(s.size() * 6);
   char* p = buffer.get();
   for (char32_t c : s) {
     char* q = cbu::char32_to_utf8(p, c);
