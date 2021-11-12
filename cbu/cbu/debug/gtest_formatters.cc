@@ -26,17 +26,61 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "cbu/debug/gtest_formatters.h"
+
 #include <string_view>
 
 #include "cbu/common/encoding.h"
 #include "cbu/common/memory.h"
+#include "cbu/common/zstring_view.h"
 
 namespace std {
 
-// STL doesn't provide proper operator<< overload for char8_t, char16_t or
-// char32_t
-void PrintTo(const std::u8string_view& s, std::ostream* os);
-void PrintTo(const std::u16string_view& s, std::ostream* os);
-void PrintTo(const std::u32string_view& s, std::ostream* os);
+void PrintTo(std::u8string_view s, std::ostream* os) {
+  *os << std::string_view(reinterpret_cast<const char*>(s.data()), s.size());
+}
+
+void PrintTo(std::u16string_view s, std::ostream* os) {
+  auto buffer = make_unique_for_overwrite<char[]>(s.size() * 6);
+  char* p = buffer.get();
+  for (char16_t c : s) {
+    // FIXME: This is actually incorrect -- treating char16_t as though it
+    // were char32_t
+    char* q = cbu::char32_to_utf8(p, c);
+    if (q != nullptr)
+      p = q;
+    else
+      *p++ = '?';
+  }
+  *os << std::string_view(buffer.get(), p - buffer.get());
+}
+
+void PrintTo(std::u32string_view s, std::ostream* os) {
+  auto buffer = make_unique_for_overwrite<char[]>(s.size() * 6);
+  char* p = buffer.get();
+  for (char32_t c : s) {
+    char* q = cbu::char32_to_utf8(p, c);
+    if (q != nullptr)
+      p = q;
+    else
+      *p++ = '?';
+  }
+  *os << std::string_view(buffer.get(), p - buffer.get());
+}
 
 }  // namespace std
+
+namespace cbu {
+
+void PrintTo(zstring_view s, std::ostream* os) { *os << std::string_view(s); }
+void PrintTo(u8zstring_view s, std::ostream* os) {
+  PrintTo(std::u8string_view(s), os);
+}
+void PrintTo(u16zstring_view s, std::ostream* os) {
+  PrintTo(std::u16string_view(s), os);
+}
+void PrintTo(u32zstring_view s, std::ostream* os) {
+  PrintTo(std::u32string_view(s), os);
+}
+
+}  // namespace cbu

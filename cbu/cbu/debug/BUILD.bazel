@@ -25,13 +25,11 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cc_library(
-  name = 'common',
-  srcs = glob(['*.cc'], exclude=['*_test.cc']),
-  hdrs = glob(['*.h'], exclude=['*_test.h']),
+  name = 'gtest_formatters',
+  srcs = ['gtest_formatters.cc'],
+  hdrs = ['gtest_formatters.h'],
   deps = [
-    '//cbu/compat',
-    '//cbu/fsyscall',
-    '//cbu/tweak:tweak',
+    '//cbu/common:common',
   ],
   copts = [
     '-march=native',
@@ -45,22 +43,4 @@ cc_library(
   # use static linking
   linkstatic=True,
   visibility = ["//visibility:public"],
-)
-
-cc_test(
-  name = 'common-tests',
-  srcs = glob(['*_test.cc', '*_test.h']),
-  deps = [
-    ':common',
-    '@com_google_googletest//:gtest_main',
-    '//cbu/debug:gtest_formatters',
-  ],
-  copts = [
-    '-march=native',
-    '-std=gnu++2a',
-    '-Wall',
-    '-Werror',
-    '-fdiagnostics-color=always',
-    '-g',
-  ],
 )

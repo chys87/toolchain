@@ -30,7 +30,7 @@
 
 #include <gtest/gtest.h>
 
-#include "cbu/common/common_test.h"
+#include "cbu/debug/gtest_formatters.h"
 
 namespace cbu {
 namespace {
