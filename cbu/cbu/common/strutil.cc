@@ -324,6 +324,9 @@ size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl,
   } else
 #endif
   {
+    while (k < maxl / 8 * 8 &&
+           mempick<uint64_t>(a + k) == mempick<uint64_t>(b + k))
+      k += 8;
     while ((k < maxl) && a[k] == b[k]) ++k;
   }
 
