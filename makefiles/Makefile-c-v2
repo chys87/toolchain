@@ -489,8 +489,9 @@ AUTO_GENERATED_EXIST_BAK := $(wildcard $(AUTO_GENERATED_EXIST:%=%.bak))
 AUTO_GENERATED_COMPARE := $(AUTO_GENERATED_EXIST_BAK:%.bak=%)
 
 compare:
-	$(Q)for x in $(AUTO_GENERATED); do \
-		if [ -f $$x -a -f $$x.bak ] && ! cmp -s $$x.bak $$x; then \
+	$(Q)touch -d '-1 day' /tmp/.makefile-c-v2-compare; \
+	for x in $(AUTO_GENERATED); do \
+		if [ -f $$x -a -f $$x.bak -a $$x -nt /tmp/.makefile-c-v2-compare ] && ! cmp -s $$x.bak $$x; then \
 			colordiff -up $$x.bak $$x | less -R; \
 		fi \
 	done
