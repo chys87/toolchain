@@ -42,7 +42,8 @@ using namespace std;
 template <typename T, typename U>
 concept Member_swap = requires (T &a, U &b) { a.swap(b); };
 
-// When a.swap(b) is available, use it; otherwise, fall back to std::swap
+// When a.swap(b) is available, use it; otherwise, fall back to ADL swap() or
+// std::swap
 template <typename T, typename U>
 requires Member_swap<T, U>
 inline constexpr void swap_impl(T &a, U &b) noexcept(noexcept(a.swap(b))) {
