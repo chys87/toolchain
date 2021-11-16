@@ -29,6 +29,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 
 #include "cbu/compat/atomic_ref.h"
 #include "cbu/tweak/tweak.h"
@@ -57,7 +58,7 @@ class LowLevelMutex {
   void wake() noexcept;
 
  private:
-  int v_ = 0;
+  std::uint32_t v_ = 0;
 };
 
 #if defined __x86_64__
@@ -105,7 +106,7 @@ CBU_MUTEX_INLINE void LowLevelMutex::unlock() noexcept {
 
 CBU_MUTEX_INLINE void LowLevelMutex::lock() noexcept {
   if (!tweak::SINGLE_THREADED) {
-    int copy = 0;
+    std::uint32_t copy = 0;
     if (!std::atomic_ref(v_).compare_exchange_weak(
             copy, 1, std::memory_order_acquire, std::memory_order_relaxed))
       wait(copy);
@@ -114,7 +115,8 @@ CBU_MUTEX_INLINE void LowLevelMutex::lock() noexcept {
 
 CBU_MUTEX_INLINE void LowLevelMutex::unlock() noexcept {
   if (!tweak::SINGLE_THREADED) {
-    int c = std::atomic_ref(v_).fetch_sub(1, std::memory_order_release) - 1;
+    std::uint32_t c =
+        std::atomic_ref(v_).fetch_sub(1, std::memory_order_release) - 1;
     if (__builtin_expect(c, 0) != 0) wake();
   }
 }
@@ -125,7 +127,7 @@ CBU_MUTEX_INLINE bool LowLevelMutex::try_lock() noexcept {
   if (tweak::SINGLE_THREADED) {
     return true;
   } else {
-    int copy = 0;
+    std::uint32_t copy = 0;
     return std::atomic_ref(v_).compare_exchange_strong(
         copy, 1, std::memory_order_acquire, std::memory_order_relaxed);
   }

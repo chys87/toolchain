@@ -296,8 +296,17 @@ def_fsys_nomem(getgid,getgid,unsigned,0)
 def_fsys_nomem(getegid,getegid,unsigned,0)
 def_fsys_nomem(getsid,getsid,int,1,int)
 def_fsys_nomem(sched_yield,sched_yield,int,0)
+#ifdef __cplusplus
+def_fsys(futex4,futex,long,4,unsigned*,int,unsigned,const struct timespec *)
+def_fsys(futex3,futex,long,3,unsigned*,int,unsigned)
 def_fsys(futex4,futex,int,4,int *,int,int,const struct timespec *)
 def_fsys(futex3,futex,int,3,int *,int,int)
+#else  // For C, which doesn't support overloading, we're foced to use void*
+       // to avoid breaking old code.
+       // Clang supoprts attribute overloadable, but we choose not to bother.
+def_fsys(futex4,futex,long,4,void*,int,int,const struct timespec *)
+def_fsys(futex3,futex,long,3,void*,int,int)
+#endif
 def_fsys(mmap,mmap,void*,6,void*,unsigned long,int,int,int,long)
 def_fsys(munmap,munmap,int,2,void*,unsigned long)
 def_fsys(madvise,madvise,int,3,void*,unsigned long,int)

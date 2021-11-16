@@ -37,13 +37,13 @@ namespace cbu {
 void LowLevelMutex::wait(int c) noexcept {
   for (;;) {
     if ((c == 2) || ({
-          int copy_a = 1;
+          uint32_t copy_a = 1;
           !std::atomic_ref(v_).compare_exchange_weak(
               copy_a, 2, std::memory_order_relaxed, std::memory_order_relaxed);})) {
       fsys_futex4(&v_, FUTEX_WAIT_PRIVATE, 2, 0);
     }
 
-    int copy_b = 0;
+    uint32_t copy_b = 0;
     if (std::atomic_ref(v_).compare_exchange_weak(
           copy_b, 2, std::memory_order_acquire, std::memory_order_relaxed))
       break;
@@ -58,7 +58,7 @@ void LowLevelMutex::wake() noexcept {
 
 void LowLevelMutex::yield() noexcept {
   if (!tweak::SINGLE_THREADED &&
-      (unsigned)std::atomic_ref(v_).load(std::memory_order_relaxed) >= 2u) {
+      std::atomic_ref(v_).load(std::memory_order_relaxed) >= 2u) {
     unlock();
     fsys_sched_yield();
     lock();

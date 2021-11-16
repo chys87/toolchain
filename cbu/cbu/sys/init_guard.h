@@ -29,6 +29,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 #include <limits>
 #include <memory>
 #include <new>
@@ -46,9 +47,9 @@ class InitGuard {
   InitGuard& operator=(const InitGuard&) = delete;
 
   // Low-level interface.  Only use this if you know exactly what you're doing.
-  enum struct LowLevelInit : int {};
+  enum struct LowLevelInit : std::uint32_t {};
   explicit constexpr InitGuard(LowLevelInit v) noexcept
-      : v_(static_cast<int>(v)) {}
+      : v_(static_cast<std::uint32_t>(v)) {}
 
   // This is the low-level interface, the callback should specify the
   // value representing "DONE" to be stored in v_.
