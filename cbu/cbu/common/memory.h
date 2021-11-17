@@ -31,16 +31,40 @@
 #include <memory>
 #include <new>
 
+#include "cbu/common/byte_size.h"
+
 namespace cbu {
 
-// This function only deletes the raw memory, without invoking destructor
+// Convenient low-level new and delete
+// These functions only allocates and deallocates raw memory, without invoking
+// constructor or destructor
 template <typename T>
-inline constexpr void sized_delete(T* p , std::size_t bytes) noexcept {
+constexpr T* raw_scalar_new() {
+  void* p;
+  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    p = ::operator new(sizeof(T), std::align_val_t(alignof(T)));
+  else
+    p = ::operator new(sizeof(T));
+  return static_cast<T*>(p);
+}
+
+template <typename T>
+constexpr T* raw_array_new(ByteSize<sizeof(T)> n) {
+  void* p;
+  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    p = ::operator new[](n.bytes(), std::align_val_t(alignof(T)));
+  else
+    p = ::operator new[](n.bytes());
+  return static_cast<T*>(p);
+}
+
+template <typename T>
+constexpr void raw_scalar_delete(T* p) noexcept {
 #ifdef __cpp_sized_deallocation
   if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    ::operator delete(p, bytes, std::align_val_t(alignof(T)));
+    ::operator delete(p, sizeof(T), std::align_val_t(alignof(T)));
   else
-    ::operator delete(p, bytes);
+    ::operator delete(p, sizeof(T));
 #else
   if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
     ::operator delete(p, std::align_val_t(alignof(T)));
@@ -49,14 +73,14 @@ inline constexpr void sized_delete(T* p , std::size_t bytes) noexcept {
 #endif
 }
 
-// This function only deletes the raw memory, without invoking destructor
 template <typename T>
-inline constexpr void sized_array_delete(T* p , std::size_t bytes) noexcept {
+constexpr void raw_array_delete(T* p, ByteSize<sizeof(T)> n
+                                [[maybe_unused]]) noexcept {
 #ifdef __cpp_sized_deallocation
   if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    ::operator delete[](p, bytes, std::align_val_t(alignof(T)));
+    ::operator delete[](p, n.bytes(), std::align_val_t(alignof(T)));
   else
-    ::operator delete[](p, bytes);
+    ::operator delete[](p, n.bytes());
 #else
   if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
     ::operator delete[](p, std::align_val_t(alignof(T)));
@@ -65,32 +89,69 @@ inline constexpr void sized_array_delete(T* p , std::size_t bytes) noexcept {
 #endif
 }
 
+// Same as std::destroy_n, but does destructin in reverse order
+template <typename T, typename Size>
+constexpr void destroy_backward_n(T* begin, Size size) {
+  if constexpr (std::is_trivially_destructible_v<T>) return;
+  T* p = begin + size;
+  while (p != begin) std::destroy_at(--p);
+}
+
+// Deleters
+struct DummyDeleter {
+  constexpr void operator()(void *) const noexcept {}
+};
+
 template <typename T>
-struct SizedArrayDeleter {
-  std::size_t bytes;
+using ScalarDeleter = std::default_delete<T>;
+
+template <typename T>
+struct ArrayDeleter {
+  ByteSize<sizeof(T)> size;
   constexpr void operator()(T* p) const noexcept {
-    std::destroy_n(p, bytes / sizeof(T));
-    sized_array_delete(p, bytes);
+    destroy_backward_n(p, size);
+    raw_array_delete(p, size);
   }
 };
+
+template <typename T>
+struct RawScalarDeleter {
+  constexpr void operator()(T* p) const noexcept { raw_scalar_delete(p); }
+};
+
+template <typename T>
+struct RawArrayDeleter {
+  ByteSize<sizeof(T)> size;
+  constexpr void operator()(T* p) const noexcept { raw_array_delete(p, size); }
+};
+
+template <typename T>
+struct RawScalarDelete {
+  constexpr void operator()(T *p) const noexcept {
+    raw_scalar_delete(p);
+  }
+};
+
+// Destruct, and calls RawDeleter to free up memory
+template <typename T, typename Size, typename RawDeleter = DummyDeleter>
+constexpr void destroy_backward_and_delete_n(
+    T* begin, Size n, RawDeleter deleter = RawDeleter()) noexcept {
+  destroy_backward_n(begin, n);
+  deleter(begin);
+}
 
 namespace cbu_memory_detail {
 
 template <typename T, bool DEFAULT_INIT>
 inline T* new_and_init_array(std::size_t n) {
-  std::size_t bytes = n * sizeof(T);
-  T* p;
-  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    p = static_cast<T*>(::operator new[](bytes, std::align_val_t(alignof(T))));
-  else
-    p = static_cast<T*>(::operator new[](bytes));
+  T* p = raw_array_new<T>(n);
   try {
     if constexpr (DEFAULT_INIT)
       std::uninitialized_default_construct_n(p, n);
     else
       std::uninitialized_value_construct_n(p, n);
   } catch (...) {
-    sized_array_delete(p, bytes);
+    raw_array_delete(p, n);
     throw;
   }
   return p;
@@ -100,8 +161,8 @@ inline T* new_and_init_array(std::size_t n) {
 
 template <typename T>
 requires std::is_unbounded_array_v<T>
-using sized_unique_ptr = std::unique_ptr<
-    T, SizedArrayDeleter<std::remove_extent_t<T>>>;
+using sized_unique_ptr =
+    std::unique_ptr<T, ArrayDeleter<std::remove_extent_t<T>>>;
 
 template <typename T, typename... Args>
 requires (!std::is_array_v<T>)
@@ -114,7 +175,7 @@ requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique(std::size_t n) {
   using V = std::remove_extent_t<T>;
   return sized_unique_ptr<T>(cbu_memory_detail::new_and_init_array<V, false>(n),
-                             SizedArrayDeleter<V>{n * sizeof(V)});
+                             ArrayDeleter<V>{n});
 }
 
 template <typename T>
@@ -130,7 +191,7 @@ requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) {
   using V = std::remove_extent_t<T>;
   return sized_unique_ptr<T>(cbu_memory_detail::new_and_init_array<V, true>(n),
-                             SizedArrayDeleter<V>{n * sizeof(V)});
+                             ArrayDeleter<V>{n});
 }
 
 template <typename T, typename... Args>
@@ -144,7 +205,7 @@ requires std::is_unbounded_array_v<T>
 inline std::shared_ptr<T> make_shared(std::size_t n) {
   using V = std::remove_extent_t<T>;
   return std::shared_ptr<T>(cbu_memory_detail::new_and_init_array<V, false>(n),
-                            SizedArrayDeleter<V>{n * sizeof(V)});
+                            ArrayDeleter<V>{n});
 }
 
 template <typename T>
@@ -160,7 +221,7 @@ requires std::is_unbounded_array_v<T>
 inline std::shared_ptr<T> make_shared_for_overwrite(std::size_t n) {
   using V = std::remove_extent_t<T>;
   return std::shared_ptr<T>(cbu_memory_detail::new_and_init_array<V, true>(n),
-                            SizedArrayDeleter<V>{n * sizeof(V)});
+                            ArrayDeleter<V>{n});
 }
 
 // OutlinableArray<T> is like array<T> or unique_ptr<T[]>, but allocates
@@ -208,21 +269,9 @@ class OutlinableArray {
   OutlinableArray& operator=(const OutlinableArray&) = delete;
 
   constexpr ~OutlinableArray() noexcept {
-    std::destroy_n(ptr_, size_);
-    if (allocated_) {
-#ifdef __cpp_sized_deallocation
-      if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-        ::operator delete[](ptr_, size_ * sizeof(T),
-                            std::align_val_t(alignof(T)));
-      else
-        ::operator delete[](ptr_, size_ * sizeof(T));
-#else
-      if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-        ::operator delete[](ptr_, std::align_val_t(alignof(T)));
-      else
-        ::operator delete[](ptr_);
-#endif
-    }
+    if constexpr (!std::is_trivially_destructible_v<T>)
+      destuct_n(ptr_, size_);
+    if (allocated_) raw_array_delete(ptr_, size_);
   }
 
   constexpr T* get() const noexcept { return ptr_; }
@@ -240,10 +289,8 @@ class OutlinableArray {
                               std::size_t n) {
     if (n <= N)
       return buffer->buffer;
-    else if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-      return ::operator new[](sizeof(T) * n, std::align_val_t(alignof(T)));
     else
-      return ::operator new[](sizeof(T) * n);
+      return raw_array_new<T>(n);
   }
 
  private:

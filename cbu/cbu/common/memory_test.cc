@@ -127,14 +127,12 @@ TEST(MemoryTest, MakeSharedDestructorTest) {
 TEST(MemoryTest, MakeUniqueNullPointer) {
   sized_unique_ptr<int[]>();
   sized_unique_ptr<int[]>(nullptr);
-  sized_unique_ptr<int[]>(nullptr, SizedArrayDeleter<int>{});
-  sized_unique_ptr<int[]>(nullptr, SizedArrayDeleter<int>{sizeof(int)});
+  sized_unique_ptr<int[]>(nullptr, ArrayDeleter<int>{});
+  sized_unique_ptr<int[]>(nullptr, ArrayDeleter<int>{1});
   sized_unique_ptr<NonTrivialType[]>();
   sized_unique_ptr<NonTrivialType[]>(nullptr);
-  sized_unique_ptr<NonTrivialType[]>(nullptr,
-                                     SizedArrayDeleter<NonTrivialType>{});
-  sized_unique_ptr<NonTrivialType[]>(
-      nullptr, SizedArrayDeleter<NonTrivialType>{sizeof(NonTrivialType)});
+  sized_unique_ptr<NonTrivialType[]>(nullptr, ArrayDeleter<NonTrivialType>{});
+  sized_unique_ptr<NonTrivialType[]>(nullptr, ArrayDeleter<NonTrivialType>{1});
 }
 
 TEST(MemoryTest, OutlinableArray) {

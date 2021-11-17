@@ -53,7 +53,6 @@ If you use anything else, you have to take care of it yourself.
    and `const void*` (explicit).
 * `concepts.h`: Somewhat like C++20's [`<concepts>`](https://en.cppreference.com/w/cpp/header/concepts)
 * `defer.h`: Provides macro `CBU_DEFER` for easier [RAII](https://en.cppreference.com/w/cpp/language/raii)
-* `destruct.h`: Provides several destruction functions
 * `double_integer.h`: Emulated integer types of double size for constexpr evaluation
 * `encoding.h`: UTF-8 functions
 * `escape.h`: C/JSON style string escaping utilities
@@ -63,7 +62,7 @@ If you use anything else, you have to take care of it yourself.
 * `fifo_list.h`: Provides `fifo_list<T>`, a first-in-first-out singly-linked container type with fast access to both ends
 * `heapq.h`: Heap operations
 * `immutable_string.h`: An "immutable" string class that holds either a `string_view` or a real `string` object.
-* `memory.h`: Provides some C++20 memory functions that are missing from GCC 9
+* `memory.h`: Provides memory operation utilities, including some C++20 memory functions that are missing from GCC 9
 * `merge_const.h`: Provides `cbu::kConst<T, args...>`, a simple wrapper of `inline constexpr`
 * `mp.h`: Multi-precicision integer operations: full support for addition, subtraction, multiplication and limited support for division
 * `once.h`: Provides macro `CBU_ONCE`, somewhat like but easier to use than [`pthread_once`](https://linux.die.net/man/3/pthread_once)
