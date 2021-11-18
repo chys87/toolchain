@@ -141,16 +141,14 @@ constexpr void destroy_backward_and_delete_n(
   deleter(begin);
 }
 
-namespace cbu_memory_detail {
-
-template <typename T, bool DEFAULT_INIT>
-inline T* new_and_init_array(std::size_t n) {
+// new_and_default_init_array, new_and_value_init_array:
+// Please note that the allocated memory can only be deleted by our
+// ArrayDeleter, not by delete[]
+template <typename T>
+inline T* new_and_default_init_array(std::size_t n) {
   T* p = raw_array_new<T>(n);
   try {
-    if constexpr (DEFAULT_INIT)
-      std::uninitialized_default_construct_n(p, n);
-    else
-      std::uninitialized_value_construct_n(p, n);
+    std::uninitialized_default_construct_n(p, n);
   } catch (...) {
     raw_array_delete(p, n);
     throw;
@@ -158,7 +156,17 @@ inline T* new_and_init_array(std::size_t n) {
   return p;
 }
 
-}  // namespace cbu_memory_detail
+template <typename T>
+inline T* new_and_value_init_array(std::size_t n) {
+  T* p = raw_array_new<T>(n);
+  try {
+    std::uninitialized_value_construct_n(p, n);
+  } catch (...) {
+    raw_array_delete(p, n);
+    throw;
+  }
+  return p;
+}
 
 // uninitialized_move_and_destroy: Move construct and destroy old object
 // It's the caller's responsibility to guarantee that old_obj and new_obj
@@ -218,7 +226,7 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  return sized_unique_ptr<T>(cbu_memory_detail::new_and_init_array<V, false>(n),
+  return sized_unique_ptr<T>(new_and_value_init_array<V>(n),
                              ArrayDeleter<V>{n});
 }
 
@@ -234,7 +242,7 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  return sized_unique_ptr<T>(cbu_memory_detail::new_and_init_array<V, true>(n),
+  return sized_unique_ptr<T>(new_and_default_init_array<V>(n),
                              ArrayDeleter<V>{n});
 }
 
@@ -248,7 +256,7 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline std::shared_ptr<T> make_shared(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  return std::shared_ptr<T>(cbu_memory_detail::new_and_init_array<V, false>(n),
+  return std::shared_ptr<T>(new_and_value_init_array<V>(n),
                             ArrayDeleter<V>{n});
 }
 
@@ -264,7 +272,7 @@ template <typename T>
 requires std::is_unbounded_array_v<T>
 inline std::shared_ptr<T> make_shared_for_overwrite(std::size_t n) {
   using V = std::remove_extent_t<T>;
-  return std::shared_ptr<T>(cbu_memory_detail::new_and_init_array<V, true>(n),
+  return std::shared_ptr<T>(new_and_default_init_array<V>(n),
                             ArrayDeleter<V>{n});
 }
 
