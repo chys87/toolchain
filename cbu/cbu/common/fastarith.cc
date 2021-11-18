@@ -32,8 +32,6 @@
 #include "bit.h"
 
 namespace cbu {
-inline namespace cbu_fastarith {
-
 
 namespace {
 
@@ -89,5 +87,4 @@ unsigned ilog10_impl(uint32_t x) noexcept {
   return y;
 }
 
-} // inline namespace cbu_fastarith
-} // namespace cbu
+}  // namespace cbu

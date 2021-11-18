@@ -44,7 +44,6 @@
 #endif
 
 namespace cbu {
-inline namespace cbu_fastarith {
 
 // r is the initial value, usually 1
 template <Raw_arithmetic T>
@@ -398,5 +397,4 @@ inline constexpr unsigned int ilog10(std::uint32_t x) noexcept {
   return ilog10_impl(x);
 }
 
-} // inline namespace cbu_fastarith
-} // namespace cbu
+}  // namespace cbu

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,6 @@
 #include "cbu/fsyscall/fsyscall.h"
 
 namespace cbu {
-inline namespace cbu_fileutil {
 
 time_t get_file_mtime(AtFile file) noexcept {
 #ifdef STATX_MTIME
@@ -107,5 +106,4 @@ bool ensure_file(AtFile atfile, mode_t mode) noexcept {
   }
 }
 
-} // namespace cbu_fileutil
-} // namepsace cbu
+}  // namespace cbu

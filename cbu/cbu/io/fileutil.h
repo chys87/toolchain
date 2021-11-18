@@ -37,7 +37,6 @@
 #include "cbu/common/zstring_view.h"
 
 namespace cbu {
-inline namespace cbu_fileutil {
 
 // Wraps an fd (to a directory) and a filename for openat and friends
 class AtFile {
@@ -99,5 +98,4 @@ inline constexpr std::string_view iov2sv(iovec v) noexcept {
   return {static_cast<const char *>(v.iov_base), v.iov_len};
 }
 
-} // namespace cbu_fileutil
-} // namepsace cbu
+}  // namespace cbu

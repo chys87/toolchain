@@ -47,7 +47,6 @@
 #include "cbu/compat/type_identity.h"
 
 namespace cbu {
-inline namespace cbu_faststr {
 
 // Useful for some SIMD operations
 extern const char arch_linear_bytes64[64];
@@ -429,5 +428,4 @@ inline constexpr std::optional<std::uint64_t> convert_16xdigit(
   return (std::uint64_t(*a) << 32) | *b;
 }
 
-} // namespace cbu_faststr
-} // namespace cbu
+}  // namespace cbu

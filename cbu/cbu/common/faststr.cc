@@ -36,7 +36,6 @@
 #include "cbu/compat/string.h"
 
 namespace cbu {
-inline namespace cbu_faststr {
 
 alignas(64) const char arch_linear_bytes64[64] = {
   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
@@ -223,5 +222,4 @@ std::string nprintf(std::size_t hint_size,
 
 template void append<char>(std::string*, std::span<const std::string_view>);
 
-} // namespace cbu_faststr
-} // namespace cbu
+}  // namespace cbu

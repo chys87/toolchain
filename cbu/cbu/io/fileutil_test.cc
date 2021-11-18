@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,6 @@
 #include <gtest/gtest.h>
 
 namespace cbu {
-inline namespace cbu_fileutil {
 
 TEST(FileUtilTest, AtFileTest) {
   AtFile atf;
@@ -49,6 +48,4 @@ TEST(FileUtilTest, AtFileTest) {
   EXPECT_TRUE(static_cast<bool>(atf));
 }
 
-
-} // namespace cbu_fileutil
-} // namepsace cbu
+}  // namespace cbu
