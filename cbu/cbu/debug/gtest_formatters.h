@@ -26,9 +26,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <ostream>
 #include <string_view>
 
+#include "cbu/common/byte_size.h"
 #include "cbu/common/zstring_view.h"
+
+using std::operator""sv;
 
 namespace std {
 
@@ -46,5 +50,11 @@ void PrintTo(zstring_view, std::ostream*);
 void PrintTo(u8zstring_view, std::ostream*);
 void PrintTo(u16zstring_view, std::ostream*);
 void PrintTo(u32zstring_view, std::ostream*);
+
+template <std::size_t N>
+void PrintTo(cbu::ByteSize<N> size, std::ostream* os) {
+  *os << "ByteSize<"sv << N << ">("sv << std::size_t(size) << ") /* "sv
+      << size.bytes() << " bytes */sv";
+}
 
 }  // namespace cbu

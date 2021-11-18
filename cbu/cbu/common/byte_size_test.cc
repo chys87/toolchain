@@ -58,4 +58,20 @@ TEST(ByteSizeTest, ByteSizeTypeTest) {
   EXPECT_EQ(12 * sizeof(int), (size * 2).bytes());
 }
 
+TEST(ByteSizeTest, TypeConversionTest) {
+  EXPECT_EQ(ByteSize<3>(ByteSize<5>(7)), 7);
+  EXPECT_EQ(ByteSize<3>(ByteSize<6>(7)), 7);
+  EXPECT_EQ(ByteSize<6>(ByteSize<3>(7)), 7);
+}
+
+TEST(ByteSizeTest, PointerOperationsTest) {
+  int x[128];
+
+  EXPECT_EQ(&x[5], &x[0] + ByteSize<sizeof(int)>(5));
+  EXPECT_EQ(&x[5], ByteSize<sizeof(int)>(5) + &x[0]);
+
+  EXPECT_EQ(&x[2], &x[5] - ByteSize<sizeof(int)>(3));
+
+}
+
 }  // namespace cbu

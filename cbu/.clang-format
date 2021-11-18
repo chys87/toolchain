@@ -1,6 +1,7 @@
 BasedOnStyle: Google
 DerivePointerAlignment: false
 IndentPPDirectives: AfterHash
+IndentRequires: true
 IncludeCategories:
 - Regex:           '^<[^/]*\.h>'
   Priority:        10

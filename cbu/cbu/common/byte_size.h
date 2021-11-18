@@ -29,6 +29,7 @@
 #pragma once
 
 #include <compare>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
@@ -71,7 +72,8 @@ inline constexpr U* byte_back(U* p, std::ptrdiff_t u) {
 }
 
 // A class with similar semantics as size_t, but stores size in bytes
-template <std::size_t N> requires (N > 0)
+template <std::size_t N>
+  requires(N > 0)
 class ByteSize {
  public:
   ByteSize() noexcept = default;
@@ -84,17 +86,20 @@ class ByteSize {
     return r;
   }
 
-  template <std::size_t M> requires (N > M && N % M == 0)
+  template <std::size_t M>
+    requires(N > M && N % M == 0)
   constexpr ByteSize(const ByteSize<M> &other) noexcept
     : bytes_(other.bytes() * (N / M)) {
   }
 
-  template <std::size_t M> requires (N < M && M % N == 0)
+  template <std::size_t M>
+    requires(N < M && M % N == 0)
   constexpr ByteSize(const ByteSize<M> &other) noexcept
     : bytes_(other.bytes() / (M / N)) {
   }
 
-  template <std::size_t M> requires (N % M != 0 && M % N != 0)
+  template <std::size_t M>
+    requires(N % M != 0 && M % N != 0)
   constexpr ByteSize(const ByteSize<M> &other) noexcept
     : ByteSize(std::size_t(other)) {
   }
@@ -112,13 +117,13 @@ class ByteSize {
   constexpr operator std::size_t() const noexcept { return size(); }
   constexpr explicit operator bool() const noexcept { return bytes_; }
 
-  constexpr ByteSize &operator *= (std::size_t k) noexcept {
+  constexpr ByteSize& operator*=(std::size_t k) noexcept {
     bytes_ *= k;
     return *this;
   }
 
   template <std::size_t M>
-  ByteSize &operator *= (ByteSize<M>) noexcept = delete;
+  ByteSize& operator*=(ByteSize<M>) noexcept = delete;
 
   constexpr ByteSize &operator += (const ByteSize &other) noexcept {
     bytes_ += other.bytes_;
@@ -130,49 +135,60 @@ class ByteSize {
     return *this;
   }
 
-  constexpr ByteSize &operator ++ () noexcept { bytes_ += N; return *this; }
-  constexpr ByteSize &operator -- () noexcept { bytes_ -= N; return *this; }
-  constexpr ByteSize operator ++ (int) noexcept {
+  template <std::size_t M>
+  constexpr ByteSize& operator+=(const ByteSize<M>&) = delete;
+
+  template <std::size_t M>
+  constexpr ByteSize& operator-=(const ByteSize<M>&) = delete;
+
+  constexpr ByteSize& operator++() noexcept {
+    bytes_ += N;
+    return *this;
+  }
+  constexpr ByteSize& operator--() noexcept {
+    bytes_ -= N;
+    return *this;
+  }
+  constexpr ByteSize operator++(int) noexcept {
     ByteSize r = *this;
     ++*this;
     return r;
   }
-
-  constexpr ByteSize operator -- (int) noexcept {
+  constexpr ByteSize operator--(int) noexcept {
     ByteSize r = *this;
     --*this;
     return r;
   }
 
   // Comparisons
-  friend constexpr bool operator == (const ByteSize& a,
-                                     const ByteSize& b) noexcept {
+  friend constexpr bool operator==(const ByteSize& a,
+                                   const ByteSize& b) noexcept {
     return a.bytes_ == b.bytes_;
   }
 
-  friend constexpr auto operator <=> (const ByteSize& a,
-                                      const ByteSize& b) noexcept {
+  friend constexpr auto operator<=>(const ByteSize& a,
+                                    const ByteSize& b) noexcept {
     return a.bytes_ <=> b.bytes_;
   }
 
   // Explicitly define comparisions against integers to avoid ambiguity.
-  template <typename T> requires std::is_integral<T>::value
-  friend constexpr bool operator == (const ByteSize& a, T b) noexcept {
+  friend constexpr bool operator==(const ByteSize& a,
+                                   std::integral auto b) noexcept {
     return a.bytes_ == b * N;
   }
 
-  template <typename T> requires std::is_integral<T>::value
-  friend constexpr auto operator <=> (const ByteSize& a, T b) noexcept {
+  friend constexpr auto operator<=>(const ByteSize& a,
+                                    std::integral auto b) noexcept {
     return a.bytes_ <=> b * N;
   }
 
-  template <typename T> requires std::is_integral<T>::value
-  friend constexpr bool operator == (T a, const ByteSize& b) noexcept {
+  friend constexpr bool operator==(std::integral auto a,
+                                   const ByteSize& b) noexcept {
     return a * N == b.bytes_;
   }
 
-  template <typename T> requires std::is_integral<T>::value
-  friend constexpr auto operator <=> (T a, const ByteSize& b) noexcept {
+  friend constexpr auto operator<=>(std::integral auto a,
+                                    const ByteSize& b) noexcept {
     return a * N <=> b.bytes_;
   }
 
@@ -180,13 +196,23 @@ class ByteSize {
   std::size_t bytes_;
 };
 
-template <std::size_t N, typename T> requires std::is_integral<T>::value
-inline constexpr ByteSize<N> operator * (const ByteSize<N> &a, T b) noexcept {
+// Explicitly disable comparison between different ByteSize's.
+// They are likely misuse.
+template <std::size_t M, std::size_t N>
+  requires(M != N)
+bool operator==(const ByteSize<M>&, const ByteSize<N>&) = delete;
+
+template <std::size_t M, std::size_t N>
+  requires(M != N)
+auto operator<=>(const ByteSize<M>&, const ByteSize<N>&) = delete;
+
+template <std::size_t N, std::integral T>
+inline constexpr ByteSize<N> operator*(const ByteSize<N>& a, T b) noexcept {
   return ByteSize<N>::from_bytes(a.bytes() * b);
 }
 
-template <std::size_t N, typename T> requires std::is_integral<T>::value
-inline constexpr ByteSize<N> operator * (T a, const ByteSize<N> &b) noexcept {
+template <std::size_t N, std::integral T>
+inline constexpr ByteSize<N> operator*(T a, const ByteSize<N>& b) noexcept {
   return ByteSize<N>::from_bytes(b.bytes() * a);
 }
 
@@ -194,48 +220,44 @@ template <std::size_t M, std::size_t N>
 void operator*(const ByteSize<M>&, const ByteSize<N>&) = delete;
 
 template <std::size_t N>
-inline constexpr ByteSize<N> operator + (const ByteSize<N> &a,
-                                         const ByteSize<N> &b) noexcept {
+inline constexpr ByteSize<N> operator+(const ByteSize<N>& a,
+                                       const ByteSize<N>& b) noexcept {
   return ByteSize<N>::from_bytes(a.bytes() + b.bytes());
 }
 
 template <std::size_t N>
-inline constexpr ByteSize<N> operator - (const ByteSize<N> &a,
-                                         const ByteSize<N> &b) noexcept {
+inline constexpr ByteSize<N> operator-(const ByteSize<N>& a,
+                                       const ByteSize<N>& b) noexcept {
   return ByteSize<N>::from_bytes(a.bytes() - b.bytes());
 }
 
-template <std::size_t M, std::size_t N> requires (M != N)
-inline constexpr std::size_t operator+(const ByteSize<M>& a,
-                                       const ByteSize<N>& b) noexcept {
-  return std::size_t(a) + std::size_t(b);
-}
+template <std::size_t M, std::size_t N>
+  requires(M != N)
+constexpr auto operator+(const ByteSize<M>& a, const ByteSize<N>& b) = delete;
 
-template <std::size_t M, std::size_t N> requires (M != N)
-inline constexpr std::size_t operator-(const ByteSize<M>& a,
-                                       const ByteSize<N>& b) noexcept {
-  return std::size_t(a) - std::size_t(b);
-}
+template <std::size_t M, std::size_t N>
+  requires(M != N)
+constexpr auto operator-(const ByteSize<M>& a, const ByteSize<N>& b) = delete;
 
 // Explicitly define them to avoid "ByteSize + int" being compiled as
 // "size_t(ByteSize) + int"
-template <std::size_t N, typename T> requires std::is_integral<T>::value
-inline constexpr ByteSize<N> operator + (const ByteSize<N> &a, T b) noexcept {
+template <std::size_t N, std::integral T>
+inline constexpr ByteSize<N> operator+(const ByteSize<N>& a, T b) noexcept {
   return ByteSize<N>::from_bytes(a.bytes() + b * N);
 }
 
-template <std::size_t N, typename T> requires std::is_integral<T>::value
-inline constexpr ByteSize<N> operator - (const ByteSize<N> &a, T b) noexcept {
+template <std::size_t N, std::integral T>
+inline constexpr ByteSize<N> operator-(const ByteSize<N>& a, T b) noexcept {
   return ByteSize<N>::from_bytes(a.bytes() - b * N);
 }
 
-template <std::size_t N, typename T> requires std::is_integral<T>::value
-inline constexpr ByteSize<N> operator + (T a, const ByteSize<N> &b) noexcept {
+template <std::size_t N, std::integral T>
+inline constexpr ByteSize<N> operator+(T a, const ByteSize<N>& b) noexcept {
   return ByteSize<N>::from_bytes(a * N + b.bytes());
 }
 
-template <std::size_t N, typename T> requires std::is_integral<T>::value
-inline constexpr ByteSize<N> operator - (T a, const ByteSize<N> &b) noexcept {
+template <std::size_t N, std::integral T>
+inline constexpr ByteSize<N> operator-(T a, const ByteSize<N>& b) noexcept {
   return ByteSize<N>::from_bytes(a * N - b.bytes());
 }
 
@@ -244,41 +266,42 @@ inline constexpr std::size_t operator+(const ByteSize<N>& a) noexcept {
   return a;
 }
 
-template <std::size_t N> ByteSize<N> operator - (const ByteSize<N> &a) = delete;
+template <std::size_t N>
+ByteSize<N> operator-(const ByteSize<N>& a) = delete;
 
 // Unfortunately we are unable to overload
 // operator [] (T *, ByteSize<sizeof(T)>)
 
-template <typename T>
-inline constexpr T *operator + (T *lo,
-                                const ByteSize<sizeof(T)> &diff) noexcept {
+template <typename T, std::size_t N>
+inline constexpr T* operator+(T* lo, const ByteSize<N>& diff) noexcept {
+  static_assert(sizeof(T) == N);
   return byte_advance(lo, diff.bytes());
 }
 
-template <typename T>
-inline constexpr T *&operator += (T *&lo,
-                                  const ByteSize<sizeof(T)> &diff) noexcept {
+template <typename T, std::size_t N>
+inline constexpr T*& operator+=(T*& lo, const ByteSize<N>& diff) noexcept {
+  static_assert(sizeof(T) == N);
   lo = byte_advance(lo, diff.bytes());
   return lo;
 }
 
-template <typename T>
-inline constexpr T *operator + (const ByteSize<sizeof(T)> &diff,
-                                T *lo) noexcept {
+template <typename T, std::size_t N>
+inline constexpr T* operator+(const ByteSize<N>& diff, T* lo) noexcept {
+  static_assert(sizeof(T) == N);
   return byte_advance(lo, diff.bytes());
 }
 
-template <typename T>
-inline constexpr T *operator - (T *lo,
-                                const ByteSize<sizeof(T)> &diff) noexcept {
+template <typename T, std::size_t N>
+inline constexpr T* operator-(T* lo, const ByteSize<N>& diff) noexcept {
+  static_assert(sizeof(T) == N);
   return byte_back(lo, diff.bytes());
 }
 
-template <typename T>
-inline constexpr T *&operator -= (T *&lo,
-                                  const ByteSize<sizeof(T)> &diff) noexcept {
+template <typename T, std::size_t N>
+inline constexpr T*& operator-=(T*& lo, const ByteSize<N>& diff) noexcept {
+  static_assert(sizeof(T) == N);
   lo = byte_back(lo, diff.bytes());
   return lo;
 }
 
-} // namespace cbu
+}  // namespace cbu
