@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <compare>
+#include <concepts>
 #include <cstdint>
 #include <limits>
 #include <utility>
@@ -368,7 +369,7 @@ inline constexpr A addc(A x, A y, A carryin, A* carryout) noexcept {
   return res;
 }
 
-template <Integral U, Integral V>
+template <std::integral U, std::integral V>
 inline bool sub_overflow(U* a, V b) noexcept {
   return sub_overflow(*a, b, a);
 }

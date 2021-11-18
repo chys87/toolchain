@@ -59,31 +59,19 @@ template <typename T>
 concept Raw_arithmetic = Arithmetic<T> && No_cv<T>;
 
 template <typename T>
-concept Floating_point = std::is_floating_point_v<T>;
+concept Raw_floating_point = std::floating_point<T> && No_cv<T>;
 
 template <typename T>
-concept Raw_floating_point = std::is_floating_point_v<T> && No_cv<T>;
+concept Raw_integral = std::integral<T> && No_cv<T>;
 
 template <typename T>
-concept Integral = std::is_integral_v<T>;
+concept Raw_unsigned_integral = std::unsigned_integral<T> && No_cv<T>;
 
 template <typename T>
-concept Raw_integral = Integral<T> && No_cv<T>;
+concept Raw_signed_integral = std::signed_integral<T> && No_cv<T>;
 
 template <typename T>
-concept Unsigned_integral = Integral<T> && std::is_unsigned_v<T>;
-
-template <typename T>
-concept Raw_unsigned_integral = Unsigned_integral<T> && No_cv<T>;
-
-template <typename T>
-concept Signed_integral = Integral<T> && std::is_signed_v<T>;
-
-template <typename T>
-concept Raw_signed_integral = Signed_integral<T> && No_cv<T>;
-
-template <typename T>
-concept Char_type = (Integral<T> && sizeof(T) == 1 &&
+concept Char_type = (std::integral<T> && sizeof(T) == 1 &&
                      !std::is_same_v<std::remove_cv_t<T>, bool>);
 
 template <typename T>

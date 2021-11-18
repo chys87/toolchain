@@ -42,7 +42,7 @@
 
 namespace cbu {
 
-template <Integral T, std::endian Order>
+template <std::integral T, std::endian Order>
 struct FillByEndian {
   T value;
 
@@ -54,11 +54,11 @@ struct FillByEndian {
   }
 };
 
-template <Integral T>
+template <std::integral T>
 using FillLittleEndian = FillByEndian<T, std::endian::little>;
-template <Integral T>
+template <std::integral T>
 using FillBigEndian = FillByEndian<T, std::endian::big>;
-template <Integral T>
+template <std::integral T>
 using FillNativeEndian = FillByEndian<T, std::endian::native>;
 
 template <unsigned Width = 0, char Fill = '0'>
