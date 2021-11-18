@@ -32,6 +32,7 @@
 #include <new>
 
 #include "cbu/common/byte_size.h"
+#include "cbu/common/type_traits.h"
 
 namespace cbu {
 
@@ -158,6 +159,49 @@ inline T* new_and_init_array(std::size_t n) {
 }
 
 }  // namespace cbu_memory_detail
+
+// uninitialized_move_and_destroy: Move construct and destroy old object
+// It's the caller's responsibility to guarantee that old_obj and new_obj
+// are different pointers.
+template <typename T>
+constexpr void uninitialized_move_and_destroy(T* old_obj, T* new_obj) noexcept {
+  static_assert(std::is_nothrow_destructible_v<T>,
+                "uninitialized_move_and_destroy is safe only if the type's "
+                "destructor never throws.");
+  if constexpr (bitwise_movable_v<T>) {
+    if (!std::is_constant_evaluated()) {
+      __builtin_memcpy(new_obj, old_obj, sizeof(T));
+      return;
+    }
+  }
+  ::new (static_cast<void*>(new_obj)) T(std::move(*old_obj));
+  std::destroy_at(old_obj);
+}
+
+// It's the caller's responsibility to guarantee that memory blocks don't
+// overlap.
+template <typename T>
+constexpr T* uninitialized_move_and_destroy_n(T* old_ptr,
+                                              cbu::ByteSize<sizeof(T)> size,
+                                              T* new_ptr) noexcept {
+  static_assert(std::is_nothrow_move_constructible_v<T> &&
+                    std::is_nothrow_destructible_v<T>,
+                "uninitialized_move_and_destroy_n is safe only if the type's "
+                "move constructor and destructor never throw.");
+  if constexpr (bitwise_movable_v<T>) {
+    if (!std::is_constant_evaluated()) {
+      __builtin_memcpy(new_ptr, old_ptr, size.bytes());
+      return new_ptr + size;
+    }
+  }
+  while (size) {
+    uninitialized_move_and_destroy(old_ptr, new_ptr);
+    ++old_ptr;
+    ++new_ptr;
+    --size;
+  }
+  return new_ptr;
+}
 
 template <typename T>
 requires std::is_unbounded_array_v<T>
