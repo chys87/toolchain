@@ -178,7 +178,8 @@ constexpr void uninitialized_move_and_destroy(T* old_obj, T* new_obj) noexcept {
                 "destructor never throws.");
   if constexpr (bitwise_movable_v<T>) {
     if (!std::is_constant_evaluated()) {
-      __builtin_memcpy(new_obj, old_obj, sizeof(T));
+      __builtin_memcpy(static_cast<void*>(new_obj),
+                       static_cast<const void*>(old_obj), sizeof(T));
       return;
     }
   }
@@ -198,7 +199,8 @@ constexpr T* uninitialized_move_and_destroy_n(T* old_ptr,
                 "move constructor and destructor never throw.");
   if constexpr (bitwise_movable_v<T>) {
     if (!std::is_constant_evaluated()) {
-      __builtin_memcpy(new_ptr, old_ptr, size.bytes());
+      __builtin_memcpy(static_cast<void*>(new_ptr),
+                       static_cast<const void*>(old_ptr), size.bytes());
       return new_ptr + size;
     }
   }
