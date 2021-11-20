@@ -30,34 +30,30 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 #include "cbu/common/bit.h"
-#include "cbu/common/short_string.h"
 
 namespace cbu {
 
 inline constexpr char kUnitPrefixes[]{'\0', 'K', 'M', 'G', 'T',
                                       'P',  'E', 'Z', 'Y'};
+
+inline constexpr char kIecUnitPrefixes[][2]{{},         {'K', 'i'}, {'M', 'i'},
+                                            {'G', 'i'}, {'T', 'i'}, {'P', 'i'},
+                                            {'E', 'i'}, {'Z', 'i'}, {'Y', 'i'}};
+
 inline constexpr unsigned kUnitPrefixCount =
     static_cast<unsigned>(sizeof(kUnitPrefixes) / sizeof(kUnitPrefixes[0]));
 
 // K, M, G, ...
-constexpr cbu::short_string<1> get_si_prefix(unsigned idx) noexcept {
-  cbu::short_string<1> res;
-  res.buffer()[0] = kUnitPrefixes[idx];
-  res.buffer()[1] = '\0';
-  res.set_length(idx ? 1 : 0);
-  return res;
+constexpr std::string_view get_si_prefix(unsigned idx) noexcept {
+  return {kUnitPrefixes + idx, std::size_t(idx ? 1 : 0)};
 }
 
 // Ki, Mi, Gi, ...
-constexpr cbu::short_string<2> get_iec_prefix(unsigned idx) noexcept {
-  cbu::short_string<2> res;
-  res.buffer()[0] = kUnitPrefixes[idx];
-  res.buffer()[1] = 'i';
-  res.buffer()[2] = '\0';
-  res.set_length(idx ? 2 : 0);
-  return res;
+constexpr std::string_view get_iec_prefix(unsigned idx) noexcept {
+  return {kIecUnitPrefixes[idx], std::size_t(idx ? 2 : 0)};
 }
 
 // For example, 1026 bytes ==> 1 KiB + 2 bytes ==> {1, 2, 1}
