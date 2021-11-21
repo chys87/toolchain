@@ -66,6 +66,20 @@ TEST(UnitPrefixTest, Base1000Test) {
           << "v=" << v;
     }
   }
+
+  for (std::uint64_t v = 0;
+       v <= std::uint64_t(std::numeric_limits<std::int64_t>::max());
+       v += 1 + v / 17) {
+    auto [fv, idx] = scale_unit_prefix_1000(v);
+    std::uint64_t idx_base = fast_powu(std::uint64_t(1000), idx);
+    if (v != 0) {
+      ASSERT_GE(fv, 1.0f * (1.0f - std::numeric_limits<float>::epsilon()))
+          << "v=" << v << ", fv=" << fv << ", idx=" << idx;
+      ASSERT_LE(fv, 1000.0f) << "v=" << v << ", fv=" << fv << ", idx=" << idx;
+    }
+    ASSERT_FLOAT_EQ(fv, float(v) / idx_base) << "v=" << v << ", fv=" << fv
+                                                     << ", idx=" << idx;
+  }
 }
 
 TEST(UnitPrefixTest, Base1024Test) {
@@ -99,6 +113,20 @@ TEST(UnitPrefixTest, Base1024Test) {
       ASSERT_EQ(rem, v % idx_base / fast_powu(std::uint64_t(1024), idx - 1))
           << "v=" << v;
     }
+  }
+
+  for (std::uint64_t v = 0;
+       v <= std::uint64_t(std::numeric_limits<std::int64_t>::max());
+       v += 1 + v / 17) {
+    auto [fv, idx] = scale_unit_prefix_1024(v);
+    std::uint64_t idx_base = fast_powu(std::uint64_t(1024), idx);
+    if (v != 0) {
+      ASSERT_GE(fv, 1.0f * (1.0f - std::numeric_limits<float>::epsilon()))
+          << "v=" << v << ", fv=" << fv << ", idx=" << idx;
+      ASSERT_LE(fv, 1024.0f) << "v=" << v << ", fv=" << fv << ", idx=" << idx;
+    }
+    ASSERT_FLOAT_EQ(fv, float(v) / idx_base) << "v=" << v << ", fv=" << fv
+                                                     << ", idx=" << idx;
   }
 }
 

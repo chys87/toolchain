@@ -84,4 +84,16 @@ constexpr SplitUnitPrefix split_unit_prefix_1024(std::uint64_t value) noexcept {
           prefix_idx};
 }
 
+// For example, 1026 bytes ==> {1260.f / 1024, 1}
+// 1050627 bytes ==> {1050627.f / 1024 / 1024, 2}
+struct ScaleUnitPrefix {
+  float value;
+  unsigned prefix_idx;
+};
+
+// Input value should be a non-negative value in range [0, 2**63]
+// We don't detect out-of-range values for sake of performance.
+[[gnu::const]] ScaleUnitPrefix scale_unit_prefix_1000(float value) noexcept;
+[[gnu::const]] ScaleUnitPrefix scale_unit_prefix_1024(float value) noexcept;
+
 }  // namespace cbu
