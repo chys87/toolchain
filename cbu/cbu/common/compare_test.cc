@@ -43,20 +43,20 @@ struct Comp {
   }
 };
 
-static_assert(Three_way_comparator<Comp, int, int>);
-static_assert(!Three_way_comparator<Comp, int, long>);
-static_assert(!Three_way_comparator<Comp, long, long>);
-static_assert(!std::predicate<Comp, int, int>);
-static_assert(!std::predicate<Comp, int, long>);
-static_assert(std::predicate<Comp, long, long>);
+static_assert(Weak_ordering_comparator<Comp, int, int>);
+static_assert(!Weak_ordering_comparator<Comp, int, long>);
+static_assert(!Weak_ordering_comparator<Comp, long, long>);
+static_assert(!Lt_comparator<Comp, int, int>);
+static_assert(!Lt_comparator<Comp, int, long>);
+static_assert(Lt_comparator<Comp, long, long>);
 
-static_assert(compare_three_way_with(Comp(), 0, 1) ==
+static_assert(compare_weak_order_with(Comp(), 0, 1) ==
               std::strong_ordering::less);
-static_assert(compare_three_way_with(Comp(), 0L, 1L) ==
+static_assert(compare_weak_order_with(Comp(), 0L, 1L) ==
               std::strong_ordering::less);
 
-static_assert(compare_lt_with(Comp(), 0, 1) == true);
-static_assert(compare_lt_with(Comp(), 0L, 1L) == true);
+static_assert(compare_lt_with(Comp(), 0, 1));
+static_assert(compare_lt_with(Comp(), 0L, 1L));
 
 } // namespace
 } // namespace cbu

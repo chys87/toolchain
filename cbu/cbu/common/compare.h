@@ -28,40 +28,68 @@
 
 #pragma once
 
-// A wrapper around another comparator, which may either be a predicate
-// (returning a boolean value), or a three-way comparator (returning
-// int, std::weak_ordering, or std::strong_ordering)
+// A wrapper around another comparator, which may either be a less-than
+// comparator (returning a boolean value), or a weak-ordering three-way
+// comparator (returning int, std::weak_ordering, or std::strong_ordering).
+//
+// Concepts:
+//
+//   Weak_ordering_compare_result_type<R>
+//   Lt_compare_result_type<R>
+//   Weak_ordering_comparator<Comp, U, V>
+//   Lt_comparator<Comp, U, V>
+//
+// Utility functions:
+//
+//   compare_weak_order_with(comparator, u, v)
+//   compare_lt_with(comparator, u, v)
+//
+// The parameters comparator can be either type of comparator.  The utility
+// functions perform the comparison and return the appropriate type of result.
 
 #include <compare>
 #include <concepts>
 #include <type_traits>
 
-namespace cbu::inline cbu_compare {
+namespace cbu {
+
+template <typename R>
+concept Weak_ordering_compare_result_type =
+    (std::is_same_v<std::remove_cvref_t<R>, int> ||
+     std::is_same_v<std::remove_cvref_t<R>, std::weak_ordering> ||
+     std::is_same_v<std::remove_cvref_t<R>, std::strong_ordering>);
+
+template <typename R>
+concept Lt_compare_result_type = std::is_same_v<std::remove_cvref_t<R>, bool>;
 
 template <typename Comp, typename U, typename V>
-concept Three_way_comparator = requires(Comp& comp, const U& u, const V& v) {
-  { comp(u, v) };
-  requires (std::is_same_v<std::remove_cvref_t<decltype(comp(u, v))>, int> ||
-            std::is_same_v<std::remove_cvref_t<decltype(comp(u, v))>,
-                           std::weak_ordering> ||
-            std::is_same_v<std::remove_cvref_t<decltype(comp(u, v))>,
-                           std::strong_ordering>);
+concept Weak_ordering_comparator = requires(Comp& comp, const U& u,
+                                            const V& v) {
+  { comp(u, v) } -> Weak_ordering_compare_result_type;
 };
 
 template <typename Comp, typename U, typename V>
-requires (Three_way_comparator<const Comp, U, V> &&
-          !std::predicate<const Comp, U, V>)
-constexpr auto compare_three_way_with(const Comp& comp, const U& u, const V& v)
-    noexcept(noexcept(comp(u, v))) {
+concept Lt_comparator = requires(Comp& comp, const U& u, const V& v) {
+  { comp(u, v) } -> Lt_compare_result_type;
+};
+
+template <typename Comp, typename U, typename V>
+concept Comparator = (Weak_ordering_comparator<Comp, U, V> ||
+                      Lt_comparator<Comp, U, V>);
+
+template <typename Comp, typename U, typename V>
+  requires Weak_ordering_comparator<const Comp, U, V>
+constexpr auto compare_weak_order_with(const Comp& comp, const U& u,
+                                       const V& v) noexcept(noexcept(comp(u,
+                                                                          v))) {
   return comp(u, v);
 }
 
 template <typename Comp, typename U, typename V>
-requires (!Three_way_comparator<const Comp, U, V> &&
-          std::predicate<const Comp, U, V>)
-constexpr std::weak_ordering compare_three_way_with(
-    const Comp& comp, U&& u, V&& v)
-    noexcept(noexcept(comp(u, v)) && noexcept(comp(v, u))) {
+  requires(Lt_comparator<const Comp, U, V>&& Lt_comparator<const Comp, V, U>)
+constexpr std::weak_ordering compare_weak_order_with(
+    const Comp& comp, U&& u,
+    V&& v) noexcept(noexcept(comp(u, v)) && noexcept(comp(v, u))) {
   if (comp(u, v))
     return std::weak_ordering::less;
   else if (comp(v, u))
@@ -71,19 +99,17 @@ constexpr std::weak_ordering compare_three_way_with(
 }
 
 template <typename Comp, typename U, typename V>
-requires (Three_way_comparator<const Comp, U, V> &&
-          !std::predicate<const Comp, U, V>)
-constexpr bool compare_lt_with(const Comp& comp, const U& u, const V& v)
-    noexcept(noexcept(comp(u, v))) {
+  requires Weak_ordering_comparator<const Comp, U, V>
+constexpr bool compare_lt_with(const Comp& comp, const U& u,
+                               const V& v) noexcept(noexcept(comp(u, v))) {
   return comp(u, v) < 0;
 }
 
 template <typename Comp, typename U, typename V>
-requires (!Three_way_comparator<const Comp, U, V> &&
-          std::predicate<const Comp, U, V>)
-constexpr bool compare_lt_with(const Comp& comp, U&& u, V&& v)
-    noexcept(noexcept(comp(u, v))) {
+  requires Lt_comparator<const Comp, U, V>
+constexpr bool compare_lt_with(const Comp& comp, U&& u,
+                               V&& v) noexcept(noexcept(comp(u, v))) {
   return comp(u, v);
 }
 
-} // namespace cbu::inline cbu_compare
+}  // namespace cbu
