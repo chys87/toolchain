@@ -54,7 +54,7 @@ class RefCntPtrTest : public testing::Test {
 TEST_F(RefCntPtrTest, SingleThreadedTest) {
   {
     RefCntPtr<MyType> p1;
-    RefCntPtr<MyType> p2{Construct{}};
+    RefCntPtr<MyType> p2{std::in_place};
     p1 = p2;
 
     EXPECT_EQ(p1.get(), p2.get());

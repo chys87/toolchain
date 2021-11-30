@@ -64,17 +64,6 @@ inline bool ref_cnt_dec(ref_cnt_t* p, int options) noexcept {
   return true;
 }
 
-// Helper type for RefCntPtr and intrusive_ptr constructors
-template <typename T = void>  // void is interpreted as default
-struct Construct {
-  template <typename DefaultType> using type = T;
-};
-
-template <>
-struct Construct<void> {
-  template <typename DefaultType> using type = DefaultType;
-};
-
 // A shared_ptr-like but simpler.
 // It doesn't support consturcting a derived type.
 // Nor does it support other advanced features of shared_ptr.
@@ -84,22 +73,21 @@ class RefCntPtr {
   constexpr RefCntPtr(decltype(nullptr) = nullptr) noexcept
       : p_(nullptr) {}
 
-  // Can only use Construct<> (aka Construct<void>) or Construct<T>
-  // in RefCntPtr.
+  // In-place construction
   template <typename... Args>
-  RefCntPtr(Construct<>, Args&&... args)
+  RefCntPtr(std::in_place_t, Args&&... args)
       : p_(new Node{T(std::forward<Args>(args)...), 1}) {}
 
   // The same.
+  // We don't support constructing a derived type, so only in_place_type_t<T>
+  // is allowed.
   template <typename... Args>
-  RefCntPtr(Construct<T>, Args&&... args)
+  RefCntPtr(std::in_place_type_t<T>, Args&&... args)
       : p_(new Node{T(std::forward<Args>(args)...), 1}) {}
 
   // Copy etc.
-  RefCntPtr(const RefCntPtr& other) noexcept
-      : p_(other.p_) {
-    if (p_)
-      ref_cnt_inc(&p_->cnt, OPTIONS);
+  RefCntPtr(const RefCntPtr& other) noexcept : p_(other.p_) {
+    if (p_) ref_cnt_inc(&p_->cnt, OPTIONS);
   }
   constexpr RefCntPtr(RefCntPtr&& other) noexcept
       : p_(std::exchange(other.p_, nullptr)) {}
@@ -108,16 +96,18 @@ class RefCntPtr {
     if (this != &other) {
       dec();
       p_ = other.p_;
-      if (p_)
-        ref_cnt_inc(&p_->cnt, OPTIONS);
+      if (p_) ref_cnt_inc(&p_->cnt, OPTIONS);
     }
     return *this;
   }
+
   RefCntPtr& operator=(RefCntPtr&& other) noexcept {
     swap(other);
     return *this;
   }
+
   void swap(RefCntPtr& other) noexcept { std::swap(p_, other.p_); }
+
   ~RefCntPtr() noexcept { dec(); }
 
   explicit constexpr operator bool() const noexcept { return p_; }
