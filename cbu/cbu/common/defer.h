@@ -28,25 +28,51 @@
 
 #pragma once
 
+#include <utility>
+
 namespace cbu {
 
 template <typename F>
 class Defer {
  public:
-  Defer(const F &f) noexcept : f_(f) {}
-  [[gnu::always_inline]]
-  ~Defer() { f_(); }
+  Defer(F f) noexcept : f_(std::move(f)) {}
+
+  Defer(const Defer&) = delete;
+  void operator=(const Defer&) = delete;
+
+  [[gnu::always_inline]] ~Defer() { f_(); }
 
  private:
-  const F &f_;
+  F f_;
 };
 
-} // namespace cbu
+namespace defer_detail {
+
+// class PreventReturn transforms "return" statements in CBU_DEFER(...) to
+// a compilation error.
+class PreventReturn {
+ private:
+  constexpr PreventReturn() {}
+
+ public:
+  static constexpr PreventReturn Make() noexcept { return {}; }
+
+  constexpr PreventReturn(const PreventReturn&) = default;
+  constexpr PreventReturn(PreventReturn&&) = default;
+
+  PreventReturn(auto&&...) = delete;
+};
+
+}  // namespace defer_detail
+
+}  // namespace cbu
 
 #define CBU_DEFER(...) CBU_DEFER_(__COUNTER__, __VA_ARGS__)
-#define CBU_DEFER_(cnt,...) CBU_DEFER__(cnt, __VA_ARGS__)
-#define CBU_DEFER__(cnt,...) \
-  auto cbu_RAII_defer_fun_##cnt = [&]() -> void { __VA_ARGS__; }; \
-  ::cbu::Defer<decltype(cbu_RAII_defer_fun_##cnt)> \
-    cbu_RAII_defer_##cnt{cbu_RAII_defer_fun_##cnt}; \
-  (void)cbu_RAII_defer_##cnt /* Suppress warning */
+#define CBU_DEFER_(cnt, ...) CBU_DEFER__(cnt, __VA_ARGS__)
+#define CBU_DEFER__(cnt, ...)                              \
+  [[maybe_unused]] ::cbu::Defer cbu_RAII_defer_##cnt {     \
+    [&]() noexcept -> ::cbu::defer_detail::PreventReturn { \
+      __VA_ARGS__;                                         \
+      return ::cbu::defer_detail::PreventReturn::Make();   \
+    }                                                      \
+  }
