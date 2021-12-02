@@ -36,6 +36,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "cbu/common/tags.h"
 #include "cbu/common/zstring_view.h"
 
 namespace cbu {
@@ -45,16 +46,13 @@ using strlen_t = std::conditional_t<(MaxLen < 65536),
     std::conditional_t<(MaxLen < 256), std::uint8_t, std::uint16_t>,
     size_t>;
 
-enum struct UninitializedShortString {};
-inline constexpr UninitializedShortString UNINITIALIZED_SHORT_STRING{};
-
 // This class is good for storage for very short strings.
 template <std::size_t MaxLen>
 class short_string {
  public:
   using len_t = strlen_t<MaxLen>;
 
-  explicit short_string(UninitializedShortString) noexcept {}
+  explicit short_string(UninitializedTag) noexcept {}
 
   constexpr short_string() noexcept : s_{}, l_{0} {}
 
@@ -111,7 +109,7 @@ short_string(const char (&)[N]) -> short_string<N - 1>;
 template <std::size_t Len, bool HasTerminator = false>
 class fixed_length_string {
  public:
-  explicit fixed_length_string(UninitializedShortString) noexcept {}
+  explicit fixed_length_string(UninitializedTag) noexcept {}
 
   constexpr fixed_length_string() noexcept : s_{} {}
   consteval fixed_length_string(std::string_view src) noexcept : s_{} {
