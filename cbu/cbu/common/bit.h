@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include <algorithm>
+#include <concepts>
 #include <cstdint>
 #include <iterator>
 #include <type_traits>
@@ -276,13 +278,15 @@ inline constexpr T bzhi(T x, unsigned k) noexcept {
 
 
 // An iterator to iterate over set bits
-template <typename T> requires std::is_unsigned<T>::value
-class BitIterator : public std::iterator<
-    std::forward_iterator_tag, unsigned int, int, const unsigned int*,
-    unsigned int
-    // reference is not a real reference, as in istreambuf_iterator
-    > {
-public:
+template <std::unsigned_integral T>
+class BitIterator {
+ public:
+  using value_type = unsigned int;
+  using difference_type = int;
+  using pointer = unsigned int*;
+  using reference = unsigned int;
+  using iterator_category = std::forward_iterator_tag;
+
   explicit constexpr BitIterator(T v = 0) noexcept : v_(v) {}
   constexpr BitIterator(const BitIterator &) noexcept = default;
   constexpr BitIterator &operator = (const BitIterator &) noexcept = default;

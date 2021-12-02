@@ -139,27 +139,21 @@ struct ArrowOperatorTempObject {
 
 // enumerate
 template <typename IT>
-class EnumerateIterator : public std::iterator<
-    std::forward_iterator_tag,
-    std::pair<
-      std::make_unsigned_t<typename std::iterator_traits<IT>::difference_type>,
-      typename std::iterator_traits<IT>::reference>,
-    typename std::iterator_traits<IT>::difference_type,
-    const std::pair<
-      std::make_unsigned_t<typename std::iterator_traits<IT>::difference_type>,
-      typename std::iterator_traits<IT>::reference>*,
-    std::pair<
-      std::make_unsigned_t<typename std::iterator_traits<IT>::difference_type>,
-      typename std::iterator_traits<IT>::reference>
-    // reference is not a real reference, as in istreambuf_iterator
-    > {
+class EnumerateIterator {
  private:
   using BaseTraits = std::iterator_traits<IT>;
 
  public:
   using index_type = std::make_unsigned_t<typename BaseTraits::difference_type>;
   using base_reference = typename BaseTraits::reference;
+
   using value_type = std::pair<index_type, base_reference>;
+  using difference_type =  typename BaseTraits::difference_type;
+  using pointer = value_type*;
+  using reference = value_type;
+  // TODO: This could potentially also be other categories
+  // (such as input_iterator_tag, bidirection_iterator_tag)
+  using iterator_category = std::forward_iterator_tag;
 
  public:
   explicit constexpr EnumerateIterator(index_type idx, IT it) noexcept :

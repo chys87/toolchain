@@ -35,13 +35,13 @@
 namespace cbu {
 
 template <typename T>
-class RangeIterator : public std::iterator<
-    std::random_access_iterator_tag, T,
-    std::make_signed_t<T>,
-    const T*,
-    T /* reference is not a real reference, as in istreambuf_iterator */ > {
-public:
+class RangeIterator {
+ public:
+  using value_type = T;
   using difference_type = std::make_signed_t<T>;
+  using pointer = T*;
+  using reference = T;
+  using iterator_category = std::random_access_iterator_tag;
 
   explicit constexpr RangeIterator(T v) noexcept : v_(v) {}
   constexpr RangeIterator(const RangeIterator &) noexcept = default;

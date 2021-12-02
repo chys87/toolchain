@@ -4,8 +4,11 @@ This is my C++ utilities.
 
 ## Pre-requisites:
 
-- [g++](https://gcc.gnu.org/) 11 or later, or [clang++](https://clang.llvm.org/) 12 or later
+- [g++](https://gcc.gnu.org/) 11 or later, or [clang++](https://clang.llvm.org/) 13 or later
 - [Bazel](https://bazel.build/).  Other make tools may also be used if you prefer; you can also just link or copy the files
+
+I try to write portable code (except functionalities that are by design Linux-only, such as `coroutine` and `malloc`), but I have
+only tested on Linux.  Clang++ may use either libstdc++ or libc++.
 
 ## Bazel notes
 
