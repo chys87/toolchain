@@ -32,11 +32,6 @@ cc_binary(
   ],
   copts = [
     '-O3',
-    '-march=native',
-    '-std=gnu++2a',
-    '-Wall',
-    '-Werror',
-    '-fdiagnostics-color=always',
     '-pthread',
   ],
   linkopts = [
@@ -51,11 +46,6 @@ cc_binary(
   ],
   copts = [
     '-O3',
-    '-march=native',
-    '-std=gnu++2a',
-    '-Wall',
-    '-Werror',
-    '-fdiagnostics-color=always',
     '-pthread',
   ],
   linkopts = [
@@ -70,17 +60,13 @@ cc_binary(
   ],
   copts = [
     '-O3',
-    '-march=native',
-    '-std=gnu++2a',
-    '-Wall',
-    '-Werror',
-    '-fdiagnostics-color=always',
     '-pthread',
   ],
   linkopts = [
     '-pthread',
     '-ljemalloc',
   ],
+  tags = ['manual'],
 )
 
 cc_binary(
@@ -90,14 +76,11 @@ cc_binary(
   ],
   copts = [
     '-O3',
-    '-march=native',
-    '-std=gnu++2a',
-    '-Wall',
-    '-Werror',
-    '-fdiagnostics-color=always',
+    '-pthread',
   ],
   linkopts = [
     '-pthread',
     '-ltcmalloc',
   ],
+  tags = ['manual'],
 )

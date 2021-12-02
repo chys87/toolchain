@@ -1,4 +1,10 @@
 # Tells bazel to honor CC and CXX set in user.bazelrc on macOS if Xcode is installed
 build --action_env=BAZEL_USE_CPP_ONLY_TOOLCHAIN=1
-try-import user.bazelrc
 build -c opt
+build --copt=-march=native
+build --copt=-std=gnu++2a
+build --copt=-Wall
+build --copt=-Werror
+build --copt=-fdiagnostics-color=always
+build --copt=-g
+try-import user.bazelrc

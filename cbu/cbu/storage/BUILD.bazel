@@ -32,14 +32,6 @@ cc_library(
   deps = [
     '//cbu/common:common',
   ],
-  copts = [
-    '-march=native',
-    '-std=gnu++2a',
-    '-Wall',
-    '-Werror',
-    '-fdiagnostics-color=always',
-    '-g',
-  ],
   # cbu is a collection of really TINY utilities so you may always want to
   # use static linking
   linkstatic=True,
@@ -52,13 +44,5 @@ cc_test(
   deps = [
     ':storage',
     '@com_google_googletest//:gtest_main',
-  ],
-  copts = [
-    '-march=native',
-    '-std=gnu++2a',
-    '-Wall',
-    '-Werror',
-    '-fdiagnostics-color=always',
-    '-g',
   ],
 )
