@@ -26,20 +26,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "mp.h"
+#include "cbu/common/mp.h"
+
 #include <string.h>
-#include <algorithm>
-#include <limits>
-#include <tuple>
 #if __has_include(<x86intrin.h>)
 # include <x86intrin.h>
 #endif
-#include "cbu/compat/platform.h"
-#include "bit.h"
-#include "fastarith.h"
-#include "faststr.h"
-#include "byteorder.h"
-#include "strutil.h"
+
+#include <algorithm>
+#include <limits>
+#include <tuple>
+
+#include "cbu/common/bit.h"
+#include "cbu/common/byteorder.h"
+#include "cbu/common/fastarith.h"
+#include "cbu/common/faststr.h"
+#include "cbu/common/strutil.h"
 
 namespace cbu {
 namespace mp {

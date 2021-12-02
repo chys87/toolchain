@@ -183,7 +183,7 @@ constexpr void uninitialized_move_and_destroy(T* old_obj, T* new_obj) noexcept {
       return;
     }
   }
-  ::new (static_cast<void*>(new_obj)) T(std::move(*old_obj));
+  std::construct_at(new_obj, std::move(*old_obj));
   std::destroy_at(old_obj);
 }
 

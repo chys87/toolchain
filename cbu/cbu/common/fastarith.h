@@ -33,22 +33,18 @@
 #include <concepts>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 #include <utility>
 
 #include "cbu/common/bit_cast.h"
 #include "cbu/common/concepts.h"
-#include "cbu/compat/type_identity.h"
-
-#ifndef __has_builtin
-# define __has_builtin(x) 0
-#endif
 
 namespace cbu {
 
 // r is the initial value, usually 1
 template <Raw_arithmetic T>
 inline constexpr T fast_powu(T a, unsigned t,
-                             compat::type_identity_t<T> r = T(1)) {
+                             std::type_identity_t<T> r = T(1)) {
   while (t) {
     if (t & 1)
       r *= a;
@@ -59,8 +55,7 @@ inline constexpr T fast_powu(T a, unsigned t,
 }
 
 template <Raw_floating_point T>
-inline constexpr T fast_powi(T a, int n,
-                             compat::type_identity_t<T> r = T(1)) {
+inline constexpr T fast_powi(T a, int n, std::type_identity_t<T> r = T(1)) {
   if (n < 0) {
     n = -n;
     a = 1 / a;
@@ -85,9 +80,8 @@ inline constexpr bool unequal(A a, B b) noexcept(noexcept(a != b)) {
 #pragma GCC diagnostic pop
 
 template <typename T>
-inline constexpr T clamp(T v,
-                         compat::type_identity_t<T> m,
-                         compat::type_identity_t<T> M) noexcept {
+inline constexpr T clamp(T v, std::type_identity_t<T> m,
+                         std::type_identity_t<T> M) noexcept {
   // 1) If v is NaN, the result is v
   // 2) M and/or m are ignored if NaN
   if constexpr (std::is_floating_point_v<T>) {

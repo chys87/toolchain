@@ -31,6 +31,7 @@
 #if __has_include(<x86intrin.h>)
 # include <x86intrin.h>
 #endif
+
 #include <bit>
 #include <cstdarg>
 #include <cstdint>
@@ -39,12 +40,13 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <utility>
+
 #include "byteorder.h"
+#include "cbu/compat/string.h"
 #include "concepts.h"
 #include "stdhack.h"
-#include "cbu/compat/string.h"
-#include "cbu/compat/type_identity.h"
 
 namespace cbu {
 
@@ -291,9 +293,9 @@ extern template void append<char>(std::string*,
                                   std::span<const std::string_view>);
 
 template <Std_string_char C>
-inline void append(std::basic_string<C>* res,
-                   compat::type_identity_t<
-                     std::initializer_list<std::basic_string_view<C>>> il) {
+inline void append(
+    std::basic_string<C>* res,
+    std::type_identity_t<std::initializer_list<std::basic_string_view<C>>> il) {
   append(res,
          std::span<const std::basic_string_view<C>>(il.begin(), il.size()));
 }

@@ -32,7 +32,6 @@
 #include <cstdint>
 #include <limits>
 #include <memory>
-#include <new>
 
 #include "cbu/common/defer.h"
 #include "cbu/compat/atomic_ref.h"
@@ -142,8 +141,7 @@ class LazyInit {
   template <typename... Args>
   void init(Args&&... args) noexcept(noexcept(T(std::forward<Args>(args)...))) {
     guard_.init([&, this]() {
-      // libc++ doesn't have std::construct_at yet
-      new (pointer()) T(std::forward<Args>(args)...);
+      std::construct_at(pointer(), std::forward<Args>(args)...);
     });
   }
 

@@ -85,6 +85,10 @@ If you use anything else, you have to take care of it yourself.
    e.g. POD pair type, `reversed` (like Python's counterpart), `enumerate` (like Python's counterpart)
 * `zstring_view.h`: Provides `cbu::zstring_view`, a subtype of `std::string_view` that assumes a null terminator is present
 
+### cbu/compat
+
+Compact code.  Mostly for internal use.
+
 ### cbu/debug
 
 Utilities for debugging and unit testing.
