@@ -1,0 +1,6 @@
+# For problems, see: https://github.com/bazelbuild/bazel/issues/13071
+build --repo_env=CC=clang
+build --repo_env=CXX=clang++
+build --repo_env=BAZEL_LINKLIBS=-lc++:-lm
+build --copt=-stdlib=libc++
+build --copt=-Wno-error=unused-command-line-argument

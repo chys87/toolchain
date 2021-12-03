@@ -12,13 +12,8 @@ only tested on Linux.  Clang++ may use either libstdc++ or libc++.
 
 ## Bazel notes
 
-If you need to specify your favorite compilers and/or library paths, create a file `user.bazelrc` and say:
-
-```
-build --action_env=CC=gcc-svn
-build --action_env=CXX=g++-svn
-build --action_env=BAZEL_LINKLIBS=-Wl,-rpath,/usr/local/LIB
-```
+If you need to specify your favorite compilers and/or library paths, create a file `user.bazelrc` and declare options.
+If you simply need to use clang + libc++, just import `clang-libc++.bazelrc` from `user.bazelrc`.
 
 ## Unit test notes
 
