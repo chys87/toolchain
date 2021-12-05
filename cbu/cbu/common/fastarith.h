@@ -96,9 +96,6 @@ inline constexpr T clamp(T v, std::type_identity_t<T> m,
 
 namespace fastarith_detail {
 
-#ifndef __has_attribute
-# define __has_attribute(...) 0
-#endif
 #if __has_attribute(__error__)
 void error() __attribute__((__error__("Unreachable code")));
 #else

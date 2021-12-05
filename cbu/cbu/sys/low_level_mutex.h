@@ -192,10 +192,9 @@ CBU_MUTEX_INLINE void SpinLock::yield() noexcept {
 
 CBU_MUTEX_INLINE void SpinLock::pause() noexcept {
   if (!tweak::SINGLE_THREADED) {
-#if (defined __i386__ || defined __x86_64__) && defined __has_builtin
-#if __has_builtin(__builtin_ia32_pause)
+#if (defined __i386__ || defined __x86_64__) && \
+    __has_builtin(__builtin_ia32_pause)
     __builtin_ia32_pause();
-#endif
 #endif
   }
 }

@@ -28,15 +28,11 @@
 
 #pragma once
 
-#ifndef __has_attribute
-# define __has_attribute(x) 0
-#endif
-
 #if __has_attribute(__externally_visible__) || \
     (defined __GNUC__ && !defined __clang__)
-# define cbu_malloc_visibility_default \
+#  define cbu_malloc_visibility_default \
     __attribute__((__externally_visible__, __visibility__("default")))
 #else
-# define cbu_malloc_visibility_default \
+#  define cbu_malloc_visibility_default \
     __attribute__((__visibility__("default")))
 #endif

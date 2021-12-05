@@ -36,16 +36,6 @@
 #include "cbu/common/bit.h"
 #include "cbu/common/faststr.h"
 
-#ifndef __has_attribute
-#define __has_attribute(x) 0
-#endif
-
-#if __has_attribute(unlikely)
-#define CBU_UNLIKELY [[unlikely]]
-#else
-#define CBU_UNLIKELY
-#endif
-
 namespace cbu {
 
 char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
@@ -61,7 +51,7 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
 #endif
     }
   } else if (u < 0x10000) {
-    if (is_in_utf16_surrogate_range(u)) CBU_UNLIKELY {
+    if (is_in_utf16_surrogate_range(u)) [[unlikely]] {
       // UTF-16 surrogate pairs
       return nullptr;
     } else {
@@ -75,7 +65,7 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
       *w++ = (u & 0x3fu) + 0x80u;
 #endif
     }
-  } else CBU_UNLIKELY {
+  } else [[unlikely]] {
     if (u < 0x110000) {
 #if defined __BMI2__
       w = memdrop_be<uint32_t>(w, _pdep_u32(u, 0x073f3f3f) | 0xf0808080u);
