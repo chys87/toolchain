@@ -49,11 +49,11 @@ constexpr T* raw_scalar_new() {
   return static_cast<T*>(p);
 }
 
-template <typename T>
+template <typename T, std::size_t align = alignof(T)>
 constexpr T* raw_array_new(ByteSize<sizeof(T)> n) {
   void* p;
-  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    p = ::operator new[](n.bytes(), std::align_val_t(alignof(T)));
+  if constexpr (align > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    p = ::operator new[](n.bytes(), std::align_val_t(align));
   else
     p = ::operator new[](n.bytes());
   return static_cast<T*>(p);
@@ -74,17 +74,17 @@ constexpr void raw_scalar_delete(T* p) noexcept {
 #endif
 }
 
-template <typename T>
+template <typename T, std::size_t align = alignof(T)>
 constexpr void raw_array_delete(T* p, ByteSize<sizeof(T)> n
                                 [[maybe_unused]]) noexcept {
 #ifdef __cpp_sized_deallocation
-  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    ::operator delete[](p, n.bytes(), std::align_val_t(alignof(T)));
+  if constexpr (align > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    ::operator delete[](p, n.bytes(), std::align_val_t(align));
   else
     ::operator delete[](p, n.bytes());
 #else
-  if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    ::operator delete[](p, std::align_val_t(alignof(T)));
+  if constexpr (align > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    ::operator delete[](p, std::align_val_t(align));
   else
     ::operator delete[](p);
 #endif
