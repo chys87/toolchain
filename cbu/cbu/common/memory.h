@@ -49,11 +49,13 @@ constexpr T* raw_scalar_new() {
   return static_cast<T*>(p);
 }
 
-template <typename T, std::size_t align = alignof(T)>
-constexpr T* raw_array_new(ByteSize<sizeof(T)> n) {
+template <typename T>
+constexpr T* raw_array_new(
+    ByteSize<sizeof(T)> n,
+    std::align_val_t align = std::align_val_t(alignof(T))) {
   void* p;
-  if constexpr (align > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    p = ::operator new[](n.bytes(), std::align_val_t(align));
+  if (std::size_t(align) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    p = ::operator new[](n.bytes(), align);
   else
     p = ::operator new[](n.bytes());
   return static_cast<T*>(p);
@@ -74,17 +76,18 @@ constexpr void raw_scalar_delete(T* p) noexcept {
 #endif
 }
 
-template <typename T, std::size_t align = alignof(T)>
-constexpr void raw_array_delete(T* p, ByteSize<sizeof(T)> n
-                                [[maybe_unused]]) noexcept {
+template <typename T>
+constexpr void raw_array_delete(
+    T* p, ByteSize<sizeof(T)> n [[maybe_unused]],
+    std::align_val_t align = std::align_val_t(alignof(T))) noexcept {
 #ifdef __cpp_sized_deallocation
-  if constexpr (align > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    ::operator delete[](p, n.bytes(), std::align_val_t(align));
+  if (std::size_t(align) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    ::operator delete[](p, n.bytes(), align);
   else
     ::operator delete[](p, n.bytes());
 #else
-  if constexpr (align > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
-    ::operator delete[](p, std::align_val_t(align));
+  if (std::size_t(align) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+    ::operator delete[](p, align);
   else
     ::operator delete[](p);
 #endif
@@ -99,19 +102,17 @@ constexpr void destroy_backward_n(T* begin, Size size) {
 }
 
 // Deleters
-struct DummyDeleter {
-  constexpr void operator()(void *) const noexcept {}
-};
-
 template <typename T>
 using ScalarDeleter = std::default_delete<T>;
 
-template <typename T>
+// Note that this class can only be used with arrays allocated with
+// new_and_default_init_array/new_and_value_init_array, not with new T[n]
+template <typename T, std::align_val_t align = std::align_val_t(alignof(T))>
 struct ArrayDeleter {
   ByteSize<sizeof(T)> size;
   constexpr void operator()(T* p) const noexcept {
     destroy_backward_n(p, size);
-    raw_array_delete(p, size);
+    raw_array_delete(p, size, align);
   }
 };
 
@@ -120,10 +121,12 @@ struct RawScalarDeleter {
   constexpr void operator()(T* p) const noexcept { raw_scalar_delete(p); }
 };
 
-template <typename T>
+template <typename T, std::align_val_t align = std::align_val_t(alignof(T))>
 struct RawArrayDeleter {
   ByteSize<sizeof(T)> size;
-  constexpr void operator()(T* p) const noexcept { raw_array_delete(p, size); }
+  constexpr void operator()(T* p) const noexcept {
+    raw_array_delete(p, size, align);
+  }
 };
 
 template <typename T>
@@ -134,7 +137,7 @@ struct RawScalarDelete {
 };
 
 // Destruct, and calls RawDeleter to free up memory
-template <typename T, typename Size, typename RawDeleter = DummyDeleter>
+template <typename T, typename Size, typename RawDeleter>
 constexpr void destroy_backward_and_delete_n(
     T* begin, Size n, RawDeleter deleter = RawDeleter()) noexcept {
   destroy_backward_n(begin, n);
@@ -145,24 +148,26 @@ constexpr void destroy_backward_and_delete_n(
 // Please note that the allocated memory can only be deleted by our
 // ArrayDeleter, not by delete[]
 template <typename T>
-inline T* new_and_default_init_array(std::size_t n) {
-  T* p = raw_array_new<T>(n);
+inline T* new_and_default_init_array(
+    std::size_t n, std::align_val_t align = std::align_val_t(alignof(T))) {
+  T* p = raw_array_new<T>(n, align);
   try {
     std::uninitialized_default_construct_n(p, n);
   } catch (...) {
-    raw_array_delete(p, n);
+    raw_array_delete(p, n, align);
     throw;
   }
   return p;
 }
 
 template <typename T>
-inline T* new_and_value_init_array(std::size_t n) {
+inline T* new_and_value_init_array(
+    std::size_t n, std::align_val_t align = std::align_val_t(alignof(T))) {
   T* p = raw_array_new<T>(n);
   try {
     std::uninitialized_value_construct_n(p, n);
   } catch (...) {
-    raw_array_delete(p, n);
+    raw_array_delete(p, n, align);
     throw;
   }
   return p;
