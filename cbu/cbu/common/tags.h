@@ -36,4 +36,23 @@ inline constexpr ReservedTag kReserved;
 struct UninitializedTag {};
 inline constexpr UninitializedTag kUninitialized;
 
+// specifying radix
+template <int>
+struct RadixTag {};
+
+using AutoRadixTag = RadixTag<0>;
+using OctTag = RadixTag<8>;
+using DecTag = RadixTag<10>;
+using HexTag = RadixTag<16>;
+
+// for str_to_integer
+struct IgnoreOverflowTag {};
+inline constexpr IgnoreOverflowTag kIgnoreOverflow;
+
+struct HaltScanOnOverflowTag {};
+inline constexpr HaltScanOnOverflowTag kHaltScanOnOverflow;
+
+template <unsigned long long>
+struct OverflowThresholdTag {};
+
 }  // namespace cbu

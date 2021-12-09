@@ -72,6 +72,7 @@ If you use anything else, you have to take care of it yourself.
 * `stdhack.h`: Hacks standard strings and containers, providing resizing without initialization
 * `strpack.h`: Converts a string literal to a class with variadic templates
 * `str_split.h`: Splitting a string with small code size, inspired by [`absl::StrSplit`](https://abseil.io/docs/cpp/guides/strings#abslstrsplit-for-splitting-strings)
+* `str_to_integer.h`: Conversion from string to integer
 * `strutil.h`: Various string utilities, higher level than `faststr.h`
 * `swap.h`: Like [boost::swap](https://www.boost.org/doc/libs/1_64_0/libs/core/doc/html/core/swap.html), but also suports swapping by calling a member function named `swap`
 * `tags.h`: Define some empty structures for common tags
