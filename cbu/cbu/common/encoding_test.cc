@@ -128,7 +128,7 @@ TEST(Utf8Test, ValidateUtf8) {
     return iconv(cd, &inbuf, &inbytes, &outbuf, &outbytes) == 0 && inbytes == 0;
   };
 
-#define REPEAT(a) a a a a
+#define REPEAT(a) a a a
   constexpr std::u8string_view kStart = REPEAT(
       u8"\uabcd\u1234\0\1\2\3\4\5\6\7\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
       u8"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -149,8 +149,8 @@ TEST(Utf8Test, ValidateUtf8) {
       char buffer[kL];
       memcpy(buffer, kStart.data(), kL);
 
-      for (int k = 0; k < 256; ++k) {
-        buffer[i]++;
+      for (int k = 0; k < 256; k += (i < kL / 4) ? 1 : 2) {
+        buffer[i] += (i < kL / 4) ? 1 : 2;
         for (int l = 0; l < 256; l += 32) {
           buffer[j] += 32;
           ASSERT_EQ(validate_utf8({buffer, kL}), naive_validate({buffer, kL}))
