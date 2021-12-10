@@ -95,7 +95,8 @@ TEST(StrToIntegerTest, Overflow) {
 }
 
 TEST(StrToIntegerTest, Partial) {
-  EXPECT_EQ(str_to_integer_partial<int64_t>("1 + 2 = 3").first.value_or(0), 1);
+  EXPECT_EQ(str_to_integer_partial<int64_t>("1 + 2 = 3").value_opt.value_or(0),
+            1);
 }
 
 TEST(StrToIntegerTest, Constexpr) {

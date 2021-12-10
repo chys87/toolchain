@@ -86,7 +86,7 @@ constexpr auto str_to_integer(std::string_view s) noexcept {
 template <std::integral T, typename... Options>
   requires(str_to_integer_detail::Supported<T, Options...>)
 constexpr auto str_to_integer_partial(const char* s, const char* e) noexcept
-    -> std::pair<std::optional<T>, const char*> {
+    -> StrToIntegerPartialResult<T> {
   using Tag = typename str_to_integer_detail::OptionParser<
           OverflowThresholdTag<
               str_to_integer_detail::OverflowThresholdByType<T>>,
@@ -99,7 +99,7 @@ constexpr auto str_to_integer_partial(const char* s, const char* e) noexcept
     if (res.first && T(*res.first) != CT(*res.first))
       return {std::nullopt, res.second};
   }
-  return {std::optional<T>(res.first), res.second};
+  return {std::optional<T>(res.value_opt), res.endptr};
 }
 
 template <std::integral T, typename... Options>

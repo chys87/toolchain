@@ -34,7 +34,15 @@
 
 #include "cbu/common/tags.h"
 
-namespace cbu::str_to_integer_detail {
+namespace cbu {
+
+template <typename T>
+struct StrToIntegerPartialResult {
+  std::optional<T> value_opt;
+  const char* endptr;
+};
+
+namespace str_to_integer_detail {
 
 template <int base_, bool check_overflow_, bool halt_on_overflow_,
           unsigned long long overflow_threshold_>
@@ -95,9 +103,9 @@ inline constexpr auto extract_value(std::optional<T> v) noexcept {
   return v;
 }
 
-template <typename U, typename V>
-inline constexpr auto extract_value(std::pair<U, V> v) noexcept {
-  return v.first;
+template <typename T>
+inline constexpr auto extract_value(StrToIntegerPartialResult<T> v) noexcept {
+  return v.value_opt;
 }
 
 template <typename U, typename T>
@@ -105,9 +113,10 @@ inline constexpr auto replace_value(std::optional<U>, T v) noexcept {
   return v;
 }
 
-template <typename U, typename V, typename W>
-inline constexpr auto replace_value(std::pair<U, V> pr, W v) noexcept {
-  return std::make_pair(v, pr.second);
+template <typename U, typename T>
+inline constexpr StrToIntegerPartialResult<T> replace_value(
+    StrToIntegerPartialResult<U> r, std::optional<T> v) noexcept {
+  return {v, r.endptr};
 }
 
 template <int base>
@@ -189,7 +198,7 @@ template <std::integral T, bool partial, typename Tag>
 constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   auto make_ret = [&](std::optional<T> v) {
     if constexpr (partial)
-      return std::pair{v, s};
+      return StrToIntegerPartialResult<T>{v, s};
     else
       return v;
   };
@@ -267,4 +276,5 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   }
 };
 
-}  // namespace cbu::str_to_integer_detail
+}  // namespace str_to_integer_detail
+}  // namespace cbu
