@@ -84,7 +84,7 @@ def cppfilter(fi):
     __type = br'(?:[^,<>]|<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>)+'
 
     def __replacable_character_literal(c):
-        return c.isalnum() or c == '_'
+        return c.isalnum() or c in (' ', '_', '(', ')')
 
     def __replace_character_literals(m):
         ctype = m.group(1)
@@ -260,6 +260,99 @@ def cppfilter(fi):
         yield do_replace(data)
 
 
+__special_readable_chars = {
+    ord('\r'): b'\\r',
+    ord('\n'): b'\\n',
+    ord('\t'): b'\\t',
+}
+
+
+def __to_readable_string(hex_part):
+    if len(hex_part) % 2 != 0:
+        hex_part = b'0' + hex_part
+    bytestr = bytes.fromhex(hex_part.decode())[::-1]  # Little endian
+    res = b''
+
+    def add_encoded(byte):
+        nonlocal res
+        res += '\\x{:02x}'.format(byte).encode()
+
+    # Allow string to start with some following bytes of UTF-8
+    while bytestr and (bytestr[0] & 0xc0) == 0x80:
+        add_encoded(bytestr[0])
+        bytestr = bytestr[1:]
+
+    if res and not bytestr:
+        return None
+
+    utf8buffer = b''
+    for byte in bytestr:
+        ch = bytes([byte])
+        if ((byte & 0xe0) == 0xc0 or (byte & 0xf0) == 0xe0 or
+            (byte & 0xf8) == 0xf0):
+            # Starting bytes of UTF-8
+            if not utf8buffer:
+                return None
+            utf8buffer += ch
+            continue
+        elif (byte & 0xc0) == 0x80:
+            # Following bytes of UTF-8
+            if not utf8buffer:
+                return None
+            utf8buffer += ch
+            try:
+                utf8buffer.decode('utf-8')
+                res += utf8buffer
+                utf8buffer = b''
+            except UnicodeDecodeError:
+                pass
+            continue
+        elif 0x20 <= byte < 0x7f or byte in __special_readable_chars:
+            if utf8buffer:
+                return None
+            if byte in __special_readable_chars:
+                res += __special_readable_chars[byte]
+            else:
+                if ch in (b'\\', b'\"'):
+                    res += b'\\'
+                res += ch
+        else:
+            return None
+
+    if utf8buffer:
+        if not res:
+            return None
+        for byte in utf8buffer:
+            add_encoded(byte)
+
+    return res
+
+def annotate_string_literals(fi):
+    ptn = re.compile(br'mov[bwlq]?\s+\$0x([0-9a-f]+),[^#\n]*(?=\n)')
+
+    def sub(match):
+        hex_part = match.group(1)
+        readable = __to_readable_string(hex_part)
+        res = match.group(0)
+        if readable:
+            res += b'\t\t # 0x' + hex_part + b' = "' + readable + b'"'
+        return res
+
+    def do_replace(data):
+        return ptn.sub(sub, data)
+
+    data = b''
+    for txt in fi:
+        data += txt
+        if len(data) >= 8192:  # An arbitrary threshold
+            yield do_replace(data)
+            data = b''
+
+    if data:
+        fi = None
+        yield do_replace(data)
+
+
 def yield_possible_headers(filename):
     yield f'/usr/include/asm/{filename}'
     yield from glob.glob(f'/usr/include/*/asm/{filename}')
@@ -324,7 +417,7 @@ def syscall_replace(fi):
             no = 0  # XOR EAX, EAX
         res = match.group(0)
         try:
-            res += b'\t\t  # ' + table[no]
+            res += b'\t\t # ' + table[no]
         except KeyError:
             pass
         return res
@@ -381,6 +474,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         description='Unassembly a program in a friendly way.')
+    parser.add_argument('--no-string-literal-annotation', action='store_true')
     parser.add_argument('filename', help='File to unassembly')
     args = parser.parse_args()
 
@@ -393,6 +487,11 @@ def main():
 
     if sys.platform.startswith('linux') and platform.machine() == 'x86_64':
         fi = syscall_replace(fi)
+
+    if not args.no_string_literal_annotation:
+        # Do this after syscall_replace to avoid annotating a syscall number
+        # as a string literal
+        fi = annotate_string_literals(fi)
 
     # An arbitrary threshold
     FLUSH_THRESHOLD = 8192

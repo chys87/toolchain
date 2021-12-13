@@ -134,8 +134,9 @@ def do_dump(fname, fw, *close_files):
     try:
         PREFERED_SIZE = 65536  # Linux pipe size
 
-        with subprocess.Popen((unassembly, fname), stdout=subprocess.PIPE,
-                              close_fds=True) as proc:
+        with subprocess.Popen(
+                (unassembly, '--no-string-literal-annotation', fname),
+                stdout=subprocess.PIPE, close_fds=True) as proc:
             fasm = proc.stdout
             txt = fasm.read(PREFERED_SIZE)
 
