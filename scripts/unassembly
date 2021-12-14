@@ -328,7 +328,7 @@ def __to_readable_string(hex_part):
     return res
 
 def annotate_string_literals(fi):
-    ptn = re.compile(br'mov[bwlq]?\s+\$0x([0-9a-f]+),[^#\n]*(?=\n)')
+    ptn = re.compile(br'(?:mov|cmp)(?:[bwlq]|absq?)?\s+\$0x([0-9a-f]+),[^#\n]*(?=\n)')
 
     def sub(match):
         hex_part = match.group(1)
