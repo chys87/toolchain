@@ -83,27 +83,63 @@ def cppfilter(fi):
     # This pattern catches templates up to 3 levels
     __type = br'(?:[^,<>]|<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>)+'
 
-    def __replacable_character_literal(c):
-        return c.isalnum() or c in (' ', '_', '(', ')')
+    __character_literals_escape = {
+        ord('\r'): br'\r',
+        ord('\n'): br'\n',
+        ord('\t'): br'\t',
+        ord('\a'): br'\a',
+        ord('\b'): br'\b',
+        ord('\v'): br'\v',
+        ord('\f'): br'\f',
+        ord('\x1f'): br'\e',
+        ord('\\'): br'\\',
+        ord('\''): br'\'',
+        ord('\"'): br'\"',
+    }
 
-    def __replace_character_literals(m):
+    __character_literal_char = {
+        b'char': b'',
+        b'char8_t': b'u8',
+        b'char16_t': b'u',
+        b'char32_t': b'U',
+        b'wchar_t': b'L',
+    }
+
+    def __replace_character_literals(m, *, _digits_re=re.compile(br'\d+'), _escape=__character_literals_escape, _char=__character_literal_char):
         ctype = m.group(1)
-        value = int(m.group(2))
-        if ctype == b'char' and __replacable_character_literal(chr(value)):
-            return f'\'{chr(value)}\''.encode()
-        elif ctype == b'wchar_t' and __replace_character_literals(chr(value)):
-            return f'L\'{chr(value)}\''.encode()
-        else:
+
+        res = b''
+        numbers = [int(x) for x in _digits_re.findall(m.group(0))]
+
+        try:
+            if ctype in (b'char', b'char8_t'):
+                res = bytes(numbers)
+            elif ctype == b'char16_t':
+                u16 = []
+                for num in numbers:
+                    u16.append(num >> 16)
+                    u16.append(num & 65535)
+                res = bytes(u16).decode('utf-16be').encode('utf-8')
+            else:  # Assume UTF-32
+                res = ''.join(map(chr, numbers)).encode('utf-8')
+        except (UnicodeError, ValueError):
             return m.group(0)
 
-    def __replace_cbu_strpack(m):
-        chars = m.group(1)
-        chars = chars.replace(br"', '", b'')
-        if chars.startswith(b", '"):
-            chars = chars[3:]
-        if chars.endswith(b'\''):
-            chars = chars[:-1]
-        return b'cbu::"' + chars + b'"_str'
+        print_res = b''
+
+        for ch in res:
+            esc = _escape.get(ch)
+            if esc:
+                print_res += esc
+            elif ch < 0x20:
+                print_res += '\\x{:02x}'.format(ch).encode()
+            else:
+                print_res += bytes([ch])
+
+        if len(numbers) == 1:
+            return _char[ctype] + b'\'' + print_res + b'\''
+        else:
+            return b'(' + _char[ctype] + b'\"' + print_res + b'\")'
 
     pattern_replaces = (
         (re.compile(br'::basic_string<char, std::(__\d+::)?char_traits<char>, std::(__\d+::)?allocator<char>>'), b'::string'),
@@ -175,7 +211,7 @@ def cppfilter(fi):
          br'__v16qi'),
         (re.compile(br'long long __vector\(4\)'),
          br'__m256i'),
-        (re.compile(br'\((char|wchar_t)\)(\d+)'), __replace_character_literals),
+        (re.compile(br'\((char|wchar_t|char8_t|char16_t|char32_t)\)\d+(,\s?\(\1\)\d+)*'), __replace_character_literals),
 
         # std::ratio
         (re.compile(br'::ratio<1l*, 1000000000000000000000000l*>'), br'::yocto'),
@@ -227,10 +263,6 @@ def cppfilter(fi):
         (re.compile(br'fmt::(\w+)::basic_format_specs<char>'), br'fmt::\1::format_specs'),
 
         # cbu specific
-        # Omit cbu's inline namespaces
-        (re.compile(br'\bcbu::cbu_\w+::'), br'cbu::'),
-        (re.compile(
-            br'\bcbu::strpack<char((?:, \'(?:\\\'|[^\']*)\')+)>::s'), __replace_cbu_strpack),
         (re.compile(br'\bcbu::basic_zstring_view<(.+), std::(__\d+::)?char_traits<\1>>'),
          br'cbu::basic_zstring_view<\1>'),
         (re.compile(br'cbu::basic_zstring_view<char>'), b'cbu::zstring_view'),
