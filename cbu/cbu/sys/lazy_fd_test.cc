@@ -36,7 +36,7 @@
 
 #include <gtest/gtest.h>
 
-namespace cbu::inline cbu_init_guard {
+namespace cbu {
 namespace {
 
 TEST(LazyFDTest, LazyFD) {
@@ -77,4 +77,4 @@ TEST(LazyFDTest, LazyFD) {
 }
 
 }  // namespace
-}  // namespace cbu::inline cbu_init_guard
+}  // namespace cbu
