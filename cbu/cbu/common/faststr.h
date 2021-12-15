@@ -76,7 +76,8 @@ inline constexpr C* memdrop_bswap(C *s, T v) noexcept {
     T u = may_bswap<std::endian::little, byte_order>(v);
     for (std::size_t i = 0; i < sizeof(T); ++i) {
       *s++ = std::uint8_t(u);
-      u >>= 8;
+      // Don't write ">> 8".  That's UB if sizeof(T) == 1
+      u = u >> 1 >> 7;
     }
     return s;
   } else {
