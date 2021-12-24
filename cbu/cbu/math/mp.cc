@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/mp.h"
+#include "cbu/math/mp.h"
 
 #include <string.h>
 #if __has_include(<x86intrin.h>)

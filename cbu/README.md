@@ -62,7 +62,6 @@ If you use anything else, you have to take care of it yourself.
 * `immutable_string.h`: An "immutable" string class that holds either a `string_view` or a real `string` object.
 * `memory.h`: Provides memory operation utilities, including some C++20 memory functions that are missing from GCC 9
 * `merge_const.h`: Provides `cbu::kConst<T, args...>`, a simple wrapper of `inline constexpr`
-* `mp.h`: Multi-precicision integer operations: full support for addition, subtraction, multiplication and limited support for division
 * `once.h`: Provides macro `CBU_ONCE`, somewhat like but easier to use than [`pthread_once`](https://linux.die.net/man/3/pthread_once)
 * `range.h`: Wraps two iterators to an object for [range-based for](https://en.cppreference.com/w/cpp/language/range-for)
 * `ref_cnt.h`: Reference-counting operations
@@ -103,6 +102,12 @@ This one is just a hobby - a crazy one.
 ### cbu/malloc
 
 [`cbu/malloc`](cbu/malloc): My malloc implementation.  See [benchmark data](cbu/malloc).
+
+### cbu/math
+
+[`cbu/math`](cbu/math): Some math utilities
+
+* `mp.h`: Multi-precicision integer operations: full support for addition, subtraction, multiplication and limited support for division
 
 ### cbu/network
 

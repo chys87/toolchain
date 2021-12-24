@@ -26,13 +26,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "faststr.h"
+#include "cbu/common/faststr.h"
+
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdarg.h>
-#include "bit.h"
-#include "fastarith.h"
-#include "stdhack.h"
+
+#include "cbu/common/bit.h"
+#include "cbu/common/fastarith.h"
+#include "cbu/common/stdhack.h"
 #include "cbu/compat/string.h"
 
 namespace cbu {

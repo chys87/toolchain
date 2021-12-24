@@ -35,9 +35,10 @@
 # define protected public
 #endif
 
-#include "stdhack.h"
 #include <cassert>
 #include <string>
+
+#include "cbu/common/stdhack.h"
 
 // Hacks standard containers to add more functionality
 
