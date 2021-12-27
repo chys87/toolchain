@@ -26,15 +26,37 @@
 
 cc_library(
   name = 'io',
-  srcs = glob(['*.cc'],
-              exclude=['*_test.cc']),
-  hdrs = glob(['*.h']),
+  srcs = [],
+  hdrs = [],
   deps = [
-    '//cbu/common',
-    '//cbu/fsyscall',
+    ':fileutil',
+    ':scoped_fd',
   ],
   # cbu is a collection of really TINY utilities so you may always want to
   # use static linking
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = 'fileutil',
+  srcs = ['fileutil.cc'],
+  hdrs = ['fileutil.h'],
+  deps = [
+    '//cbu/common:strutil',
+    '//cbu/fsyscall',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = 'scoped_fd',
+  srcs = ['scoped_fd.cc'],
+  hdrs = ['scoped_fd.h'],
+  deps = [
+    '//cbu/fsyscall',
+  ],
   linkstatic=True,
   visibility = ["//visibility:public"],
 )

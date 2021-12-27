@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/scoped_fd.h"
+#include "cbu/io/scoped_fd.h"
 
 #include <unistd.h>
 

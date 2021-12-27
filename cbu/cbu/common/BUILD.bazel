@@ -28,12 +28,10 @@ cc_library(
   name = 'common',
   srcs = [
     'escape.cc',
-    'scoped_fd.cc',
     'unit_prefix.cc',
   ],
   hdrs = [
     'escape.h',
-    'scoped_fd.h',
     'unit_prefix.h',
   ],
   deps = [
@@ -88,7 +86,6 @@ cc_library(
     'tags.h',
     'type_traits.h',
     'utility.h',
-    'zstring_view.h',
   ],
   deps = [
     ':concepts',
@@ -151,6 +148,7 @@ cc_library(
   hdrs = [
     'encoding.h',
     'strutil.h',
+    'zstring_view.h',
   ],
   deps = [
     ':header_only',

@@ -103,7 +103,7 @@ class InitGuard {
   static constexpr bool inited(int v) noexcept { return v >= MIN_DONE; }
 
   // Use this only if you know exactly what you're doing
-  // Typically it's only used by LazyScopedFD and similar situations
+  // Typically it's only used by LazyFD and similar situations
   constexpr const int* raw_value_ptr() const noexcept { return &v_; }
   constexpr int* raw_value_ptr(int v) noexcept { return &v_; }
 
