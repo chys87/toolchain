@@ -1,3 +1,4 @@
+
 /*
  * cbu - chys's basic utilities
  * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
@@ -26,53 +27,76 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/unit_prefix.h"
+#include "cbu/math/strict_overflow.h"
 
-#include <cstring>
-#include <limits>
+#include <cmath>
 
-#include "cbu/math/common.h"
-#include "cbu/math/fastdiv.h"
+#include <gtest/gtest.h>
 
 namespace cbu {
 
-ScaleUnitPrefix scale_unit_prefix_1000(float value) noexcept {
-  float scale = 1;
-  unsigned prefix_idx = 0;
-  while (value >= scale * 1000) {
-    scale *= 1000;
-    ++prefix_idx;
-  }
-  return {value / scale, prefix_idx};
+template <typename V, typename T, typename U>
+inline consteval std::pair<bool, V> add_wrap(T a, U b) noexcept {
+  V res;
+  bool overflow = add_overflow(a, b, &res);
+  return {overflow, res};
 }
 
-ScaleUnitPrefix scale_unit_prefix_1024(float value) noexcept {
-  if constexpr (std::numeric_limits<float>::is_iec559) {
-    // 0 is a special case in floating point
-    if (equal(value, 0.0f)) return {value, 0};
-    float orig_value = value;
-    std::uint32_t u;
-    std::memcpy(&u, &orig_value, sizeof(u));
-    // Extract exponent
-    // The value is known to be positive, so don't bother to clear sign bit
-    unsigned orig_exponent = u >> 23;
-    unsigned real_exponent = orig_exponent - 127;
-    unsigned prefix_idx = cbu::fastdiv<10, 64>(real_exponent);
-    u -= prefix_idx * 10 << 23;
-    float res;
-    std::memcpy(&res, &u, sizeof(res));
-    return {res, prefix_idx};
-  } else {
-    // Division by 1024 doesn't generate errors, so this could be further
-    // optimized by avoiding division.
-    // But we don't bother to, becuase mainsteam platforms all use IEEE 754
-    float scale = 1;
-    unsigned prefix_idx = 0;
-    while (value >= scale * 1024) {
-      scale *= 1024;
-      ++prefix_idx;
-    }
-    return {value / scale, prefix_idx};
+TEST(OverflowTest, ConstexprAddOverflow) {
+  {
+    constexpr auto a = add_wrap<uint32_t>(255, 1);
+    ASSERT_FALSE(a.first);
+    EXPECT_EQ(a.second, 256);
+  }
+  {
+    constexpr auto a = add_wrap<uint8_t>(255, 1);
+    ASSERT_TRUE(a.first);
+    EXPECT_EQ(a.second, 0);
+  }
+  {
+    constexpr auto a = add_wrap<uint8_t>(254, 1);
+    ASSERT_FALSE(a.first);
+    EXPECT_EQ(a.second, 255);
+  }
+  {
+    constexpr auto a = add_wrap<int8_t>(254, 1);
+    ASSERT_TRUE(a.first);
+    EXPECT_EQ(a.second, -1);
+  }
+}
+
+template <typename V, typename T, typename U>
+inline consteval std::pair<bool, V> mul_wrap(T a, U b) noexcept {
+  V res;
+  bool overflow = mul_overflow(a, b, &res);
+  return {overflow, res};
+}
+
+TEST(OverflowTest, ConstexprMulOverflow) {
+  {
+    constexpr auto a = mul_wrap<uint32_t>(128, 128);
+    ASSERT_FALSE(a.first);
+    ASSERT_EQ(a.second, 16384);
+  }
+  {
+    constexpr auto a = mul_wrap<uint8_t>(127, 2);
+    ASSERT_FALSE(a.first);
+    ASSERT_EQ(a.second, 254);
+  }
+  {
+    constexpr auto a = mul_wrap<int8_t>(127, 2);
+    ASSERT_TRUE(a.first);
+    ASSERT_EQ(a.second, -2);
+  }
+  {
+    constexpr auto a = mul_wrap<int8_t>(-64, 2);
+    ASSERT_FALSE(a.first);
+    ASSERT_EQ(a.second, -128);
+  }
+  {
+    constexpr auto a = mul_wrap<int8_t>(64, 2);
+    ASSERT_TRUE(a.first);
+    ASSERT_EQ(a.second, -128);
   }
 }
 

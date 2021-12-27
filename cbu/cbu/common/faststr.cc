@@ -33,9 +33,10 @@
 #include <string.h>
 
 #include "cbu/common/bit.h"
-#include "cbu/common/fastarith.h"
 #include "cbu/common/stdhack.h"
 #include "cbu/compat/string.h"
+#include "cbu/math/common.h"
+#include "cbu/math/strict_overflow.h"
 
 namespace cbu {
 

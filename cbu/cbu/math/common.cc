@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/fastarith.h"
+#include "cbu/math/common.h"
 
 #include <cmath>
 #include <limits>

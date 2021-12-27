@@ -38,12 +38,14 @@ cc_library(
   ],
   deps = [
     ':header_only',
-    ':fastarith',
     ':faststr',
+    ':low_level_buffer_filler',
     ':stdhack',
     ':strutil',
     '//cbu/compat',
     '//cbu/fsyscall',
+    '//cbu/math:common',
+    '//cbu/math:fastdiv',
     '//cbu/tweak:tweak',
   ],
   # cbu is a collection of really TINY utilities so you may always want to
@@ -65,16 +67,12 @@ cc_library(
     'byte_size.h',
     'bytes_view.h',
     'compare.h',
-    'concepts.h',
     'defer.h',
-    'double_integer.h',
-    'fastdiv.h',
     'fifo_list.h',
     'heapq.h',
     'hint.h',
     'immutable_string.h',
     'length_prefixed_string_literal.h',
-    'low_level_buffer_filler.h',
     'memory.h',
     'merge_const.h',
     'once.h',
@@ -92,17 +90,18 @@ cc_library(
     'utility.h',
     'zstring_view.h',
   ],
+  deps = [
+    ':concepts',
+  ],
   linkstatic=True,
   visibility = ["//visibility:public"],
 )
 
 cc_library(
-  name = 'fastarith',
-  srcs = ['fastarith.cc'],
-  hdrs = ['fastarith.h'],
-  deps = [
-    ':header_only',
-  ],
+  name = 'concepts',
+  srcs = [],
+  hdrs = ['concepts.h'],
+  deps = [],
   linkstatic=True,
   visibility = ["//visibility:public"],
 )
@@ -113,8 +112,31 @@ cc_library(
   hdrs = ['faststr.h'],
   deps = [
     ':header_only',
-    ':fastarith',
     ':stdhack',
+    '//cbu/math:common',
+    '//cbu/math:strict_overflow',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = 'low_level_buffer_filler',
+  srcs = [],
+  hdrs = ['low_level_buffer_filler.h'],
+  deps = [
+    '//cbu/math:fastdiv',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = 'stdhack',
+  srcs = ['stdhack.cc'],
+  hdrs = ['stdhack.h'],
+  deps = [
+    '//cbu/compat:compat',
   ],
   linkstatic=True,
   visibility = ["//visibility:public"],
@@ -132,19 +154,9 @@ cc_library(
   ],
   deps = [
     ':header_only',
-    ':fastarith',
     ':faststr',
-  ],
-  linkstatic=True,
-  visibility = ["//visibility:public"],
-)
-
-cc_library(
-  name = 'stdhack',
-  srcs = ['stdhack.cc'],
-  hdrs = ['stdhack.h'],
-  deps = [
-    '//cbu/compat:compat',
+    '//cbu/math:common',
+    '//cbu/math:strict_overflow',
   ],
   linkstatic=True,
   visibility = ["//visibility:public"],

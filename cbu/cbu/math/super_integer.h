@@ -26,115 +26,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
-
-#include <algorithm>
-#include <compare>
-#include <concepts>
 #include <cstdint>
 #include <limits>
+#include <ostream>
 #include <type_traits>
-#include <utility>
 
-#include "cbu/common/bit_cast.h"
 #include "cbu/common/concepts.h"
 
 namespace cbu {
-
-// r is the initial value, usually 1
-template <Raw_arithmetic T>
-inline constexpr T fast_powu(T a, unsigned t,
-                             std::type_identity_t<T> r = T(1)) {
-  while (t) {
-    if (t & 1)
-      r *= a;
-    t >>= 1;
-    a *= a;
-  }
-  return r;
-}
-
-template <Raw_floating_point T>
-inline constexpr T fast_powi(T a, int n, std::type_identity_t<T> r = T(1)) {
-  if (n < 0) {
-    n = -n;
-    a = 1 / a;
-  }
-  return fast_powu(a, n, r);
-}
-
-// Equal without incurring warning
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wfloat-equal"
-template <typename A, typename B>
-requires EqualityComparable<A, B>
-inline constexpr bool equal(A a, B b) noexcept(noexcept(a == b)) {
-  return (a == b);
-}
-
-template <typename A, typename B>
-requires EqualityComparable<A, B>
-inline constexpr bool unequal(A a, B b) noexcept(noexcept(a != b)) {
-  return (a != b);
-}
-#pragma GCC diagnostic pop
-
-template <typename T>
-inline constexpr T clamp(T v, std::type_identity_t<T> m,
-                         std::type_identity_t<T> M) noexcept {
-  // 1) If v is NaN, the result is v
-  // 2) M and/or m are ignored if NaN
-  if constexpr (std::is_floating_point_v<T>) {
-    T r = v;
-    r = (m > r) ? m : r;  // Generates maxss with SSE
-    r = (M < r) ? M : r;  // Generates minss with SSE
-    return r;
-  } else {
-    return std::min(std::max(v, m), M);
-  }
-}
-
-namespace fastarith_detail {
-
-#if __has_attribute(__error__)
-void error() __attribute__((__error__("Unreachable code")));
-#else
-[[noreturn]] void error();
-#endif
-
-} // namespace fastarith_detail
-
-inline std::uint32_t float_to_uint32(float x) {
-  if constexpr (sizeof(float) == 4) {
-    return bit_cast<std::uint32_t>(x);
-  } else {
-    fastarith_detail::error();
-  }
-}
-
-inline float uint32_to_float(std::uint32_t u) {
-  if constexpr (sizeof(float) == 4) {
-    return bit_cast<float>(u);
-  } else {
-    fastarith_detail::error();
-  }
-}
-
-inline std::uint64_t double_to_uint64(double x) {
-  if constexpr (sizeof(double) == 8) {
-    return bit_cast<std::uint64_t>(x);
-  } else {
-    fastarith_detail::error();
-  }
-}
-
-inline double uint64_to_double(std::uint64_t u) {
-  if constexpr (sizeof(double) == 8) {
-    return bit_cast<double>(u);
-  } else {
-    fastarith_detail::error();
-  }
-}
 
 // This class stores any signed or unsigned integer type precisely.
 // It's optimized for constexpr evaluation, and mainly used to help implement
@@ -279,113 +178,10 @@ inline constexpr auto operator<=>(U b, const SuperInteger<T>& a) noexcept {
   return (SuperInteger<std::make_unsigned_t<U>>(b) <=> a);
 }
 
-template <Raw_integral A, Raw_integral B, Raw_integral C>
-inline constexpr bool mul_overflow(A a, B b, C *c) noexcept {
-  if (std::is_constant_evaluated()) {
-    SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
-    bool overflow = si.mul_overflow(b);
-    return !si.cast(c) || overflow;
-  }
-  return __builtin_mul_overflow(a, b, c);
-}
-
-template <Raw_integral A, Raw_integral B, Raw_integral C>
-inline constexpr bool add_overflow(A a, B b, C *c) noexcept {
-  if (std::is_constant_evaluated()) {
-    SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
-    bool overflow = si.add_overflow(b);
-    return !si.cast(c) || overflow;
-  }
-  return __builtin_add_overflow(a, b, c);
-}
-
-template <typename T, typename U>
-requires std::is_convertible_v<T*, U*>
-inline bool add_overflow(T* a, std::size_t b, U** c) noexcept {
-  std::uintptr_t res;
-  if (__builtin_add_overflow(std::uintptr_t(a), b, &res)) {
-    return true;
-  } else {
-    *c = reinterpret_cast<U*>(res);
-    return false;
-  }
-}
-
-template <Raw_integral A, Raw_integral B, Raw_integral C>
-inline constexpr bool sub_overflow(A a, B b, C *c) noexcept {
-  if (std::is_constant_evaluated()) {
-    SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
-    bool overflow = si.sub_overflow(b);
-    return !si.cast(c) || overflow;
-  }
-  return __builtin_sub_overflow(a, b, c);
-}
-
-template <Raw_integral A>
-inline constexpr A addc(A x, A y, A carryin, A* carryout) noexcept {
-  if (!std::is_constant_evaluated()) {
-    if constexpr (std::is_unsigned_v<A>) {
-      // Currently Clang has these addc builtins
-#define CBU_ADDC(Type, Builtin)              \
-  if constexpr (sizeof(A) == sizeof(Type)) { \
-    Type o;                                  \
-    A ret = Builtin(x, y, carryin, &o);      \
-    *carryout = o;                           \
-    return ret;                              \
-  }
-#if __has_builtin(__builtin_addcb)
-      CBU_ADDC(unsigned char, __builtin_addcb)
-#endif
-#if __has_builtin(__builtin_addcs)
-      CBU_ADDC(unsigned short, __builtin_addcs)
-#endif
-#if __has_builtin(__builtin_addc)
-      CBU_ADDC(unsigned, __builtin_addc)
-#endif
-#if __has_builtin(__builtin_addcl)
-      CBU_ADDC(unsigned long, __builtin_addcl)
-#endif
-#if __has_builtin(__builtin_addcll)
-      CBU_ADDC(unsigned long long, __builtin_addcll)
-#endif
-#undef CBU_ADDC
-    }
-  }
-  A tmp;
-  bool c1 = add_overflow(x, y, &tmp);
-  A res;
-  bool c2 = add_overflow(tmp, carryin, &res);
-  *carryout = c1 || c2;
-  return res;
-}
-
-template <std::integral U, std::integral V>
-inline bool sub_overflow(U* a, V b) noexcept {
-  return sub_overflow(*a, b, a);
-}
-
-// Map uint32_t or uint64_t to floating point values in [0, 1)
-float map_uint32_to_float(std::uint32_t v) noexcept;
-double map_uint64_to_double(std::uint64_t v) noexcept;
-
-
-constexpr std::uint32_t ipow10_array[10] = {
-  1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000
-};
-
-unsigned int ilog10_impl(std::uint32_t) noexcept __attribute__((__const__));
-
-inline constexpr unsigned int ilog10(std::uint32_t x) noexcept {
-  if (std::is_constant_evaluated()) {
-    std::uint64_t p = 10;
-    unsigned int i = 0;
-    while (true) {
-      if (x <= p) return i;
-      p *= 10;
-      ++i;
-    }
-  }
-  return ilog10_impl(x);
+template <typename T>
+std::ostream& operator<<(std::ostream& s, const SuperInteger<T>& v) {
+  if (!v.pos) s << '-';
+  return s << std::conditional_t<sizeof(T) == 1, unsigned int, T>(v.abs);
 }
 
 }  // namespace cbu

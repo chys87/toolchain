@@ -32,7 +32,7 @@
 #include <limits>
 #include <utility>
 
-#include "cbu/common/double_integer.h"
+#include "cbu/math/double_integer.h"
 
 namespace cbu {
 namespace fastdiv_detail {

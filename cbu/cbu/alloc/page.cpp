@@ -43,7 +43,6 @@
 #include "cbu/alloc/tc.h"
 #include "cbu/alloc/trie.h"
 #include "cbu/common/byte_size.h"
-#include "cbu/common/fastarith.h"
 #include "cbu/common/hint.h"
 #include "cbu/fsyscall/fsyscall.h"
 #include "cbu/tweak/tweak.h"
@@ -671,10 +670,10 @@ bool Arena::extend_nomove(Page* ptr, size_t old, size_t grow) noexcept {
 
 Description* Arena::trim_and_extract_unlocked(
     std::optional<size_t> threshold_opt) noexcept {
-  size_t threshold =
-      threshold_opt
-          ? *threshold_opt
-          : clamp(total_bytes_allocated_, kMinTrimThreshold, kMaxTrimThreshold);
+  size_t threshold = threshold_opt
+                         ? *threshold_opt
+                         : std::clamp(total_bytes_allocated_, kMinTrimThreshold,
+                                      kMaxTrimThreshold);
 
   if (reclaim_count_ < threshold * 2) return nullptr;
   reclaim_count_ = 0;

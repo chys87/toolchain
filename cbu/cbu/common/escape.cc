@@ -37,8 +37,8 @@
 
 #include "cbu/common/bit.h"
 #include "cbu/common/encoding.h"
-#include "cbu/common/fastarith.h"
 #include "cbu/common/faststr.h"
+#include "cbu/math/common.h"
 
 namespace cbu {
 namespace {

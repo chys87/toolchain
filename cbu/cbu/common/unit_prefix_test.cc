@@ -30,7 +30,7 @@
 
 #include <gtest/gtest.h>
 
-#include "cbu/common/fastarith.h"
+#include "cbu/math/common.h"
 
 namespace cbu {
 

@@ -30,9 +30,9 @@
 
 #include <limits>
 
-#include "cbu/common/fastarith.h"
-#include "cbu/common/fastdiv.h"
 #include "cbu/common/short_string.h"
+#include "cbu/math/common.h"
+#include "cbu/math/fastdiv.h"
 
 namespace cbu {
 namespace {

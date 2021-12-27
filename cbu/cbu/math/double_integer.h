@@ -32,9 +32,7 @@
 #include <limits>
 #include <utility>
 
-#include "cbu/common/concepts.h"
-#include "cbu/common/fastarith.h"
-#include "cbu/common/utility.h"
+#include "cbu/math/strict_overflow.h"
 
 namespace cbu {
 
@@ -171,9 +169,10 @@ struct DoubleUnsigned {
 
   friend constexpr std::strong_ordering operator<=>(
       const DoubleUnsigned& a, const DoubleUnsigned& b) noexcept {
-    // As of version 13, libc++ doesn't yet provide <=> for std::pair,
-    // so use our own pair instead.
-    return pair{a.hi, a.lo} <=> pair{b.hi, b.lo};
+    // As of version 13, libc++ doesn't yet provide <=> for std::pair
+    auto res = a.hi <=> b.hi;
+    if (res == 0) res = a.lo <=> b.lo;
+    return res;
   }
 
   friend constexpr DoubleUnsigned operator+(const DoubleUnsigned& a,

@@ -30,8 +30,9 @@ cc_library(
               exclude=['*_test.cc']),
   hdrs = glob(['*.h']),
   deps = [
-    '//cbu/common',
+    '//cbu/common:common',
     '//cbu/fsyscall',
+    '//cbu/math:fastdiv',
   ],
   # cbu is a collection of really TINY utilities so you may always want to
   # use static linking

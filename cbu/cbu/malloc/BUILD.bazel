@@ -35,6 +35,7 @@ cc_library(
     '//cbu/sys:sys',
     '//cbu/tweak:tweak',
     '//cbu/tweak:use_brk',
+    '//cbu/math:strict_overflow',
   ],
   # cbu is a collection of really TINY utilities so you may always want to
   # use static linking

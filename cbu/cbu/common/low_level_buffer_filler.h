@@ -37,8 +37,8 @@
 
 #include "cbu/common/byteorder.h"
 #include "cbu/common/concepts.h"
-#include "cbu/common/fastdiv.h"
 #include "cbu/common/faststr.h"
+#include "cbu/math/fastdiv.h"
 
 namespace cbu {
 

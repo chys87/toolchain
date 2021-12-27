@@ -34,9 +34,9 @@
 
 #include "cbu/alloc/alloc.h"
 #include "cbu/alloc/pagesize.h"
-#include "cbu/common/fastarith.h"
 #include "cbu/malloc/malloc.h"
 #include "cbu/malloc/visibility.h"
+#include "cbu/math/strict_overflow.h"
 
 namespace alloc = cbu::alloc;
 

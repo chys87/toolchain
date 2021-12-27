@@ -51,11 +51,8 @@ If you use anything else, you have to take care of it yourself.
    and `const void*` (explicit).
 * `concepts.h`: Somewhat like C++20's [`<concepts>`](https://en.cppreference.com/w/cpp/header/concepts)
 * `defer.h`: Provides macro `CBU_DEFER` for easier [RAII](https://en.cppreference.com/w/cpp/language/raii)
-* `double_integer.h`: Emulated integer types of double size for constexpr evaluation
 * `encoding.h`: UTF-8 functions
 * `escape.h`: C/JSON style string escaping utilities
-* `fastarith.h`: Various C++ arithmetic functions
-* `fastdiv.h`: Provides `fastdiv` and `fastmod`, to provide for faster division operations if the dividend is known to be small
 * `faststr.h`: Provides `mempick`, `memdrop`, `append`, `concat` and similar functions for easy string operations
 * `fifo_list.h`: Provides `fifo_list<T>`, a first-in-first-out singly-linked container type with fast access to both ends
 * `heapq.h`: Heap operations
@@ -107,7 +104,12 @@ This one is just a hobby - a crazy one.
 
 [`cbu/math`](cbu/math): Some math utilities
 
+* `common.h`: Various C++ arithmetic functions
+* `double_integer.h`: Emulated integer types of double size for constexpr evaluation
+* `fastdiv.h`: Provides `fastdiv` and `fastmod`, to provide for faster division operations if the dividend is known to be small
 * `mp.h`: Multi-precicision integer operations: full support for addition, subtraction, multiplication and limited support for division
+* `super_integer.h`: Provides class `SuperInteger` for constexpr evaluation
+* `strict_overflow.h`: Provides convenient wrappers for compiler overflow builtins
 
 ### cbu/network
 

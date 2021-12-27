@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/double_integer.h"
+#include "cbu/math/double_integer.h"
 
 #include <gtest/gtest.h>
 #include <stdint.h>
