@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -507,14 +507,13 @@ size_t from_bin(Word *r, const char *s, size_t n) noexcept {
     const char *p = s + n;
 #if defined __x86_64__ && defined __AVX2__
     static_assert(sizeof(Word) == 8);
-    __m256i ones = _mm256_set1_epi8('1');
     __m256i swap_mask = _mm256_setr_epi8(
         7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8,
         7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8);
-    __m256i va = _mm256_shuffle_epi8(_mm256_cmpeq_epi8(
-        *reinterpret_cast<const __m256i_u*>(p), ones), swap_mask);
-    __m256i vb = _mm256_shuffle_epi8(_mm256_cmpeq_epi8(
-        *reinterpret_cast<const __m256i_u*>(p + 32), ones), swap_mask);
+    __m256i va = _mm256_shuffle_epi8(_mm256_slli_epi32(
+        *reinterpret_cast<const __m256i_u*>(p), 7), swap_mask);
+    __m256i vb = _mm256_shuffle_epi8(_mm256_slli_epi32(
+        *reinterpret_cast<const __m256i_u*>(p + 32), 7), swap_mask);
     Word& w = r[nr++];
     uint32_t* pw = reinterpret_cast<uint32_t*>(&w);
     *(pw + 1) = bswap(_mm256_movemask_epi8(va));
