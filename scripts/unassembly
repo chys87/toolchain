@@ -261,6 +261,8 @@ def cppfilter(fi):
         (re.compile(br'fmt::(\w+)::basic_format_args<fmt::\1::basic_format_context<fmt::\1::appender, char>>'), br'fmt::\1::format_args'),
         (re.compile(br'fmt::\w+::type_identity<(.*?)>::type'), br'\1'),
         (re.compile(br'fmt::(\w+)::basic_format_specs<char>'), br'fmt::\1::format_specs'),
+        (re.compile(br'fmt::(\w+)::basic_format_string<char, '), br'fmt::\1::format_string<'),
+        (re.compile(br'fmt::(\w+)::basic_format_string<wchar_t, '), br'fmt::\1::wformat_string<'),
 
         # cbu specific
         (re.compile(br'\bcbu::basic_zstring_view<(.+), std::(__\d+::)?char_traits<\1>>'),
