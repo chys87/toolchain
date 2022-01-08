@@ -30,6 +30,9 @@
 
 #include <string.h>
 
+#include <algorithm>
+
+#include "cbu/alloc/pagesize.h"
 #include "cbu/alloc/private.h"
 
 namespace cbu {

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,8 +29,9 @@
 #include <string.h>
 #include <sys/mman.h>
 
-#include <atomic>
+#include <algorithm>
 #include <mutex>
+#include <utility>
 
 #include "cbu/alloc/alloc.h"
 #include "cbu/alloc/private.h"
