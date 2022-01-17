@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+
+#
+# Copyright (c) 2022, chys <admin@CHYS.INFO>
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#
+#   Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+#   Neither the name of chys <admin@CHYS.INFO> nor the names of other
+#   contributors may be used to endorse or promote products derived from
+#   this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+
+# This tool has essentially the same purpose as gtest-parallel
+# (https://github.com/google/gtest-parallel), but we always treat each
+# test as a whole.
+# We currently do not cache run time like gtest-parallel, so we never reorder
+# test cases.
+
+import argparse
+import os
+import re
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+
+
+class Executor:
+    def __init__(self, binary, additional_args):
+        self.binary = binary
+        self.additional_args = additional_args
+
+    def get_tests(self):
+        proc = subprocess.run(
+            [self.binary, '--gtest_list_tests'] + self.additional_args,
+            stdout=subprocess.PIPE, text=True, check=True)
+        return re.findall(r'^(\w+)\.$', proc.stdout, re.MULTILINE)
+
+    def run(self):
+        subprocess.run([self.binary] + self.additional_args, check=True)
+
+    def start_test(self, test):
+        f = tempfile.TemporaryFile()
+        proc = subprocess.Popen(
+            [self.binary, '--gtest_color=yes', f'--gtest_filter={test}.*'] +
+            self.additional_args,
+            stdout=f, stderr=subprocess.STDOUT)
+        return f, proc
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('binary')
+    parser.add_argument('additional_args', nargs='*')
+    parser.add_argument('--verbose', '-v', action='store_true',
+                        help='Print full message for all tests')
+    args = parser.parse_args()
+
+    exe = Executor(args.binary, args.additional_args)
+    tests = exe.get_tests()
+
+    tests_n = len(tests)
+    if tests_n == 0:
+        return
+    if tests_n == 1:
+        exe.run()
+        return
+
+    concurrency = min(os.cpu_count(), tests_n)
+
+    pending = tests[::-1]
+    running = []
+
+    signals = {signal.SIGCLD}
+    signal.pthread_sigmask(signal.SIG_BLOCK, signals)
+
+    ret_code = 0
+
+    while running or (ret_code == 0 and pending):
+        while ret_code == 0 and pending and len(running) < concurrency:
+            test = pending.pop()
+            f, proc = exe.start_test(test)
+            running.append((test, f, proc, time.time()))
+            print(f'\033[32;1m[ RUN    ]\033[0m {test}')
+
+        signal.sigwait(signals)
+
+        for i in range(len(running) - 1, -1, -1):
+            test, f, proc, start_ts = running[i]
+            try:
+                code = proc.wait(0)
+            except subprocess.TimeoutExpired:
+                continue
+            del running[i]
+            ms = int((time.time() - start_ts) * 1000)
+            if code == 0:
+                print(f'\033[32;1m[     OK ]\033[0m {test} ({ms} ms)')
+                if args.verbose:
+                    f.seek(0)
+                    sys.stdout.buffer.write(f.read())
+            else:
+                print(f'\033[31;1m[ FAILED ]\033[0m {test} ({ms} ms)')
+                f.seek(0)
+                sys.stdout.buffer.write(f.read())
+                ret_code = ret_code or code
+    sys.exit(ret_code)
+
+
+if __name__ == '__main__':
+    main()
