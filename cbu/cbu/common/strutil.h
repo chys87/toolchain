@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -177,6 +177,15 @@ struct StrLessLengthFirst {
   template <typename T, typename U>
   constexpr bool operator()(const T& a, const U& b) const noexcept {
     return strcmp_length_first(a, b) < 0;
+  }
+};
+
+struct StrGreaterLengthFirst {
+  using is_transparent = void;
+
+  template <typename T, typename U>
+  constexpr bool operator()(const T& a, const U& b) const noexcept {
+    return strcmp_length_first(a, b) > 0;
   }
 };
 
