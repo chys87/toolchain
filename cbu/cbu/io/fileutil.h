@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,8 @@
 #include <stdint.h>
 #include <time.h>
 #include <sys/uio.h>
+
+#include <optional>
 #include <string_view>
 
 #include "cbu/common/zstring_view.h"
@@ -82,6 +84,10 @@ class AtFileWithLength {
 // If anything is wrong, returns 0
 time_t get_file_mtime(AtFile) noexcept;
 time_t get_file_mtime(int) noexcept;
+
+// If anything is wrong, returns nullopt
+std::optional<time_t> get_file_mtime_opt(AtFile) noexcept;
+std::optional<time_t> get_file_mtime_opt(int) noexcept;
 
 void touch_file(AtFile, time_t) noexcept;
 void touch_file(int, time_t) noexcept;

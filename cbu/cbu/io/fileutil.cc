@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,13 +37,21 @@
 namespace cbu {
 
 time_t get_file_mtime(AtFile file) noexcept {
+  return get_file_mtime_opt(file).value_or(0);
+}
+
+time_t get_file_mtime(int fd) noexcept {
+  return get_file_mtime_opt(fd).value_or(0);
+}
+
+std::optional<time_t> get_file_mtime_opt(AtFile file) noexcept {
 #ifdef STATX_MTIME
   struct statx st;
   int rc = fsys_statx(file.fd(), file.name(), 0, STATX_MTIME, &st);
   if (rc == 0) {
     return st.stx_mtime.tv_sec;
   } else {
-    return 0;
+    return std::nullopt;
   }
 #else
   struct stat st;
@@ -51,19 +59,19 @@ time_t get_file_mtime(AtFile file) noexcept {
   if (rc == 0) {
     return st.st_mtime;
   } else {
-    return 0;
+    return std::nullopt;
   }
 #endif
 }
 
-time_t get_file_mtime(int fd) noexcept {
+std::optional<time_t> get_file_mtime_opt(int fd) noexcept {
 #ifdef STATX_MTIME
   struct statx st;
   int rc = fsys_statx(fd, "", AT_EMPTY_PATH, STATX_MTIME, &st);
   if (rc == 0) {
     return st.stx_mtime.tv_sec;
   } else {
-    return 0;
+    return std::nullopt;
   }
 #else
   struct stat st;
@@ -71,7 +79,7 @@ time_t get_file_mtime(int fd) noexcept {
   if (rc == 0) {
     return st.st_mtime;
   } else {
-    return 0;
+    return std::nullopt;
   }
 #endif
 }
