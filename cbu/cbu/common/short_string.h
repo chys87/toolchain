@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -89,8 +90,14 @@ class short_string {
   static constexpr len_t capacity() noexcept { return MaxLen; }
 
   constexpr void assign(std::string_view rhs) noexcept {
-    auto copy_end = std::copy_n(rhs.data(), rhs.length(), s_);
-    *copy_end = '\0';
+    if (std::is_constant_evaluated()) {
+      auto copy_end = std::copy_n(rhs.data(), rhs.length(), s_);
+      *copy_end = '\0';
+    } else {
+      // memcpy is fine, but copy_n uses memmove
+      std::memcpy(s_, rhs.data(), rhs.length());
+      s_[rhs.length()] = '\0';
+    }
     l_ = rhs.length();
   }
 
