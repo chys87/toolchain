@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -260,7 +260,7 @@ char *reverse(char *p, char *q) noexcept {
   return ret;
 }
 
-int compare_string_view(std::string_view a, std::string_view b) noexcept {
+int compare_string_view_impl(std::string_view a, std::string_view b) noexcept {
   if (a.length() == b.length()) {
     return std::memcmp(a.data(), b.data(), a.length());
   } else if (a.length() < b.length()) {
@@ -276,8 +276,8 @@ int compare_string_view(std::string_view a, std::string_view b) noexcept {
   }
 }
 
-int compare_string_view_for_lt(std::string_view a,
-                               std::string_view b) noexcept {
+int compare_string_view_for_lt_impl(std::string_view a,
+                                    std::string_view b) noexcept {
   if (a.length() >= b.length()) {
     return memcmp(a.data(), b.data(), b.length());
   } else {

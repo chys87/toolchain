@@ -102,12 +102,25 @@ inline constexpr const char *c_str(const T &s) noexcept(noexcept(s->c_str())) {
 }
 
 // Compares two string views, and returns negative, 0, and positive
-int compare_string_view(std::string_view a, std::string_view b) noexcept
-  __attribute__((__pure__));
+int compare_string_view_impl(std::string_view a, std::string_view b) noexcept
+    __attribute__((__pure__));
+
+inline constexpr int compare_string_view(std::string_view a,
+                                         std::string_view b) noexcept {
+  if (std::is_constant_evaluated()) return (a < b) ? -1 : (a == b) ? 0 : 1;
+  return compare_string_view_impl(a, b);
+}
 
 // Returns negative if (a < b), 0 or positive otherwise
-int compare_string_view_for_lt(std::string_view a, std::string_view b) noexcept
-  __attribute__((__pure__));
+int compare_string_view_for_lt_impl(std::string_view a,
+                                    std::string_view b) noexcept
+    __attribute__((__pure__));
+
+inline constexpr int compare_string_view_for_lt(std::string_view a,
+                                                std::string_view b) noexcept {
+  if (std::is_constant_evaluated()) return (a < b) ? -1 : 0;
+  return compare_string_view_for_lt_impl(a, b);
+}
 
 // Convert anything to a string_view, useful in templates.
 template <Std_string_char C>
