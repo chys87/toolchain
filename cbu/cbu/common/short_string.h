@@ -159,4 +159,68 @@ class fixed_length_string {
 template <std::size_t N>
 fixed_length_string(const char (&)[N]) -> fixed_length_string<N - 1>;
 
-} // namespace cbu
+// This class is like short_string, but no null terminator is guaranteed
+template <std::size_t MaxLen>
+class short_nzstring {
+ public:
+  using len_t = strlen_t<MaxLen>;
+
+  explicit short_nzstring(UninitializedTag) noexcept {}
+
+  constexpr short_nzstring() noexcept : s_{}, l_{0} {}
+
+  template <std::size_t LenP1>
+  consteval short_nzstring(const char (&src)[LenP1]) noexcept
+      : short_nzstring(std::string_view(src, LenP1 - 1)) {
+    // Use a static assertion rather than a concept, to prevent
+    // longer strings from matching the following std::string_view overload.
+    static_assert(LenP1 <= MaxLen + 1);
+  }
+
+  constexpr short_nzstring(std::string_view src) noexcept {
+    if (std::is_constant_evaluated()) std::fill_n(s_, std::size(s_), 0);
+    assign(src);
+  }
+
+  constexpr char (&buffer() noexcept)[MaxLen] { return s_; }
+  constexpr void set_length(len_t l) { l_ = l; }
+
+  constexpr const char* data() const noexcept { return s_; }
+  constexpr char operator[](std::size_t n) const noexcept { return s_[n]; }
+  constexpr len_t length() const noexcept { return l_; }
+  constexpr len_t size() const noexcept { return l_; }
+  constexpr const char* begin() const noexcept { return s_; }
+  constexpr const char* end() const noexcept { return s_ + l_; }
+  constexpr const char* cbegin() const noexcept { return s_; }
+  constexpr const char* cend() const noexcept { return s_ + l_; }
+  constexpr operator std::string_view() const noexcept { return {s_, l_}; }
+
+  constexpr std::string_view string_view() const noexcept { return {s_, l_}; }
+  std::string string() const { return std::string(s_, l_); }
+
+  static constexpr len_t capacity() noexcept { return MaxLen; }
+
+  constexpr void assign(std::string_view rhs) noexcept {
+    if (std::is_constant_evaluated()) {
+      std::copy_n(rhs.data(), rhs.length(), s_);
+    } else {
+      // memcpy is fine, but copy_n uses memmove
+      std::memcpy(s_, rhs.data(), rhs.length());
+    }
+    l_ = rhs.length();
+  }
+
+  // For some third-party type traits
+  static constexpr inline bool pass_by_ref(short_nzstring*) { return true; }
+
+ private:
+  char s_[MaxLen];
+  len_t l_;
+};
+
+template <std::size_t N>
+  requires(N > 0)
+short_nzstring(const char (&)[N])
+->short_nzstring<N - 1>;
+
+}  // namespace cbu
