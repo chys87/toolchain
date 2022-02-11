@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2013-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2013-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -311,6 +311,7 @@ def_fsys(mmap,mmap,void*,6,void*,unsigned long,int,int,int,long)
 def_fsys(munmap,munmap,int,2,void*,unsigned long)
 def_fsys(madvise,madvise,int,3,void*,unsigned long,int)
 def_fsys(mremap,mremap,void*,4,void*,unsigned long,unsigned long,int)
+def_fsys(mprotect,mprotect,int,3,void*,unsigned long,int)
 // Should be sigset_t. But don't want to include signal.h here
 def_fsys(rt_sigprocmask,rt_sigprocmask,int,
          4,int,const void *,void *,unsigned long)
@@ -328,6 +329,7 @@ def_fsys(setrlimit,setrlimit,int,2,int,const struct rlimit *)
 def_fsys(getrlimit,getrlimit,int,2,int,struct rlimit *)
 def_fsys(sysinfo,sysinfo,int,1,struct sysinfo *)
 def_fsys_nomem(fadvise64,fadvise64,int,4,int,__OFF64_T_TYPE,__OFF64_T_TYPE,int)
+def_fsys_nomem(fallocate,fallocate,int,4,int,int,long,long)
 
 // Glibc wrappers of many of the following syscalls do some bookkeeping
 // related to asynchronous cancelation.
@@ -554,6 +556,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_munmap munmap
 #define fsys_madvise madvise
 #define fsys_mremap mremap
+#define fsys_mprotect mprotect
 #define fsys_sigprocmask sigprocmask
 #define fsys_setsid setsid
 #define fsys_kill kill
@@ -565,6 +568,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_getrlimit getrlimit
 #define fsys_sysinfo sysinfo
 #define fsys_posix_fadvise posix_fadvise
+#define fsys_fallocate fallocate
 #define fsys_open2 open
 #define fsys_open3 open
 #define fsys_openat3 openat
