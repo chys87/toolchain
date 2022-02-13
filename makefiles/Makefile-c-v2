@@ -106,6 +106,7 @@ ARFLAGS := crs
 
 STRIP := strip --strip-unneeded -R .comment -R .GCC.command.line
 INSTALL := install -m755 -C -T -v
+INSTALL_DATA := install -m644 -C -T -v
 INSTDIR := /usr/local/bin
 
 CSTD ?= -std=gnu99
@@ -258,6 +259,19 @@ endef
 
 define define_static_library
 $(call define_static_library_impl,$(1),$(patsubst %.proto,%.pb.cc,$(patsubst %.py,%,$(2))))
+endef
+
+# $(1): Target name
+# $(2): Script
+# $(3): Extra dependencies
+define define_data_file
+all: $(BUILDDIR)/$(1)
+$(BUILDDIR)/$(1): private NAME := DATA
+$(BUILDDIR)/$(1): $(DIR)/$(2) $(3:%=$(DIR)/%)
+	+$$(Q)$(DIR)/$(2) > $$@
+install: $(INSTDIR)/$(1)
+$(INSTDIR)/$(1): $(BUILDDIR)/$(1)
+	$(INSTALL_DATA) $$< $$@
 endef
 
 # Make sure headers are generated earlier than everything else
