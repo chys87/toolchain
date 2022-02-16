@@ -42,7 +42,7 @@ $(patsubst $(DIR)/%,%,$(patsubst $(BUILDDIR)/%,%,$(1)))
 endef
 
 # First handle automatically generated sources
-AUTO_GENERATOR_PYTHON := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.*.cpp.py $(x)/*.*.cc.py $(x)/*.*.h.py))
+AUTO_GENERATOR_PYTHON := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.cpp.py $(x)/*.cc.py $(x)/*.h.py))
 AUTO_GENERATED_PYTHON := $(AUTO_GENERATOR_PYTHON:$(DIR)/%.py=$(BUILDDIR)/%)
 AUTO_GENERATED_PYTHON_DEPS := $(AUTO_GENERATOR_PYTHON:$(DIR)/%.py=$(BUILDDIR)/%.py.P)
 
