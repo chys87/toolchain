@@ -114,7 +114,7 @@ CXXSTD ?=
 # -pipe does more harm than good since we mount /tmp as a tmpfs
 # GCC defaults to -ffp-contract=fast, but clang defaults to -ffp-contract=on unless -ffast-math is set
 # We direct clang to use -ffp-contract=fast as well, even if -ffast-math isn't set
-OPTIMIZEFLAGS ?= -O2 -ggdb \
+OPTIMIZEFLAGS ?= -O2 \
 				 -fmerge-all-constants -fno-common \
 				 -fno-ident \
 				 -ffp-contract=fast \
