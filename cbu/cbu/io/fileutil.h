@@ -45,7 +45,8 @@ class AtFile {
  public:
   constexpr AtFile(int f, const char *n) noexcept : fd_(f), name_(n) {}
   constexpr AtFile(const char *n = nullptr) noexcept : AtFile(AT_FDCWD, n) {}
-  constexpr AtFile(const AtFile &) noexcept = default;
+  constexpr AtFile(const AtFile&) noexcept = default;
+  constexpr AtFile& operator=(const AtFile&) noexcept = default;
 
   explicit constexpr operator bool() const noexcept { return name(); }
   constexpr int fd() const noexcept { return fd_; }
@@ -67,6 +68,8 @@ class AtFileWithLength {
       : fd_(af.fd()),
         l_(std::string_view(af.name()).size()),
         name_(af.name()) {}
+  constexpr AtFileWithLength(const AtFileWithLength&) noexcept = default;
+  constexpr AtFileWithLength& operator=(const AtFileWithLength&) noexcept = default;
 
   explicit constexpr operator bool() const noexcept { return name(); }
   constexpr operator AtFile() const noexcept { return {fd_, name_}; }
