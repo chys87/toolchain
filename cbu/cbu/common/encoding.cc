@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,6 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
       // UTF-16 surrogate pairs
       return nullptr;
     } else {
-      // Most Chinese characters fall here
 #if defined __BMI2__
       memdrop_be<uint32_t>(w, _pdep_u32(u, 0x0f3f3f00) | 0xe0808000);
       w += 3;
@@ -65,7 +64,7 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
       *w++ = (u & 0x3fu) + 0x80u;
 #endif
     }
-  } else [[unlikely]] {
+  } else {
     if (u < 0x110000) {
 #if defined __BMI2__
       w = memdrop_be<uint32_t>(w, _pdep_u32(u, 0x073f3f3f) | 0xf0808080u);
@@ -82,9 +81,92 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
   return w;
 }
 
+char8_t* char32_to_utf8_unsafe(char8_t* w, char32_t u) noexcept {
+  if (u < 0x800) {
+    if (u < 0x80) {
+      *w++ = u;
+    } else {
+#if defined __BMI2__
+      w = memdrop_be<uint16_t>(w, _pdep_u32(u, 0x1f3f) | 0xc080u);
+#else
+      *w++ = (u >> 6) + 0xc0u;
+      *w++ = (u & 0x3fu) + 0x80u;
+#endif
+    }
+  } else if (u < 0x10000) {
+#if defined __BMI2__
+    memdrop_be<uint32_t>(w, _pdep_u32(u, 0x0f3f3f00) | 0xe0808000);
+    w += 3;
+#else
+    *w++ = (u >> 12) + 0xe0u;
+    *w++ = ((u >> 6) & 0x3fu) + 0x80u;
+    *w++ = (u & 0x3fu) + 0x80u;
+#endif
+  } else {
+    // Assuming u < 0x110000
+#if defined __BMI2__
+    w = memdrop_be<uint32_t>(w, _pdep_u32(u, 0x073f3f3f) | 0xf0808080u);
+#else
+    *w++ = (u >> 18) + 0xf0u;
+    *w++ = ((u >> 12) & 0x3fu) + 0x80u;
+    *w++ = ((u >> 6) & 0x3fu) + 0x80u;
+    *w++ = (u & 0x3fu) + 0x80u;
+#endif
+  }
+  return w;
+}
+
+char8_t* char16_to_utf8_unsafe(char8_t* w, char16_t u) noexcept {
+  if (u < 0x800) {
+    if (u < 0x80) {
+      *w++ = u;
+    } else {
+#if defined __BMI2__
+      w = memdrop_be<uint16_t>(w, _pdep_u32(u, 0x1f3f) | 0xc080u);
+#else
+      *w++ = (u >> 6) + 0xc0u;
+      *w++ = (u & 0x3fu) + 0x80u;
+#endif
+    }
+  } else {
+#if defined __BMI2__
+    memdrop_be<uint32_t>(w, _pdep_u32(u, 0x0f3f3f00) | 0xe0808000);
+    w += 3;
+#else
+    *w++ = (u >> 12) + 0xe0u;
+    *w++ = ((u >> 6) & 0x3fu) + 0x80u;
+    *w++ = (u & 0x3fu) + 0x80u;
+#endif
+  }
+  return w;
+}
+
+void encoding_detail::utf16_surrogates_to_utf8(char8_t* w, char16_t a,
+                                               char16_t b) noexcept {
+  char32_t u = (a << 10) - (0xd800 << 10) + (b - 0xdc00) + 0x10000;
+#if defined __BMI2__
+  w = memdrop_be<uint32_t>(w, _pdep_u32(u, 0x073f3f3f) | 0xf0808080u);
+#else
+  *w++ = (u >> 18) + 0xf0u;
+  *w++ = ((u >> 12) & 0x3fu) + 0x80u;
+  *w++ = ((u >> 6) & 0x3fu) + 0x80u;
+  *w++ = (u & 0x3fu) + 0x80u;
+#endif
+}
+
 char* char32_to_utf8(char* dst, char32_t c) noexcept {
   return reinterpret_cast<char*>(
       char32_to_utf8(reinterpret_cast<char8_t*>(dst), c));
+}
+
+char* char32_to_utf8_unsafe(char* dst, char32_t c) noexcept {
+  return reinterpret_cast<char*>(
+      char32_to_utf8_unsafe(reinterpret_cast<char8_t*>(dst), c));
+}
+
+char* char16_to_utf8_unsafe(char* dst, char16_t c) noexcept {
+  return reinterpret_cast<char*>(
+      char16_to_utf8_unsafe(reinterpret_cast<char8_t*>(dst), c));
 }
 
 namespace {

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,7 @@
 #include <gtest/gtest.h>
 
 #include "cbu/common/defer.h"
+#include "cbu/debug/gtest_formatters.h"
 
 namespace cbu {
 namespace {
@@ -72,14 +73,59 @@ TEST(Utf8Test, Char32ToUtf8) {
   EXPECT_EQ(char32_to_utf8(buffer, U'x') - buffer, 1);
   EXPECT_EQ(std::string(buffer, 1), std::string((const char*)u8"x"));
 
+  EXPECT_EQ(char32_to_utf8_unsafe(buffer, U'x') - buffer, 1);
+  EXPECT_EQ(std::string(buffer, 1), std::string((const char*)u8"x"));
+
+  EXPECT_EQ(char16_to_utf8_unsafe(buffer, u'x') - buffer, 1);
+  EXPECT_EQ(std::string(buffer, 1), std::string((const char*)u8"x"));
+
   EXPECT_EQ(char32_to_utf8(buffer, U'\u07ff') - buffer, 2);
+  EXPECT_EQ(std::string(buffer, 2), std::string((const char*)u8"\u07ff"));
+
+  EXPECT_EQ(char32_to_utf8_unsafe(buffer, U'\u07ff') - buffer, 2);
+  EXPECT_EQ(std::string(buffer, 2), std::string((const char*)u8"\u07ff"));
+
+  EXPECT_EQ(char16_to_utf8_unsafe(buffer, u'\u07ff') - buffer, 2);
   EXPECT_EQ(std::string(buffer, 2), std::string((const char*)u8"\u07ff"));
 
   EXPECT_EQ(char32_to_utf8(buffer, U'人') - buffer, 3);
   EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"人"));
 
+  EXPECT_EQ(char32_to_utf8_unsafe(buffer, U'人') - buffer, 3);
+  EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"人"));
+
+  EXPECT_EQ(char16_to_utf8_unsafe(buffer, u'人') - buffer, 3);
+  EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"人"));
+
   EXPECT_EQ(char32_to_utf8(buffer, U'\U00012345') - buffer, 4);
   EXPECT_EQ(std::string(buffer, 4), std::string((const char*)u8"\U00012345"));
+
+  EXPECT_EQ(char32_to_utf8_unsafe(buffer, U'\U00012345') - buffer, 4);
+  EXPECT_EQ(std::string(buffer, 4), std::string((const char*)u8"\U00012345"));
+}
+
+TEST(Utf8Test, Utf16SurrogatesTest) {
+  EXPECT_EQ(char32_non_bmp_to_utf16_surrogates(U'🀄'),
+            std::pair(u"🀄"[0], u"🀄"[1]));
+  EXPECT_EQ(utf16_surrogates_to_char32(u"🀄"[0], u"🀄"[1]),
+            U'🀄');
+  {
+    char8_t buffer[4];
+    utf16_surrogates_to_utf8(buffer, u"🀄"[0], u"🀄"[1]);
+    EXPECT_EQ(std::u8string_view(buffer, 4), u8"🀄"sv);
+  }
+
+  for (uint32_t u = 0x10000; u <= 0x10ffff; ++u) {
+    char32_t c{u};
+    char16_t u16[2]{char32_non_bmp_to_utf16_surrogates(c).first,
+                    char32_non_bmp_to_utf16_surrogates(c).second};
+    EXPECT_EQ(utf16_surrogates_to_char32(u16[0], u16[1]), c);
+    char buffer[4]{};
+    utf16_surrogates_to_utf8(buffer, u16[0], u16[1]);
+    char buffer2[4]{};
+    char32_to_utf8(buffer2, c);
+    EXPECT_EQ(std::string_view(buffer, 4), std::string_view(buffer2, 4));
+  }
 }
 
 TEST(Utf8Test, ValidateUtf8) {

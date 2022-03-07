@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <tuple>
 #include <string_view>
+#include <tuple>
+#include <utility>
 
 namespace cbu {
 
@@ -102,6 +103,18 @@ inline constexpr bool is_in_utf16_surrogate_range(std::uint32_t c) noexcept {
   return (c >= 0xd800 && c <= 0xdfff);
 }
 
+// Returns true if c is a code point reserved for UTF-16 "high" surrogate pairs
+inline constexpr bool is_in_utf16_high_surrogate_range(
+    std::uint32_t c) noexcept {
+  return (c >= 0xd800 && c <= 0xdbff);
+}
+
+// Returns true if c is a code point reserved for UTF-16 "low" surrogate pairs
+inline constexpr bool is_in_utf16_low_surrogate_range(
+    std::uint32_t c) noexcept {
+  return (c >= 0xdc00 && c <= 0xdfff);
+}
+
 namespace encoding_detail {
 
 constexpr std::array<std::uint8_t, 128> make_utf8_second_byte_ranges() {
@@ -124,6 +137,8 @@ constexpr std::array<std::uint8_t, 128> make_utf8_second_byte_ranges() {
 
 inline constexpr auto kUtf8SecondByteRanges = make_utf8_second_byte_ranges();
 
+void utf16_surrogates_to_utf8(char8_t* dst, char16_t a, char16_t b) noexcept;
+
 }  // namespace encoding_detail
 
 inline constexpr bool validate_utf8_two_bytes(std::uint8_t a,
@@ -136,6 +151,47 @@ inline constexpr bool validate_utf8_two_bytes(std::uint8_t a,
 // If c is out of range (> U+10FFFF) or is a UTF-16 surrogate, return nullptr
 char8_t* char32_to_utf8(char8_t* dst, char32_t c) noexcept;
 char* char32_to_utf8(char* dst, char32_t c) noexcept;
+
+// Same as char32_to_utf8, except that
+//  * behavior is undefined if c is out of range;
+//  * UTF-16 surrogates are encoded as if they were valid code points;
+//  * Never returns nullptr.
+char8_t* char32_to_utf8_unsafe(char8_t* dst, char32_t c) noexcept;
+char* char32_to_utf8_unsafe(char* dst, char32_t c) noexcept;
+
+// Encode c in UTF-8, without checking whether c is a valid code point (i.e. not
+// a UTF-16 surrogate).  Never returns nullptr.
+char8_t* char16_to_utf8_unsafe(char8_t* dst, char16_t c) noexcept;
+char* char16_to_utf8_unsafe(char* dst, char16_t c) noexcept;
+
+// It's the caller's responsibility to guarante that (a, b) are a valid pair of
+// UTF-16 surrogates.
+inline constexpr char32_t utf16_surrogates_to_char32(char16_t a,
+                                                     char16_t b) noexcept {
+  return ((a - 0xd800) << 10) + (b - 0xdc00) + 0x10000;
+}
+
+// It's the caller's responsibility to guarante u is in [0x10000, 0x10FFFF]
+inline constexpr std::pair<char16_t, char16_t>
+char32_non_bmp_to_utf16_surrogates(char32_t c) noexcept {
+  return {char16_t(0xd800 + (c >> 10) - (0x10000 >> 10)),
+          char16_t(0xdc00 + (c & 0x3ff))};
+}
+
+// Convert a pair of UTF-16 surrogates (a, b) to UTF-8.
+// It's the caller's responsibility to guarante that (a, b) are a valid pair of
+// UTF-16 surrogates.  The result is guaranteed to be 4 bytes.
+inline char8_t* utf16_surrogates_to_utf8(char8_t* dst, char16_t a,
+                                         char16_t b) noexcept {
+  encoding_detail::utf16_surrogates_to_utf8(dst, a, b);
+  return dst + 4;
+}
+
+inline char* utf16_surrogates_to_utf8(char* dst, char16_t a,
+                                      char16_t b) noexcept {
+  return reinterpret_cast<char*>(
+      utf16_surrogates_to_utf8(reinterpret_cast<char8_t*>(dst), a, b));
+}
 
 // Verify if the memory range contains valid UTF-8.
 // This function makes use of AVX-2 to accelerate.
