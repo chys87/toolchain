@@ -36,6 +36,7 @@ TEST(StrToIntegerTest, Regular) {
   EXPECT_EQ((str_to_integer<int32_t>("123").value_or(0)), 123);
   EXPECT_EQ((str_to_integer<int32_t, RadixTag<8>>("123").value_or(0)), 0123);
   EXPECT_EQ((str_to_integer<int32_t, RadixTag<16>>("123").value_or(0)), 0x123);
+  EXPECT_EQ((str_to_integer<int32_t, RadixTag<16>>("00391").value_or(0)), 0x391);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("123").value_or(0)), 123);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("0123").value_or(0)), 0123);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("0o123").value_or(0)), 0123);

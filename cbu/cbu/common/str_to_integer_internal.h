@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -125,7 +125,7 @@ inline constexpr std::optional<unsigned> parse_one_digit(
   if constexpr (base <= 10) {
     if (c >= '0' && c < '0' + base) return c - '0';
   } else {
-    if (c >= '0' && c < '9')
+    if (c >= '0' && c <= '9')
       return c - '0';
     if ((c | 0x20) >= 'a' && (c | 0x20) < 'a' + (base - 10))
       return (((c | 0x20) - 'a') + 10);
