@@ -59,7 +59,7 @@ class Executor:
         return re.findall(r'^(\w+)\.$', proc.stdout, re.MULTILINE)
 
     def run(self):
-        subprocess.run([self.binary] + self.additional_args, check=True)
+        return subprocess.run([self.binary] + self.additional_args)
 
     def start_test(self, test):
         f = tempfile.TemporaryFile()
@@ -85,8 +85,8 @@ def main():
     if tests_n == 0:
         return
     if tests_n == 1:
-        exe.run()
-        return
+        r = exe.run()
+        sys.exit(r.returncode)
 
     concurrency = min(os.cpu_count(), tests_n)
 
