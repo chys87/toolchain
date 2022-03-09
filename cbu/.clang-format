@@ -6,7 +6,7 @@ IncludeCategories:
 - Regex:           '^<[^/]*\.h>'
   Priority:        10
   SortPriority:    10
-- Regex:           '^<(bits|sys|linux|asm|netinet)/.*'
+- Regex:           '^<(arpa|bits|sys|linux|asm|netinet)/.*'
   Priority:        10
   SortPriority:    11
 - Regex:           '^<[^/]*>'

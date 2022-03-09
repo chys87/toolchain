@@ -45,6 +45,7 @@ cc_test(
   srcs = glob(['*_test.cc']),
   deps = [
     ':network',
+    '//cbu/debug:gtest_formatters',
     '@com_google_googletest//:gtest_main',
   ],
 )

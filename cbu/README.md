@@ -117,6 +117,7 @@ This one is just a hobby - a crazy one.
 [`cbu/network`](cbu/network): Networking utilities
 
 * `ipv4.h`: Provides a simple `IPv4` class and related utility functions
+* `ipv6.h`: Provides IPv6 utilities
 
 ### cbu/storage
 
