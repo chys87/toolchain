@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,11 +28,16 @@
 
 #include "cbu/network/ipv4.h"
 
+#include <arpa/inet.h>
+
 #include <gtest/gtest.h>
 
 #include "cbu/common/short_string.h"
+#include "cbu/debug/gtest_formatters.h"
 
 namespace cbu {
+
+using std::operator""sv;
 
 static_assert(IPv4(1, 2, 3, 4).value(native_endian) == 0x01020304);
 static_assert(IPv4(1, 2, 3, 4).a() == 1);
@@ -103,6 +108,18 @@ TEST(IPv4Test, FromStringTest) {
   EXPECT_FALSE(IPv4::from_string(" 192.168.1.105").has_value());
   EXPECT_FALSE(IPv4::from_string("192.168.1..105").has_value());
   EXPECT_FALSE(IPv4::from_string("0xx7f.0.0.1").has_value());
+}
+
+TEST(IPv4Test, InAddrTest) {
+  in_addr addr;
+  ASSERT_NE(inet_pton(AF_INET, "192.168.5.4", &addr), 0);
+  IPv4 ip(addr);
+  ASSERT_EQ(std::string_view(ip.to_string()), "192.168.5.4"sv);
+
+  ip.To(&addr);
+  char buffer[32];
+  ASSERT_NE(inet_ntop(AF_INET, &addr, buffer, sizeof(buffer)), nullptr);
+  ASSERT_STREQ(buffer, "192.168.5.4");
 }
 
 }  // namespace cbu

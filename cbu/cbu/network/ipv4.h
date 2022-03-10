@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,8 @@
  */
 
 #pragma once
+
+#include <netinet/in.h>
 
 #include <bit>
 #include <cstdint>
@@ -62,6 +64,8 @@ class IPv4 {
   constexpr IPv4(std::uint8_t a, std::uint8_t b, std::uint8_t c,
                  std::uint8_t d) noexcept
       : v_(a << 24 | b << 16 | c << 8 | d) {}
+  explicit constexpr IPv4(const in_addr& addr) noexcept
+      : IPv4(addr.s_addr, std::endian::big) {}
   constexpr IPv4(const IPv4&) noexcept = default;
 
   constexpr IPv4& operator=(const IPv4&) noexcept = default;
@@ -82,6 +86,10 @@ class IPv4 {
 
   char* to_string(char* buffer) const noexcept;
   short_string<15> to_string() const;
+
+  constexpr void To(in_addr* addr) const noexcept {
+    addr->s_addr = bswap_be(v_);
+  }
 
   // from_common_string supports only the common "a.b.c.d" format
   static std::optional<IPv4> from_common_string(std::string_view s) noexcept;
