@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -353,14 +353,16 @@ inline constexpr std::make_unsigned_t<T> MAX_POW2 =
 template <typename T> requires std::is_integral_v<T>
 inline constexpr T pow2_ceil(T n) noexcept {
   if (n <= 1) return 1;
-  return (MAX_POW2<T> >> (clz(std::max(n, T(1)) - 1) - 1));
+  using UT = std::conditional_t<(sizeof(T) < sizeof(unsigned)), unsigned, T>;
+  return (MAX_POW2<UT> >> (clz(UT(n - 1)) - 1));
 }
 
 // Flooring to the nearest power of 2
 // Undefined for n == 0
 template <typename T> requires std::is_integral_v<T>
 inline constexpr T pow2_floor(T n) noexcept {
-  return (std::make_unsigned_t<T>(1) << (8 * sizeof(T) - 1)) >> clz(n);
+  using UT = std::conditional_t<(sizeof(T) < sizeof(unsigned)), unsigned, T>;
+  return MAX_POW2<UT> >> clz(UT(n));
 }
 
 template <typename T> requires std::is_integral_v<T>
@@ -377,6 +379,7 @@ static_assert(pow2_ceil(5) == 8);
 static_assert(pow2_ceil(8) == 8);
 static_assert(pow2_ceil(9) == 16);
 static_assert(pow2_ceil(uint32_t(0x80000000)) == 0x80000000);
+static_assert(pow2_ceil(uint16_t(9)) == 16);
 
 static_assert(pow2_floor(1) == 1);
 static_assert(pow2_floor(2) == 2);
@@ -386,6 +389,7 @@ static_assert(pow2_floor(7) == 4);
 static_assert(pow2_floor(8) == 8);
 static_assert(pow2_floor(15) == 8);
 static_assert(pow2_floor(uint32_t(0xffff0f0f)) == 0x80000000);
+static_assert(pow2_floor(uint16_t(15)) == 8);
 
 static_assert(!is_pow2(0));
 static_assert(is_pow2(1));
