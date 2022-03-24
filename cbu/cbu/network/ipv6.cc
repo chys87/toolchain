@@ -38,6 +38,7 @@
 #include "cbu/common/byteorder.h"
 #include "cbu/common/faststr.h"
 #include "cbu/common/short_string.h"
+#include "cbu/math/fastdiv.h"
 #include "cbu/network/ipv4.h"
 
 namespace cbu {
@@ -133,6 +134,53 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
 short_string<IPv6::kMaxStringLen> IPv6::Format(const in6_addr& addr6) noexcept {
   short_string<kMaxStringLen> res;
   char* w = Format(res.buffer(), addr6);
+  res.set_length(w - res.data());
+  return res;
+}
+
+short_string<IPv6::kMaxStringLen> IPv6::ToString() const noexcept {
+  return Format(a_);
+}
+
+char* IPv6Port::PortToString(char* buf, uint16_t port) noexcept {
+  if (port >= 10000) {
+    *buf++ = cbu::fastdiv<10000, 65536>(port) + '0';
+    port = cbu::fastmod<10000, 65536>(port);
+    goto _1000;
+  }
+  if (port >= 1000) {
+_1000:
+    *buf++ = cbu::fastdiv<1000, 10000>(port) + '0';
+    port = cbu::fastmod<1000, 10000>(port);
+    goto _100;
+  }
+  if (port >= 100) {
+_100:
+    *buf++ = cbu::fastdiv<100, 1000>(port) + '0';
+    port = cbu::fastmod<100, 1000>(port);
+    goto _10;
+  }
+  if (port >= 10) {
+_10:
+    *buf++ = cbu::fastdiv<10, 100>(port) + '0';
+    port = cbu::fastmod<10, 100>(port);
+  }
+  *buf++ = port + '0';
+  return buf;
+}
+
+char* IPv6Port::ToString(char* buf) const noexcept {
+  *buf++ = '[';
+  buf = ip.ToString(buf);
+  *buf++ = ']';
+  *buf++ = ':';
+  buf = PortToString(buf, port);
+  return buf;
+}
+
+short_string<IPv6Port::kMaxStringLen> IPv6Port::ToString() const noexcept {
+  short_string<kMaxStringLen> res;
+  char* w = ToString(res.buffer());
   res.set_length(w - res.data());
   return res;
 }

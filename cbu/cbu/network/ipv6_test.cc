@@ -40,6 +40,8 @@
 namespace cbu {
 namespace {
 
+using std::operator""sv;
+
 TEST(IPv6Test, FormatTest) {
   auto test = [](const char* src, std::string_view expected) {
     SCOPED_TRACE(src);
@@ -70,6 +72,12 @@ TEST(IPv6Test, FormatTest) {
   test("64:ff9b:1::2554:909:90a", "64:ff9b:1::2554:9.9.9.10");
   test("0064:ff9b:0001:ffff:ffff:ffff:255.255.255.255",
        "64:ff9b:1:ffff:ffff:ffff:255.255.255.255");
+}
+
+TEST(IPv6Test, IPv6PortTest) {
+  EXPECT_EQ(
+      std::string_view(IPv6Port{IPv6{IPv4{192, 168, 25, 54}}, 79}.ToString()),
+      "[::ffff:192.168.25.54]:79"sv);
 }
 
 }  // namespace
