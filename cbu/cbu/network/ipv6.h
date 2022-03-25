@@ -146,10 +146,10 @@ struct IPv6Port {
   uint16_t port;
 
   static constexpr IPv6Port FromSockAddr(const sockaddr_in6& s) {
-    return {IPv6(s.sin6_addr), s.sin6_port};
+    return {IPv6(s.sin6_addr), bswap_be(s.sin6_port)};
   }
   static constexpr IPv6Port FromSockAddr(const sockaddr_in& s) {
-    return {IPv6(s.sin_addr), s.sin_port};
+    return {IPv6(s.sin_addr), bswap_be(s.sin_port)};
   }
 
   // This cannot be constexpr
