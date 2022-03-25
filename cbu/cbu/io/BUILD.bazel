@@ -55,6 +55,7 @@ cc_library(
   srcs = ['scoped_fd.cc'],
   hdrs = ['scoped_fd.h'],
   deps = [
+    '//cbu/compat',
     '//cbu/fsyscall',
   ],
   linkstatic=True,

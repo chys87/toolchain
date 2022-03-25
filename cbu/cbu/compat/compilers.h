@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,50 +28,11 @@
 
 #pragma once
 
-#include <utility>
+#define CBU_TRIVIAL_ABI
 
-#include "cbu/compat/compilers.h"
+#ifdef __clang__
 
-namespace cbu {
+#  undef CBU_TRIVIAL_ABI
+#  define CBU_TRIVIAL_ABI [[clang::trivial_abi]]
 
-class CBU_TRIVIAL_ABI ScopedFD {
- public:
-  constexpr ScopedFD() noexcept : fd_(-1) {}
-  explicit constexpr ScopedFD(int fd) noexcept : fd_(fd) {}
-  ScopedFD(const ScopedFD &) = delete;
-  ScopedFD(ScopedFD &&other) noexcept : fd_(other.release()) {}
-  ~ScopedFD() noexcept { if (fd_ >= 0) do_close(fd_); }
-
-  ScopedFD &operator = (const ScopedFD &) = delete;
-  ScopedFD &operator = (ScopedFD &&other) noexcept {
-    swap(other); return *this;
-  }
-
-  void reset(int fd = -1) noexcept {
-    int fdo = std::exchange(fd_, fd);
-    if (fdo >= 0) do_close(fdo);
-  }
-  void reset_unsafe(int fd) noexcept { fd_ = fd; }
-
-  void swap(ScopedFD &other) noexcept { std::swap(fd_, other.fd_); }
-  void close() noexcept { reset(-1); }
-
-  constexpr int fd() const noexcept { return fd_; }
-  constexpr operator int() const noexcept { return fd_; }
-  explicit operator bool() const = delete;
-
-  int release() noexcept { return std::exchange(fd_, -1); }
-
- public:
-  static constexpr inline bool bitwise_movable(ScopedFD *) { return true; }
-
- private:
-  // Use this function to close FD, so that we don't need to #include
-  // fsyscall.h or unistd.h in this header.
-  static void do_close(int) noexcept;
-
- private:
-  int fd_;
-};
-
-}  // namespace cbu
+#endif
