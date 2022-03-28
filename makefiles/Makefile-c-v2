@@ -226,7 +226,9 @@ $(BUILDDIR)/$(1).success: $(BUILDDIR)/$(1).n.out
 else
 INST_TARGETS += $(1)
 all:	$(BUILDDIR)/$(1).out
-install: $(INSTDIR)/$(1)
+.PHONY: install-$(1)
+install-$(1): $(INSTDIR)/$(1)
+install: install-$(1)
 $(INSTDIR)/$(1):$(BUILDDIR)/$(1).out ut
 	$(INSTALL) $$< $$@
 endif
@@ -269,7 +271,9 @@ all: $(BUILDDIR)/$(1)
 $(BUILDDIR)/$(1): private NAME := DATA
 $(BUILDDIR)/$(1): $(DIR)/$(2) $(3:%=$(DIR)/%)
 	+$$(Q)$(DIR)/$(2) > $$@
-install: $(INSTDIR)/$(1)
+install-data: install-$(1)
+.PHONY: install-$(1)
+install-$(1): $(INSTDIR)/$(1)
 $(INSTDIR)/$(1): $(BUILDDIR)/$(1)
 	$(INSTALL_DATA) $$< $$@
 endef
@@ -279,7 +283,7 @@ ifneq "$(AUTO_GENERATED_HEADERS)" ""
 $(OBJS) $(DEPS): | $(AUTO_GENERATED_HEADERS)
 endif
 
-.PHONY:	all install size bincmp purge clean clobber un compare ut
+.PHONY:	all install install-data size bincmp purge clean clobber un compare ut
 .DEFAULT_GOAL := all
 
 -include Makefile-spec
