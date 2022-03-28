@@ -377,8 +377,8 @@ bincmp:
 # $(1) = binname
 define define_size_unassembly_bincmp
 size-$(1):
-	$(Q)detailed_size $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out
-SIZE_COMMANDS += detailed_size $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out;
+	$(Q)detailed_size -c $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out
+SIZE_COMMANDS += detailed_size -c $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out;
 un-$(1):
 	$(Q)unassembly $(BUILDDIR)/$(1).n.out
 UN_COMMANDS += unassembly $(BUILDDIR)/$(1).n.out;

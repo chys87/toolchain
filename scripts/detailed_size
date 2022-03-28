@@ -3,7 +3,7 @@
 # vim:ts=8 sts=4 sw=4 expandtab ft=python
 
 #
-# Copyright (c) 2013-2021, chys <admin@CHYS.INFO>
+# Copyright (c) 2013-2022, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 
 __all__ = ['detailed_size']
 
+import argparse
 import re
 import sys
 import subprocess
@@ -94,21 +95,64 @@ def detailed_size(file):
     return data
 
 
+def print_compare(data_list):
+    different = [False] * I_COUNT
+    any_different = False
+    for i in range(I_COUNT):
+        if len(set(data[i] for (data, _) in data_list)) > 1:
+            different[i] = True
+            any_different = True
+    if not any_different:
+        return False
+
+    def print_row(cols):
+        for i, col in enumerate(cols):
+            if i < I_COUNT and different[i]:
+                print(f'\033[31;1m{col}\033[0m', end='')
+            else:
+                print(col, end='')
+        print()
+
+    print_row(['{:>10}'.format(col) for col in _col_names] + ['    filename'])
+    for data, filename in data_list:
+        print_row(['{:10}'.format(v) for v in data] + ['    ' + filename])
+
+
 def main():
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(0)
-    print(''.join('{:>10}'.format(col) for col in _col_names) +
-          '    filename')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--compare', action='store_true',
+                        help='Highlight differences and hide equalities.')
+    parser.add_argument('filename', nargs='+')
+    args = parser.parse_args()
+
+    if len(args.filename) < 2:
+        args.compare = False
+
     error = 0
-    for filename in sys.argv[1:]:
-        try:
-            data = detailed_size(filename)
-            print(''.join('{:10}'.format(v) for v in data) +
-                  '    ' + filename)
-        except subprocess.CalledProcessError:
-            # readelf already prints error info
-            error = 1
+
+    if args.compare:
+        data_list = []
+        for filename in args.filename:
+            try:
+                data = detailed_size(filename)
+                data_list.append((data, filename))
+            except subprocess.CalledProcessError:
+                # readelf already prints error info
+                error = 1
+        print_compare(data_list)
+
+    else:
+        print(''.join('{:>10}'.format(col) for col in _col_names) +
+              '    filename')
+        for filename in args.filename:
+            try:
+                data = detailed_size(filename)
+                print(''.join('{:10}'.format(v) for v in data) +
+                      '    ' + filename)
+            except subprocess.CalledProcessError:
+                # readelf already prints error info
+                error = 1
+
     sys.exit(error)
 
 
