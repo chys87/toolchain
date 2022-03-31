@@ -26,6 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #if __has_include(<x86intrin.h>)
 #  include <x86intrin.h>
 #endif
