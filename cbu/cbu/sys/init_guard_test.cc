@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,7 @@ constexpr int sleep_unit = 300 * 1000;
 
 TEST(InitGuardTest, InitGuard) {
   InitGuard guard;
+  std::atomic<int> ret_true{0};
   std::atomic<int> succ{0};
   std::atomic<int> throws{0};
   std::atomic<int> caught{0};
@@ -48,19 +49,19 @@ TEST(InitGuardTest, InitGuard) {
   auto throwing = [&](int us) {
     usleep(us);
     try {
-      guard.init([&](int throw_val) {
-        ++throws;
-        throw throw_val;
-      }, 5);
+      ret_true += guard.init(
+          [&](int throw_val) {
+            ++throws;
+            throw throw_val;
+          },
+          5);
     } catch (int) {
       ++caught;
     }
   };
   auto nonthrowing = [&](int us) {
     usleep(us);
-    guard.init([&]() {
-      ++succ;
-    });
+    ret_true += guard.init([&]() { ++succ; });
   };
 
   std::vector<std::thread> threads;
@@ -75,6 +76,7 @@ TEST(InitGuardTest, InitGuard) {
     thr.join();
   }
 
+  EXPECT_EQ(ret_true.load(), 1);
   EXPECT_EQ(succ.load(), 1);
   EXPECT_LE(throws.load(), 6);
   EXPECT_GE(throws.load(), 4);
@@ -93,9 +95,9 @@ TEST(InitGuardTest, LazyInit) {
   {
     LazyInit<Cls> lz;
     EXPECT_FALSE(lz.inited());
-    lz.init();
+    EXPECT_TRUE(lz.init());
     EXPECT_TRUE(lz.inited());
-    lz.init();
+    EXPECT_FALSE(lz.init());
     EXPECT_TRUE(lz.inited());
   }
   EXPECT_EQ(Cls::ctor.load(), 1);

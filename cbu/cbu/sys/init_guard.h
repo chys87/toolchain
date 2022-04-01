@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,7 +54,7 @@ class InitGuard {
   // value representing "DONE" to be stored in v_.
   // Only use this if you know exactly what you're doing.
   template <typename Foo, typename... Args>
-  void init_with_reuse(Foo&& foo, Args&&... args) noexcept(
+  bool init_with_reuse(Foo&& foo, Args&&... args) noexcept(
       noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
     int v = std::atomic_ref(v_).load(std::memory_order_relaxed);
     if (!inited(v) && guard_lock(v)) {
@@ -66,15 +66,18 @@ class InitGuard {
           guard_abort();
       });
       done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
+      return inited(done_value);
+    } else {
+      return false;
     }
   }
 
   // This is the normal interface you should use.
   template <typename Foo, typename... Args>
-  void init(Foo&& foo, Args&&... args) noexcept(
+  bool init(Foo&& foo, Args&&... args) noexcept(
       noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
-    init_with_reuse([&]() noexcept(noexcept(
-                        std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
+    return init_with_reuse([&]() noexcept(noexcept(std::forward<Foo>(foo)(
+                               std::forward<Args>(args)...))) {
       std::forward<Foo>(foo)(std::forward<Args>(args)...);
       return DEFAULT_DONE;
     });
@@ -139,8 +142,8 @@ class LazyInit {
   }
 
   template <typename... Args>
-  void init(Args&&... args) noexcept(noexcept(T(std::forward<Args>(args)...))) {
-    guard_.init([&, this]() {
+  bool init(Args&&... args) noexcept(noexcept(T(std::forward<Args>(args)...))) {
+    return guard_.init([&, this]() {
       std::construct_at(pointer(), std::forward<Args>(args)...);
     });
   }
