@@ -72,7 +72,6 @@ cc_library(
     'immutable_string.h',
     'length_prefixed_string_literal.h',
     'memory.h',
-    'merge_const.h',
     'once.h',
     'ref_cnt.h',
     'shared_instance.h',
