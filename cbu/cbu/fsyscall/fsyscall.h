@@ -195,6 +195,7 @@ struct utsname;
 struct statfs;
 struct iovec;
 struct msghdr;
+struct mmsghdr;
 struct epoll_event;
 struct itimerspec;
 struct rlimit;
@@ -360,9 +361,11 @@ def_fsys(sendfile,sendfile,long,4,int,int,__OFF64_T_TYPE *,unsigned long)
 def_fsys(sendto,sendto,long,6,int,const void *,unsigned long,int,
          const struct sockaddr *,unsigned long)
 def_fsys(sendmsg,sendmsg,long,3,int,const struct msghdr *, int)
+def_fsys(sendmmsg,sendmmsg,int,4,int,struct mmsghdr*,unsigned,int)
 def_fsys(recvfrom,recvfrom,long,6,int,void *,unsigned long,int,
          struct sockaddr *,unsigned *)
 def_fsys(recvmsg,recvmsg,long,3,int,struct msghdr *,int)
+def_fsys(recvmmsg,recvmmsg,int,5,int,struct mmsghdr*,unsigned,int,struct timespec*)
 #define fsys_send(a,b,c,d) fsys_sendto(a,b,c,d,0,0)
 #define fsys_recv(a,b,c,d) fsys_recvfrom(a,b,c,d,0,0)
 def_fsys_nomem(fsync,fsync,int,1,int)
@@ -589,8 +592,10 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_sendto sendto
 #define fsys_send send
 #define fsys_sendmsg sendmsg
+#define fsys_sendmmsg sendmmsg
 #define fsys_recvfrom recvfrom
 #define fsys_recvmsg recvmsg
+#define fsys_recvmmsg recvmmsg
 #define fsys_recv recv
 #define fsys_fsync fsync
 #define fsys_fdatasync fdatasync
