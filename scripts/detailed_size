@@ -97,13 +97,9 @@ def detailed_size(file):
 
 def print_compare(data_list):
     different = [False] * I_COUNT
-    any_different = False
     for i in range(I_COUNT):
         if len(set(data[i] for (data, _) in data_list)) > 1:
             different[i] = True
-            any_different = True
-    if not any_different:
-        return False
 
     def print_row(cols):
         for i, col in enumerate(cols):
