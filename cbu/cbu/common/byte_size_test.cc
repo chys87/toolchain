@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
  */
 
 #include "byte_size.h"
+
 #include <gtest/gtest.h>
 
 namespace cbu {
@@ -47,7 +48,7 @@ TEST(ByteSizeTest, ByteDistanceTest) {
 TEST(ByteSizeTest, ByteSizeTypeTest) {
   int x[5];
 
-  ByteSize<sizeof(int)> size(x, x + 5);
+  ByteSize<int> size(x, x + 5);
   EXPECT_EQ(5, std::size_t(size));
   EXPECT_TRUE(bool(size));
   EXPECT_EQ(5, size.size());
@@ -59,18 +60,18 @@ TEST(ByteSizeTest, ByteSizeTypeTest) {
 }
 
 TEST(ByteSizeTest, TypeConversionTest) {
-  EXPECT_EQ(ByteSize<3>(ByteSize<5>(7)), 7);
-  EXPECT_EQ(ByteSize<3>(ByteSize<6>(7)), 7);
-  EXPECT_EQ(ByteSize<6>(ByteSize<3>(7)), 7);
+  EXPECT_EQ(ByteSize<char[3]>(ByteSize<char[5]>(7)), 7);
+  EXPECT_EQ(ByteSize<char[3]>(ByteSize<char[6]>(7)), 7);
+  EXPECT_EQ(ByteSize<char[6]>(ByteSize<char[3]>(7)), 7);
 }
 
 TEST(ByteSizeTest, PointerOperationsTest) {
   int x[128];
 
-  EXPECT_EQ(&x[5], &x[0] + ByteSize<sizeof(int)>(5));
-  EXPECT_EQ(&x[5], ByteSize<sizeof(int)>(5) + &x[0]);
+  EXPECT_EQ(&x[5], &x[0] + ByteSize<int>(5));
+  EXPECT_EQ(&x[5], ByteSize<int>(5) + &x[0]);
 
-  EXPECT_EQ(&x[2], &x[5] - ByteSize<sizeof(int)>(3));
+  EXPECT_EQ(&x[2], &x[5] - ByteSize<int>(3));
 
 }
 

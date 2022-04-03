@@ -51,10 +51,10 @@ void PrintTo(u8zstring_view, std::ostream*);
 void PrintTo(u16zstring_view, std::ostream*);
 void PrintTo(u32zstring_view, std::ostream*);
 
-template <std::size_t N>
-void PrintTo(cbu::ByteSize<N> size, std::ostream* os) {
-  *os << "ByteSize<"sv << N << ">("sv << std::size_t(size) << ") /* "sv
-      << size.bytes() << " bytes */sv";
+template <typename T>
+void PrintTo(cbu::ByteSize<T> size, std::ostream* os) {
+  *os << "ByteSize("sv << std::size_t(size) << ") /* * "sv << sizeof(T)
+      << " = "sv << size.bytes() << " bytes */sv";
 }
 
 }  // namespace cbu

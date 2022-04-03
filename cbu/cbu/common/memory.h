@@ -51,8 +51,7 @@ constexpr T* raw_scalar_new() {
 
 template <typename T>
 constexpr T* raw_array_new(
-    ByteSize<sizeof(T)> n,
-    std::align_val_t align = std::align_val_t(alignof(T))) {
+    ByteSize<T> n, std::align_val_t align = std::align_val_t(alignof(T))) {
   void* p;
   if (std::size_t(align) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
     p = ::operator new[](n.bytes(), align);
@@ -78,7 +77,7 @@ constexpr void raw_scalar_delete(T* p) noexcept {
 
 template <typename T>
 constexpr void raw_array_delete(
-    T* p, ByteSize<sizeof(T)> n [[maybe_unused]],
+    T* p, ByteSize<std::type_identity_t<T>> n [[maybe_unused]],
     std::align_val_t align = std::align_val_t(alignof(T))) noexcept {
 #ifdef __cpp_sized_deallocation
   if (std::size_t(align) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
@@ -109,7 +108,7 @@ using ScalarDeleter = std::default_delete<T>;
 // new_and_default_init_array/new_and_value_init_array, not with new T[n]
 template <typename T, std::align_val_t align = std::align_val_t(alignof(T))>
 struct ArrayDeleter {
-  ByteSize<sizeof(T)> size;
+  ByteSize<T> size;
   constexpr void operator()(T* p) const noexcept {
     destroy_backward_n(p, size);
     raw_array_delete(p, size, align);
@@ -123,7 +122,7 @@ struct RawScalarDeleter {
 
 template <typename T, std::align_val_t align = std::align_val_t(alignof(T))>
 struct RawArrayDeleter {
-  ByteSize<sizeof(T)> size;
+  ByteSize<T> size;
   constexpr void operator()(T* p) const noexcept {
     raw_array_delete(p, size, align);
   }
@@ -195,9 +194,9 @@ constexpr void uninitialized_move_and_destroy(T* old_obj, T* new_obj) noexcept {
 // It's the caller's responsibility to guarantee that memory blocks don't
 // overlap.
 template <typename T>
-constexpr T* uninitialized_move_and_destroy_n(T* old_ptr,
-                                              cbu::ByteSize<sizeof(T)> size,
-                                              T* new_ptr) noexcept {
+constexpr T* uninitialized_move_and_destroy_n(
+    T* old_ptr, cbu::ByteSize<std::type_identity_t<T>> size,
+    T* new_ptr) noexcept {
   static_assert(std::is_nothrow_move_constructible_v<T> &&
                     std::is_nothrow_destructible_v<T>,
                 "uninitialized_move_and_destroy_n is safe only if the type's "
