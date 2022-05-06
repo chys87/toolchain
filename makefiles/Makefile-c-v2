@@ -323,15 +323,9 @@ else
  OPTIMIZEFLAGS += -ffunction-sections -fdata-sections
 endif
 ifeq "$(PIE)" "1"
- OPTIMIZEFLAGS += -fpie
- ifeq "$(IS_CLANG)" "0"
- OPTIMIZEFLAGS += -pie
- endif
+ OPTIMIZEFLAGS += -fpie -pie
 else
- OPTIMIZEFLAGS += -fno-pie
- ifeq "$(IS_CLANG)" "0"
- OPTIMIZEFLAGS += -no-pie
- endif
+ OPTIMIZEFLAGS += -fno-pie -no-pie
 endif
 ifeq "$(NOPLT)" "1"
  OPTIMIZEFLAGS += -fno-plt
