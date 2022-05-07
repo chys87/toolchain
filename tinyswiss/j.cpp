@@ -1,8 +1,10 @@
 #include <fcntl.h>
-#include <initializer_list>
+#include <sys/uio.h>
 #include <tinyx32.h>
 #include <unistd.h>
-#include <sys/uio.h>
+
+#include <algorithm>
+#include <initializer_list>
 
 namespace {
 
@@ -47,6 +49,10 @@ int invoke(const char *exe, std::initializer_list<const char*>base_args,
   return 127;
 }
 
+unsigned get_load_limit(unsigned nprocs) {
+  return nprocs + std::max(2u, nprocs / 3);
+}
+
 } // namespace
 
 int j_main(size_t argc, char **argv, char **envp) {
@@ -73,7 +79,7 @@ int j_main(size_t argc, char **argv, char **envp) {
   ChainMemcpy(j_buf) << "-j" << nprocs << '\0';
 
   char l_buf[16];
-  ChainMemcpy(l_buf) << "-l" << nprocs + 1 << '\0';
+  ChainMemcpy(l_buf) << "-l" << get_load_limit(nprocs) << '\0';
 
   // Make with "-f"
   for (const char *filename: {"Makefile.test"}) {
