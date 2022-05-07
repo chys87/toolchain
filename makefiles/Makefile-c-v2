@@ -92,8 +92,8 @@ CXXDEPS := $(CXXOBJS:%.o=%.P)
 ASMDEPS := $(ASMOBJS:%.o=%.P)
 DEPS    := $(sort $(CDEPS) $(CXXDEPS) $(ASMDEPS))
 
-CC := gcc
-CXX := g++
+CC := ccache gcc
+CXX := ccache g++
 AR := gcc-ar
 
 INCLUDES := -iquote $(DIR) -iquote $(BUILDDIR) $(foreach x,$(AUTO_GENERATED_HEADERS),-iquote $(dir $(x)))
