@@ -47,7 +47,7 @@ extern "C" int main(int argc, char **argv, char **envp) {
     return 1;
   }
   const char *bname = basename(name);
-  if (strcmp(bname, "TS") == 0) {
+  if (strncmp(bname, "TS", 2) == 0 && (bname[2] == '\0' || bname[2] == '.')) {
     --argc;
     ++argv;
     name = *argv;
