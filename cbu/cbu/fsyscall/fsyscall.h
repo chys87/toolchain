@@ -427,6 +427,7 @@ def_fsys(wait4,wait4,int,4,int,int *,int,struct rusage *)
 def_fsys(waitid_raw,waitid,int,5,int,int,void*,int,struct rusage*)
 #define fsys_waitid(a,b,c,d) fsys_waitid_raw(a,b,c,d,(struct rusage*)0)
 def_fsys(execve,execve,int,3,const char *,char *const*,char *const *)
+def_fsys(execveat,execveat,int,5,int,const char*,char*const*,char*const*,int)
 def_fsys(exit_group,exit_group,int,1,int)
 def_fsys(mount,mount,int,5,const char *,const char *,const char *,
          unsigned long,const void *)
@@ -629,6 +630,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_waitpid waitpid
 #define fsys_waitid waitid
 #define fsys_execve execve
+#define fsys_execveat execveat
 #define fsys__exit _exit
 #define fsys_mount mount
 #define fsys_umount2 umount2
