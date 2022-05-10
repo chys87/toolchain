@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <tinyx32.h>
 
-int strnumcmp(const char *a, const char *b) noexcept {
+int strnumcmp(const char *a, const char *b) {
   const uint8_t *u = (const uint8_t *)a;
   const uint8_t *v = (const uint8_t *)b;
   unsigned U, V;

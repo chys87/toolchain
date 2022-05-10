@@ -1,9 +1,14 @@
-#include <fcntl.h>
 #include <limits.h>
+#include <sys/fcntl.h>
 #include <tinyx32.h>
-#include <unistd.h>
+
 #include <string_view>
+
 #include "utils.h"
+
+#ifndef PATH_MAX
+#define PATH_MAX 512
+#endif
 
 using namespace std::string_view_literals;
 

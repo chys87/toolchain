@@ -40,7 +40,7 @@ void print_subcommands() {
 
 } // namespace
 
-int main(int argc, char **argv, char **envp) {
+extern "C" int main(int argc, char **argv, char **envp) {
   const char *name = argv[0];
   if (name == NULL) {
     unknown_subcommand();

@@ -72,39 +72,39 @@ namespace detail {
 
 template <typename T, typename ChainMemcpy>
 class ChainMemcpyBase {
-public:
-    explicit constexpr ChainMemcpyBase(T *p) : p_(p) {}
+ public:
+  explicit constexpr ChainMemcpyBase(T* p) : p_(p) {}
 
-    ChainMemcpy &operator << (T v) {
-        *p_++ = v;
-        return static_cast<ChainMemcpy &>(*this);
-    }
+  ChainMemcpy& operator<<(T v) {
+    *p_++ = v;
+    return static_cast<ChainMemcpy&>(*this);
+  }
 
-    void operator >> (T *&p) const {
-        p = p_;
-    }
+  void operator>>(T*& p) const { p = p_; }
 
-    T *endptr() const { return p_; }
+  T* endptr() const { return p_; }
 
-protected:
-    T *p_;
+ protected:
+  T* p_;
 };
 
 } // namespace detail
 
-template <typename T> requires std::is_trivially_copyable<T>::value
-class ChainMemcpy : public detail::ChainMemcpyBase<T, ChainMemcpy<T>> {
-public:
-    using Base = detail::ChainMemcpyBase<T, ChainMemcpy>;
-    using Base::Base;
-    using Base::operator <<;
+template <typename T>
+requires std::is_trivially_copyable<T>::value class ChainMemcpy
+    : public detail::ChainMemcpyBase<T, ChainMemcpy<T>> {
+ public:
+  using Base = detail::ChainMemcpyBase<T, ChainMemcpy>;
+  using Base::Base;
+  using Base::operator<<;
 
-    template <typename U>
-      requires (sizeof(U) == sizeof(T) and std::is_convertible<U, T>::value)
-    ChainMemcpy &operator << (pair<U *, size_t> s) {
-        this->p_ = Mempcpy(this->p_, s.first, s.second * sizeof(T));
-        return *this;
-    }
+  template <typename U>
+  requires(sizeof(U) == sizeof(T) and
+           std::is_convertible<U, T>::value) ChainMemcpy&
+  operator<<(pair<U*, size_t> s) {
+    this->p_ = Mempcpy(this->p_, s.first, s.second * sizeof(T));
+    return *this;
+  }
 };
 
 template <>
@@ -185,4 +185,9 @@ void sort(T *lo, T *hi, Comp comp) {
     }
     ++mid;
   } while (mid != hi);
+}
+
+template <typename T>
+const T& max(const T& a, const T& b) {
+  return a >= b ? a : b;
 }

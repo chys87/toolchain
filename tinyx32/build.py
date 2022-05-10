@@ -26,10 +26,10 @@ NINJA_TEMPLATE = r'''
 {name}cc = {cc}
 {name}cxx = {cxx}
 {name}cppflags = -I{tinyx32_dir} -D _GNU_SOURCE -D NDEBUG -D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS -D __NO_MATH_INLINES -U _FORTIFY_SOURCE
-{name}commonflags = -O2 -march=native -mx32 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-vzeroupper
-{name}cflags = -std=gnu17
-{name}cxxflags = -fno-exceptions -fno-rtti -std=gnu++20
-{name}ldflags = -nostdlib -static -fuse-linker-plugin -flto-partition=none -Wl,--gc-sections
+{name}commonflags = -O2 -march=native -mx32 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-vzeroupper
+{name}cflags = -std=gnu2x
+{name}cxxflags = -fno-rtti -std=gnu++2a
+{name}ldflags = -nostdlib -static -fuse-linker-plugin -Wl,--gc-sections
 {name}libs = -lgcc
 {name}builddir = {builddir}
 {name}instdir = {instdir}
@@ -94,9 +94,14 @@ def find_executable(exe):
 
 
 def find_compilers():
+    env_cc = os.environ.get('CC')
+    env_cxx = os.environ.get('CXX')
+    if env_cc and env_cxx:
+        return env_cc, env_cxx
+
     for exe_pattern in COMPILER_PATTERNS:
-        gcc = find_executable(exe_pattern.format('gcc'))
-        gxx = find_executable(exe_pattern.format('g++'))
+        gcc = env_cc or find_executable(exe_pattern.format('gcc'))
+        gxx = env_cxx or find_executable(exe_pattern.format('g++'))
         if gcc and gxx:
             return gcc, gxx
     raise sys.exit('Failed to find an appropriate C++ compiler')
@@ -112,9 +117,10 @@ class Binary:
 
 
 class BuildFile:
-    __slots__ = 'binaries'
+    __slots__ = 'binaries', 'cc', 'cxx'
 
     def __init__(self, filename):
+        self.cc, self.cxx = find_compilers()
         self.binaries = []
 
         try:
@@ -123,16 +129,21 @@ class BuildFile:
         except FileNotFoundError as e:
             sys.exit(str(e))
 
+        build_globals = {
+            'binary': self.__callback_binary,
+            '__builtin__': {},
+            'CC': self.cc,
+            'CXX': self.cxx,
+        }
         try:
-            exec(build_content, {
-                'binary': self.__callback_binary,
-                '__builtin__': {},
-            })
+            exec(build_content, build_globals)
         except Exception as e:
             sys.exit(f'Failed to parse {filename}: {e}')
 
         if not self.binaries:
             sys.exit(f'No target is specified in {filename}')
+        self.cc = build_globals['CC']
+        self.cxx = build_globals['CXX']
 
     def __callback_binary(self, *, name, srcs):
         binary = Binary()
@@ -141,7 +152,6 @@ class BuildFile:
         self.binaries.append(binary)
 
     def gen_ninja(self):
-        cc, cxx = find_compilers()
         tinyx32_dir = os.path.dirname(os.path.realpath(__file__))
         instdir = os.path.expanduser('~/bin')
 
@@ -152,7 +162,8 @@ class BuildFile:
         for binary in self.binaries:
             name = binary.name
             builddir = os.path.realpath(os.path.join('build', name))
-            safe_replace(os.path.join(builddir, '__hash'), binary.build_hash(cc=cc, cxx=cxx))
+            safe_replace(os.path.join(builddir, '__hash'),
+                         binary.build_hash(cc=self.cc, cxx=self.cxx))
 
             # obj: src
             objs = {}
@@ -175,7 +186,7 @@ class BuildFile:
 
             ninja_content += NINJA_TEMPLATE.format(
                 tinyx32_dir=tinyx32_dir, instdir=instdir,
-                name=binary.name, cc=cc, cxx=cxx, builddir=builddir,
+                name=binary.name, cc=self.cc, cxx=self.cxx, builddir=builddir,
                 objs=' '.join(sorted(objs)), rules=rules)
 
         return ninja_content

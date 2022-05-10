@@ -1,27 +1,24 @@
-#include <fcntl.h>
+#include <sys/fcntl.h>
 #include <sys/uio.h>
 #include <tinyx32.h>
-#include <unistd.h>
 
-#include <algorithm>
 #include <initializer_list>
 
 namespace {
 
-  void print_cmd(const char *const *args, size_t n) {
-    size_t lens[n];
-    size_t total_len = 0;
-    for (size_t i = 0; i < n; ++i)
-      total_len += lens[i] = strlen(args[i]);
+void print_cmd(const char *const *args, size_t n) {
+  size_t lens[n];
+  size_t total_len = 0;
+  for (size_t i = 0; i < n; ++i) total_len += lens[i] = strlen(args[i]);
 
-    char buf[total_len + n];
+  char buf[total_len + n];
 
-    ChainMemcpy cm(buf);
+  ChainMemcpy cm(buf);
 
-    for (size_t i = 0; i < n; ++i)
-      cm << pair{args[i], lens[i]} << (i == n - 1 ? "\n" : " ");
+  for (size_t i = 0; i < n; ++i)
+    cm << pair{args[i], lens[i]} << (i == n - 1 ? "\n" : " ");
 
-    fsys_write(2, buf, cm.endptr() - buf);
+  fsys_write(2, buf, cm.endptr() - buf);
 }
 
 int invoke(const char *exe, std::initializer_list<const char*>base_args,
@@ -50,7 +47,7 @@ int invoke(const char *exe, std::initializer_list<const char*>base_args,
 }
 
 unsigned get_load_limit(unsigned nprocs) {
-  return nprocs + std::max(2u, nprocs / 3);
+  return nprocs + max(2u, nprocs / 3);
 }
 
 } // namespace
