@@ -58,8 +58,8 @@ def _check_python_version(args):
         interpreter = shebang[1]
 
     if not os.path.isabs(interpreter):
-        from distutils.spawn import find_executable
-        full_interpreter = find_executable(interpreter) or interpreter
+        import shutil
+        full_interpreter = shutil.which(interpreter) or interpreter
     else:
         full_interpreter = interpreter
 
@@ -68,6 +68,40 @@ def _check_python_version(args):
         return True, None
 
     return False, shebang + [__file__] + sys.argv[1:]
+
+
+class _Formatter:
+    __slot__ = '_lines',
+
+    def __init__(self):
+        self._lines = []
+
+    def __str__(self):
+        return ''.join(self._lines)
+
+    def add(self, target: str, srcs: list[str]):
+        raise NotImplementedError
+
+
+class _MakeFormatter(_Formatter):
+    __slots__ = ()
+
+    def add(self, target: str, srcs: list[str]):
+        self._lines.append(f'{target}: \\\n')
+        for src in srcs:
+            self._lines.append(f'\t{src} \\\n')
+        self._lines.append('\n')
+
+
+class _NinjaDynDepFormatter(_Formatter):
+    __slots__ = ()
+
+    def __init__(self):
+        super().__init__()
+        self._lines.append('ninja_dyndep_version = 1\n')
+
+    def add(self, target: str, srcs: list[str]):
+        self._lines.append(f'build {target}: dyndep | {" ".join(srcs)}\n')
 
 
 def _print_dependency(args):
@@ -82,30 +116,34 @@ def _print_dependency(args):
     except AttributeError:  # No idea why
         pass
 
+    if args.format == 'ninja_dyndep':
+        formatter = _NinjaDynDepFormatter()
+    else:
+        formatter = _MakeFormatter()
+
     files = []
     for mod in finder.modules.values():
         if mod.__file__:
             files.append(mod.__file__)
 
-    files = sorted(set(files))
-    print(args.target, ': \\')
+    # ' ' not in path: Kill "setuptools/script template.py"
+    formatter.add(args.target,
+                  sorted(path for path in files if ' ' not in path))
 
-    for path in files:
-        # Kill "setuptools/script template.py"
-        if ' ' not in path:
-            print('\t', path, ' \\')
-    print()
-
-    if args.dummy:
+    if args.dummy and args.format != 'ninja_dyndep':
         for path in files:
             if ' ' not in path:
-                print(path, ':')
+                formatter.add(path, [])
+
+    print(str(formatter))
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="Build Makefile-style dependency for Python")
     parser.add_argument('-t', '--target', help='Target name', required=True)
+    parser.add_argument('-f', '--format', help='format (default is make)',
+                        choices=('make', 'ninja_dyndep'))
     parser.add_argument('--no-dummy', help='Don\'t add dummy rules',
                         dest='dummy', default=True, action='store_false')
     parser.add_argument('--no-shebang',
