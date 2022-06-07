@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -156,7 +156,11 @@ inline T *Memcpy(T *dst, const void *src, std::size_t n) noexcept {
 
 template <Raw_trivial_type T>
 inline T *Mempcpy(T *dst, const void *src, std::size_t n) noexcept {
+#ifdef __GLIBC__
+  return static_cast<T *>(mempcpy(dst, src, n));
+#else
   return reinterpret_cast<T *>(std::uintptr_t(std::memcpy(dst, src, n)) + n);
+#endif
 }
 
 template <Raw_trivial_type T>
