@@ -84,7 +84,7 @@ class IPv6 {
 
   constexpr bool IsIPv4() const noexcept {
     return mempick<uint64_t>(a_.s6_addr) == 0 &&
-           mempick<uint32_t>(a_.s6_addr + 8) == bswap_be(0x0000ffff);
+           mempick<uint32_t>(a_.s6_addr + 8) == bswap_be(0x0000ffffu);
   }
 
   constexpr IPv4 GetIPv4() const noexcept {
