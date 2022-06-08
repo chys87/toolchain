@@ -124,69 +124,93 @@ inline constexpr unsigned clz_const(T x) noexcept {
 
 // IMPORTANT: The following ctz/clz/bsr functions requires argument to be non-zero!!!
 inline constexpr unsigned ctz(unsigned x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
+  if consteval {
+    return cbu_bit_detail::ctz_const(x);
+  }
   return __builtin_ctz(x);
 }
 
 inline constexpr unsigned ctz(unsigned long x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
+  if consteval {
+    return cbu_bit_detail::ctz_const(x);
+  }
   return __builtin_ctzl(x);
 }
 
 inline constexpr unsigned ctz(unsigned long long x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
+  if consteval {
+    return cbu_bit_detail::ctz_const(x);
+  }
   return __builtin_ctzll(x);
 }
 
 inline constexpr unsigned ctz(int x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
+  if consteval {
+    return cbu_bit_detail::ctz_const(x);
+  }
   return __builtin_ctz(x);
 }
 
 inline constexpr unsigned ctz(long x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
+  if consteval {
+    return cbu_bit_detail::ctz_const(x);
+  }
   return __builtin_ctzl(x);
 }
 
 inline constexpr unsigned ctz(long long x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::ctz_const(x);
+  if consteval {
+    return cbu_bit_detail::ctz_const(x);
+  }
   return __builtin_ctzll(x);
 }
 
 inline constexpr unsigned clz(unsigned x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
+  if consteval {
+    return cbu_bit_detail::clz_const(x);
+  }
   return __builtin_clz(x);
 }
 
 inline constexpr unsigned clz(unsigned long x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
+  if consteval {
+    return cbu_bit_detail::clz_const(x);
+  }
   return __builtin_clzl(x);
 }
 
 inline constexpr unsigned clz(unsigned long long x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
+  if consteval {
+    return cbu_bit_detail::clz_const(x);
+  }
   return __builtin_clzll(x);
 }
 
 inline constexpr unsigned clz(int x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
+  if consteval {
+    return cbu_bit_detail::clz_const(x);
+  }
   return __builtin_clz(x);
 }
 
 inline constexpr unsigned clz(long x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
+  if consteval {
+    return cbu_bit_detail::clz_const(x);
+  }
   return __builtin_clzl(x);
 }
 
 inline constexpr unsigned clz(long long x) noexcept {
-  if (std::is_constant_evaluated()) return cbu_bit_detail::clz_const(x);
+  if consteval {
+    return cbu_bit_detail::clz_const(x);
+  }
   return __builtin_clzll(x);
 }
 
 inline constexpr unsigned bsr(unsigned x) noexcept {
 #if (defined __GNUC__ && (defined __i386__ || defined __x86_64__)) \
     && !defined __clang__
-  if (!std::is_constant_evaluated()) {
+  if !consteval {
     return __builtin_ia32_bsrsi(x);
   }
 #endif
@@ -195,7 +219,7 @@ inline constexpr unsigned bsr(unsigned x) noexcept {
 
 inline constexpr unsigned bsr(unsigned long x) noexcept {
 #if defined __GNUC__ && defined __x86_64__ && !defined __clang__
-  if (!std::is_constant_evaluated()) {
+  if !consteval {
     return (sizeof(unsigned long) == 4 ? __builtin_ia32_bsrsi(x) :
             __builtin_ia32_bsrdi(x));
   }
@@ -205,7 +229,7 @@ inline constexpr unsigned bsr(unsigned long x) noexcept {
 
 inline constexpr unsigned bsr(unsigned long long x) noexcept {
 #if defined __GNUC__ && defined __x86_64__ && !defined __clang__
-  if (!std::is_constant_evaluated()) {
+  if !consteval {
     return __builtin_ia32_bsrdi(x);
   }
 #endif
@@ -262,7 +286,7 @@ inline constexpr T blsi(T x) noexcept { return (x & -x); }
 template <typename T> requires std::is_integral_v<T>
 inline constexpr T bzhi(T x, unsigned k) noexcept {
 #if defined __BMI2__
-  if (!std::is_constant_evaluated()) {
+  if !consteval {
     if constexpr (sizeof(T) <= 4)
       return __builtin_ia32_bzhi_si(std::make_unsigned_t<T>(x), k);
 # if defined __x86_64__

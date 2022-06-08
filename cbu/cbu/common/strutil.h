@@ -107,8 +107,11 @@ int compare_string_view_impl(std::string_view a, std::string_view b) noexcept
 
 inline constexpr int compare_string_view(std::string_view a,
                                          std::string_view b) noexcept {
-  if (std::is_constant_evaluated()) return (a < b) ? -1 : (a == b) ? 0 : 1;
-  return compare_string_view_impl(a, b);
+  if consteval {
+    return (a < b) ? -1 : (a == b) ? 0 : 1;
+  } else {
+    return compare_string_view_impl(a, b);
+  }
 }
 
 // Returns negative if (a < b), 0 or positive otherwise
@@ -118,8 +121,11 @@ int compare_string_view_for_lt_impl(std::string_view a,
 
 inline constexpr int compare_string_view_for_lt(std::string_view a,
                                                 std::string_view b) noexcept {
-  if (std::is_constant_evaluated()) return (a < b) ? -1 : 0;
-  return compare_string_view_for_lt_impl(a, b);
+  if consteval {
+    return (a < b) ? -1 : 0;
+  } else {
+    return compare_string_view_for_lt_impl(a, b);
+  }
 }
 
 // Convert anything to a string_view, useful in templates.
@@ -163,7 +169,7 @@ inline constexpr int strcmp_length_first(const T& a, const U& b) noexcept {
   } else {
     using Traits = typename decltype(sv_a)::traits_type;
     // Explicitly use std::memcmp to make GCC and clang generate better code
-    if (!std::is_constant_evaluated()) {
+    if !consteval {
       if constexpr (std::is_same_v<Traits, std::char_traits<char>> ||
                     std::is_same_v<Traits, std::char_traits<char8_t>>) {
         return std::memcmp(sv_a.data(), sv_b.data(), sv_a.length());

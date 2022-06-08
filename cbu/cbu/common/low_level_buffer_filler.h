@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -192,7 +192,7 @@ class LowLevelBufferFiller {
   constexpr LowLevelBufferFiller& operator<<(
       std::basic_string_view<Ch> v) noexcept {
     auto size = v.size();
-    if (std::is_constant_evaluated()) {
+    if consteval {
       p_ = std::copy_n(v.data(), size, p_);
     } else {
       p_ = static_cast<Ch*>(std::memcpy(p_, v.data(), size)) + size;

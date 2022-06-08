@@ -38,22 +38,24 @@ namespace cbu {
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
 inline constexpr bool mul_overflow(A a, B b, C* c) noexcept {
-  if (std::is_constant_evaluated()) {
+  if consteval {
     SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
     bool overflow = si.mul_overflow(b);
     return !si.cast(c) || overflow;
+  } else {
+    return __builtin_mul_overflow(a, b, c);
   }
-  return __builtin_mul_overflow(a, b, c);
 }
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
 inline constexpr bool add_overflow(A a, B b, C* c) noexcept {
-  if (std::is_constant_evaluated()) {
+  if consteval {
     SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
     bool overflow = si.add_overflow(b);
     return !si.cast(c) || overflow;
+  } else {
+    return __builtin_add_overflow(a, b, c);
   }
-  return __builtin_add_overflow(a, b, c);
 }
 
 template <typename T, typename U>
@@ -70,17 +72,18 @@ inline bool add_overflow(T* a, std::size_t b, U** c) noexcept {
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
 inline constexpr bool sub_overflow(A a, B b, C* c) noexcept {
-  if (std::is_constant_evaluated()) {
+  if consteval {
     SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
     bool overflow = si.sub_overflow(b);
     return !si.cast(c) || overflow;
+  } else {
+    return __builtin_sub_overflow(a, b, c);
   }
-  return __builtin_sub_overflow(a, b, c);
 }
 
 template <Raw_integral A>
 inline constexpr A addc(A x, A y, A carryin, A* carryout) noexcept {
-  if (!std::is_constant_evaluated()) {
+  if !consteval {
     if constexpr (std::is_unsigned_v<A>) {
       // Currently Clang has these addc builtins
 #define CBU_ADDC(Type, Builtin)              \

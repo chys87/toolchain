@@ -98,14 +98,16 @@ class IPv6 {
   }
 
   friend constexpr bool operator==(const IPv6& a, const IPv6& b) noexcept {
-    if (std::is_constant_evaluated())
+    if consteval {
       return std::equal(std::begin(a.a_.s6_addr), std::end(a.a_.s6_addr),
                         b.a_.s6_addr);
+    } else {
 #ifdef __SSE4_2__
-    __m128i v = a.ToVec() ^ b.ToVec();
-    return _mm_testz_si128(v, v);
+      __m128i v = a.ToVec() ^ b.ToVec();
+      return _mm_testz_si128(v, v);
 #endif
-    return memcmp(a.a_.s6_addr, b.a_.s6_addr, 16) == 0;
+      return memcmp(a.a_.s6_addr, b.a_.s6_addr, 16) == 0;
+    }
   }
 
   friend constexpr std::strong_ordering operator<=>(const IPv6& a,

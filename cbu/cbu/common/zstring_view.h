@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -75,16 +75,18 @@ class basic_zstring_view : public std::basic_string_view<C, T> {
 
   using Base::compare;
   constexpr int compare(const C* o) const noexcept {
-    if (std::is_constant_evaluated()) {
+    if consteval {
       return compare(Base(o));
-    } else if constexpr (std::is_same_v<C, char> &&
-                         std::is_same_v<T, std::char_traits<char>>) {
-      return __builtin_strcmp(c_str(), o);
-    } else if constexpr (std::is_same_v<C, wchar_t> &&
-                         std::is_same_v<T, std::char_traits<wchar_t>>) {
-      return __builtin_wcscmp(c_str(), o);
     } else {
-      return Base(*this).compare(o);
+      if constexpr (std::is_same_v<C, char> &&
+                    std::is_same_v<T, std::char_traits<char>>) {
+        return __builtin_strcmp(c_str(), o);
+      } else if constexpr (std::is_same_v<C, wchar_t> &&
+                           std::is_same_v<T, std::char_traits<wchar_t>>) {
+        return __builtin_wcscmp(c_str(), o);
+      } else {
+        return Base(*this).compare(o);
+      }
     }
   }
 

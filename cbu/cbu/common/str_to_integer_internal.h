@@ -137,11 +137,12 @@ inline constexpr std::optional<unsigned> parse_one_digit(
 // only supports unsigned integers, and we choose not to include fastarith.h
 template <std::unsigned_integral T>
 inline constexpr bool add_overflow(T a, T b, T* c) noexcept {
-  if (std::is_constant_evaluated()) {
+  if consteval {
     *c = a + b;
     return (*c < a || *c < b);
+  } else {
+    return __builtin_add_overflow(a, b, c);
   }
-  return __builtin_add_overflow(a, b, c);
 }
 
 // threshold means max value

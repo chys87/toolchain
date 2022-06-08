@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,7 +82,7 @@ constexpr EncodedVlq vlq_encode(uint64_t v) noexcept {
 // Optimized version if the input is known to be smaller than 2**56
 constexpr EncodedVlq vlq_encode_small(uint64_t v) noexcept {
 #ifdef __BMI2__
-  if (!std::is_constant_evaluated()) {
+  if !consteval {
     EncodedVlq res{};
     v = bswap_be(_pdep_u64(v, 0x7f7f7f7f7f7f7f7f));
     cbu::memdrop(res.buffer + sizeof(res.buffer) - 8,

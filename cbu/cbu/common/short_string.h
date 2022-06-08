@@ -66,7 +66,9 @@ class short_string {
   }
 
   constexpr short_string(std::string_view src) noexcept {
-    if (std::is_constant_evaluated()) std::fill_n(s_, MaxLen + 1, 0);
+    if consteval {
+      std::fill_n(s_, MaxLen + 1, 0);
+    }
     assign(src);
   }
 
@@ -90,7 +92,7 @@ class short_string {
   static constexpr len_t capacity() noexcept { return MaxLen; }
 
   constexpr void assign(std::string_view rhs) noexcept {
-    if (std::is_constant_evaluated()) {
+    if consteval {
       auto copy_end = std::copy_n(rhs.data(), rhs.length(), s_);
       *copy_end = '\0';
     } else {
@@ -178,7 +180,9 @@ class short_nzstring {
   }
 
   constexpr short_nzstring(std::string_view src) noexcept {
-    if (std::is_constant_evaluated()) std::fill_n(s_, std::size(s_), 0);
+    if consteval {
+      std::fill_n(s_, std::size(s_), 0);
+    }
     assign(src);
   }
 
@@ -201,7 +205,7 @@ class short_nzstring {
   static constexpr len_t capacity() noexcept { return MaxLen; }
 
   constexpr void assign(std::string_view rhs) noexcept {
-    if (std::is_constant_evaluated()) {
+    if consteval {
       std::copy_n(rhs.data(), rhs.length(), s_);
     } else {
       // memcpy is fine, but copy_n uses memmove

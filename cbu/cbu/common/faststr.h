@@ -57,7 +57,7 @@ extern const char arch_linear_bytes64[64];
 // type checking
 template <std::endian byte_order, Bswappable T, Raw_char_type C>
 inline constexpr T mempick_bswap(const C* s) noexcept {
-  if (std::is_constant_evaluated()) {
+  if consteval {
     T u = 0;
     for (std::size_t i = 0; i < sizeof(T); ++i) {
       u = (u << 8) | std::uint8_t(*s++);
@@ -72,7 +72,7 @@ inline constexpr T mempick_bswap(const C* s) noexcept {
 
 template <std::endian byte_order, Bswappable T, Raw_char_type C>
 inline constexpr C* memdrop_bswap(C *s, T v) noexcept {
-  if (std::is_constant_evaluated()) {
+  if consteval {
     T u = may_bswap<std::endian::little, byte_order>(v);
     for (std::size_t i = 0; i < sizeof(T); ++i) {
       *s++ = std::uint8_t(u);
@@ -212,7 +212,7 @@ requires ((Raw_char_type<T> || std::is_void_v<T>) &&
 inline constexpr T* memdrop(T* dst, IT v, std::size_t n) noexcept {
   using S = std::conditional_t<std::is_void_v<T>, char, T>;
   S* d = static_cast<S*>(dst);
-  if (std::is_constant_evaluated()) {
+  if consteval {
     char buf[sizeof(v)];
     memdrop(buf, v);
     for (std::size_t i = 0; i < n; ++i) {
@@ -359,7 +359,7 @@ inline constexpr std::optional<unsigned> convert_2xdigit(
 inline constexpr std::optional<unsigned> convert_4xdigit(
     const char *s, bool assume_valid = false) noexcept {
 #if defined __SSE4_1__ && defined __BMI2__
-  if (!std::is_constant_evaluated()) {
+  if !consteval {
     __v16qu v = __v16qu(__v4su{mempick_be<uint32_t>(s), 0, 0, 0});
     __v16qu digits = (v - '0' <= 9);
     __v16qu v_alpha = (v | 0x20) - 'a';
@@ -388,7 +388,7 @@ inline constexpr std::optional<unsigned> convert_4xdigit(
 inline constexpr std::optional<unsigned> convert_8xdigit(
     const char *s, bool assume_valid = false) noexcept {
 #if defined __x86_64__ && defined __SSE4_1__ && defined __BMI2__
-  if (!std::is_constant_evaluated()) {
+  if !consteval {
     __v16qu v = __v16qu(__v2du{mempick_be<uint64_t>(s), 0});
     __v16qu digits = (v - '0' <= 9);
     __v16qu v_alpha = (v | 0x20) - 'a';
@@ -412,7 +412,7 @@ inline constexpr std::optional<unsigned> convert_8xdigit(
 inline constexpr std::optional<std::uint64_t> convert_16xdigit(
     const char *s, bool assume_valid = false) noexcept {
 #if defined __x86_64__ && defined __SSE4_1__ && defined __BMI2__
-  if (!std::is_constant_evaluated()) {
+  if !consteval {
     __v16qu v = __v16qu(_mm_shuffle_epi8(
           *(const __m128i_u*)s,
           _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)));

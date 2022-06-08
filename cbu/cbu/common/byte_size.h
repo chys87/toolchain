@@ -39,8 +39,9 @@ namespace cbu {
 template <typename U>
 constexpr std::ptrdiff_t byte_distance(const U* p, const U* q) {
   if constexpr (!std::is_void_v<U>) {
-    if (std::is_constant_evaluated())
+    if consteval {
       return (q - p) * std::ptrdiff_t(sizeof(U));
+    }
   }
   return (reinterpret_cast<std::intptr_t>(q) -
           reinterpret_cast<std::intptr_t>(p));
@@ -56,8 +57,10 @@ constexpr std::make_unsigned_t<std::ptrdiff_t> byte_udistance(const U* p,
 template <typename U>
 constexpr U* byte_advance(U* p, std::ptrdiff_t u) noexcept {
   if constexpr (!std::is_void_v<U>) {
-    if (std::is_constant_evaluated() && u % std::ptrdiff_t(sizeof(U)) == 0)
-      return (p + u / std::ptrdiff_t(sizeof(U)));
+    if consteval {
+      if (u % std::ptrdiff_t(sizeof(U)) == 0)
+        return (p + u / std::ptrdiff_t(sizeof(U)));
+    }
   }
   return reinterpret_cast<U*>(reinterpret_cast<std::intptr_t>(p) + u);
 }
@@ -65,8 +68,10 @@ constexpr U* byte_advance(U* p, std::ptrdiff_t u) noexcept {
 template <typename U>
 constexpr U* byte_back(U* p, std::ptrdiff_t u) {
   if constexpr (!std::is_void_v<U>) {
-    if (std::is_constant_evaluated() && u % std::ptrdiff_t(sizeof(U)) == 0)
-      return (p - u / std::ptrdiff_t(sizeof(U)));
+    if consteval {
+      if (u % std::ptrdiff_t(sizeof(U)) == 0)
+        return (p - u / std::ptrdiff_t(sizeof(U)));
+    }
   }
   return reinterpret_cast<U*>(reinterpret_cast<std::intptr_t>(p) - u);
 }

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -181,7 +181,7 @@ constexpr void uninitialized_move_and_destroy(T* old_obj, T* new_obj) noexcept {
                 "uninitialized_move_and_destroy is safe only if the type's "
                 "destructor never throws.");
   if constexpr (bitwise_movable_v<T>) {
-    if (!std::is_constant_evaluated()) {
+    if !consteval {
       __builtin_memcpy(static_cast<void*>(new_obj),
                        static_cast<const void*>(old_obj), sizeof(T));
       return;
@@ -202,7 +202,7 @@ constexpr T* uninitialized_move_and_destroy_n(
                 "uninitialized_move_and_destroy_n is safe only if the type's "
                 "move constructor and destructor never throw.");
   if constexpr (bitwise_movable_v<T>) {
-    if (!std::is_constant_evaluated()) {
+    if !consteval {
       __builtin_memcpy(static_cast<void*>(new_ptr),
                        static_cast<const void*>(old_ptr), size.bytes());
       return new_ptr + size;

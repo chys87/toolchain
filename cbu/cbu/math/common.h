@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -148,7 +148,7 @@ constexpr std::uint32_t ipow10_array[10] = {
 unsigned int ilog10_impl(std::uint32_t) noexcept __attribute__((__const__));
 
 inline constexpr unsigned int ilog10(std::uint32_t x) noexcept {
-  if (std::is_constant_evaluated()) {
+  if consteval {
     std::uint64_t p = 10;
     unsigned int i = 0;
     while (true) {
@@ -156,8 +156,9 @@ inline constexpr unsigned int ilog10(std::uint32_t x) noexcept {
       p *= 10;
       ++i;
     }
+  } else {
+    return ilog10_impl(x);
   }
-  return ilog10_impl(x);
 }
 
 }  // namespace cbu
