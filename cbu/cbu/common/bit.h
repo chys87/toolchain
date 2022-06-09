@@ -29,6 +29,7 @@
 #pragma once
 
 #include <algorithm>
+#include <bit>
 #include <concepts>
 #include <cstdint>
 #include <iterator>
@@ -95,182 +96,41 @@ static_assert(std::is_same_v<FastUIntTypeByBits<8>, std::uint32_t>);
 static_assert(std::is_same_v<UIntTypeByBits<32>, std::uint32_t>);
 static_assert(std::is_same_v<FastUIntTypeByBits<32>, std::uint32_t>);
 
-namespace cbu_bit_detail {
-
-template <typename T>
-inline constexpr unsigned ctz_const(T x) noexcept {
-  std::make_unsigned_t<T> y = x;
-  unsigned r = 0;
-  while ((y & 1) == 0) {
-    y >>= 1;
-    ++r;
-  }
-  return r;
+// ctz is equivalent to std::countr_zero, except that it also accepts signed
+// arguments and returns unsigned int.
+template <std::integral T>
+constexpr unsigned ctz(T x) noexcept {
+  return std::countr_zero(std::make_unsigned_t<T>(x));
 }
 
-template <typename T>
-inline constexpr unsigned clz_const(T x) noexcept {
-  using UT = std::make_unsigned_t<T>;
-  UT y = x;
-  unsigned r = 0;
-  while ((y & (UT(1) << (8 * sizeof(T) - 1))) == 0) {
-    y <<= 1;
-    ++r;
-  }
-  return r;
+// clz is equivalent to std::countl_zero, except that it also accepts signed
+// arguments and returns unsigned int.
+template <std::integral T>
+constexpr unsigned clz(T x) noexcept {
+  return std::countl_zero(std::make_unsigned_t<T>(x));
 }
 
-}  // namespace cbu_bit_detail
-
-// IMPORTANT: The following ctz/clz/bsr functions requires argument to be non-zero!!!
-inline constexpr unsigned ctz(unsigned x) noexcept {
-  if consteval {
-    return cbu_bit_detail::ctz_const(x);
-  }
-  return __builtin_ctz(x);
-}
-
-inline constexpr unsigned ctz(unsigned long x) noexcept {
-  if consteval {
-    return cbu_bit_detail::ctz_const(x);
-  }
-  return __builtin_ctzl(x);
-}
-
-inline constexpr unsigned ctz(unsigned long long x) noexcept {
-  if consteval {
-    return cbu_bit_detail::ctz_const(x);
-  }
-  return __builtin_ctzll(x);
-}
-
-inline constexpr unsigned ctz(int x) noexcept {
-  if consteval {
-    return cbu_bit_detail::ctz_const(x);
-  }
-  return __builtin_ctz(x);
-}
-
-inline constexpr unsigned ctz(long x) noexcept {
-  if consteval {
-    return cbu_bit_detail::ctz_const(x);
-  }
-  return __builtin_ctzl(x);
-}
-
-inline constexpr unsigned ctz(long long x) noexcept {
-  if consteval {
-    return cbu_bit_detail::ctz_const(x);
-  }
-  return __builtin_ctzll(x);
-}
-
-inline constexpr unsigned clz(unsigned x) noexcept {
-  if consteval {
-    return cbu_bit_detail::clz_const(x);
-  }
-  return __builtin_clz(x);
-}
-
-inline constexpr unsigned clz(unsigned long x) noexcept {
-  if consteval {
-    return cbu_bit_detail::clz_const(x);
-  }
-  return __builtin_clzl(x);
-}
-
-inline constexpr unsigned clz(unsigned long long x) noexcept {
-  if consteval {
-    return cbu_bit_detail::clz_const(x);
-  }
-  return __builtin_clzll(x);
-}
-
-inline constexpr unsigned clz(int x) noexcept {
-  if consteval {
-    return cbu_bit_detail::clz_const(x);
-  }
-  return __builtin_clz(x);
-}
-
-inline constexpr unsigned clz(long x) noexcept {
-  if consteval {
-    return cbu_bit_detail::clz_const(x);
-  }
-  return __builtin_clzl(x);
-}
-
-inline constexpr unsigned clz(long long x) noexcept {
-  if consteval {
-    return cbu_bit_detail::clz_const(x);
-  }
-  return __builtin_clzll(x);
-}
-
-inline constexpr unsigned bsr(unsigned x) noexcept {
+// bsr is like x86's BSR instruction, and is deprecated in favor of clz or
+// std::countl_zero.
+template <std::integral T>
+constexpr unsigned bsr(T x) noexcept {
 #if (defined __GNUC__ && (defined __i386__ || defined __x86_64__)) \
     && !defined __clang__
   if !consteval {
-    return __builtin_ia32_bsrsi(x);
+      if constexpr (sizeof(T) == 4)
+        return __builtin_ia32_bsrsi(x);
+      else if constexpr (sizeof(T) == 8)
+        return __builtin_ia32_bsrdi(x);
   }
 #endif
-  return clz(x) ^ (8 * sizeof(x) - 1);
+  return clz(x) ^ (8 * sizeof(T) - 1);
 }
 
-inline constexpr unsigned bsr(unsigned long x) noexcept {
-#if defined __GNUC__ && defined __x86_64__ && !defined __clang__
-  if !consteval {
-    return (sizeof(unsigned long) == 4 ? __builtin_ia32_bsrsi(x) :
-            __builtin_ia32_bsrdi(x));
-  }
-#endif
-  return clz(x) ^ (8 * sizeof(x) - 1);
-}
-
-inline constexpr unsigned bsr(unsigned long long x) noexcept {
-#if defined __GNUC__ && defined __x86_64__ && !defined __clang__
-  if !consteval {
-    return __builtin_ia32_bsrdi(x);
-  }
-#endif
-  return clz(x) ^ (8 * sizeof(x) - 1);
-}
-
-inline constexpr unsigned bsr(int x) noexcept {
-  return bsr(static_cast<unsigned>(x));
-}
-
-inline constexpr unsigned bsr(long x) noexcept {
-  return bsr(static_cast<unsigned long>(x));
-}
-
-inline constexpr unsigned bsr(long long x) noexcept {
-  return bsr(static_cast<unsigned long long>(x));
-}
-
-// popcnt: Count the number of set bits
-inline constexpr unsigned popcnt(unsigned x) noexcept {
-  return __builtin_popcount(x);
-}
-
-inline constexpr unsigned popcnt(unsigned long x) noexcept {
-  return __builtin_popcountl(x);
-}
-
-inline constexpr unsigned popcnt(unsigned long long x) noexcept {
-  return __builtin_popcountll(x);
-}
-
-inline constexpr unsigned popcnt(int x) noexcept {
-  return __builtin_popcount(x);
-}
-
-inline constexpr unsigned popcnt(long x) noexcept {
-  return __builtin_popcountl(x);
-}
-
-inline constexpr unsigned popcnt(long long x) noexcept {
-  return __builtin_popcountll(x);
+// popcnt is equivalent to std::popcount, except that it also accepts signed
+// arguments and returns unsigned int.
+template <std::integral T>
+constexpr unsigned popcnt(T x) noexcept {
+  return std::popcount(std::make_unsigned_t<T>(x));
 }
 
 // Clear lowest set bit
@@ -376,9 +236,10 @@ inline constexpr std::make_unsigned_t<T> MAX_POW2 =
 // Undefined for n > MAX_POW2<T>
 template <typename T> requires std::is_integral_v<T>
 inline constexpr T pow2_ceil(T n) noexcept {
-  if (n <= 1) return 1;
-  using UT = std::conditional_t<(sizeof(T) < sizeof(unsigned)), unsigned, T>;
-  return (MAX_POW2<UT> >> (clz(UT(n - 1)) - 1));
+  if (n == 0) return 1;
+  using UT = std::conditional_t<(sizeof(T) < sizeof(unsigned)), unsigned,
+                                std::make_unsigned_t<T>>;
+  return (MAX_POW2<UT> >> (std::countl_zero(UT(n - 1)) - 1));
 }
 
 // Flooring to the nearest power of 2
@@ -389,8 +250,10 @@ inline constexpr T pow2_floor(T n) noexcept {
   return MAX_POW2<UT> >> clz(UT(n));
 }
 
-template <typename T> requires std::is_integral_v<T>
-inline constexpr T is_pow2(T n) noexcept {
+// is_pow2 is equivalent to std::has_single_bit, except that it also accepts
+// signed arguments
+template <std::integral T>
+constexpr bool is_pow2(T n) noexcept {
   return (n > 0 && (n & (n - 1)) == 0);
 }
 
