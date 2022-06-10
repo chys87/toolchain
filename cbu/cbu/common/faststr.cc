@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "cbu/common/bit.h"
+#include <bit>
+
 #include "cbu/common/stdhack.h"
 #include "cbu/compat/string.h"
 #include "cbu/math/common.h"
@@ -149,9 +150,16 @@ void* memdrop(void* dst, __m256i v, std::size_t n) noexcept {
 namespace {
 
 // We assume allocating 2**n bytes is optimal
-inline std::size_t roundup_cap_nonzero(std::size_t n) {
-  return (std::size_t(2) << bsr(n)) - 1;
+constexpr std::size_t roundup_cap_nonzero(std::size_t n) {
+  return std::size_t(-1) >> std::countl_zero(n);
 }
+
+static_assert(roundup_cap_nonzero(1) == 1);
+static_assert(roundup_cap_nonzero(2) == 3);
+static_assert(roundup_cap_nonzero(3) == 3);
+static_assert(roundup_cap_nonzero(4) == 7);
+static_assert(roundup_cap_nonzero(7) == 7);
+static_assert(roundup_cap_nonzero(8) == 15);
 
 } // namespace
 
