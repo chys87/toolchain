@@ -56,7 +56,7 @@ class Executor:
         proc = subprocess.run(
             [self.binary, '--gtest_list_tests'] + self.additional_args,
             stdout=subprocess.PIPE, text=True, check=True)
-        return re.findall(r'^(\w+)\.$', proc.stdout, re.MULTILINE)
+        return re.findall(r'^([\w/]+)\.(\s+#.*)?$', proc.stdout, re.MULTILINE)
 
     def run(self):
         return subprocess.run([self.binary] + self.additional_args)
@@ -100,10 +100,10 @@ def main():
 
     while running or (ret_code == 0 and pending):
         while ret_code == 0 and pending and len(running) < concurrency:
-            test = pending.pop()
+            test, comment = pending.pop()
             f, proc = exe.start_test(test)
             running.append((test, f, proc, time.time()))
-            print(f'\033[32;1m[ RUN    ]\033[0m {test}')
+            print(f'\033[32;1m[ RUN    ]\033[0m {test}{comment or ""}')
 
         signal.sigwait(signals)
 
