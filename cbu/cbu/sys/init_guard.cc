@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@
 namespace cbu {
 
 bool InitGuard::uninit() noexcept {
+  if (tweak::SINGLE_THREADED) return uninit_no_race();
   int v = std::atomic_ref(v_).load(std::memory_order_acquire);
   while (inited(v)) {
     if (std::atomic_ref(v_).compare_exchange_weak(

@@ -35,6 +35,7 @@
 
 #include "cbu/common/defer.h"
 #include "cbu/compat/atomic_ref.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 
@@ -56,6 +57,22 @@ class InitGuard {
   template <typename Foo, typename... Args>
   bool init_with_reuse(Foo&& foo, Args&&... args) noexcept(
       noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
+    if (tweak::SINGLE_THREADED) {
+      if (inited(v_)) {
+        return false;
+      } else {
+        int done_value = ABORTED;
+        CBU_DEFER({
+          if (inited(done_value))
+            v_ = done_value;
+          else
+            v_ = ABORTED;
+        });
+        done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
+        return inited(done_value);
+      }
+    }
+
     int v = std::atomic_ref(v_).load(std::memory_order_relaxed);
     if (!inited(v) && guard_lock(v)) {
       int done_value = ABORTED;
@@ -85,7 +102,10 @@ class InitGuard {
 
   // IMPORTANT: The status may be changed after this function returns
   bool inited() const noexcept {
-    return inited(std::atomic_ref(v_).load(std::memory_order_acquire));
+    if (tweak::SINGLE_THREADED)
+      return inited(v_);
+    else
+      return inited(std::atomic_ref(v_).load(std::memory_order_acquire));
   }
 
   bool inited_no_race() const noexcept { return inited(v_); }
