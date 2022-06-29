@@ -55,6 +55,7 @@ If you use anything else, you have to take care of it yourself.
 * `escape.h`: C/JSON style string escaping utilities
 * `faststr.h`: Provides `mempick`, `memdrop`, `append`, `concat` and similar functions for easy string operations
 * `fifo_list.h`: Provides `fifo_list<T>`, a first-in-first-out singly-linked container type with fast access to both ends
+* `fixed_string.h`: Provides `fixed_string<N>`, a helper class to allow the use of string literal as template argument (ref [PR0732R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0732r2.pdf), part of C++20)
 * `heapq.h`: Heap operations
 * `immutable_string.h`: An "immutable" string class that holds either a `string_view` or a real `string` object.
 * `memory.h`: Provides memory operation utilities, including some C++20 memory functions that are missing from GCC 9
@@ -63,7 +64,6 @@ If you use anything else, you have to take care of it yourself.
 * `shared_instance.h`: An enhanced singleton implementation
 * `short_string.h`: A class for storing very short strings efficiently
 * `stdhack.h`: Hacks standard strings and containers, providing resizing without initialization
-* `strpack.h`: Converts a string literal to a class with variadic templates
 * `str_split.h`: Splitting a string with small code size, inspired by [`absl::StrSplit`](https://abseil.io/docs/cpp/guides/strings#abslstrsplit-for-splitting-strings)
 * `str_to_integer.h`: Conversion from string to integer
 * `strutil.h`: Various string utilities, higher level than `faststr.h`

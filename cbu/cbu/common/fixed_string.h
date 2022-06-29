@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,37 +30,29 @@
 
 #include <cstddef>
 
-#ifdef __clang__
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wgnu-string-literal-operator-template"
-#endif
-
 namespace cbu {
 
-// STRPACK: Convert a string literal to a template argument pack
-template <typename T, T... chars>
-struct strpack {
-  enum : std::size_t { n = sizeof...(chars) };
-  static inline constexpr T s[n + 1] = {chars..., T()};
-  static constexpr T* fill(T* p) noexcept {
-    ((*p++ = chars), ...);
-    return p;
+// The intended use of fixed_string is as template argument, see P0732R2
+// (https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0732r2.pdf), part
+// of C++20.
+template <std::size_t N>
+struct fixed_string {
+  constexpr fixed_string(const char (&s)[N + 1]) noexcept {
+    for (std::size_t i = 0; i < N + 1; ++i) s_[i] = s[i];
   }
+
+  constexpr const char* data() const noexcept { return s_; }
+  constexpr const char* c_str() const noexcept { return s_; }
+  static constexpr std::size_t size() noexcept { return N; }
+  static constexpr std::size_t length() noexcept { return N; }
+
+  // Has to be public to be used as template argument
+  char s_[N + 1];
 };
 
-template <typename T, T... chars>
-constexpr strpack<T, chars...> operator""_strpack() {
-  return {};
-}
+template <std::size_t N>
+  requires(N > 0)
+fixed_string(const char (&)[N])
+->fixed_string<N - 1>;
 
-// This can be used as template argument!!
-template <typename T, T... chars>
-constexpr const T (&operator""_str())[sizeof...(chars) + 1] {
-  return strpack<T, chars...>::s;
-}
-
-} // namespace cbu
-
-#ifdef __clang__
-# pragma GCC diagnostic pop
-#endif
+}  // namespace cbu
