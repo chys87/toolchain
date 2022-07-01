@@ -37,14 +37,30 @@ namespace cbu {
 // of C++20.
 template <std::size_t N>
 struct fixed_string {
+  constexpr fixed_string() noexcept : s_{} {}
   constexpr fixed_string(const char (&s)[N + 1]) noexcept {
     for (std::size_t i = 0; i < N + 1; ++i) s_[i] = s[i];
   }
 
+  constexpr char* data() noexcept { return s_; }
   constexpr const char* data() const noexcept { return s_; }
   constexpr const char* c_str() const noexcept { return s_; }
   static constexpr std::size_t size() noexcept { return N; }
   static constexpr std::size_t length() noexcept { return N; }
+
+  constexpr char& operator[](std::size_t n) noexcept { return s_[n]; }
+  constexpr const char& operator[](std::size_t n) const noexcept {
+    return s_[n];
+  }
+
+  using iterator = char*;
+  using const_iterator = const char*;
+  constexpr iterator begin() noexcept { return s_; }
+  constexpr iterator end() noexcept { return s_; }
+  constexpr const_iterator begin() const noexcept { return s_; }
+  constexpr const_iterator end() const noexcept { return s_; }
+  constexpr const_iterator cbegin() const noexcept { return s_; }
+  constexpr const_iterator cend() const noexcept { return s_; }
 
   // Has to be public to be used as template argument
   char s_[N + 1];
