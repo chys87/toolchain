@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#if __has_include(<cxxabi.h>)
+#  include <cxxabi.h>
+#endif
 
 #include "cbu/fsyscall/fsyscall.h"
 
@@ -59,3 +62,41 @@ int pthread_create(pthread_t*, const pthread_attr_t*,
   fsys_write(2, msg, strlen(msg));
   abort();
 }
+
+#ifdef __GLIBCXX__
+static inline int __guard_test_bit(const int __byte, const int __val) {
+  union {
+    int __i;
+    char __c[sizeof(int)];
+  } __u = {0};
+  __u.__c[__byte] = __val;
+  return __u.__i;
+}
+
+extern "C" {
+
+[[gnu::visibility("hidden")]] int __cxa_guard_acquire_override(int* g) noexcept
+    asm("__cxa_guard_acquire");
+[[gnu::visibility("hidden")]] void __cxa_guard_abort_override(int* g) noexcept
+    asm("__cxa_guard_abort");
+[[gnu::visibility("hidden")]] void __cxa_guard_release_override(int* g) noexcept
+    asm("__cxa_guard_release");
+
+int __cxa_guard_acquire_override(int* g) noexcept {
+  if (*g == 0) {
+    // Let's be lazy and don't change its value.
+    // *g = _GLIBCXX_GUARD_PENDING_BIT;
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+void __cxa_guard_abort_override(int* g) noexcept {
+  // *g = 0;
+}
+
+void __cxa_guard_release_override(int* g) noexcept { *g = _GLIBCXX_GUARD_BIT; }
+
+}  // extern "C"
+#endif
