@@ -305,6 +305,10 @@ ifeq "$(CXXSRCS)" ""
  NOEXCEPTIONS := 1
 endif
 
+ifeq "$(IS_CLANG)" "1"
+ EXTRA_CXXFLAGS += -fstrict-vtable-pointers
+endif
+
 ifeq "$(NOEXCEPTIONS)" "1"
  OPTIMIZEFLAGS += -fno-exceptions
  OPTIMIZEFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables
