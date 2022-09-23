@@ -434,6 +434,7 @@ def_fsys(mount,mount,int,5,const char *,const char *,const char *,
 def_fsys(umount2,umount2,int,2,const char *,int)
 def_fsys(pivot_root,pivot_root,int,2,const char *,const char *)
 def_fsys(memfd_create,memfd_create,int,2,const char *,unsigned)
+def_fsys_nomem(copy_file_range,copy_file_range,long,6,int,long*,int,long*,unsigned long,unsigned)
 
 // vsyscall is nowadays deprecated; We should use vDSO instead,
 // of which modern glibc takes good care.
@@ -636,5 +637,6 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_umount2 umount2
 #define fsys_pivot_root pivot_root
 #define fsys_memfd_create memfd_create
+#define fsys_copy_file_range copy_file_range
 
 #endif
