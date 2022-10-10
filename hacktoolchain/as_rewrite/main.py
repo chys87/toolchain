@@ -1,13 +1,12 @@
 #! /usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
-
 import sys
 import os
 import subprocess
 import time
 import fcntl
+
 
 def find_as():
     best_as = '/usr/local/binutils-svn/bin/as'
