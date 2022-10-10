@@ -349,17 +349,6 @@ BASE_LDFLAGS = -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed \
   -Wl,-z,nostart-stop-gc
 LDFLAGS = $(ARCHFLAGS) $(OPTIMIZEFLAGS) $(BASE_LDFLAGS) $(EXTRA_LDFLAGS)
 
-ifeq "$(DIR)" "."
- ifeq "$(BUILDDIR)" "build"
-  TAGSFILE ?= tags
- endif
-endif
-
-ifneq "$(TAGSFILE)" ""
- CTAGS := ctags -Idecltype -Inoexcept #--c++-kinds=+p --fields=+iaS --extra=+q
-endif
-
-all:	$(TAGSFILE)
 all: ut
 
 SIZE_COMMANDS :=
@@ -492,13 +481,6 @@ ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
  -include $(AUTO_GENERATED_PROTOBUF_DEPS)
  -include $(AUTO_GENERATED_FLATBUF_DEPS)
  -include $(AUTO_GENERATED_PYTHON_DEPS)  # This goes after protoc and flatc, so that Python generators may depend on them
-endif
-
-# Update ctags
-ifeq "$(TAGSFILE)" "tags"
-tags: private NAME := CTAGS
-tags: $(HANDWRITTEN_SRCS) $(HANDWRITTEN_HEADERS)
-	$(Q)$(CTAGS) $(HANDWRITTEN_SRCS:./%=%) $(HANDWRITTEN_HEADERS:./%=%)
 endif
 
 # compare
