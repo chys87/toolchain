@@ -319,9 +319,9 @@ ifeq "$(LTO)" "1"
  EXTRA_CXXFLAGS += -flto -fuse-linker-plugin
  EXTRA_LDFLAGS += -flto=jobserver -fuse-linker-plugin
  else
- EXTRA_CFLAGS += -flto
- EXTRA_CXXFLAGS += -flto
- EXTRA_LDFLAGS += -flto -fuse-ld=lld
+ EXTRA_CFLAGS += -flto=thin
+ EXTRA_CXXFLAGS += -flto=thin
+ EXTRA_LDFLAGS += -flto=thin -fuse-ld=lld
  endif
 else
  OPTIMIZEFLAGS += -ffunction-sections -fdata-sections
