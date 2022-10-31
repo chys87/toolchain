@@ -321,7 +321,8 @@ ifeq "$(LTO)" "1"
  else
  EXTRA_CFLAGS += -flto=thin
  EXTRA_CXXFLAGS += -flto=thin
- EXTRA_LDFLAGS += -flto=thin -fuse-ld=lld
+ EXTRA_LDFLAGS += -flto=thin -fuse-ld=lld -Wl,--thinlto-cache-dir=$(BUILDDIR)/thinlto-cache
+ $(EGM.mkdirp $(BUILDDIR)/thinlto-cache)
  endif
 else
  OPTIMIZEFLAGS += -ffunction-sections -fdata-sections
