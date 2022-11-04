@@ -1,7 +1,7 @@
 #include <dirent.h>
 #include <limits.h>
 #include <sys/fcntl.h>
-#include <tinyx32.h>
+#include <tinyx64.h>
 
 #include <string_view>
 

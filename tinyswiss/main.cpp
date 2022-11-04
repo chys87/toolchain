@@ -1,4 +1,4 @@
-#include <tinyx32.h>
+#include <tinyx64.h>
 #include "utils.h"
 
 int j_main(size_t argc, char **argv, char **);

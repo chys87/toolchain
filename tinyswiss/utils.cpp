@@ -1,6 +1,6 @@
 #include "utils.h"
 #include <stdint.h>
-#include <tinyx32.h>
+#include <tinyx64.h>
 
 int strnumcmp(const char *a, const char *b) {
   const uint8_t *u = (const uint8_t *)a;

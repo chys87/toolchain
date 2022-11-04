@@ -1,4 +1,4 @@
-#include "tinyx32.h"
+#include "tinyx64.h"
 #include <sys/errno.h>
 
 int execvpe(const char* exe, char* const* args, char* const* envp) {

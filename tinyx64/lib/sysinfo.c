@@ -1,4 +1,4 @@
-#include "tinyx32.h"
+#include "tinyx64.h"
 #include <fcntl.h>
 
 unsigned get_nprocs() {

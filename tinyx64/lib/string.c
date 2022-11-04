@@ -1,4 +1,4 @@
-#include "tinyx32.h"
+#include "tinyx64.h"
 
 #include <x86intrin.h>
 
@@ -8,7 +8,7 @@
 "
 
 void* memset(void* dst, int ch, size_t n) {
-  asm volatile("addr32 rep stosb" DUMMY_ASM
+  asm volatile("rep stosb" DUMMY_ASM
                : "+D"(dst), "+c"(n)
                : "a"(ch)
                : "memory", "cc");
@@ -21,8 +21,7 @@ void* memcpy(void* dst, const void* src, size_t n) {
 }
 
 void* mempcpy(void* dst, const void* src, size_t n) {
-  asm volatile("addr32 rep movsb" DUMMY_ASM
-               : "+D"(dst), "+S"(src), "+c"(n)::"memory");
+  asm volatile("rep movsb" DUMMY_ASM : "+D"(dst), "+S"(src), "+c"(n)::"memory");
   return dst;
 }
 
@@ -31,7 +30,7 @@ void* memmove(void* dst, const void* src, size_t n) {
     void* ret = dst;
     dst = (void*)((uintptr_t)dst + n - 1);
     src = (void*)((uintptr_t)src + n - 1);
-    asm volatile("std; addr32 rep movsb; cld" DUMMY_ASM
+    asm volatile("std; rep movsb; cld" DUMMY_ASM
                  : "+D"(dst), "+S"(src), "+c"(n)::"memory");
     return ret;
   } else {

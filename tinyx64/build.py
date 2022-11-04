@@ -10,8 +10,7 @@ import pickle
 import sys
 
 
-COMPILER_PATTERNS = ['{}-svn-opt', '{}-svn', 'x86_64-linux-gnux32-{}', '{}']
-BUILD_FILE = 'TINYX32BUILD'
+BUILD_FILE = 'TINYX64BUILD'
 
 
 NINJA_HEADER = r'''
@@ -25,11 +24,11 @@ argv0 = {argv0}
 NINJA_TEMPLATE = r'''
 {name}cc = {cc}
 {name}cxx = {cxx}
-{name}cppflags = -I{tinyx32_dir} -D _GNU_SOURCE -D NDEBUG -D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS -D __NO_MATH_INLINES -U _FORTIFY_SOURCE
-{name}commonflags = -O2 -march=native -mx32 -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fdata-sections -ffunction-sections -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-vzeroupper
+{name}cppflags = -I{tinyx64_dir} -D _GNU_SOURCE -D NDEBUG -D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS -D __NO_MATH_INLINES -U _FORTIFY_SOURCE
+{name}commonflags = -O2 -march=native -ffreestanding -fbuiltin -fno-PIE -fno-PIC -Wall -flto -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-vzeroupper
 {name}cflags = -std=gnu2x
 {name}cxxflags = -fno-rtti -std=gnu++2a
-{name}ldflags = -nostdlib -static -fuse-linker-plugin -Wl,--gc-sections
+{name}ldflags = -nostdlib -static -fuse-linker-plugin
 {name}libs = -lgcc
 {name}builddir = {builddir}
 {name}instdir = {instdir}
@@ -51,12 +50,12 @@ rule {name}strip
 rule {name}install
   command = install -m755 -C -T -v $in $out
 rule {name}size
-  command = {tinyx32_dir}/../scripts/detailed_size ${name}instdir/{name} ${name}builddir/{name}.out
+  command = {tinyx64_dir}/../scripts/detailed_size ${name}instdir/{name} ${name}builddir/{name}.out
 rule {name}bincmp
-  command = {tinyx32_dir}/../scripts/bincmp ${name}instdir/{name} ${name}builddir/{name}.out
+  command = {tinyx64_dir}/../scripts/bincmp ${name}instdir/{name} ${name}builddir/{name}.out
   pool = console
 rule {name}un
-  command = {tinyx32_dir}/../scripts/unassembly ${name}builddir/{name}.n.out
+  command = {tinyx64_dir}/../scripts/unassembly ${name}builddir/{name}.n.out
   pool = console
 rule {name}clean
   command = rm -rfv ${name}builddir/{name}.n.out ${name}builddir/{name}.out {objs}
@@ -99,11 +98,12 @@ def find_compilers():
     if env_cc and env_cxx:
         return env_cc, env_cxx
 
-    for exe_pattern in COMPILER_PATTERNS:
-        gcc = env_cc or find_executable(exe_pattern.format('gcc'))
-        gxx = env_cxx or find_executable(exe_pattern.format('g++'))
-        if gcc and gxx:
-            return gcc, gxx
+    for cc, cxx in (('clang', 'clang++'), ('gcc', 'g++')):
+        cc = env_cc or find_executable(cc)
+        cxx = env_cxx or find_executable(cxx)
+        if cc and cxx:
+            return cc, cxx
+
     raise sys.exit('Failed to find an appropriate C++ compiler')
 
 
@@ -152,7 +152,7 @@ class BuildFile:
         self.binaries.append(binary)
 
     def gen_ninja(self):
-        tinyx32_dir = os.path.dirname(os.path.realpath(__file__))
+        tinyx64_dir = os.path.dirname(os.path.realpath(__file__))
         instdir = os.path.expanduser('~/bin')
 
         ninja_content = NINJA_HEADER.format(
@@ -172,9 +172,9 @@ class BuildFile:
                 objs[f'${name}builddir/{src}.o'] = os.path.join('..', src)
 
             for suffix in ('*.c', '*.S', '*.cpp'):
-                for src in glob.glob(os.path.join(tinyx32_dir, 'lib', suffix)):
-                    relsrc = os.path.relpath(src, tinyx32_dir)
-                    objs[f'${name}builddir/__tinyx32/{relsrc}.o'] = src
+                for src in glob.glob(os.path.join(tinyx64_dir, 'lib', suffix)):
+                    relsrc = os.path.relpath(src, tinyx64_dir)
+                    objs[f'${name}builddir/__tinyx64/{relsrc}.o'] = src
 
             extra_deps = f'$argv0 ${name}builddir/__hash'
             rules = ''
@@ -185,7 +185,7 @@ class BuildFile:
                     rules += f'build {obj}: {name}cxx {src} | {extra_deps}\n'
 
             ninja_content += NINJA_TEMPLATE.format(
-                tinyx32_dir=tinyx32_dir, instdir=instdir,
+                tinyx64_dir=tinyx64_dir, instdir=instdir,
                 name=binary.name, cc=self.cc, cxx=self.cxx, builddir=builddir,
                 objs=' '.join(sorted(objs)), rules=rules)
 
@@ -214,8 +214,8 @@ def safe_replace(filename, content):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Build against tinyx32')
-    parser.add_argument('-f', default='TINYX32BUILD')
+    parser = argparse.ArgumentParser(description='Build against tinyx64')
+    parser.add_argument('-f', default='TINYX64BUILD')
     parser.add_argument('--print-ninja', action='store_true', default=False,
                         help='Print generated ninja build file')
     parser.add_argument('-v', '--verbose', action='store_true')

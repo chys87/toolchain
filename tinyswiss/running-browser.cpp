@@ -1,5 +1,5 @@
 #include <fcntl.h>
-#include <tinyx32.h>
+#include <tinyx64.h>
 #include <string_view>
 #include <sys/stat.h>
 
@@ -21,9 +21,6 @@ const Browser supported_browsers[] = {
   {STR_LEN("Firefox"), STR_LEN("/firefox-bin"),
     {"firefox", "firefox-bin"}},
 };
-
-constexpr unsigned kBrowsers =
-    sizeof(supported_browsers) / sizeof(supported_browsers[0]);
 
 const Browser *identify_browser(std::string_view exe) {
   for (const Browser &browser: supported_browsers)

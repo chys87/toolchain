@@ -1,5 +1,5 @@
-#if !defined __x86_64__ || !defined __linux__ || defined __LP64__
-# error "Only \"gcc -mx32\" is supported."
+#if !defined __x86_64__ || !defined __linux__ || !defined __LP64__
+# error "Only Linux x86-64 is supported."
 #endif
 
 #include <asm/unistd.h>
@@ -9,9 +9,9 @@
     .globl    _start
 _start:
     mov     (%rsp), %edi # argc
-    lea     4(%rsp), %esi # argv
-    and     $-16, %esp
-    lea     4(%rsi, %rdi, 4), %edx # environ
+    lea     8(%rsp), %rsi # argv
+    and     $-16, %rsp
+    lea     8(%rsi, %rdi, 8), %rdx # environ
     call    main
     mov     %eax, %edi
     .align  16,,3

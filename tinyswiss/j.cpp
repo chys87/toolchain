@@ -1,6 +1,6 @@
 #include <sys/fcntl.h>
 #include <sys/uio.h>
-#include <tinyx32.h>
+#include <tinyx64.h>
 
 #include <initializer_list>
 

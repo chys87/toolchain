@@ -1,4 +1,4 @@
-#include "tinyx32.h"
+#include "tinyx64.h"
 
 #include <assert.h>
 #include <stdalign.h>
@@ -83,7 +83,7 @@ void* aligned_alloc(size_t align, size_t n) {
   return alloced->mem;
 }
 
-#ifdef TX32_DUMMY_FREE
+#ifdef TX64_DUMMY_FREE
 void free(void* p) { (void)p; }
 #else
 void free(void* p) {

@@ -1,7 +1,7 @@
 #pragma once
 
-#if !defined __GNUC__ || !defined __x86_64__ || !defined __ILP32__ || !defined __linux__
-# error "Only \"gcc -mx32\" is supported."
+#if !defined __GNUC__ || !defined __x86_64__ || !defined __LP64__ || !defined __linux__
+# error "Only Linux x86-64 is supported."
 #endif
 
 #if defined __PIC__ || defined __PIE__
@@ -25,15 +25,15 @@
 #include <sys/types.h>
 
 #ifdef __cplusplus
-# define TX32_INLINE inline
+# define TX64_INLINE inline
 #else
-# define TX32_INLINE static inline
+# define TX64_INLINE static inline
 #endif
 
 #if defined __cplusplus && __cplusplus >= 201103
-# define TX32_CONSTEXPR constexpr
+# define TX64_CONSTEXPR constexpr
 #else
-# define TX32_CONSTEXPR
+# define TX64_CONSTEXPR
 #endif
 
 #ifdef __cplusplus
@@ -67,31 +67,31 @@ int memcmp(const void *, const void *, size_t) __attribute__((__pure__, __nonnul
 #endif
 
 #ifdef __cplusplus
-#define TX32_DISPATCH_CXX_STRING_FUNCTION(func, ret_ptr_type, params, \
+#define TX64_DISPATCH_CXX_STRING_FUNCTION(func, ret_ptr_type, params, \
                                           const_params, attrs)        \
   ret_ptr_type* func params __asm__(#func) __attribute__(attrs);      \
   const ret_ptr_type* func const_params __asm__(#func) __attribute__(attrs)
 #else
-#define TX32_DISPATCH_CXX_STRING_FUNCTION(func, ret_ptr_type, params, \
+#define TX64_DISPATCH_CXX_STRING_FUNCTION(func, ret_ptr_type, params, \
                                           const_params, attrs)        \
   ret_ptr_type* func const_params __attribute__(attrs)
 #endif
-TX32_DISPATCH_CXX_STRING_FUNCTION(memchr, void, (void*, int, size_t),
+TX64_DISPATCH_CXX_STRING_FUNCTION(memchr, void, (void*, int, size_t),
                                   (const void*, int, size_t),
                                   (__pure__, __nonnull__(1)));
-TX32_DISPATCH_CXX_STRING_FUNCTION(memrchr, void, (void*, int, size_t),
+TX64_DISPATCH_CXX_STRING_FUNCTION(memrchr, void, (void*, int, size_t),
                                   (const void*, int, size_t),
                                   (__pure__, __nonnull__(1)));
-TX32_DISPATCH_CXX_STRING_FUNCTION(rawmemchr, void, (void*, int),
+TX64_DISPATCH_CXX_STRING_FUNCTION(rawmemchr, void, (void*, int),
                                   (const void*, int),
                                   (__pure__, __nonnull__(1)));
-TX32_DISPATCH_CXX_STRING_FUNCTION(strchr, char, (char*, int),
+TX64_DISPATCH_CXX_STRING_FUNCTION(strchr, char, (char*, int),
                                   (const char*, int),
                                   (__pure__, __nonnull__(1)));
-TX32_DISPATCH_CXX_STRING_FUNCTION(strchrnul, char, (char*, int),
+TX64_DISPATCH_CXX_STRING_FUNCTION(strchrnul, char, (char*, int),
                                   (const char*, int),
                                   (__pure__, __nonnull__(1)));
-TX32_DISPATCH_CXX_STRING_FUNCTION(strrchr, char, (char*, int),
+TX64_DISPATCH_CXX_STRING_FUNCTION(strrchr, char, (char*, int),
                                   (const char*, int),
                                   (__pure__, __nonnull__(1)));
 
@@ -109,7 +109,7 @@ char *itoa10(int value, char *str);
 } // extern "C"
 #endif
 
-TX32_DISPATCH_CXX_STRING_FUNCTION(basename, char, (char*), (const char*),
+TX64_DISPATCH_CXX_STRING_FUNCTION(basename, char, (char*), (const char*),
                                   (__pure__, __nonnull__(1)));
 
 #ifdef __cplusplus
@@ -127,7 +127,7 @@ unsigned strtou(const char *s, char **endptr);
 int execvpe(const char *exe, char *const *args, char *const *envp);
 
 // ctype.c
-TX32_INLINE int isdigit(int c) { return (c >= '0' && c <= '9'); }
+TX64_INLINE int isdigit(int c) { return (c >= '0' && c <= '9'); }
 
 // sysinfo.c
 unsigned get_nprocs();
@@ -172,11 +172,11 @@ typedef unsigned long long __v4du __attribute__((__vector_size__(32)));
 #undef _mm_cmplt_epi8
 #define _mm_cmpgt_epi8 __mm_cmpgt_epi8_fix
 #define _mm_cmplt_epi8 __mm_cmplt_epi8_fix
-TX32_INLINE TX32_CONSTEXPR __m128i _mm_cmpgt_epi8(__m128i a, __m128i b) {
+TX64_INLINE TX64_CONSTEXPR __m128i _mm_cmpgt_epi8(__m128i a, __m128i b) {
 	return (__m128i)((__v16qs)a > (__v16qs)b);
 }
 
-TX32_INLINE TX32_CONSTEXPR __m128i _mm_cmplt_epi8(__m128i a, __m128i b) {
+TX64_INLINE TX64_CONSTEXPR __m128i _mm_cmplt_epi8(__m128i a, __m128i b) {
 	return (__m128i)((__v16qs)a < (__v16qs)b);
 }
 #endif
@@ -184,7 +184,7 @@ TX32_INLINE TX32_CONSTEXPR __m128i _mm_cmplt_epi8(__m128i a, __m128i b) {
 #ifdef __AVX2__
 #undef _mm256_cmpgt_epi8
 #define _mm256_cmpgt_epi8 __mm256_cmpgt_epi8_fix
-TX32_INLINE TX32_CONSTEXPR __m256i _mm256_cmpgt_epi8(__m256i a, __m256i b) {
+TX64_INLINE TX64_CONSTEXPR __m256i _mm256_cmpgt_epi8(__m256i a, __m256i b) {
 	return (__m256i)((__v32qs)a > (__v32qs)b);
 }
 #endif
@@ -196,5 +196,5 @@ TX32_INLINE TX32_CONSTEXPR __m256i _mm256_cmpgt_epi8(__m256i a, __m256i b) {
 #endif
 
 #ifdef __cplusplus
-# include "tinyx32-cxx.h"
+# include "tinyx64-cxx.h"
 #endif

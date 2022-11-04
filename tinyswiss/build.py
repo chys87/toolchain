@@ -1,1 +1,1 @@
-../tinyx32/build.py
+../tinyx64/build.py

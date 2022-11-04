@@ -13,4 +13,4 @@ This repository includes many of my favorite little hobbies
 * `scripts/fast_gtest`: A minimalistic tool to run [googletest](http://google.github.io/googletest/) tests in parallel
 * `scripts/pythondep`: Build Makefile-style dependency for Python
 * `scripts/unassembly`: A convenient wrapper of [objdump](https://sourceware.org/binutils/docs/binutils/objdump.html)
-* `tinyx32`: A tiny x32 runtime
+* `tinyx64`: A tiny x86-64 runtime

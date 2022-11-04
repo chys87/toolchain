@@ -3,8 +3,8 @@
 // Convenient utilities for C++
 // Don't include this file directly
 
-#ifndef TX32_INLINE
-# error "Don't include me directly. Include tinyx32.h instead."
+#ifndef TX64_INLINE
+# error "Don't include me directly. Include tinyx64.h instead."
 #endif
 
 #include <new>
@@ -13,12 +13,12 @@
 
 #include "fsys-aux.h"
 
-# define TX32_NO_UNIQUE_ADDRESS
+# define TX64_NO_UNIQUE_ADDRESS
 
 #if defined __has_cpp_attribute
 # if __has_cpp_attribute(no_unique_address)
-#  undef TX32_NO_UNIQUE_ADDRESS
-#  define TX32_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#  undef TX64_NO_UNIQUE_ADDRESS
+#  define TX64_NO_UNIQUE_ADDRESS [[no_unique_address]]
 # endif
 #endif
 
@@ -61,8 +61,8 @@ inline T *Mempset(T *dst, T value, size_t n) {
 
 template <typename A, typename B>
 struct pair {
-    TX32_NO_UNIQUE_ADDRESS A first;
-    TX32_NO_UNIQUE_ADDRESS B second;
+    TX64_NO_UNIQUE_ADDRESS A first;
+    TX64_NO_UNIQUE_ADDRESS B second;
 };
 
 template <typename A, typename B>
