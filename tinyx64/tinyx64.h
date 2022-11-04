@@ -26,8 +26,10 @@
 
 #ifdef __cplusplus
 # define TX64_INLINE inline
+# define TX64_NOTHROW throw()  // Match glibc headers
 #else
 # define TX64_INLINE static inline
+# define TX64_NOTHROW
 #endif
 
 #if defined __cplusplus && __cplusplus >= 201103
@@ -41,36 +43,47 @@ extern "C" {
 #endif
 
 // Functions in start.S
-void exit(int) __attribute__((__noreturn__));
+void exit(int) TX64_NOTHROW __attribute__((__noreturn__));
 void _exit(int) __attribute__((__noreturn__));
 
 // stdlib.c
-void abort(void) __attribute__((__cold__, __noreturn__));
+void abort(void) TX64_NOTHROW __attribute__((__cold__, __noreturn__));
 
 // malloc.c
-void *malloc(size_t) __attribute__((__malloc__, __warn_unused_result__));
-void *calloc(size_t, size_t) __attribute__((__malloc__, __warn_unused_result__));
-void *realloc(void *, size_t) __attribute__((__malloc__, __warn_unused_result__));
-void *aligned_alloc(size_t, size_t) __attribute__((__malloc__, __warn_unused_result__, __alloc_size__(2)));
-void free(void *);
+void* malloc(size_t) TX64_NOTHROW
+    __attribute__((__malloc__, __warn_unused_result__));
+void* calloc(size_t, size_t) TX64_NOTHROW
+    __attribute__((__malloc__, __warn_unused_result__));
+void* realloc(void*, size_t) TX64_NOTHROW
+    __attribute__((__malloc__, __warn_unused_result__));
+void* aligned_alloc(size_t, size_t) TX64_NOTHROW
+    __attribute__((__malloc__, __warn_unused_result__, __alloc_size__(2)));
+void free(void*) TX64_NOTHROW;
 
 // string.c
-void *memset(void *dst, int ch, size_t n) __attribute__((__nonnull__(1)));
-void *memcpy(void *dst, const void *src, size_t n) __attribute__((__nonnull__(1, 2)));
-void *mempcpy(void *dst, const void *src, size_t n) __attribute__((__nonnull__(1, 2)));
-void *memmove(void *dst, const void *src, size_t n) __attribute__((__nonnull__(1, 2)));
-size_t strlen(const char *s) __attribute__((__pure__, __nonnull__(1)));
-int memcmp(const void *, const void *, size_t) __attribute__((__pure__, __nonnull__(1, 2)));
+void* memset(void* dst, int ch, size_t n) TX64_NOTHROW
+    __attribute__((__nonnull__(1)));
+void* memcpy(void* dst, const void* src, size_t n) TX64_NOTHROW
+    __attribute__((__nonnull__(1, 2)));
+void* mempcpy(void* dst, const void* src, size_t n) TX64_NOTHROW
+    __attribute__((__nonnull__(1, 2)));
+void* memmove(void* dst, const void* src, size_t n) TX64_NOTHROW
+    __attribute__((__nonnull__(1, 2)));
+size_t strlen(const char* s) TX64_NOTHROW
+    __attribute__((__pure__, __nonnull__(1)));
+int memcmp(const void*, const void*, size_t) TX64_NOTHROW
+    __attribute__((__pure__, __nonnull__(1, 2)));
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
 #ifdef __cplusplus
-#define TX64_DISPATCH_CXX_STRING_FUNCTION(func, ret_ptr_type, params, \
-                                          const_params, attrs)        \
-  ret_ptr_type* func params __asm__(#func) __attribute__(attrs);      \
-  const ret_ptr_type* func const_params __asm__(#func) __attribute__(attrs)
+#define TX64_DISPATCH_CXX_STRING_FUNCTION(func, ret_ptr_type, params,         \
+                                          const_params, attrs)                \
+  ret_ptr_type* func params TX64_NOTHROW __asm__(#func) __attribute__(attrs); \
+  const ret_ptr_type* func const_params TX64_NOTHROW __asm__(#func)           \
+      __attribute__(attrs)
 #else
 #define TX64_DISPATCH_CXX_STRING_FUNCTION(func, ret_ptr_type, params, \
                                           const_params, attrs)        \
@@ -98,8 +111,10 @@ TX64_DISPATCH_CXX_STRING_FUNCTION(strrchr, char, (char*, int),
 #ifdef __cplusplus
 extern "C" {
 #endif
-int strcmp(const char *, const char *) __attribute__((__pure__, __nonnull__(1, 2)));
-int strncmp(const char *, const char *, size_t) __attribute__((__pure__, __nonnull__(1, 2)));
+int strcmp(const char*, const char*) TX64_NOTHROW
+    __attribute__((__pure__, __nonnull__(1, 2)));
+int strncmp(const char*, const char*, size_t) TX64_NOTHROW
+    __attribute__((__pure__, __nonnull__(1, 2)));
 
 // Non-standard string.c
 char *utoa10(unsigned value, char *str);
@@ -127,7 +142,7 @@ unsigned strtou(const char *s, char **endptr);
 int execvpe(const char *exe, char *const *args, char *const *envp);
 
 // ctype.c
-TX64_INLINE int isdigit(int c) { return (c >= '0' && c <= '9'); }
+TX64_INLINE int isdigit(int c) TX64_NOTHROW { return (c >= '0' && c <= '9'); }
 
 // sysinfo.c
 unsigned get_nprocs();
