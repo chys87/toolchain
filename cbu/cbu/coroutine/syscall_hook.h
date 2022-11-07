@@ -32,16 +32,17 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include "cbu/common/strpack.h"
+
+#include "cbu/common/fixed_string.h"
 
 namespace cbu {
 namespace coroutine {
 
 // Accessors to non-prempted functions in libc
-template <const char* NAME, typename Prototype>
+template <fixed_string NAME, typename Prototype>
 class RawFuncAccessor;
 
-template <const char* NAME, typename R, typename... Params>
+template <fixed_string NAME, typename R, typename... Params>
 class RawFuncAccessor<NAME, R(Params...)> {
  private:
   constexpr RawFuncAccessor() = default;
@@ -55,7 +56,8 @@ class RawFuncAccessor<NAME, R(Params...)> {
   R operator()(Params... params) { return f_(params...); }
 
   static R ifunc_loader(Params... params) {
-    Prototype* func = reinterpret_cast<Prototype*>(dlsym(RTLD_NEXT, NAME));
+    Prototype* func =
+        reinterpret_cast<Prototype*>(dlsym(RTLD_NEXT, NAME.c_str()));
     instance.f_ = func;
     return func(params...);
   }
@@ -65,26 +67,25 @@ class RawFuncAccessor<NAME, R(Params...)> {
 };
 
 // Access to non-prempted functions from libc
-inline auto& sys_poll = RawFuncAccessor<
-  "poll"_str, int(pollfd*, nfds_t, int)>::instance;
-inline auto& sys_read = RawFuncAccessor<
-  "read"_str, ssize_t(int, void*, size_t)>::instance;
-inline auto& sys_write = RawFuncAccessor<
-  "write"_str, ssize_t(int, const void*, size_t)>::instance;
-inline auto& sys_send = RawFuncAccessor<
-  "send"_str, ssize_t(int, const void*, size_t, int)>::instance;
-inline auto& sys_sendto = RawFuncAccessor<
-  "sendto"_str, ssize_t(int, const void*, size_t, int,
-                        const sockaddr*, socklen_t)>::instance;
-inline auto& sys_recv = RawFuncAccessor<
-  "recv"_str, ssize_t(int, void*, size_t, int)>::instance;
-inline auto& sys_recvfrom = RawFuncAccessor<
-  "recvfrom"_str, ssize_t(int, void*, size_t, int,
-                          sockaddr*, socklen_t)>::instance;
-inline auto& sys_usleep = RawFuncAccessor<
-  "usleep"_str, int(useconds_t)>::instance;
-inline auto& sys_epoll_wait = RawFuncAccessor<
-  "epoll_wait"_str, int(int, epoll_event*, int, int)>::instance;
+inline auto& sys_poll =
+    RawFuncAccessor<"poll", int(pollfd*, nfds_t, int)>::instance;
+inline auto& sys_read =
+    RawFuncAccessor<"read", ssize_t(int, void*, size_t)>::instance;
+inline auto& sys_write =
+    RawFuncAccessor<"write", ssize_t(int, const void*, size_t)>::instance;
+inline auto& sys_send =
+    RawFuncAccessor<"send", ssize_t(int, const void*, size_t, int)>::instance;
+inline auto& sys_sendto =
+    RawFuncAccessor<"sendto", ssize_t(int, const void*, size_t, int,
+                                      const sockaddr*, socklen_t)>::instance;
+inline auto& sys_recv =
+    RawFuncAccessor<"recv", ssize_t(int, void*, size_t, int)>::instance;
+inline auto& sys_recvfrom =
+    RawFuncAccessor<"recvfrom", ssize_t(int, void*, size_t, int, sockaddr*,
+                                        socklen_t)>::instance;
+inline auto& sys_usleep = RawFuncAccessor<"usleep", int(useconds_t)>::instance;
+inline auto& sys_epoll_wait =
+    RawFuncAccessor<"epoll_wait", int(int, epoll_event*, int, int)>::instance;
 
 } // namespace coroutine
 } // namespace cbu
