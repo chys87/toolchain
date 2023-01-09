@@ -79,4 +79,16 @@ constexpr fixed_string<M + N> operator+(fixed_string<M> a, fixed_string<N> b) no
   return res;
 }
 
+template <std::size_t M, std::size_t N>
+  requires(M > 0)
+constexpr auto operator+(const char (&a)[M], fixed_string<N> b) noexcept {
+  return fixed_string(a) + b;
+}
+
+template <std::size_t M, std::size_t N>
+  requires(N > 0)
+constexpr auto operator+(fixed_string<M> a, const char (&b)[N]) noexcept {
+  return a + fixed_string(b);
+}
+
 }  // namespace cbu
