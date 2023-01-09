@@ -91,4 +91,23 @@ constexpr auto operator+(fixed_string<M> a, const char (&b)[N]) noexcept {
   return a + fixed_string(b);
 }
 
+template <auto Value>
+  requires(Value >= 0)
+consteval auto NumberToFixedString() noexcept {
+  constexpr unsigned DIGITS = []() constexpr noexcept {
+    auto v = Value;
+    unsigned r = 0;
+    do ++r;
+    while (v /= 10);
+    return r;
+  }
+  ();
+  fixed_string<DIGITS> res;
+  char* p = res.data() + DIGITS;
+  auto v = Value;
+  do *--p = '0' + (v % 10);
+  while (v /= 10);
+  return res;
+}
+
 }  // namespace cbu
