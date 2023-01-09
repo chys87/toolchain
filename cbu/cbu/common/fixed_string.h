@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -70,5 +70,13 @@ template <std::size_t N>
   requires(N > 0)
 fixed_string(const char (&)[N])
 ->fixed_string<N - 1>;
+
+template <std::size_t M, std::size_t N>
+constexpr fixed_string<M + N> operator+(fixed_string<M> a, fixed_string<N> b) noexcept {
+  fixed_string<M + N> res;
+  for (std::size_t i = 0; i < M; ++i) res[i] = a[i];
+  for (std::size_t i = 0; i < N; ++i) res[M + i] = b[i];
+  return res;
+}
 
 }  // namespace cbu
