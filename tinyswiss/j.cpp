@@ -46,6 +46,8 @@ int invoke(const char *exe, std::initializer_list<const char*>base_args,
   return 127;
 }
 
+unsigned get_parallel(unsigned nprocs) { return max(2u, nprocs); }
+
 unsigned get_load_limit(unsigned nprocs) {
   return nprocs + max(2u, nprocs / 3);
 }
@@ -73,7 +75,7 @@ int j_main(size_t argc, char **argv, char **envp) {
     nprocs = 1;
 
   char j_buf[16];
-  ChainMemcpy(j_buf) << "-j" << nprocs << '\0';
+  ChainMemcpy(j_buf) << "-j" << get_parallel(nprocs) << '\0';
 
   char l_buf[16];
   ChainMemcpy(l_buf) << "-l" << get_load_limit(nprocs) << '\0';
