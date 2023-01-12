@@ -47,7 +47,7 @@ size_t strlen(const char* s) {
   unsigned mask = 0xffffffffu << filter_bytes;
   mask &= __builtin_ia32_pmovmskb256(cmp);
   while (mask == 0) {
-    cmp = ref = (ref == *p++);
+    cmp = (ref == *p++);
     mask = __builtin_ia32_pmovmskb256(cmp);
   }
   return ((char*)p - s - 32 + __builtin_ctz(mask));
