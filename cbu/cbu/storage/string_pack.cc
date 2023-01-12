@@ -125,12 +125,20 @@ void StringPackCompactEncoderBase::add_compacted(
   Mempcpy(w, compacted_bytes.data(), compacted_bytes.size());
 }
 
-namespace {
-
-std::size_t common_prefix_max_31(std::string_view a, std::string_view b) {
+std::size_t CommonPrefixSuffixCodec::common_prefix_max_31(std::string_view a,
+                                                          std::string_view b) {
   const char* pa = a.data();
   const char* pb = b.data();
   std::size_t l = std::min(a.size(), b.size());
+
+#if defined __AVX512BW__ && defined __AVX512VL__
+  unsigned pl = std::min<std::size_t>(l, 31);
+  std::uint32_t mask = (1u << pl) - 1;
+  __m256i va = _mm256_maskz_loadu_epi8(mask, pa);
+  __m256i vb = _mm256_maskz_loadu_epi8(mask, pb);
+  std::uint32_t ne_mask = _mm256_cmpneq_epi8_mask(va, vb) | (1u << pl);
+  return _tzcnt_u32(ne_mask);
+#endif
 
 #if defined __AVX2__
   if (l >= 32) {
@@ -147,10 +155,20 @@ std::size_t common_prefix_max_31(std::string_view a, std::string_view b) {
   return prefix;
 }
 
-std::size_t common_suffix_max_7(std::string_view a, std::string_view b) {
+std::size_t CommonPrefixSuffixCodec::common_suffix_max_7(std::string_view a,
+                                                         std::string_view b) {
   const char* pa = a.data() + a.size() - 1;
   const char* pb = b.data() + b.size() - 1;
   std::size_t l = std::min(a.size(), b.size());
+
+#if defined __AVX512BW__ && defined __AVX512VL__
+  unsigned sl = std::min<std::size_t>(l, 7);
+  std::uint16_t mask = 0x7f0000 >> sl;
+  __m128i va = _mm_maskz_loadu_epi8(mask, pa - 15);
+  __m128i vb = _mm_maskz_loadu_epi8(mask, pb - 15);
+  std::uint16_t ne_mask = _mm_cmpneq_epi8_mask(va, vb) | ~mask;
+  return __lzcnt16(ne_mask);
+#endif
 
 #if defined __SSE4_1__
   if (l >= 8) {
@@ -166,8 +184,6 @@ std::size_t common_suffix_max_7(std::string_view a, std::string_view b) {
   while (suffix < 31 && suffix < l && *pa-- == *pb--) ++suffix;
   return suffix;
 }
-
-}  // namespace
 
 void CommonPrefixSuffixCodec::compact(std::string_view prev,
                                       std::string_view cur,

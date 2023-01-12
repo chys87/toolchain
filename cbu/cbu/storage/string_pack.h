@@ -179,6 +179,9 @@ struct CommonPrefixSuffixCodec {
                       std::string_view* compacted_bytes, std::string* scratch);
   static void restore(CompactInfo compact_info, std::string_view prev,
                       std::string_view compacted_bytes, std::string* out);
+
+  static std::size_t common_prefix_max_31(std::string_view a, std::string_view b);
+  static std::size_t common_suffix_max_7(std::string_view a, std::string_view b);
 };
 
 template <typename Codec = CommonPrefixSuffixCodec>

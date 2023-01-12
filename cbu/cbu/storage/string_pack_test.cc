@@ -101,6 +101,22 @@ TEST(StringPackTest, Security) {
   EXPECT_TRUE(StringPackZ().deserialize("\x05Hello\x00"s));
 }
 
+TEST(StringPackTest, CommonPrefixSuffixCodecTest) {
+  EXPECT_EQ(CommonPrefixSuffixCodec::common_prefix_max_31("abcd", "abcc"), 3);
+  EXPECT_EQ(CommonPrefixSuffixCodec::common_prefix_max_31("abcd", "xbcc"), 0);
+  EXPECT_EQ(CommonPrefixSuffixCodec::common_prefix_max_31(
+                "012345678901234567890123456789abcd",
+                "012345678901234567890123456789abcdefg"),
+            31);
+
+  EXPECT_EQ(CommonPrefixSuffixCodec::common_suffix_max_7("abcd", "xbcd"), 3);
+  EXPECT_EQ(CommonPrefixSuffixCodec::common_suffix_max_7("abcd", "abc!"), 0);
+  EXPECT_EQ(CommonPrefixSuffixCodec::common_suffix_max_7(
+                "012345678901234567890123456789abcd",
+                "!012345678901234567890123456789abcd"),
+            7);
+}
+
 TEST(StringPackTest, Compact) {
   {
     StringPackCompactEncoder encoder;
