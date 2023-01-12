@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,11 @@ alignas(64) const char arch_linear_bytes64[64] = {
 };
 
 void* memdrop_var64(void* dst, uint64_t v, size_t n) noexcept {
+#if defined __AVX512VL__ && defined __AVX512BW__
+  _mm_mask_storeu_epi8(dst, (1 << n) - 1, _mm_cvtsi64_si128(v));
+  return static_cast<char*>(dst) + n;
+#endif
+
   if (std::endian::native == std::endian::little) {
 
     char *d = static_cast<char *>(dst);
@@ -101,6 +106,11 @@ void* memdrop_var64(void* dst, uint64_t v, size_t n) noexcept {
 
 #if __WORDSIZE >= 64
 void* memdrop_var128(void* dst, unsigned __int128 v, std::size_t n) noexcept {
+#if defined __AVX512VL__ && defined __AVX512BW__
+  _mm_mask_storeu_epi8(dst, (1 << n) - 1, _mm_set_epi64x(v >> 64, v));
+  return static_cast<char*>(dst) + n;
+#endif
+
   if (std::endian::native == std::endian::little) {
     if (n <= 8) {
       return memdrop_var64(dst, uint64_t(v), n);
@@ -118,6 +128,10 @@ void* memdrop_var128(void* dst, unsigned __int128 v, std::size_t n) noexcept {
 
 #ifdef __SSE2__
 void* memdrop(void* dst, __m128i v, std::size_t n) noexcept {
+#if defined __AVX512VL__ && defined __AVX512BW__
+  _mm_mask_storeu_epi8(dst, (1 << n) - 1, v);
+  return static_cast<char*>(dst) + n;
+#endif
   char *d = static_cast<char *>(dst);
   char *e = d + n;
 
@@ -135,6 +149,11 @@ void* memdrop(void* dst, __m128i v, std::size_t n) noexcept {
 
 #ifdef __AVX2__
 void* memdrop(void* dst, __m256i v, std::size_t n) noexcept {
+#if defined __AVX512VL__ && defined __AVX512BW__
+  // TODO: We can do better by using 32-bit mask and forcing SHLX instead of SHL
+  _mm256_mask_storeu_epi8(dst, (1ull << n) - 1, v);
+  return static_cast<char*>(dst) + n;
+#endif
   char *d = static_cast<char *>(dst);
 
   if (n > 16) {

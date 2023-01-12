@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,7 +67,7 @@ enum struct Utf8ByteType {
 inline constexpr Utf8ByteType utf8_byte_type(std::uint8_t c) noexcept {
   if (std::int8_t(c) >= 0) {
     return Utf8ByteType::ASCII;
-  } else if (std::int8_t(c) < std::int8_t(0xc2) /* c >= 0x80 && c < 0xc2 */ ) {
+  } else if (std::int8_t(c) < std::int8_t(0xc0) /* c >= 0x80 && c < 0xc0 */ ) {
     return Utf8ByteType::TRAILING;
   } else if (c >= 0xc2 && c <= 0xf4) {
     return Utf8ByteType::LEADING;

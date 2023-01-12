@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -79,7 +79,11 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
   const uint32_t(&u32)[4] = addr.s6_addr32;
 
   uint32_t zero_mask = 0;
-#ifdef __SSE2__
+#if defined __AVX512VL__ && defined __AVX512BW__
+  zero_mask = _mm_cmpeq_epi16_mask(
+      _mm_setzero_si128(),
+      _mm_loadu_si128(reinterpret_cast<const __m128i*>(addr.s6_addr)));
+#elif defined __SSE2__
   {
     __m128i v = _mm_cmpeq_epi16(
         _mm_setzero_si128(),

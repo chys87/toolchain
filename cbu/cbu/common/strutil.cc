@@ -130,7 +130,29 @@ std::size_t strcnt(const char *s, char c) noexcept {
 
 size_t memcnt(const char *s, char c, size_t n) noexcept {
   size_t r = 0;
-#if defined __AVX2__ && defined __BMI2__
+#ifdef __AVX512BW__
+  if (n == 0) return 0;
+
+  __m512i ref = _mm512_set1_epi8(c);
+  size_t misalign = (uintptr_t)s & 63;
+  const __m512i *p = (const __m512i *)((uintptr_t)s & -64);
+
+  uint64_t mask = _mm512_cmpeq_epi8_mask(ref, *p++);
+  mask >>= misalign;
+
+  size_t l = n + misalign - 64;
+  if (ssize_t(l) <= 0) return _mm_popcnt_u64(_bzhi_u64(mask, n));
+
+  r = _mm_popcnt_u64(mask);
+
+  while (!sub_overflow(l, 64, &l))
+    r += _mm_popcnt_u64(_mm512_cmpeq_epi8_mask(ref, *p++));
+
+  unsigned tail = unsigned(l) & 63;
+  if (tail)
+    r += _mm_popcnt_u64(_bzhi_u64(_mm512_cmpeq_epi8_mask(ref, *p++), tail));
+
+#elif defined __AVX2__ && defined __BMI2__
   if (n == 0) {
     return 0;
   }
@@ -294,7 +316,32 @@ size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl,
   const char* b = static_cast<const char*>(pb);
   size_t k = 0;
 
-#if defined __AVX2__ && defined __BMI__
+#if defined __AVX512BW__
+  for (;;) {
+    if (k + 64 <= maxl) {
+      __m512i va = *(const __m512i_u*)(a + k);
+      __m512i vb = *(const __m512i_u*)(b + k);
+      auto msk = _mm512_cmpneq_epi8_mask(va, vb);
+      if (msk) {
+        k += ctz(msk);
+        break;
+      }
+      k += 64;
+    } else if (k < maxl) {
+      uint64_t msk = (uint64_t(1) << (maxl - k)) - 1;
+      __m512i va = _mm512_maskz_loadu_epi8(msk, a + k);
+      __m512i vb = _mm512_maskz_loadu_epi8(msk, b + k);
+      msk = _mm512_cmpneq_epi8_mask(va, vb);
+      k += ctz(msk);
+      if (k >= maxl) return maxl;
+      break;
+    } else {
+      return maxl;
+    }
+  }
+
+  if (false)
+#elif defined __AVX2__ && defined __BMI__
   if (maxl >= 32) {
     __m256i ones = _mm256_set1_epi8(-1);
     __m256i va = *(const __m256i_u*)a;
@@ -347,7 +394,32 @@ size_t common_suffix_ex(const void* pa, const void* pb, size_t maxl,
   const char* min_a = a - maxl;
   ptrdiff_t d = b - a;
 
-#if defined __AVX2__
+#if defined __AVX512BW__
+  for (;;) {
+    if (a >= min_a + 64) {
+      a -= 64;
+      __m512i va = *(const __m512i_u*)a;
+      __m512i vb = *(const __m512i_u*)(a + d);
+      auto msk = _mm512_cmpneq_epi8_mask(va, vb);
+      if (msk) {
+        a += 64l - _lzcnt_u64(msk);
+        break;
+      }
+    } else if (a > min_a) {
+      uint64_t msk = ~(uint64_t(-1) >> (a - min_a));
+      __m512i va = _mm512_maskz_loadu_epi8(msk, a - 64);
+      __m512i vb = _mm512_maskz_loadu_epi8(msk, a - 64 + d);
+      msk = _mm512_cmpneq_epi8_mask(va, vb);
+      a -= _lzcnt_u64(msk);
+      if (a <= min_a) a = min_a;
+      break;
+    } else {
+      break;
+    }
+  }
+
+  if (false)
+#elif defined __AVX2__
   if (maxl >= 32) {
     __m256i ones = _mm256_set1_epi8(-1);
     a -= 32;

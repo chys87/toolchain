@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -171,7 +171,8 @@ char* char16_to_utf8_unsafe(char* dst, char16_t c) noexcept {
 
 namespace {
 
-bool validate_utf8_fallback(const void* ptr, const void* endptr) noexcept {
+[[maybe_unused]] bool validate_utf8_fallback(const void* ptr,
+                                             const void* endptr) noexcept {
   const uint8_t* s = static_cast<const uint8_t*>(ptr);
   const uint8_t* end = static_cast<const uint8_t*>(endptr);
   while (s < end) {
@@ -214,8 +215,20 @@ bool validate_utf8_avx2_bmi(const void* ptr, const void* endptr) noexcept {
   const uint8_t* s = static_cast<const uint8_t*>(ptr);
   const uint8_t* end = static_cast<const uint8_t*>(endptr);
 
-  while (s + 32 <= end) {
+  for (;;) {
+#if defined __AVX512VL__ && defined __AVX512BW__
+    __m256i v;
+    if (s + 32 > end) {
+      if (s >= end) return true;
+      v = _mm256_maskz_loadu_epi8((1u << (end - s)) - 1, s);
+    } else {
+      v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(s));
+    }
+#else
+    if (s + 32 > end) return validate_utf8_fallback(s, end);
     __m256i v = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(s));
+#endif
+
     // Quickly skip if the chunk is all ASCII
     if (_mm256_testz_si256(v, _mm256_set1_epi8(0x80))) {
       s += 32;
@@ -236,7 +249,7 @@ bool validate_utf8_avx2_bmi(const void* ptr, const void* endptr) noexcept {
     uint32_t maskf = _mm256_movemask_epi8(vmaskf);
 
     // Is there any byte that's impossible in a legal UTF-8 string?
-    if (!_mm256_testz_si256((vmask1 | vmask2 | vmask3 | vmaskf) ^ v,
+    if (!_mm256_testz_si256(~(vmask1 | vmask2 | vmask3 | vmaskf) & v,
                             _mm256_set1_epi8(0x80)))
       return false;
 
@@ -273,8 +286,6 @@ bool validate_utf8_avx2_bmi(const void* ptr, const void* endptr) noexcept {
     s += _tzcnt_u32((mask1 & 0x80000000) | (mask2 & 0xc0000000) |
                     (mask3 & 0xe0000000));
   }
-
-  return validate_utf8_fallback(s, end);
 }
 #endif
 

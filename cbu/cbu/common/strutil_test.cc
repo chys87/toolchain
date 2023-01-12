@@ -59,6 +59,11 @@ TEST(StrUtilTest, Memcnt) {
   EXPECT_EQ(2, memcnt("abcabc"sv, 'a'));
   EXPECT_EQ(0, memcnt("abcabc"sv, 'x'));
   EXPECT_EQ(4, memcnt("0123456789abcdef012345678901234567890123456789"sv, '9'));
+  EXPECT_EQ(
+      9,
+      memcnt(
+          "0123456789abcdef01234567890123456789012345678901234567890123456789012345678999"sv,
+          '9'));
 }
 
 TEST(StrUtilTest, Reverse) {
