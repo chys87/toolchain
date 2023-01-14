@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@ char* uint8_to_string(char* p, std::uint8_t v) noexcept {
     if (v >= 200) {
       *p++ = '2';
       v -= 200;
-    } else if (v >= 100) {
+    } else {
       *p++ = '1';
       v -= 100;
     }
@@ -51,10 +51,9 @@ char* uint8_to_string(char* p, std::uint8_t v) noexcept {
   if (v >= 10) {
 _j:
     *p++ = fastdiv<10, 100>(v) + '0';
-    *p++ = fastmod<10, 100>(v) + '0';
-  } else {
-    *p++ = v + '0';
+    v = fastmod<10, 100>(v);
   }
+  *p++ = v + '0';
   return p;
 }
 

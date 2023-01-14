@@ -65,6 +65,15 @@ inline bool FormatLastTwoFieldsAsIPv4(const in6_addr& addr) noexcept {
 inline char FormatChar(uint8_t c) noexcept { return "0123456789abcdef"[c]; }
 
 inline char* FormatField(char* w, uint16_t v) noexcept {
+#if defined __SSE4_1__ && defined __BMI2__
+  uint32_t vext = bswap(_pdep_u32(v, 0x0f0f0f0f));
+  uint32_t skip_bytes = cbu::ctz(vext | 0x8000'0000) / 8;
+  __m128i chars_v =
+      _mm_shuffle_epi8(*(const __m128i_u*)"0123456789abcdef",
+                       _mm_cvtsi32_si128(vext >> (skip_bytes * 8)));
+  memdrop(w, __v4si(chars_v)[0]);
+  return w + 4 - skip_bytes;
+#endif
   if (v >= 0x1000) *w++ = FormatChar(v >> 12);
   if (v >= 0x100) *w++ = FormatChar((v >> 8) & 0xf);
   if (v >= 0x10) *w++ = FormatChar((v >> 4) & 0xf);
@@ -104,19 +113,17 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
   // The rule: Compress the longest run of zero fields.
   // If there are multiple runs of the same length, compress the leftmost.
   if (zero_mask) {
-    compress_pos = ctz(zero_mask);
-    if (uint32_t two_zeros = zero_mask & (zero_mask >> 1)) {
-      compress_pos = ctz(two_zeros);
-      if (uint32_t three_zeros = two_zeros & (zero_mask >> 2)) {
-        compress_pos = ctz(three_zeros);
-        if (uint32_t four_zeros = three_zeros & (zero_mask >> 3)) {
-          compress_pos = ctz(four_zeros);
-          // Don't check for more than 4 fields, since the total is 8.
-          // So the first run of 4 zero fields must be the starting point of
-          // compression.
-        }
-      }
-    }
+    // Don't check for more than 4 fields, since the total is 8.
+    // So the first run of 4 zero fields must be the starting point of
+    // compression.
+    uint32_t two_zeros = zero_mask & (zero_mask >> 1);
+    uint32_t three_zeros = two_zeros & (zero_mask >> 2);
+    uint32_t four_zeros = three_zeros & (zero_mask >> 3);
+
+    compress_pos = ctz(four_zeros    ? four_zeros
+                       : three_zeros ? three_zeros
+                       : two_zeros   ? two_zeros
+                                     : zero_mask);
   }
 
   uint32_t i = 0;
