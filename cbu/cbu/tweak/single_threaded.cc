@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
 namespace cbu {
 namespace tweak {
 
-bool SINGLE_THREADED = true;
+extern const bool SINGLE_THREADED = true;
 
 } // namespace tweak
 } // namespace cbu
