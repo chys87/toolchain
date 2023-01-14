@@ -17,7 +17,7 @@ struct Dispatch {
   int (*func)(size_t argc, char **, char **);
 };
 
-static const Dispatch dispatch[] = {
+constexpr Dispatch dispatch[] = {
   {STR_LEN("mvln"), mvln_main},
   {STR_LEN("j"), j_main},
   {STR_LEN("python3-latest"), python3_latest_main},
