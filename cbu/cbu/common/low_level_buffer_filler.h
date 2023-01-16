@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,8 @@
 #include <concepts>
 #include <cstddef>
 #include <cstring>
+#include <optional>
+#include <tuple>
 #include <string_view>
 #include <type_traits>
 
@@ -219,7 +221,29 @@ class LowLevelBufferFiller {
     return *this;
   }
 
+  template <typename... Args>
+  constexpr LowLevelBufferFiller& operator<<(const std::tuple<Args...>& args) noexcept {
+    ApplyTuple(args, std::make_index_sequence<sizeof...(Args)>());
+    return *this;
+  }
+
+  template <typename T>
+    requires requires(const T& real, LowLevelBufferFiller& filler) {
+      {filler << real} noexcept;
+    }
+  constexpr LowLevelBufferFiller& operator<<(
+      const std::optional<T>& opt) noexcept {
+    if (opt) *this << *opt;
+    return *this;
+  }
+
   constexpr Ch* pointer() const noexcept { return p_; }
+
+ private:
+  template <typename Tpl, std::size_t... I>
+  constexpr void ApplyTuple(const Tpl& args, std::index_sequence<I...>) {
+    (*this << ... << std::get<I>(args));
+  }
 
  private:
   Ch* p_;
