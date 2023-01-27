@@ -118,6 +118,7 @@ OPTIMIZEFLAGS ?= -O2 \
 				 -fmerge-all-constants -fno-common \
 				 -fno-ident \
 				 -ffp-contract=fast \
+				 -fno-stack-protector \
 				 -Qn
 COPTIMIZEFLAGS ?=
 CXXOPTIMIZEFLAGS ?= -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0
