@@ -26,6 +26,8 @@ else
  DIR := $(EGM.readlink src)
 endif
 
+export CCACHE_NAMESPACE="$(notdir $(realpath $(DIR)))"
+
 ifneq "$(wildcard $(DIR)/srcdirs)" ""
  SRCDIRS := $(foreach x, $(EGM.cat $(DIR)/srcdirs), $(subst $(DIR)/.,$(DIR),$(DIR)/$(x)))
 else
