@@ -70,7 +70,7 @@ CFLAGS := -O2 -march=native -flto -std=gnu99 -fPIC \
 	-Werror=jump-misses-init \
 	-fmax-errors=5
 
-LDFLAGS := -shared -Wl,-O1,--gc-section,--as-needed
+LDFLAGS := -shared -Wl,-O1,--gc-sections,--as-needed
 INSTNAME := ~/bin/egmake.so
 
 -include Makefile-spec
