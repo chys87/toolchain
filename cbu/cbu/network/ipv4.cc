@@ -28,8 +28,13 @@
 
 #include "cbu/network/ipv4.h"
 
+#if __has_include(<x86intrin.h>)
+#  include <x86intrin.h>
+#endif
+
 #include <limits>
 
+#include "cbu/common/faststr.h"
 #include "cbu/common/short_string.h"
 #include "cbu/math/common.h"
 #include "cbu/math/fastdiv.h"
@@ -146,6 +151,34 @@ ParseResult<std::uint32_t> parse_any_uint32(const char* s,
 } // namespace
 
 char* IPv4::to_string(char* p) const noexcept {
+#if defined __AVX512VL__ && defined __AVX512BW__
+  __v4su v = __v4su(_mm_cvtepu8_epi32(_mm_cvtsi32_si128(v_)));
+  __v4su hundreds = (v * 41) >> 12;
+  __v4su rem = v - hundreds * 100;
+  __v4su tens = (rem * 103) >> 10;
+  __v4su ones = rem - tens * 10;
+  __v4su combined = hundreds | (tens << 8) | (ones << 16);
+
+  __mmask8 mask_lt10 = _mm_cmplt_epu32_mask(__m128i(v), _mm_set1_epi32(10));
+  __mmask8 mask_lt100 = _mm_cmplt_epu32_mask(__m128i(v), _mm_set1_epi32(100));
+  __v4su skipped_bytes = __v4su(_mm_mask_blend_epi32(
+      mask_lt10,
+      _mm_mask_blend_epi32(mask_lt100, _mm_setzero_si128(), _mm_set1_epi32(1)),
+      _mm_set1_epi32(2)));
+
+  __v4su bytes = __v4su(_mm_srlv_epi32(__m128i(combined | 0x2e303030),
+                                       __m128i(skipped_bytes * 8)));
+  *(uint32_t*)p = bytes[3];
+  p -= skipped_bytes[3];
+  *(uint32_t*)(p + 4) = bytes[2];
+  p -= skipped_bytes[2];
+  *(uint32_t*)(p + 8) = bytes[1];
+  p -= skipped_bytes[1];
+  *(uint16_t*)(p + 12) = __v8hu(bytes)[0];
+  *(p + 14) = __v16qu(bytes)[2];
+  p += 15l - skipped_bytes[0];
+  return p;
+#endif
   p = uint8_to_string(p, a());
   *p++ = '.';
   p = uint8_to_string(p, b());

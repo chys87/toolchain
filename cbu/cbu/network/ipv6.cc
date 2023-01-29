@@ -87,16 +87,17 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
   const uint16_t(&u16)[8] = addr.s6_addr16;
   const uint32_t(&u32)[4] = addr.s6_addr32;
 
+#ifdef __SSE2__
+  __m128i v6 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(addr.s6_addr));
+#endif
+
   uint32_t zero_mask = 0;
+
 #if defined __AVX512VL__ && defined __AVX512BW__
-  zero_mask = _mm_cmpeq_epi16_mask(
-      _mm_setzero_si128(),
-      _mm_loadu_si128(reinterpret_cast<const __m128i*>(addr.s6_addr)));
+  zero_mask = _mm_cmpeq_epi16_mask(_mm_setzero_si128(), v6);
 #elif defined __SSE2__
   {
-    __m128i v = _mm_cmpeq_epi16(
-        _mm_setzero_si128(),
-        _mm_loadu_si128(reinterpret_cast<const __m128i*>(addr.s6_addr)));
+    __m128i v = _mm_cmpeq_epi16(_mm_setzero_si128(), v6);
     v = _mm_packs_epi16(v, _mm_setzero_si128());
     zero_mask = _mm_movemask_epi8(v);
   }
@@ -126,15 +127,58 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
                                      : zero_mask);
   }
 
-  uint32_t i = 0;
-  while (i < (ipv4 ? 6 : 8)) {
-    if (i == compress_pos) {
-      if (i == 0) *w++ = ':';
-      i = ctz(~zero_mask & ~((1u << i) - 1));
-      *w++ = ':';
-    } else {
-      w = FormatField(w, bswap_be(u16[i]));
-      if (++i < 8) *w++ = ':';
+  {
+#if defined __AVX512VL__ && defined __AVX512BW__ && defined __AVX512CD__
+    uint64_t skip_bytes_u64;
+    union {
+      char formatted_bytes[8][4];
+      __m256i_u formatted_bytes_256;
+    };
+    __m256i vx6 = _mm256_cvtepu16_epi32(_mm_shuffle_epi8(
+        v6,
+        _mm_setr_epi8(1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12, 15, 14)));
+    __m256i v_skip_raw_bits = _mm256_min_epu32(
+        _mm256_sub_epi32(_mm256_lzcnt_epi32(vx6), _mm256_set1_epi32(16)),
+        _mm256_set1_epi32(12));
+    __m256i v_skip_bytes = _mm256_srli_epi32(v_skip_raw_bits, 2);
+    __m256i v_skip_real_bits = _mm256_slli_epi32(v_skip_bytes, 3);
+    skip_bytes_u64 = _mm_cvtsi128_si64(_mm256_cvtepi32_epi8(v_skip_bytes));
+
+    __m256i vxx =
+        __m256i(((__v8su(vx6) & 0xf) << 24) | ((__v8su(vx6) & 0xf0) << 12) |
+                ((__v8su(vx6) & 0xf00)) | (__v8su(vx6) >> 12));
+    formatted_bytes_256 = _mm256_srlv_epi32(
+        _mm256_shuffle_epi8(
+            *(const __m256i_u*)"0123456789abcdef0123456789abcdef", vxx),
+        __m256i(v_skip_real_bits));
+#endif
+
+    uint32_t i = 0;
+    uint32_t limit = ipv4 ? 6 : 8;
+    while (i < limit) {
+      if (i == compress_pos) {
+        if (i == 0) *w++ = ':';
+        uint32_t next_i = ctz(~zero_mask & ~((1u << i) - 1));
+#if defined __AVX512VL__ && defined __AVX512BW__ && defined __AVX512CD__
+        skip_bytes_u64 >>= (8 * (next_i - i));
+#endif
+        i = next_i;
+        *w++ = ':';
+      } else {
+#if defined __AVX512VL__ && defined __AVX512BW__ && defined __AVX512CD__
+        if (true) {
+          memcpy(w, formatted_bytes[i], 4);
+          w += 4l - uint8_t(skip_bytes_u64);
+        } else
+#endif
+        {
+          w = FormatField(w, bswap_be(u16[i]));
+        }
+        if (++i < 8) *w++ = ':';
+#if defined __AVX512VL__ && defined __AVX512BW__ && defined __AVX512CD__
+        skip_bytes_u64 >>= 8;
+#endif
+      }
     }
   }
 
