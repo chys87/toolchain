@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -461,6 +461,44 @@ size_t common_suffix_ex(const void* pa, const void* pb, size_t maxl,
   }
 
   return aend - a;
+}
+
+size_t char_span_length(const void* buffer, size_t len, char c) noexcept {
+  const char* p = static_cast<const char*>(buffer);
+  size_t i = 0;
+
+#ifdef __AVX512BW__
+  __m512i ref = _mm512_set1_epi8(c);
+  while (i + 64 <= len) {
+    uint64_t neqmsk = _mm512_cmpneq_epi8_mask(
+        ref, *reinterpret_cast<const __m512i_u*>(p + i));
+    if (neqmsk) return i + _tzcnt_u64(neqmsk);
+    i += 64;
+  }
+  if (i < len) {
+    uint64_t neqmsk = _mm512_cmpneq_epi8_mask(
+        ref, _mm512_maskz_loadu_epi8(_bzhi_u64(-1ull, len - i), p + i));
+    i += _tzcnt_u64(neqmsk | (1ull << (len - i)));
+  }
+  return i;
+#endif
+
+#ifdef __AVX2__
+  while (i + 32 <= len) {
+    __m256i v =
+        _mm256_set1_epi8(c) ^ *reinterpret_cast<const __m256i_u*>(p + i);
+    if (_mm256_testz_si256(v, v)) {
+      i += 32;
+      continue;
+    }
+    uint32_t zmask =
+        _mm256_movemask_epi8(_mm256_cmpeq_epi8(v, _mm256_setzero_si256()));
+    return i + _tzcnt_u32(~zmask);
+  }
+#endif
+
+  while (i < len && p[i] == c) ++i;
+  return i;
 }
 
 }  // namespace cbu

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -247,6 +247,13 @@ inline size_t common_suffix(std::u8string_view sa,
                             std::u8string_view sb) noexcept {
   size_t maxl = std::min(sa.length(), sb.length());
   return common_suffix_ex(sa.end(), sb.end(), maxl, true);
+}
+
+// Return the length of prefix composed only of character c
+[[gnu::pure]] size_t char_span_length(const void* buffer, size_t len, char c) noexcept;
+
+inline size_t char_span_length(std::string_view s, char c) noexcept {
+  return char_span_length(s.data(), s.size(), c);
 }
 
 }  // namespace cbu

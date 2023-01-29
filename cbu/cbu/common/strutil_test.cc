@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -161,6 +161,23 @@ TEST(StrUtilTest, CommonSuffix) {
 TEST(StrUtilTest, CommonSuffix_Utf8) {
   EXPECT_EQ(common_suffix(u8"帀一", u8"一一"), 3);
   EXPECT_EQ(common_suffix((const char*)u8"帀一", (const char*)u8"一一"), 5);
+}
+
+TEST(StrUtilTest, CharSpanLength) {
+  constexpr unsigned N = 4096;
+  char bytes[N];
+  std::fill_n(bytes, std::size(bytes), 'b');
+
+  for (size_t m = 0; m < 128; ++m) {
+    for (size_t i = 0; i < 1024; ++i) {
+      for (size_t j = i; j < N; j += j / 2 + 1) {
+        size_t expected = m <= i ? 0 : std::min(j, m) - i;
+        ASSERT_EQ(char_span_length(bytes + i, j - i, 'a'), expected)
+            << "m = " << m << " i = " << i << " j = " << j;
+      }
+    }
+    bytes[m] = 'a';
+  }
 }
 
 }  // namespace cbu
