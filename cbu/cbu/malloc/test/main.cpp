@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
 #include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#if __has_include(<x86intrin.h>)
+#if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
 # include <x86intrin.h>
 #endif
 

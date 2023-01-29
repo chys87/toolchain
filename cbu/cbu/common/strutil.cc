@@ -32,7 +32,7 @@
 #include <cstdio>
 #include <cstring>
 #include <type_traits>
-#if __has_include(<x86intrin.h>)
+#if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
 #  include <x86intrin.h>
 #endif
 
