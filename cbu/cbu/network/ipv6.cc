@@ -187,9 +187,10 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
 }
 
 short_string<IPv6::kMaxStringLen> IPv6::Format(const in6_addr& addr6) noexcept {
-  short_string<kMaxStringLen> res;
+  short_string<kMaxStringLen> res(kUninitialized);
   char* w = Format(res.buffer(), addr6);
-  res.set_length(w - res.data());
+  *w = '\0';
+  res.set_length(w - res.buffer());
   return res;
 }
 
@@ -234,9 +235,10 @@ char* IPv6Port::ToString(char* buf) const noexcept {
 }
 
 short_string<IPv6Port::kMaxStringLen> IPv6Port::ToString() const noexcept {
-  short_string<kMaxStringLen> res;
+  short_string<kMaxStringLen> res(kUninitialized);
   char* w = ToString(res.buffer());
-  res.set_length(w - res.data());
+  *w = '\0';
+  res.set_length(w - res.buffer());
   return res;
 }
 

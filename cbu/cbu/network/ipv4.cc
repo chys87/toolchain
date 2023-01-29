@@ -190,8 +190,10 @@ char* IPv4::to_string(char* p) const noexcept {
 }
 
 short_string<15> IPv4::to_string() const {
-  short_string<15> res;  // The max length of an IPv4 is 15
-  res.set_length(to_string(res.buffer()) - res.buffer());
+  short_string<15> res(kUninitialized);  // The max length of an IPv4 is 15
+  char* w = to_string(res.buffer());
+  *w = '\0';
+  res.set_length(w - res.buffer());
   return res;
 }
 
