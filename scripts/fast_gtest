@@ -105,7 +105,8 @@ class Executor:
         return re.findall(r'^([\w/]+)\.(\s+#.*)?$', proc.stdout, re.MULTILINE)
 
     def run(self):
-        return subprocess.run([self.binary] + self.additional_args)
+        args = self.wrapper_args + [self.binary] + self.additional_args
+        return subprocess.run(args)
 
     def start_test(self, test):
         args = (self.wrapper_args +
