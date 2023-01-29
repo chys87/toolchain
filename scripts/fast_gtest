@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 #
-# Copyright (c) 2022, chys <admin@CHYS.INFO>
+# Copyright (c) 2022-2023, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -38,35 +38,81 @@
 # test cases.
 
 import argparse
+import json
 import os
 import re
+import shlex
 import signal
 import subprocess
 import sys
 import tempfile
 import time
 
+import redis
+
+
+class SpeedMemo:
+    '''Remebers the time each test requires.
+    This requires local redis.
+    '''
+    def __init__(self, binary):
+        self.binary = os.path.realpath(binary)
+        self.rd = redis.StrictRedis()
+
+    def _get_key(self, test_desc):
+        return 'chys-fast-gtest-' + json.dumps((self.binary, test_desc))
+
+    def sort_tests(self, tests):
+        memo_times = self.rd.mget([self._get_key(test_desc)
+                                   for test_desc in tests])
+        memo_time_dict = {}
+        for test_desc, memo_time in zip(tests, memo_times):
+            if memo_time:
+                try:
+                    memo_time_dict[test_desc] = float(memo_time)
+                except ValueError:
+                    pass
+
+        tests.sort(key=lambda test_desc: memo_time_dict.get(test_desc, 1e10),
+                   reverse=True)
+
+    def remember(self, test_desc, ms):
+        key = self._get_key(test_desc)
+        old_time = self.rd.get(key)
+        if old_time:
+            try:
+                ms = (float(old_time) + ms) * .5
+            except ValueError:
+                pass
+
+        self.rd.setex(key, 128 * 86400, repr(ms))
+
 
 class Executor:
-    def __init__(self, binary, additional_args):
+    def __init__(self, binary, additional_args, wrapper):
         self.binary = binary
         self.additional_args = additional_args
+        if wrapper:
+            self.wrapper_args = shlex.split(wrapper)
+        else:
+            self.wrapper_args = []
 
     def get_tests(self):
-        proc = subprocess.run(
-            [self.binary, '--gtest_list_tests'] + self.additional_args,
-            stdout=subprocess.PIPE, text=True, check=True)
+        args = (self.wrapper_args + [self.binary, '--gtest_list_tests'] +
+                self.additional_args)
+        proc = subprocess.run(args,
+                              stdout=subprocess.PIPE, text=True, check=True)
         return re.findall(r'^([\w/]+)\.(\s+#.*)?$', proc.stdout, re.MULTILINE)
 
     def run(self):
         return subprocess.run([self.binary] + self.additional_args)
 
     def start_test(self, test):
+        args = (self.wrapper_args +
+                [self.binary, '--gtest_color=yes', f'--gtest_filter={test}.*']
+                + self.additional_args)
         f = tempfile.TemporaryFile()
-        proc = subprocess.Popen(
-            [self.binary, '--gtest_color=yes', f'--gtest_filter={test}.*'] +
-            self.additional_args,
-            stdout=f, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(args, stdout=f, stderr=subprocess.STDOUT)
         return f, proc
 
 
@@ -76,10 +122,13 @@ def main():
     parser.add_argument('additional_args', nargs='*')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Print full message for all tests')
+    parser.add_argument('--wrapper', help='Executable wrapper (e.g. Intel SDE)')
     args = parser.parse_args()
 
-    exe = Executor(args.binary, args.additional_args)
+    speed_memo = SpeedMemo(args.binary)
+    exe = Executor(args.binary, args.additional_args, args.wrapper)
     tests = exe.get_tests()
+    speed_memo.sort_tests(tests)
 
     tests_n = len(tests)
     if tests_n == 0:
@@ -102,19 +151,19 @@ def main():
         while ret_code == 0 and pending and len(running) < concurrency:
             test, comment = pending.pop()
             f, proc = exe.start_test(test)
-            running.append((test, f, proc, time.time()))
+            running.append((test, comment, f, proc, time.time()))
             print(f'\033[32;1m[ RUN    ]\033[0m {test}{comment or ""}')
 
         signal.sigwait(signals)
 
         for i in range(len(running) - 1, -1, -1):
-            test, f, proc, start_ts = running[i]
-            try:
-                code = proc.wait(0)
-            except subprocess.TimeoutExpired:
+            test, comment, f, proc, start_ts = running[i]
+            code = proc.poll()
+            if code is None:
                 continue
             del running[i]
             ms = int((time.time() - start_ts) * 1000)
+            speed_memo.remember((test, comment), ms)
             if code == 0:
                 print(f'\033[32;1m[     OK ]\033[0m {test} ({ms} ms)')
                 if args.verbose:
