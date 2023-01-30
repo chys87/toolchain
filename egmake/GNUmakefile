@@ -1,5 +1,5 @@
 # egmake, Enhanced GNU make
-# Copyright (C) 2014, chys <admin@CHYS.INFO>
+# Copyright (C) 2014-2023, chys <admin@CHYS.INFO>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,19 @@ SRCS := $(wildcard *.c)
 OBJS := $(SRCS:%.c=%.o)
 DEPS := $(SRCS:%.c=%.P)
 
-CC := gcc
+ifneq "" "$(shell which clang 2>/dev/null)"
+  CC := clang
+  ifneq "" "$(shell which lld 2>/dev/null)"
+    CC += -fuse-ld=lld
+  endif
+else
+  CC := gcc
+endif
+
+ifneq "" "$(shell which ccache 2>/dev/null)"
+  CC := ccache $(CC)
+endif
+
 CFLAGS := -O2 -march=native -flto -std=gnu99 -fPIC \
 	-D_GNU_SOURCE -DNDEBUG \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -fno-exceptions \
