@@ -96,7 +96,6 @@ DEPS    := $(sort $(CDEPS) $(CXXDEPS) $(ASMDEPS))
 
 CC := ccache gcc
 CXX := ccache g++
-AR := gcc-ar
 
 INCLUDES := -iquote $(DIR) -iquote $(BUILDDIR) $(foreach x,$(AUTO_GENERATED_HEADERS),-iquote $(dir $(x)))
 LIBS :=
@@ -106,7 +105,6 @@ DEFS := -D _GNU_SOURCE -D NDEBUG \
 
 ARFLAGS := crs
 
-STRIP := strip --strip-unneeded -R .comment -R .GCC.command.line
 INSTALL := install -m755 -C -T -v
 INSTALL_DATA := install -m644 -C -T -v
 INSTDIR := /usr/local/bin
@@ -311,6 +309,11 @@ endif
 ifeq "$(IS_CLANG)" "1"
  EXTRA_CFLAGS += -fveclib=libmvec
  EXTRA_CXXFLAGS += -fveclib=libmvec -fstrict-vtable-pointers
+ AR ?= llvm-ar
+ STRIP ?= llvm-strip --strip-all --strip-unneeded -R .comment -R .GCC.command.line
+else
+ AR ?= gcc-ar
+ STRIP ?= strip --strip-unneeded -R .comment -R .GCC.command.line
 endif
 
 ifeq "$(NOEXCEPTIONS)" "1"
