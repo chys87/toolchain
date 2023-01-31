@@ -44,7 +44,18 @@ inline __m128i in_range_epi8(__m128i v, signed char lo,
     return _mm_cmpgt_epi8(_mm_set1_epi8(hi + 1), v);
   } else if (hi == 127) {
     return _mm_cmpgt_epi8(v, _mm_set1_epi8(lo - 1));
+  } else if (lo == hi) {
+    return _mm_cmpeq_epi8(v, _mm_set1_epi8(lo));
   } else {
+#if defined __AVX512VL__ && defined __AVX512BW__
+    // With AVX-512VL and AVX-512BW, gcc/clang generates satisfactory code
+    if (static_cast<unsigned char>(lo) <= static_cast<unsigned char>(hi))
+      return __v16qu(v) >= static_cast<unsigned char>(lo) &
+             __v16qu(v) <= static_cast<unsigned char>(hi);
+    else
+      return __v16qu(v) >= static_cast<unsigned char>(hi) |
+             __v16qu(v) <= static_cast<unsigned char>(lo);
+#endif
     v = _mm_add_epi8(v, _mm_set1_epi8(127 - hi));
     return _mm_cmpgt_epi8(v, _mm_set1_epi8(127 - (hi - lo) - 1));
   }
@@ -61,10 +72,35 @@ inline __m256i in_range_epi8(__m256i v, signed char lo,
     return _mm256_cmpgt_epi8(_mm256_set1_epi8(hi + 1), v);
   } else if (hi == 127) {
     return _mm256_cmpgt_epi8(v, _mm256_set1_epi8(lo - 1));
+  } else if (lo == hi) {
+    return _mm256_cmpeq_epi8(v, _mm256_set1_epi8(lo));
   } else {
+#if defined __AVX512VL__ && defined __AVX512BW__
+    // With AVX-512VL and AVX-512BW, gcc/clang generates satisfactory code
+    if (static_cast<unsigned char>(lo) <= static_cast<unsigned char>(hi))
+      return __v32qu(v) >= static_cast<unsigned char>(lo) &
+             __v32qu(v) <= static_cast<unsigned char>(hi);
+    else
+      return __v32qu(v) >= static_cast<unsigned char>(hi) |
+             __v32qu(v) <= static_cast<unsigned char>(lo);
+#endif
     v = _mm256_add_epi8(v, _mm256_set1_epi8(127 - hi));
     return _mm256_cmpgt_epi8(v, _mm256_set1_epi8(127 - (hi - lo) - 1));
   }
+}
+#endif
+
+#if defined __AVX512BW__
+inline __m512i in_range_epi8(__m512i v, signed char lo,
+                             signed char hi) noexcept {
+  if (static_cast<signed char>(hi + 1) == lo)
+    return _mm512_set1_epi8(-1);
+  else if (static_cast<unsigned char>(lo) <= static_cast<unsigned char>(hi))
+    return __v64qu(v) >= static_cast<unsigned char>(lo) &
+           __v64qu(v) <= static_cast<unsigned char>(hi);
+  else
+    return __v64qu(v) >= static_cast<unsigned char>(hi) |
+           __v64qu(v) <= static_cast<unsigned char>(lo);
 }
 #endif
 

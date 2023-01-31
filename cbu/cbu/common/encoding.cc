@@ -248,14 +248,16 @@ bool validate_utf8_avx2_bmi(const void* ptr, const void* endptr) noexcept {
     __m256i vmaskf = in_range_epi8(v, 0x80, 0xbf);
     uint32_t maskf = _mm256_movemask_epi8(vmaskf);
 
+    uint32_t bad_mask = 0;
+
     // Is there any byte that's impossible in a legal UTF-8 string?
-    if (!_mm256_testz_si256(~(vmask1 | vmask2 | vmask3 | vmaskf) & v,
-                            _mm256_set1_epi8(0x80)))
-      return false;
+    bad_mask |= ((mask1 | mask2 | mask3 | maskf) ^ _mm256_movemask_epi8(v));
 
-    if (uint32_t(mask1 * 0b10 | mask2 * 0b110 | mask3 * 0b1110) != maskf)
-      return false;
+    // Correct number of following bytes
+    bad_mask |=
+        (uint32_t(mask1 * 0b10 | mask2 * 0b110 | mask3 * 0b1110) ^ maskf);
 
+    // Check for overlong UTF-8 encoding
     // mask1: Nothing to take special care of
 
     // mask2:
@@ -265,7 +267,7 @@ bool validate_utf8_avx2_bmi(const void* ptr, const void* endptr) noexcept {
     uint32_t ed = _mm256_movemask_epi8(__m256i(__v32qi(v) == int8_t(0xed)));
     uint32_t x80_9f = _mm256_movemask_epi8(in_range_epi8(v, 0x80, 0x9f));
     uint32_t a0_bf = maskf ^ x80_9f;
-    if (((e0 << 1) & x80_9f) | ((ed << 1) & a0_bf)) return false;
+    bad_mask |= ((e0 << 1) & x80_9f) | ((ed << 1) & a0_bf);
 
     // mask3:
     // F0       90..BF (excluding 80..8F)
@@ -274,7 +276,9 @@ bool validate_utf8_avx2_bmi(const void* ptr, const void* endptr) noexcept {
     uint32_t f4 = _mm256_movemask_epi8(__m256i(__v32qi(v) == int8_t(0xf4)));
     uint32_t x80_8f = _mm256_movemask_epi8(in_range_epi8(v, 0x80, 0x8f));
     uint32_t x90_bf = maskf ^ x80_8f;
-    if (((f0 << 1) & x80_8f) | ((f4 << 1) & (x90_bf))) return false;
+    bad_mask |= ((f0 << 1) & x80_8f) | ((f4 << 1) & (x90_bf));
+
+    if (bad_mask) return false;
 
     // Now let's see by how many bytes we can advance.
     // Normally we can advance by 32 bytes; but if a character spans the end
