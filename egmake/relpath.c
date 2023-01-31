@@ -113,19 +113,17 @@ char *func_relpath(const char *nm, unsigned int argc, char **argv) {
   abspath_free(&start_abs);
 
   char* res = gmk_alloc(path_abs.max_len + uppers * 3 + 16);
-  if (res != NULL)  {
-    char* w = res;
-    for (unsigned i = uppers; i; --i) w = Mempcpy(w, "../", 3);
-    for (unsigned n = path_abs.part_count; k < n; ++k) {
-      w = Mempcpy(w, path_abs.parts[k].p, path_abs.parts[k].l);
-      *w++ = '/';
-    }
-    if (w == res) {
-      strcpy(res, ".");
-    } else {
-      --w;
-      *w = '\0';
-    }
+  char* w = res;
+  for (unsigned i = uppers; i; --i) w = Mempcpy(w, "../", 3);
+  for (unsigned n = path_abs.part_count; k < n; ++k) {
+    w = Mempcpy(w, path_abs.parts[k].p, path_abs.parts[k].l);
+    *w++ = '/';
+  }
+  if (w == res) {
+    strcpy(res, ".");
+  } else {
+    --w;
+    *w = '\0';
   }
 
   abspath_free(&path_abs);
