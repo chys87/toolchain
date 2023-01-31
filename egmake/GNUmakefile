@@ -26,11 +26,13 @@ DEPS := $(SRCS:%.c=%.P)
 
 ifneq "" "$(shell which clang 2>/dev/null)"
   CC := clang
+  STRIP := llvm-strip
   ifneq "" "$(shell which lld 2>/dev/null)"
     CC += -fuse-ld=lld
   endif
 else
   CC := gcc
+  STRIP := strip
 endif
 
 ifneq "" "$(shell which ccache 2>/dev/null)"
@@ -88,7 +90,7 @@ INSTNAME := ~/bin/egmake.so
 -include Makefile-spec
 
 egmake.so: egmake-unstripped.so
-	strip -v -o $@ $<
+	$(STRIP) --strip-all --strip-unneeded -o $@ $<
 
 egmake-unstripped.so: $(OBJS)
 	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $^
