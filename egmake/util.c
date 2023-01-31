@@ -1,6 +1,6 @@
 /*
 egmake, Enhanced GNU make
-Copyright (C) 2014, chys <admin@CHYS.INFO>
+Copyright (C) 2014-2023, chys <admin@CHYS.INFO>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,20 +20,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include <gnumake.h>
 
-void strtr_in_place(char *s, size_t l, char from, char to) {
-  char *e = s + l;
-  while (s < e) {
-    char *p = memchr(s, from, e - s);
-    if (p == NULL)
-      break;
-    *p = to;
-    s = p + 1;
+void copy_replace_cr_ln(char *dest, const char *src, size_t l) {
+  // No need to do unroll or vectorization by hand.
+  // Modern compilers do it satisfactorily.
+  for (size_t i = 0; i < l; ++i) {
+    char c = src[i];
+    if (c == '\r' || c == '\n') c = ' ';
+    dest[i] = c;
   }
-}
-
-void replace_cr_ln_in_place(char *s, size_t l) {
-  strtr_in_place(s, l, '\r', ' ');
-  strtr_in_place(s, l, '\n', ' ');
 }
 
 char *Memcpy(char *d, const void *s, size_t n) {

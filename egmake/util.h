@@ -1,6 +1,6 @@
 /*
 egmake, Enhanced GNU make
-Copyright (C) 2014, chys <admin@CHYS.INFO>
+Copyright (C) 2014-2023, chys <admin@CHYS.INFO>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,10 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stddef.h>
 #include <string.h>
 
-void strtr_in_place(char *s, size_t l, char from, char to);
-
 // Replace '\r' and '\n' with spaces
-void replace_cr_ln_in_place(char *, size_t);
+void copy_replace_cr_ln(char *dest, const char *src, size_t l);
 
 static inline size_t max_size(size_t a, size_t b) {
 	return (a < b) ? b : a;

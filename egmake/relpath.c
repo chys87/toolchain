@@ -110,6 +110,7 @@ char *func_relpath(const char *nm, unsigned int argc, char **argv) {
     ++k;
 
   unsigned uppers = start_abs.part_count - k;
+  abspath_free(&start_abs);
 
   char* res = gmk_alloc(path_abs.max_len + uppers * 3 + 16);
   if (res != NULL)  {
@@ -127,7 +128,6 @@ char *func_relpath(const char *nm, unsigned int argc, char **argv) {
     }
   }
 
-  abspath_free(&start_abs);
   abspath_free(&path_abs);
   return res;
 }

@@ -1,6 +1,6 @@
 /*
 egmake, Enhanced GNU make
-Copyright (C) 2014, chys <admin@CHYS.INFO>
+Copyright (C) 2014-2023, chys <admin@CHYS.INFO>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ char *func_cat(const char *nm, unsigned int argc, char **argv) {
   const size_t min_grow = 4096;
   while (*argv) {
     const char *fname = *argv++;
-    int fd = fsys_open2(fname, O_RDONLY | O_CLOEXEC);
+    int fd = fsys_open2(fname, O_RDONLY | O_CLOEXEC | O_NOCTTY);
     if (fd < 0) {
       free(res);
       fprintf(stderr, "Failed to open file: %s\n", fname);
@@ -50,9 +50,10 @@ char *func_cat(const char *nm, unsigned int argc, char **argv) {
     }
     fsys_close(fd);
   }
-  char *ret = strdup_to_gmk_with_len(res, L);
+  char* ret = gmk_alloc(L + 1);
+  copy_replace_cr_ln(ret, res, L);
+  ret[L] = '\0';
   free(res);
-  replace_cr_ln_in_place(ret, L);
   return ret;
 }
 
