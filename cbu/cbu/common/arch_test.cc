@@ -35,7 +35,7 @@ namespace {
 #if defined __x86_64__ && defined __AVX2__
 TEST(ArchTest, x86_in_range_epi8) {
   for (int lo = -128; lo <= 127; ++lo) {
-    for (int hi = lo; hi <= 127; ++hi) {
+    for (int hi = -128; hi <= 127; ++hi) {
       for (int x = -128; x <= 127; x += 32) {
         __m256i v = _mm256_add_epi8(
             _mm256_set1_epi8(x),
@@ -46,7 +46,8 @@ TEST(ArchTest, x86_in_range_epi8) {
         __v32qi qcmp = (__v32qi)cmp;
         for (int i = 0; i < 32; ++i) {
           bool got = qcmp[i];
-          bool expected = (x + i >= lo && x + i <= hi);
+          bool expected = (lo <= hi) ? (x + i >= lo && x + i <= hi)
+                                     : (x + i >= lo || x + i <= hi);
           ASSERT_EQ(expected, got)
               << "lo=" << lo << " hi=" << hi << " x=" << x << " i=" << i;
         }
