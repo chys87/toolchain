@@ -97,9 +97,26 @@ inline size_t Madd(Word *r, const Word *a, size_t na, Word b, Word c) noexcept {
   return na;
 }
 
-// Caller guarantees the quotient is representible by Word.
+// Caller guarantees the quotient is representible by Word (i.e. hi < b).
 // Otherwise, it's undefined behavior
 inline std::pair<Word, Word> Div(Word hi, Word lo, Word b) noexcept {
+  if (b < (Word(1) << (4 * sizeof(Word)))) {
+    // [mq, mr] = (Word::max() + 1) [/, %] b
+    Word mq = Word(-1) / b;
+    Word mr = Word(-1) % b;
+    if (++mr >= b) {
+      ++mq;
+      mr = 0;
+    }
+
+    Word lq = lo / b;
+    Word lr = lo % b;
+
+    Word q = hi * mq + lq + (hi * mr + lr) / b;
+    Word r = (hi * mr + lr) % b;
+    return std::make_pair(q, r);
+  }
+
 #if defined __x86_64__
   Word quo, rem;
   asm ("div %[b]" : "=a"(quo), "=d"(rem) : "a"(lo), "d"(hi), [b]"r"(b) : "cc");
