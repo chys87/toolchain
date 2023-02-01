@@ -505,7 +505,15 @@ size_t from_bin(Word *r, const char *s, size_t n) noexcept {
   while (n > 8 * sizeof(Word)) {
     n -= 8 * sizeof(Word);
     const char *p = s + n;
-#if defined __x86_64__ && defined __AVX2__
+#if defined __x86_64__ && defined __AVX513BW__
+    static_assert(sizeof(Word) == 8);
+    __m512i swap_mask = _mm512_broadcast_i32x4(
+        _mm_setr_epi8(7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8));
+    __m512i v = *reinterpret_cast<const __m512i_u*>(p);
+    uint64_t v64 = _mm512_cmpneq_epi8_mask(_mm512_shuffle_epi8(v, swap_mask),
+                                           _mm512_set1_epi8('0'));
+    r[nr++] = bswap(v64);
+#elif defined __x86_64__ && defined __AVX2__
     static_assert(sizeof(Word) == 8);
     __m256i swap_mask = _mm256_setr_epi8(
         7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8,
@@ -542,32 +550,73 @@ char *to_bin(char *r, const Word *s, size_t n) noexcept {
   }
 
   Word v = s[n - 1];
+#if defined __AVX512BW__ && defined __x86_64__
+  {
+    __m512i u = _mm512_shuffle_epi8(
+        _mm512_cvtepu8_epi64(_mm_cvtsi64_si128(bswap(v))),
+        _mm512_broadcast_i32x4(
+            _mm_setr_epi8(0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8)));
+    u = _mm512_mask_mov_epi8(
+        _mm512_set1_epi8('0'),
+        _mm512_test_epi8_mask(u, _mm512_set1_epi64(0x0102040810204080)),
+        _mm512_set1_epi8('1'));
+    uint32_t skip_bits = _lzcnt_u64(v);
+    _mm512_mask_storeu_epi8(r - skip_bits, uint64_t(-1) << skip_bits,  u);
+    r = r + 64 - skip_bits;
+  }
+#else
   unsigned bits = bsr(v) + 1;
   do {
     --bits;
     *r++ = (v >> bits) + '0';
     v = bzhi(v, bits);
   } while (bits);
+#endif
 
   while (--n) {
     Word vv = s[n - 1];
-    for (unsigned k = sizeof(vv); k; --k) {
-      uint8_t b = vv >> ((k - 1) * 8);
+#if defined __AVX512BW__ && defined __x86_64__
+    __m512i u = _mm512_shuffle_epi8(
+        _mm512_cvtepu8_epi64(_mm_cvtsi64_si128(bswap(vv))),
+        _mm512_broadcast_i32x4(
+            _mm_setr_epi8(0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 8, 8, 8, 8, 8, 8)));
+    u = _mm512_mask_mov_epi8(
+        _mm512_set1_epi8('0'),
+        _mm512_test_epi8_mask(u, _mm512_set1_epi64(0x0102040810204080)),
+        _mm512_set1_epi8('1'));
+    *(__m512i_u*)r = u;
+    r += 64;
+    continue;
+#endif
+    for (unsigned k = sizeof(vv); k; k -= 2) {
+      uint16_t w = vv >> ((k - 2) * 8);
 #if defined __AVX2__ && defined __x86_64__
-      __m128i u = _mm_mullo_epi16(_mm_set1_epi16(b),
-                                  _mm_setr_epi16(1, 2, 4, 8, 16, 32, 64, 128));
-      u = _mm_srli_epi16(u, 7) & _mm_set1_epi16(1);
-      u = _mm_add_epi8(_mm_packus_epi16(u, u), _mm_set1_epi8('0'));
-      r = memdrop8(r, _mm_cvtsi128_si64(u));
+      __m128i u = _mm_shuffle_epi8(
+          _mm_cvtsi32_si128(w),
+          _mm_setr_epi8(1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0));
+      u = _mm_and_si128(u, _mm_setr_epi8(char(128), 64, 32, 16, 8, 4, 2, 1,
+                                         char(128), 64, 32, 16, 8, 4, 2, 1));
+      u = _mm_add_epi8(_mm_cmpeq_epi8(u, _mm_setzero_si128()),
+                       _mm_set1_epi8('1'));
+      *(__m128i_u*)r = u;
+      r += 16;
 #else
-      *r++ = (b >> 7) + '0';
-      *r++ = (1 & (b >> 6)) + '0';
-      *r++ = (1 & (b >> 5)) + '0';
-      *r++ = (1 & (b >> 4)) + '0';
-      *r++ = (1 & (b >> 3)) + '0';
-      *r++ = (1 & (b >> 2)) + '0';
-      *r++ = (1 & (b >> 1)) + '0';
-      *r++ = (1 & (b >> 0)) + '0';
+      *r++ = (w >> 15) + '0';
+      *r++ = (1 & (w >> 14)) + '0';
+      *r++ = (1 & (w >> 13)) + '0';
+      *r++ = (1 & (w >> 12)) + '0';
+      *r++ = (1 & (w >> 11)) + '0';
+      *r++ = (1 & (w >> 10)) + '0';
+      *r++ = (1 & (w >> 9)) + '0';
+      *r++ = (1 & (w >> 8)) + '0';
+      *r++ = (1 & (w >> 7)) + '0';
+      *r++ = (1 & (w >> 6)) + '0';
+      *r++ = (1 & (w >> 5)) + '0';
+      *r++ = (1 & (w >> 4)) + '0';
+      *r++ = (1 & (w >> 3)) + '0';
+      *r++ = (1 & (w >> 2)) + '0';
+      *r++ = (1 & (w >> 1)) + '0';
+      *r++ = (1 & (w >> 0)) + '0';
 #endif
     }
   }
