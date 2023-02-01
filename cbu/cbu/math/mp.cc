@@ -42,6 +42,7 @@
 #include "cbu/common/faststr.h"
 #include "cbu/common/strutil.h"
 #include "cbu/math/common.h"
+#include "cbu/math/fastdiv.h"
 #include "cbu/math/strict_overflow.h"
 
 namespace cbu {
@@ -51,12 +52,8 @@ namespace {
 // r = a * b + c
 inline size_t Madd(Word *r, const Word *a, size_t na, Word b, Word c) noexcept {
   if (na == 0 || b == 0) {
-    if (c == 0) {
-      return 0;
-    } else {
-      *r = c;
-      return 1;
-    }
+    *r = c;
+    return (c == 0 ? 0 : 1);
   }
 
   if (b == 1) {
@@ -318,13 +315,23 @@ char *to_dec(char *r, const Word *s, size_t n) noexcept {
 
   while (n > 1) {
     uint32_t rem;
-    std::tie(n, rem) = Div(t, t, n, 10000);
-    uint32_t hi = rem / 100;
-    uint32_t lo = rem % 100;
-    *w++ = (lo % 10) + '0';
-    *w++ = (lo / 10) + '0';
-    *w++ = (hi % 10) + '0';
-    *w++ = (hi / 10) + '0';
+    // Div is not optimized for divisors larger than 65536 in 32-bit, but
+    // we choose not to optimize for 32-bit these days.
+    std::tie(n, rem) = Div(t, t, n, 100000000);
+    uint32_t lo = fastmod<10000, 100000000>(rem);
+    uint32_t hi = fastdiv<10000, 100000000>(rem);
+    uint32_t a = fastmod<100, 10000>(lo);
+    uint32_t b = fastdiv<100, 10000>(lo);
+    *w++ = fastmod<10, 100>(a) + '0';
+    *w++ = fastdiv<10, 100>(a) + '0';
+    *w++ = fastmod<10, 100>(b) + '0';
+    *w++ = fastdiv<10, 100>(b) + '0';
+    uint32_t c = fastmod<100, 10000>(hi);
+    uint32_t d = fastdiv<100, 10000>(hi);
+    *w++ = fastmod<10, 100>(c) + '0';
+    *w++ = fastdiv<10, 100>(c) + '0';
+    *w++ = fastmod<10, 100>(d) + '0';
+    *w++ = fastdiv<10, 100>(d) + '0';
   }
 
   Word v = t[0];

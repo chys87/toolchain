@@ -93,6 +93,7 @@ cc_library(
   deps = [
     ':common',
     ':strict_overflow',
+    ':fastdiv',
     '//cbu/common:header_only',
     '//cbu/common:faststr',
     '//cbu/common:strutil',
