@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,7 @@ using OctTag = RadixTag<8>;
 using DecTag = RadixTag<10>;
 using HexTag = RadixTag<16>;
 
-// for str_to_integer
+// for str_to_number
 struct IgnoreOverflowTag {};
 inline constexpr IgnoreOverflowTag kIgnoreOverflow;
 

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,12 +37,16 @@
 namespace cbu {
 
 template <typename T>
-struct StrToIntegerPartialResult {
+struct StrToNumberPartialResult {
   std::optional<T> value_opt;
   const char* endptr;
 };
 
-namespace str_to_integer_detail {
+// Compatible name
+template <typename T>
+using StrToIntegerPartialResult = StrToNumberPartialResult<T>;
+
+namespace str_to_number_detail {
 
 template <int base_, bool check_overflow_, bool halt_on_overflow_,
           unsigned long long overflow_threshold_>
@@ -104,7 +108,7 @@ inline constexpr auto extract_value(std::optional<T> v) noexcept {
 }
 
 template <typename T>
-inline constexpr auto extract_value(StrToIntegerPartialResult<T> v) noexcept {
+inline constexpr auto extract_value(StrToNumberPartialResult<T> v) noexcept {
   return v.value_opt;
 }
 
@@ -114,8 +118,8 @@ inline constexpr auto replace_value(std::optional<U>, T v) noexcept {
 }
 
 template <typename U, typename T>
-inline constexpr StrToIntegerPartialResult<T> replace_value(
-    StrToIntegerPartialResult<U> r, std::optional<T> v) noexcept {
+inline constexpr StrToNumberPartialResult<T> replace_value(
+    StrToNumberPartialResult<U> r, std::optional<T> v) noexcept {
   return {v, r.endptr};
 }
 
@@ -199,7 +203,7 @@ template <std::integral T, bool partial, typename Tag>
 constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   auto make_ret = [&](std::optional<T> v) {
     if constexpr (partial)
-      return StrToIntegerPartialResult<T>{v, s};
+      return StrToNumberPartialResult<T>{v, s};
     else
       return v;
   };
@@ -277,5 +281,5 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   }
 };
 
-}  // namespace str_to_integer_detail
+}  // namespace str_to_number_detail
 }  // namespace cbu
