@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,6 @@
 
 #include <atomic>
 #include <cstdint>
-#include <limits>
 #include <memory>
 
 #include "cbu/common/defer.h"
@@ -38,118 +37,168 @@
 #include "cbu/tweak/tweak.h"
 
 namespace cbu {
+namespace init_guard {
 
-// Generic implementation
+// Put their implementations in init_guard.cc to avoid including too many
+// headers here.
+void FutexWakeAll(std::uint32_t* guard) noexcept;
+void FutexWakeOne(std::uint32_t* guard) noexcept;
+void FutexWait(std::uint32_t* guard, std::uint32_t value) noexcept;
+
+// After uninit, the status is modified to ABORTED
+// (It's unsafe to reset it to NEW)
+template <typename Values>
+bool UninitNoRace(std::uint32_t* guard) noexcept {
+  if (Values::IsInited(*guard)) {
+    *guard = Values::ABORTED;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template <typename Values>
+bool Uninit(std::uint32_t* guard) noexcept {
+  std::uint32_t v = std::atomic_ref(*guard).load(std::memory_order_acquire);
+  while (Values::IsInited(v)) {
+    if (std::atomic_ref(*guard).compare_exchange_weak(
+            v, Values::ABORTED, std::memory_order_acquire,
+            std::memory_order_acquire))
+      return true;
+  }
+  return false;
+}
+
+template <typename Values>
+bool Lock(std::uint32_t* guard, std::uint32_t v) noexcept {
+  for (;;) {
+    while (v == Values::NEW || v == Values::ABORTED) {
+      if (std::atomic_ref(*guard).compare_exchange_weak(
+              v, (v == Values::NEW) ? Values::RUNNING : Values::RUNNING_WAITING,
+              std::memory_order_acquire, std::memory_order_relaxed)) {
+        return true;
+      }
+    }
+
+    if (Values::IsInited(v)) return false;
+
+    if (v != Values::RUNNING_WAITING) {
+      if (!std::atomic_ref(*guard).compare_exchange_strong(
+              v, Values::RUNNING_WAITING, std::memory_order_acquire,
+              std::memory_order_relaxed) &&
+          v != Values::RUNNING_WAITING) {
+        continue;
+      }
+    }
+    FutexWait(guard, v);
+    v = std::atomic_ref(*guard).load(std::memory_order_relaxed);
+  }
+}
+
+void Release(std::uint32_t* guard, std::uint32_t value,
+             std::uint32_t running_waiting_value) noexcept;
+
+void Abort(std::uint32_t* guard, std::uint32_t aborted_value) noexcept;
+
+template <typename Values>
+void Release(std::uint32_t* guard, std::uint32_t value) noexcept {
+  Release(guard, value, Values::RUNNING_WAITING);
+}
+
+template <typename Values>
+void Abort(std::uint32_t* guard) noexcept {
+  Abort(guard, Values::ABORTED);
+}
+
+template <typename Values, typename Foo, typename... Args>
+inline bool InitImpl(std::uint32_t* guard, Foo&& foo, Args&&... args) noexcept(
+    noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
+  if (tweak::SINGLE_THREADED) {
+    if (Values::IsInited(*guard)) {
+      return false;
+    } else {
+      std::uint32_t done_value = Values::ABORTED;
+      CBU_DEFER({
+        if (Values::IsInited(done_value))
+          *guard = done_value;
+        else
+          *guard = Values::ABORTED;
+      });
+      done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
+      return Values::IsInited(done_value);
+    }
+  }
+
+  std::uint32_t v = std::atomic_ref(*guard).load(std::memory_order_relaxed);
+  if (!Values::IsInited(v) && Lock<Values>(guard, v)) {
+    std::uint32_t done_value = Values::ABORTED;
+    CBU_DEFER({
+      if (Values::IsInited(done_value))
+        Release<Values>(guard, done_value);
+      else
+        Abort<Values>(guard);
+    });
+    done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
+    return Values::IsInited(done_value);
+  } else {
+    return false;
+  }
+}
+
+}  // namespace init_guard
+
+// Generic interface
 class InitGuard {
+ private:
+  struct Values {
+    static constexpr std::uint32_t NEW = 0;
+    static constexpr std::uint32_t ABORTED = 1;
+    static constexpr std::uint32_t RUNNING = 2;
+    static constexpr std::uint32_t RUNNING_WAITING = 3;
+    static constexpr std::uint32_t DONE = 4;
+
+    static constexpr bool IsInited(std::uint32_t v) noexcept {
+      return v == DONE;
+    }
+  };
+
  public:
   constexpr InitGuard() noexcept = default;
   InitGuard(const InitGuard&) = delete;
   InitGuard& operator=(const InitGuard&) = delete;
 
-  // Low-level interface.  Only use this if you know exactly what you're doing.
-  enum struct LowLevelInit : std::uint32_t {};
-  explicit constexpr InitGuard(LowLevelInit v) noexcept
-      : v_(static_cast<std::uint32_t>(v)) {}
-
-  // This is the low-level interface, the callback should specify the
-  // value representing "DONE" to be stored in v_.
-  // Only use this if you know exactly what you're doing.
-  template <typename Foo, typename... Args>
-  bool init_with_reuse(Foo&& foo, Args&&... args) noexcept(
-      noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
-    if (tweak::SINGLE_THREADED) {
-      if (inited(v_)) {
-        return false;
-      } else {
-        int done_value = ABORTED;
-        CBU_DEFER({
-          if (inited(done_value))
-            v_ = done_value;
-          else
-            v_ = ABORTED;
-        });
-        done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
-        return inited(done_value);
-      }
-    }
-
-    int v = std::atomic_ref(v_).load(std::memory_order_relaxed);
-    if (!inited(v) && guard_lock(v)) {
-      int done_value = ABORTED;
-      CBU_DEFER({
-        if (inited(done_value))
-          guard_release(done_value);
-        else
-          guard_abort();
-      });
-      done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
-      return inited(done_value);
-    } else {
-      return false;
-    }
-  }
-
   // This is the normal interface you should use.
   template <typename Foo, typename... Args>
   bool init(Foo&& foo, Args&&... args) noexcept(
       noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
-    return init_with_reuse([&]() noexcept(noexcept(std::forward<Foo>(foo)(
-                               std::forward<Args>(args)...))) {
-      std::forward<Foo>(foo)(std::forward<Args>(args)...);
-      return DEFAULT_DONE;
-    });
+    return init_guard::InitImpl<Values>(
+        &guard_, [&]() noexcept(noexcept(
+                     std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
+          std::forward<Foo>(foo)(std::forward<Args>(args)...);
+          return Values::DONE;
+        });
   }
 
   // IMPORTANT: The status may be changed after this function returns
   bool inited() const noexcept {
     if (tweak::SINGLE_THREADED)
-      return inited(v_);
+      return inited(guard_);
     else
-      return inited(std::atomic_ref(v_).load(std::memory_order_acquire));
+      return inited(std::atomic_ref(guard_).load(std::memory_order_acquire));
   }
 
-  bool inited_no_race() const noexcept { return inited(v_); }
+  bool inited_no_race() const noexcept { return inited(guard_); }
 
-  // After unit, the status is modified to ABORTED
-  // (It's unsafe to reset it to INIT)
-  bool uninit() noexcept;
+  bool uninit() noexcept { return init_guard::Uninit<Values>(&guard_); }
 
   bool uninit_no_race() noexcept {
-    if (inited(v_)) {
-      v_ = ABORTED;
-      return true;
-    } else {
-      return false;
-    }
+    return init_guard::UninitNoRace<Values>(&guard_);
   }
 
-  static constexpr bool inited(int v) noexcept { return v >= MIN_DONE; }
-
-  // Use this only if you know exactly what you're doing
-  // Typically it's only used by LazyFD and similar situations
-  constexpr const int* raw_value_ptr() const noexcept { return &v_; }
-  constexpr int* raw_value_ptr(int v) noexcept { return &v_; }
+  static constexpr bool inited(int v) noexcept { return Values::IsInited(v); }
 
  private:
-  bool guard_lock(int v) noexcept;
-  void guard_release(int v = DEFAULT_DONE) noexcept;
-  void guard_abort() noexcept;
-
- public:
-  // Intentionally use negative values, so that 0 and positive values can be
-  // used for other purposes (e.g. as FD)
-  enum {
-    INIT = std::numeric_limits<int>::min(),
-    ABORTED,
-    RUNNING,
-    RUNNING_WAITING,
-    MIN_DONE,
-    DEFAULT_DONE = 0,
-    // All other values are also considered "DONE"
-  };
-
- private:
-  int v_{INIT};
+  std::uint32_t guard_{Values::NEW};
 };
 
 template <typename T>
@@ -163,9 +212,10 @@ class LazyInit {
 
   template <typename... Args>
   bool init(Args&&... args) noexcept(noexcept(T(std::forward<Args>(args)...))) {
-    return guard_.init([&, this]() {
-      std::construct_at(pointer(), std::forward<Args>(args)...);
-    });
+    return guard_.init(
+        [&, this]() noexcept(noexcept(T(std::forward<Args>(args)...))) {
+          std::construct_at(pointer(), std::forward<Args>(args)...);
+        });
   }
 
   // IMPORTANT: The status may be changed after this function returns

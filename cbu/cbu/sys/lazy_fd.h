@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2021-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,47 +28,49 @@
 
 #pragma once
 
-#include <atomic>
-#include <limits>
-#include <memory>
-#include <new>
+#include <cstdint>
+#include <utility>
 
-#include "cbu/compat/atomic_ref.h"
 #include "cbu/sys/init_guard.h"
 
 namespace cbu {
 
 // Like ScopedFD, but supports atomic lazy initialization
 class LazyFD {
+ private:
+  struct Values {
+    static constexpr std::uint32_t NEW = -1;
+    static constexpr std::uint32_t ABORTED = -2;
+    static constexpr std::uint32_t RUNNING = -3;
+    static constexpr std::uint32_t RUNNING_WAITING = -4;
+
+    static constexpr bool IsInited(int fd) noexcept { return fd >= 0; }
+  };
+
  public:
   explicit constexpr LazyFD(int fd = -1) noexcept
-      : ig_(InitGuard::LowLevelInit(negative_to_init(fd))) {}
+      : guard_(fd >= 0 ? fd : Values::NEW) {}
 
   ~LazyFD() noexcept {
-    int fd = *ig_.raw_value_ptr();
+    int fd = guard_;
     if (fd >= 0) do_close(fd);
   }
 
   LazyFD(const LazyFD&) = delete;
   LazyFD& operator=(const LazyFD&) = delete;
 
-  constexpr int fd() const noexcept { return *ig_.raw_value_ptr(); }
+  constexpr int fd() const noexcept { return guard_; }
   constexpr operator int() const noexcept { return fd(); }
   explicit operator bool() const = delete;
 
   template <typename Foo, typename... Args>
-  void init(Foo&& foo, Args&&... args) noexcept(
+  bool init(Foo&& foo, Args&&... args) noexcept(
       noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
-    ig_.init_with_reuse(std::forward<Foo>(foo), std::forward<Args>(args)...);
-  }
-
- private:
-  static constexpr int negative_to_init(int fd) noexcept {
-    return fd >= 0 ? fd : InitGuard::INIT;
-  }
-
-  static constexpr int negative_to_aborted(int fd) noexcept {
-    return fd >= 0 ? fd : InitGuard::ABORTED;
+    return init_guard::InitImpl<Values>(
+        &guard_, [&]() noexcept(noexcept(
+                     std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
+          return std::forward<Foo>(foo)(std::forward<Args>(args)...);
+        });
   }
 
  private:
@@ -77,7 +79,7 @@ class LazyFD {
   static void do_close(int fd) noexcept;
 
  private:
-  InitGuard ig_;
+  std::uint32_t guard_;
 };
 
 }  // namespace cbu

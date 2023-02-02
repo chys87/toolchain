@@ -34,54 +34,31 @@
 #include "cbu/fsyscall/fsyscall.h"
 
 namespace cbu {
+namespace init_guard {
 
-bool InitGuard::uninit() noexcept {
-  if (tweak::SINGLE_THREADED) return uninit_no_race();
-  int v = std::atomic_ref(v_).load(std::memory_order_acquire);
-  while (inited(v)) {
-    if (std::atomic_ref(v_).compare_exchange_weak(
-            v, ABORTED, std::memory_order_acquire, std::memory_order_acquire)) {
-      return true;
-    }
-  }
-  return false;
+void FutexWakeAll(std::uint32_t* guard) noexcept {
+  fsys_futex3(guard, FUTEX_WAKE_PRIVATE, std::numeric_limits<int>::max());
 }
 
-bool InitGuard::guard_lock(int v) noexcept {
-  for (;;) {
-    while (v == INIT || v == ABORTED) {
-      if (std::atomic_ref(v_).compare_exchange_weak(
-              v, (v == INIT) ? RUNNING : RUNNING_WAITING,
-              std::memory_order_acquire, std::memory_order_relaxed)) {
-        return true;
-      }
-    }
-
-    if (inited(v)) return false;
-
-    if (v != RUNNING_WAITING) {
-      if (!std::atomic_ref(v_).compare_exchange_strong(
-              v, RUNNING_WAITING, std::memory_order_acquire,
-              std::memory_order_relaxed) &&
-          v != RUNNING_WAITING) {
-        continue;
-      }
-    }
-    fsys_futex4(&v_, FUTEX_WAIT_PRIVATE, v, nullptr);
-    v = std::atomic_ref(v_).load(std::memory_order_relaxed);
-  }
+void FutexWakeOne(std::uint32_t* guard) noexcept {
+  fsys_futex3(guard, FUTEX_WAKE_PRIVATE, 1);
 }
 
-void InitGuard::guard_release(int v) noexcept {
-  int old_v = std::atomic_ref(v_).exchange(v, std::memory_order_release);
-  if (old_v == RUNNING_WAITING)
-    fsys_futex3(&v_, FUTEX_WAKE_PRIVATE, std::numeric_limits<int>::max());
+void FutexWait(std::uint32_t* guard, std::uint32_t value) noexcept {
+  fsys_futex4(guard, FUTEX_WAIT_PRIVATE, value, nullptr);
 }
 
-void InitGuard::guard_abort() noexcept {
-  std::atomic_ref(v_).store(ABORTED, std::memory_order_release);
+void Release(std::uint32_t* guard, std::uint32_t value,
+             std::uint32_t running_waiting_value) noexcept {
+  int old_v = std::atomic_ref(*guard).exchange(value, std::memory_order_release);
+  if (old_v == running_waiting_value) FutexWakeAll(guard);
+}
+
+void Abort(std::uint32_t* guard, std::uint32_t aborted_value) noexcept {
+  std::atomic_ref(*guard).store(aborted_value, std::memory_order_release);
   // Only need to wake up one, which (if existent) will retry construction
-  fsys_futex3(&v_, FUTEX_WAKE_PRIVATE, 1);
+  FutexWakeOne(guard);
 }
 
+}  // namespace init_guard
 }  // namespace cbu
