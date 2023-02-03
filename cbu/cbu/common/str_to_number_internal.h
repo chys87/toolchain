@@ -146,13 +146,38 @@ inline constexpr std::optional<unsigned> parse_one_digit(
 }
 
 template <typename T>
-inline constexpr T powu(T a, unsigned t, T r = T(1)) {
+inline constexpr T powu(T a, unsigned t, T r = T(1)) noexcept {
   while (t) {
     if (t & 1) r *= a;
     t >>= 1;
     a *= a;
   }
   return r;
+}
+
+// "daz" stands for "denormal as zero"
+template <typename T>
+inline constexpr T pow2_daz(int t) noexcept {
+  if constexpr (!std::numeric_limits<T>::is_iec559 || sizeof(T) > 8) {
+    return powu(t >= 0 ? T(2) : T(.5), t >= 0 ? t : -t);
+  } else {
+    int lo = std::numeric_limits<T>::min_exponent - 1;
+    int hi = std::numeric_limits<T>::max_exponent - 1;
+    if (t < lo || t > hi) [[unlikely]]
+      return t < 0 ? T(0) : T(INFINITY);
+    if consteval {
+      return powu(t >= 0 ? T(2) : T(.5), t >= 0 ? t : -t);
+    } else {
+      using UT =
+          std::conditional_t<(sizeof(T) <= 4), std::uint32_t, std::uint64_t>;
+      union {
+        UT ut;
+        T res;
+      };
+      ut = UT(unsigned(t - lo + 1)) << (std::numeric_limits<T>::digits - 1);
+      return res;
+    }
+  }
 }
 
 // Essentially the same as add_overflow in fastarith.h, but
@@ -253,11 +278,11 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
     // Handle base 0
     if (s + 1 < e && *s == '0') {
       ++s;
-      if ((*s | 0x20) == 'x')
+      if (*s == 'x' || *s == 'X')
         return str_to_integer<T, partial, decltype(Tag() + HexTag())>(s + 1, e);
       else
         return str_to_integer<T, partial, decltype(Tag() + OctTag())>(
-            s + ((*s | 0x20) == 'o'), e);
+            s + (*s == 'o' || *s == 'O'), e);
     } else {
       return str_to_integer<T, partial, decltype(Tag() + DecTag())>(s, e);
     }
@@ -411,8 +436,8 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
 
       UT u = 0;
       std::optional<unsigned> xdigit_opt;
-      while (s < e && (xdigit_opt = parse_one_digit<16>(*s)) &&
-             u <= kHexMulLimit) {
+      while (u <= kHexMulLimit && s < e &&
+             (xdigit_opt = parse_one_digit<16>(*s))) {
         ++s;
         u = u * 16 + *xdigit_opt;
       }
@@ -425,8 +450,8 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
 
       if (s < e && *s == '.') {
         ++s;
-        while (s < e && (xdigit_opt = parse_one_digit<16>(*s)) &&
-               u <= kHexMulLimit) {
+        while (u <= kHexMulLimit && s < e &&
+               (xdigit_opt = parse_one_digit<16>(*s))) {
           u = u * 16 + *xdigit_opt;
           ++s;
           xpow2 -= 4;
@@ -447,8 +472,8 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
         return make_bad_ret();
 
       unsigned uexp = (*s++ - '0');
-      while (s < e && isdigit(*s) &&
-             uexp <= std::numeric_limits<unsigned>::max() / 16) {
+      while (uexp <= std::numeric_limits<unsigned>::max() / 16 && s < e &&
+             isdigit(*s)) {
         uexp = uexp * 10 + (*s++ - '0');
       }
       while (s < e && isdigit(*s)) ++s;
@@ -475,9 +500,7 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
           xpow2 -= std::numeric_limits<T>::min_exponent - 1;
         }
 
-        T mul = (xpow2 >= 0 ? 2 : .5);
-        unsigned xp = (xpow2 >= 0 ? xpow2 : -xpow2);
-        res = powu(mul, xp, res);
+        res *= pow2_daz<T>(xpow2);
       }
       return make_ret(res);
     }
@@ -494,8 +517,7 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
 
   UT u = 0;
 
-  while (s < e && isdigit(*s) && u <= kDecMulLimit)
-    u = u * 10 + (*s++ - '0');
+  while (u <= kDecMulLimit && s < e && isdigit(*s)) u = u * 10 + (*s++ - '0');
 
   int xpow10 = 0;
   while (s < e && isdigit(*s)) {
@@ -506,7 +528,7 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
   if (s < e && *s == '.') {
     ++s;
 
-    while (s < e && isdigit(*s) && u <= kDecMulLimit) {
+    while (u <= kDecMulLimit && s < e && isdigit(*s)) {
       u = u * 10 + (*s++ - '0');
       --xpow10;
     }
@@ -523,8 +545,8 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
       return make_bad_ret();
 
     unsigned uexp = (*s++ - '0');
-    while (s < e && isdigit(*s) &&
-           uexp <= std::numeric_limits<unsigned>::max() / 16) {
+    while (uexp <= std::numeric_limits<unsigned>::max() / 16 && s < e &&
+           isdigit(*s)) {
       uexp = uexp * 10 + (*s++ - '0');
     }
     while (s < e && isdigit(*s)) ++s;
@@ -540,24 +562,23 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
   int xpow5 = xpow10;
 
   // Try to reduce the exponent of 5, helping to reduce round errors.
-  while (xpow5 < 0 && (u % 5 == 0)) {
-    u /= 5;
-    ++xpow5;
-  }
-  while (xpow5 > 0 && (u <= (std::numeric_limits<ST>::max() / 5))) {
-    u *= 5;
-    --xpow5;
+  if (xpow5 < 0) {
+    while (xpow5 < 0 && (u % 5 == 0)) {
+      u /= 5;
+      ++xpow5;
+    }
+  } else {
+    while (xpow5 && (u <= (std::numeric_limits<ST>::max() / 5))) {
+      u *= 5;
+      --xpow5;
+    }
   }
 
   T res = sign(ST(u));
 
   // This check is necessary to avoid 0 * inf = nan
   if (u != 0) {
-    {
-      T mul = (xpow2 >= 0 ? 2 : .5);
-      unsigned xp = (xpow2 >= 0 ? xpow2 : -xpow2);
-      res = powu(mul, xp, res);
-    }
+    res *= pow2_daz<T>(xpow2);
 
     if (xpow5 != 0) {
       unsigned xp = (xpow5 >= 0 ? xpow5 : -xpow5);
