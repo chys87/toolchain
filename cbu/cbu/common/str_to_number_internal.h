@@ -26,6 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -50,7 +51,7 @@ namespace str_to_number_detail {
 
 template <int base_, bool check_overflow_, bool halt_on_overflow_,
           unsigned long long overflow_threshold_>
-struct OptionTag {
+struct IntegerOptionTag {
   static constexpr int base = base_;
   static constexpr bool check_overflow = check_overflow_;
   static constexpr bool halt_on_overflow = halt_on_overflow_;
@@ -59,36 +60,36 @@ struct OptionTag {
   template <int new_base>
     requires(new_base == 0 || (new_base >= 2 && new_base <= 36))
   auto operator+(RadixTag<new_base>)
-      -> OptionTag<new_base, check_overflow, halt_on_overflow,
-                   overflow_threshold>;
+      -> IntegerOptionTag<new_base, check_overflow, halt_on_overflow,
+                          overflow_threshold>;
 
   auto operator+(IgnoreOverflowTag)
-      -> OptionTag<base, false, halt_on_overflow, overflow_threshold>;
+      -> IntegerOptionTag<base, false, halt_on_overflow, overflow_threshold>;
 
   auto operator+(HaltScanOnOverflowTag)
-      -> OptionTag<base, check_overflow, true, overflow_threshold>;
+      -> IntegerOptionTag<base, check_overflow, true, overflow_threshold>;
 
   template <unsigned long long threshold>
   auto operator+(OverflowThresholdTag<threshold>)
-      -> OptionTag<base, check_overflow, halt_on_overflow, threshold>;
+      -> IntegerOptionTag<base, check_overflow, halt_on_overflow, threshold>;
 };
 
-using DefaultOptionTag = OptionTag<10, true, false, ~0ull>;
+using IntegerDefaultOptionTag = IntegerOptionTag<10, true, false, ~0ull>;
 
 template <typename... Options>
-concept ValidOptions = requires(Options&&... options) {
-  {(DefaultOptionTag() + ... + options)};
+concept IntegerValidOptions = requires(Options&&... options) {
+  {(IntegerDefaultOptionTag() + ... + options)};
 };
 
 template <typename... Options>
-  requires ValidOptions<Options...>
-struct OptionParser {
-  using Tag = decltype((DefaultOptionTag() + ... + Options()));
+  requires IntegerValidOptions<Options...>
+struct IntegerOptionParser {
+  using Tag = decltype((IntegerDefaultOptionTag() + ... + Options()));
 };
 
 template <typename T, typename... Options>
-concept Supported =
-    std::integral<T> && sizeof(T) <= 8 && ValidOptions<Options...>;
+concept IntegerSupported =
+    std::integral<T> && sizeof(T) <= 8 && IntegerValidOptions<Options...>;
 
 template <typename T>
 using ConversionType = std::conditional_t<
@@ -123,18 +124,35 @@ inline constexpr StrToNumberPartialResult<T> replace_value(
   return {v, r.endptr};
 }
 
+constexpr bool isdigit(unsigned char c) noexcept {
+  return (c >= '0' && c <= '9');
+}
+
+constexpr bool isxdigit(unsigned char c) noexcept {
+  return isdigit(c) || ((c | 0x20) >= 'a' && (c | 0x20) <= 'f');
+}
+
 template <int base>
 inline constexpr std::optional<unsigned> parse_one_digit(
     std::uint8_t c) noexcept {
   if constexpr (base <= 10) {
     if (c >= '0' && c < '0' + base) return c - '0';
   } else {
-    if (c >= '0' && c <= '9')
-      return c - '0';
+    if (isdigit(c)) return c - '0';
     if ((c | 0x20) >= 'a' && (c | 0x20) < 'a' + (base - 10))
       return (((c | 0x20) - 'a') + 10);
   }
   return std::nullopt;
+}
+
+template <typename T>
+inline constexpr T powu(T a, unsigned t, T r = T(1)) {
+  while (t) {
+    if (t & 1) r *= a;
+    t >>= 1;
+    a *= a;
+  }
+  return r;
 }
 
 // Essentially the same as add_overflow in fastarith.h, but
@@ -201,13 +219,13 @@ inline constexpr std::optional<T> mul_base_add(T x, T digit) noexcept {
 
 template <std::integral T, bool partial, typename Tag>
 constexpr auto str_to_integer(const char* s, const char* e) noexcept {
-  auto make_ret = [&](std::optional<T> v) {
+  auto make_ret = [&](std::optional<T> v) constexpr noexcept {
     if constexpr (partial)
       return StrToNumberPartialResult<T>{v, s};
     else
       return v;
   };
-  auto make_bad_ret = [&] { return make_ret(std::nullopt); };
+  auto make_bad_ret = [&] constexpr noexcept { return make_ret(std::nullopt); };
 
   // Handle negative values
   if constexpr (std::is_signed_v<T>) {
@@ -280,6 +298,279 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
     return make_ret(val);
   }
 };
+
+template <bool supports_hex_ = false>
+struct FpOptionTag {
+  static constexpr bool supports_hex = supports_hex_;
+
+  template <int new_base>
+    requires(new_base == 0 || new_base == 10)
+  auto operator+(RadixTag<new_base>) -> FpOptionTag<new_base == 0>;
+};
+
+using FpDefaultOptionTag = FpOptionTag<>;
+
+template <typename... Options>
+concept FpValidOptions = requires(Options&&... options) {
+  {(FpDefaultOptionTag() + ... + options)};
+};
+
+template <typename... Options>
+  requires FpValidOptions<Options...>
+struct FpOptionParser {
+  using Tag = decltype((FpDefaultOptionTag() + ... + Options()));
+};
+
+template <typename T, typename... Options>
+concept FpSupported = std::numeric_limits<T>::is_iec559 &&
+                      (std::numeric_limits<T>::digits < 63) &&
+                      FpValidOptions<Options...>;
+
+template <typename T>
+class FpSignApply {
+ public:
+  constexpr FpSignApply(bool negative = false) noexcept
+      : negative_(negative), sign_zero_(negative ? -T(0) : T(0)) {}
+  constexpr FpSignApply& operator=(bool negative) noexcept {
+    negative_ = negative;
+    sign_zero_ = negative ? -T(0) : T(0);
+    return *this;
+  }
+  constexpr T operator()(T val) noexcept {
+    if !consteval {
+#ifdef __AVX__
+      if constexpr (std::is_same_v<T, float>) {
+        asm ("vxorps %2, %1, %0" : "=x"(val) : "x"(val), "x"(sign_zero_));
+        return val;
+      } else if constexpr (std::is_same_v<T, double>) {
+        asm ("vxorpd %2, %1, %0" : "=x"(val) : "x"(val), "x"(sign_zero_));
+        return val;
+      }
+#endif
+    }
+    if (negative_) val = -val;
+    return val;
+  }
+
+ private:
+  bool negative_;
+  T sign_zero_;
+};
+
+template <std::floating_point T, bool partial, typename Tag>
+constexpr auto str_to_fp(const char* s, const char* e) noexcept {
+  auto make_ret = [&](std::optional<T> v) constexpr noexcept {
+    if constexpr (partial)
+      return StrToNumberPartialResult<T>{v, s};
+    else
+      return v;
+  };
+  auto make_bad_ret = [&] constexpr noexcept { return make_ret(std::nullopt); };
+
+  if (s >= e) [[unlikely]]
+    return make_bad_ret();
+
+  FpSignApply<T> sign;
+  if (s < e && (*s == '+' || *s == '-')) sign = (*s++ == '-');
+
+  // Handle inf and nan
+  if (s < e && std::uintptr_t(e - s) >= 3) {
+    std::uint32_t vl = std::uint8_t(s[0]) | (std::uint8_t(s[1]) << 8) |
+                       (std::uint8_t(s[2]) << 16) | 0x202020;
+    const std::uint32_t kInf = 'i' | ('n' << 8) | ('f' << 16);
+    const std::uint32_t kNaN = 'n' | ('a' << 8) | ('n' << 16);
+    if (vl == kInf || vl == kNaN) {
+      T val = (vl == kInf) ? INFINITY : NAN;
+      s += 3;
+      if constexpr (!partial) {
+        if (s != e) return make_bad_ret();
+      }
+      return make_ret(sign(val));
+    }
+  }
+
+  using UT = std::conditional_t<(std::numeric_limits<T>::digits < 31),
+                                std::uint32_t, std::uint64_t>;
+  using ST = std::make_signed_t<UT>;
+  constexpr UT kDecMulLimit = (std::numeric_limits<ST>::max() - 9) / 10;
+  constexpr UT kHexMulLimit = (std::numeric_limits<ST>::max() - 15) / 16;
+
+  // Handle hex
+  if constexpr (Tag::supports_hex) {
+    if (s < e && s + 1 < e && *s == '0' && (s[1] == 'x' || s[1] == 'X')) {
+      s += 2;
+
+      // The next character should either be an xdigit, or a "." followed by an
+      // xdigit.
+      if (s < e && isxdigit(*s))
+        ;
+      else if (s < e && *s == '.' && (s + 1 < e) && isxdigit(s[1]))
+        ;
+      else
+        return make_bad_ret();
+
+      UT u = 0;
+      std::optional<unsigned> xdigit_opt;
+      while (s < e && (xdigit_opt = parse_one_digit<16>(*s)) &&
+             u <= kHexMulLimit) {
+        ++s;
+        u = u * 16 + *xdigit_opt;
+      }
+
+      int xpow2 = 0;
+      while (s < e && isxdigit(*s)) {
+        xpow2 += 4;
+        ++s;
+      }
+
+      if (s < e && *s == '.') {
+        ++s;
+        while (s < e && (xdigit_opt = parse_one_digit<16>(*s)) &&
+               u <= kHexMulLimit) {
+          u = u * 16 + *xdigit_opt;
+          ++s;
+          xpow2 -= 4;
+        }
+
+        while (s < e && isxdigit(*s)) ++s;
+      }
+
+      // For hexadecimal floating-point values, the exponential part is
+      // mandatory.
+      if (s >= e || (*s != 'p' && *s != 'P')) [[unlikely]]
+        return make_bad_ret();
+      ++s;
+
+      unsigned exp_sign = 0;
+      if (s < e && (*s == '+' || *s == '-')) exp_sign = (*s++ == '-') ? -1u : 0;
+      if (s >= e || !isdigit(*s)) [[unlikely]]
+        return make_bad_ret();
+
+      unsigned uexp = (*s++ - '0');
+      while (s < e && isdigit(*s) &&
+             uexp <= std::numeric_limits<unsigned>::max() / 16) {
+        uexp = uexp * 10 + (*s++ - '0');
+      }
+      while (s < e && isdigit(*s)) ++s;
+
+      if constexpr (!partial) {
+        if (s != e) return make_bad_ret();
+      }
+
+      xpow2 += (uexp ^ exp_sign) - exp_sign;
+
+      T res = sign(ST(u));
+
+      // This check is necessary to avoid 0 * inf = nan
+      if (u != 0 && xpow2 != 0) {
+        // Reduce xpow2 to closer to 0 to prevent 2 ** xpow2 from overflow.
+        // We don't need to use a while loop - if we have to do this more than
+        // once, the final result definitely would be 0, even taking into
+        // account of denormal numbers.
+        // Also, we don't need to check for large xpow2 vlaues, because we
+        // multiply the result to an integer - if 2**xpow2 would overflow then
+        // the final result would too.
+        if (xpow2 < std::numeric_limits<T>::min_exponent - 1) {
+          res *= powu(T(.5), -(std::numeric_limits<T>::min_exponent - 1));
+          xpow2 -= std::numeric_limits<T>::min_exponent - 1;
+        }
+
+        T mul = (xpow2 >= 0 ? 2 : .5);
+        unsigned xp = (xpow2 >= 0 ? xpow2 : -xpow2);
+        res = powu(mul, xp, res);
+      }
+      return make_ret(res);
+    }
+  }
+
+  // Normal path: decimal
+  // The next character should either be a digit, or a "." followed by a digit.
+  if (s < e && isdigit(*s))
+    ;
+  else if (s < e && *s == '.' && (s + 1 < e) && isdigit(s[1]))
+    ;
+  else
+    return make_bad_ret();
+
+  UT u = 0;
+
+  while (s < e && isdigit(*s) && u <= kDecMulLimit)
+    u = u * 10 + (*s++ - '0');
+
+  int xpow10 = 0;
+  while (s < e && isdigit(*s)) {
+    ++xpow10;
+    ++s;
+  }
+
+  if (s < e && *s == '.') {
+    ++s;
+
+    while (s < e && isdigit(*s) && u <= kDecMulLimit) {
+      u = u * 10 + (*s++ - '0');
+      --xpow10;
+    }
+
+    while (s < e && isdigit(*s)) ++s;
+  }
+
+  if (s < e && (*s == 'e' || *s == 'E')) {
+    ++s;
+
+    unsigned exp_sign = 0;
+    if (s < e && (*s == '+' || *s == '-')) exp_sign = (*s++ == '-') ? -1u : 0;
+    if (s >= e || !isdigit(*s)) [[unlikely]]
+      return make_bad_ret();
+
+    unsigned uexp = (*s++ - '0');
+    while (s < e && isdigit(*s) &&
+           uexp <= std::numeric_limits<unsigned>::max() / 16) {
+      uexp = uexp * 10 + (*s++ - '0');
+    }
+    while (s < e && isdigit(*s)) ++s;
+
+    xpow10 += (uexp ^ exp_sign) - exp_sign;
+  }
+
+  if constexpr (!partial) {
+    if (s != e) return make_bad_ret();
+  }
+
+  int xpow2 = xpow10;
+  int xpow5 = xpow10;
+
+  // Try to reduce the exponent of 5, helping to reduce round errors.
+  while (xpow5 < 0 && (u % 5 == 0)) {
+    u /= 5;
+    ++xpow5;
+  }
+  while (xpow5 > 0 && (u <= (std::numeric_limits<ST>::max() / 5))) {
+    u *= 5;
+    --xpow5;
+  }
+
+  T res = sign(ST(u));
+
+  // This check is necessary to avoid 0 * inf = nan
+  if (u != 0) {
+    {
+      T mul = (xpow2 >= 0 ? 2 : .5);
+      unsigned xp = (xpow2 >= 0 ? xpow2 : -xpow2);
+      res = powu(mul, xp, res);
+    }
+
+    if (xpow5 != 0) {
+      unsigned xp = (xpow5 >= 0 ? xpow5 : -xpow5);
+      T r = powu(T(5), xp);
+      if (xpow5 >= 0)
+        res *= r;
+      else
+        res /= r;
+    }
+  }
+
+  return make_ret(res);
+}
 
 }  // namespace str_to_number_detail
 }  // namespace cbu

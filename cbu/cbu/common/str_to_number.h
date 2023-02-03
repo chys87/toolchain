@@ -62,9 +62,9 @@ namespace cbu {
 //                          (str_to_integer_partial mode only, affects returned
 //                           endptr)
 template <std::integral T, typename... Options>
-  requires(str_to_number_detail::Supported<T, Options...>)
+  requires(str_to_number_detail::IntegerSupported<T, Options...>)
 constexpr std::optional<T> str_to_integer(const char* s, const char* e) {
-  using Tag = typename str_to_number_detail::OptionParser<
+  using Tag = typename str_to_number_detail::IntegerOptionParser<
       OverflowThresholdTag<str_to_number_detail::OverflowThresholdByType<T>>,
       Options...>::Tag;
   using CT = str_to_number_detail::ConversionType<T>;
@@ -78,16 +78,16 @@ constexpr std::optional<T> str_to_integer(const char* s, const char* e) {
 }
 
 template <std::integral T, typename... Options>
-  requires(str_to_number_detail::Supported<T, Options...>)
+  requires(str_to_number_detail::IntegerSupported<T, Options...>)
 constexpr auto str_to_integer(std::string_view s) noexcept {
   return str_to_integer<T, Options...>(s.data(), s.data() + s.size());
 }
 
 template <std::integral T, typename... Options>
-  requires(str_to_number_detail::Supported<T, Options...>)
+  requires(str_to_number_detail::IntegerSupported<T, Options...>)
 constexpr auto str_to_integer_partial(const char* s, const char* e) noexcept
     -> StrToNumberPartialResult<T> {
-  using Tag = typename str_to_number_detail::OptionParser<
+  using Tag = typename str_to_number_detail::IntegerOptionParser<
       OverflowThresholdTag<str_to_number_detail::OverflowThresholdByType<T>>,
       Options...>::Tag;
   using CT = str_to_number_detail::ConversionType<T>;
@@ -102,7 +102,7 @@ constexpr auto str_to_integer_partial(const char* s, const char* e) noexcept
 }
 
 template <std::integral T, typename... Options>
-  requires(str_to_number_detail::Supported<T, Options...>)
+  requires(str_to_number_detail::IntegerSupported<T, Options...>)
 constexpr auto str_to_integer_partial(std::string_view s) noexcept {
   return str_to_integer_partial<T, Options...>(s.data(), s.data() + s.size());
 }
@@ -111,6 +111,61 @@ constexpr auto str_to_integer_partial(std::string_view s) noexcept {
 template <int base = 0, std::integral T>
 constexpr bool SimpleAtoi(std::string_view s, T* res) noexcept {
   auto value_opt = str_to_integer<T, RadixTag<base>>(s);
+  if (value_opt) *res = *value_opt;
+  return value_opt.has_value();
+}
+
+// Conversion from string to float or double
+// This is like absl::SimpleAtof/absl::SimpleAtod, but supports more types and
+// has different return types.
+//
+// str_to_fp converts the whole string;
+//
+// str_to_fp_partial converts as many characters as possible, and returns
+// the value and the endptr (pointer past the last converted character).
+//
+// Supported tags:
+//
+//   DecTag: decimal (default)
+//   AutoRadixTag: auto detect radix ("0x" for hex; otherwise dec)
+template <typename T, typename... Options>
+  requires(str_to_number_detail::FpSupported<T, Options...>)
+constexpr std::optional<T> str_to_fp(const char* s, const char* e) noexcept {
+  return str_to_number_detail::str_to_fp<
+      T, false, typename str_to_number_detail::FpOptionParser<Options...>::Tag>(
+      s, e);
+}
+
+template <typename T, typename... Options>
+  requires(str_to_number_detail::FpSupported<T, Options...>)
+constexpr auto str_to_fp(std::string_view s) noexcept {
+  return str_to_fp<T, Options...>(s.data(), s.data() + s.size());
+}
+
+template <typename T, typename... Options>
+  requires(str_to_number_detail::FpSupported<T, Options...>)
+constexpr auto str_to_fp_partial(const char* s, const char* e) noexcept
+    -> StrToNumberPartialResult<T> {
+  return str_to_number_detail::str_to_fp<
+      T, true, typename str_to_number_detail::FpOptionParser<Options...>::Tag>(
+      s, e);
+}
+
+template <typename T, typename... Options>
+  requires(str_to_number_detail::FpSupported<T, Options...>)
+constexpr auto str_to_fp_partial(std::string_view s) noexcept {
+  return str_to_fp_partial<T, Options...>(s.data(), s.data() + s.size());
+}
+
+// Mimics absl::SimpleAtof and absl::SimpleAtod
+constexpr bool SimpleAtof(std::string_view s, float* res) noexcept {
+  auto value_opt = str_to_fp<float>(s);
+  if (value_opt) *res = *value_opt;
+  return value_opt.has_value();
+}
+
+constexpr bool SimpleAtod(std::string_view s, double* res) noexcept {
+  auto value_opt = str_to_fp<double>(s);
   if (value_opt) *res = *value_opt;
   return value_opt.has_value();
 }
