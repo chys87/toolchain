@@ -103,6 +103,11 @@ TEST(StrToIntegerTest, Overflow) {
 TEST(StrToIntegerTest, Partial) {
   EXPECT_EQ(str_to_integer_partial<int64_t>("1 + 2 = 3").value_opt.value_or(0),
             1);
+
+  // Tests that we don't get trapped in the octal path and results in an error
+  EXPECT_EQ((str_to_integer_partial<int64_t, AutoRadixTag>("0 = 0"))
+                .value_opt.value_or(-1),
+            0);
 }
 
 TEST(StrToIntegerTest, Constexpr) {

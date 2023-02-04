@@ -277,15 +277,13 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   } else if constexpr (Tag::base == 0) {
     // Handle base 0
     if (s + 1 < e && *s == '0') {
-      ++s;
-      if (*s == 'x' || *s == 'X')
-        return str_to_integer<T, partial, decltype(Tag() + HexTag())>(s + 1, e);
-      else
+      if (s[1] == 'x' || s[1] == 'X')
+        return str_to_integer<T, partial, decltype(Tag() + HexTag())>(s + 2, e);
+      else if ((s[1] == 'o' || s[1] == 'O') || isdigit(s[1]))
         return str_to_integer<T, partial, decltype(Tag() + OctTag())>(
-            s + (*s == 'o' || *s == 'O'), e);
-    } else {
-      return str_to_integer<T, partial, decltype(Tag() + DecTag())>(s, e);
+            s + 1 + (s[1] == 'o' || s[1] == 'O'), e);
     }
+    return str_to_integer<T, partial, decltype(Tag() + DecTag())>(s, e);
   } else {
     // Now T is unsigned, and base is between 2 and 36
     if (s >= e) [[unlikely]]
