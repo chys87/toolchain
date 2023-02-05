@@ -26,6 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <math.h>
+
 #ifdef __SSE__
 #  include <x86intrin.h>
 #endif
