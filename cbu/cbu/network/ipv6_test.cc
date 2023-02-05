@@ -80,5 +80,36 @@ TEST(IPv6Test, IPv6PortTest) {
       "[::ffff:192.168.25.54]:79"sv);
 }
 
+TEST(IPv6Test, FromStringTest) {
+  auto test_valid = [](std::string_view src, std::string_view standard = {}) {
+    auto ipv6_opt = IPv6::FromString(src);
+    ASSERT_TRUE(ipv6_opt.has_value()) << src;
+    ASSERT_EQ(std::string_view(ipv6_opt->ToString()),
+              standard.empty() ? src : standard);
+  };
+  auto test_invalid = [](std::string_view src) {
+    auto ipv6_opt = IPv6::FromString(src);
+    ASSERT_FALSE(ipv6_opt.has_value()) << src;
+  };
+
+  test_valid("192.168.1.5", "::ffff:192.168.1.5");
+  test_invalid("[192.168.1.5]");
+  test_valid("::ffff:192.168.1.5");
+  test_valid("[::ffff:192.168.1.5]", "::ffff:192.168.1.5");
+  test_invalid("ffff:192.168.1.5");
+  test_valid("::1");
+  test_valid("::1:abcd");
+  test_valid("abcd::");
+  test_valid("abcd::1");
+  test_valid("abcd::1:dead:beef");
+  test_valid("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff");
+  test_invalid(":ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff");
+  test_invalid("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:");
+  test_invalid("0ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff");
+  test_invalid("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:abcd");
+  test_valid("64:ff9b::", "64:ff9b::0.0.0.0");
+  test_valid("64:ff9b::1.2.3.4", "64:ff9b::1.2.3.4");
+}
+
 }  // namespace
 }  // namespace cbu

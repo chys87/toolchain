@@ -132,6 +132,11 @@ class IPv6 {
     }
   }
 
+  // This attempts to support all valid string representations of IPv6,
+  // as well as IPv4 addresses (only "a.b.c.d" and no other archic formats;
+  // translated to ::ffff:a.b.c.d)
+  static std::optional<IPv6> FromString(std::string_view s) noexcept;
+
  private:
 #ifdef __SSE4_2__
   __m128i ToVec() const noexcept {

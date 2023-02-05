@@ -198,6 +198,115 @@ short_string<IPv6::kMaxStringLen> IPv6::ToString() const noexcept {
   return Format(a_);
 }
 
+namespace {
+
+template <typename T>
+struct ParseResult {
+  bool ok;
+  T v;
+  const char* s;
+};
+
+
+ParseResult<uint16_t> parse_hex_uint16(const char* s, const char* e) noexcept {
+  if (s >= e) [[unlikely]]
+    return {false};
+  unsigned res = 0;
+  for (int i = 0; i < 4 && s < e; ++i) {
+    unsigned char c = *s;
+    if (c >= '0' && c <= '9') {
+      res = res * 16 + (c - '0');
+    } else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f') {
+      res = res * 16 + ((c | 0x20) - 'a' + 10);
+    } else {
+      if (i == 0) [[unlikely]]
+        return {false};
+      break;
+    }
+    ++s;
+  }
+  return {true, uint16_t(res), s};
+}
+
+}  // namespace
+
+std::optional<IPv6> IPv6::FromString(std::string_view s) noexcept {
+  // First check if it's a valid IPv4 address
+  if (std::optional<IPv4> ipv4_opt = IPv4::from_common_string(s))
+    return IPv6(*ipv4_opt);
+
+  // Surrounded by [ ]
+  if (s.size() >= 2 && s.starts_with('[') && s.ends_with(']'))
+    s = s.substr(1, s.size() - 2);
+
+  in6_addr addr;
+  uint16_t* parts = addr.s6_addr16;
+  int omit_pos = -1;
+  unsigned k = 0;
+
+  const char* p = s.data();
+  const char* e = p + s.size();
+
+  // Special case: starts with '::'
+  if (p < e && *p == ':') {
+    ++p;
+    if (p >= e || *p != ':') [[unlikely]]
+      return std::nullopt;
+    ++p;
+    omit_pos = 0;
+  }
+
+  while (p < e) {
+    if (k >= 8) [[unlikely]]
+      return std::nullopt;
+    auto [ok, v, endptr] = parse_hex_uint16(p, e);
+    if (!ok) [[unlikely]]
+      return std::nullopt;
+    // Check for special case: IPv4 mapped IPv6
+    if (endptr < e && *endptr == '.') {
+      if (k > 6 || (k < 6 && omit_pos < 0)) [[unlikely]]
+        return std::nullopt;
+      std::optional<IPv4> ipv4_opt = IPv4::from_common_string({p, e});
+      if (!ipv4_opt) [[unlikely]]
+        return std::nullopt;
+      uint32_t ipv4_be = ipv4_opt->value(std::endian::big);
+      memcpy(parts + k, &ipv4_be, 4);
+      k += 2;
+      break;
+    }
+
+    parts[k++] = bswap_be(uint16_t(v));
+    p = endptr;
+    if (p >= e) break;
+    if (k >= 8) [[unlikely]]
+      return std::nullopt;
+    if (*p++ != ':') [[unlikely]]
+      return std::nullopt;
+    if (p < e && *p == ':') {
+      if (omit_pos >= 0) [[unlikely]]
+        return std::nullopt;
+      ++p;
+      omit_pos = k;
+    }
+  }
+
+  if (k != 8) {
+    if (omit_pos < 0) [[unlikely]]
+      return std::nullopt;
+    unsigned omit_cnt = 8 - k;
+    unsigned move_cnt = k - omit_pos;
+#if defined __AVX512BW__ && defined __AVX512VL__
+    __m128i v = _mm_maskz_loadu_epi16(-1u << (8 - move_cnt), parts - omit_cnt);
+    _mm_mask_storeu_epi16(parts, -1u << omit_pos, v);
+#else
+    memmove(parts + 8 - move_cnt, parts + omit_pos,
+            move_cnt * sizeof(uint16_t));
+    memset(parts + omit_pos, 0, omit_cnt * sizeof(uint16_t));
+#endif
+  }
+  return IPv6(addr);
+}
+
 char* IPv6Port::PortToString(char* buf, uint16_t port) noexcept {
   if (port >= 10000) {
     *buf++ = cbu::fastdiv<10000, 65536>(port) + '0';
