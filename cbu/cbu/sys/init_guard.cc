@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,8 @@ void FutexWait(std::uint32_t* guard, std::uint32_t value) noexcept {
 
 void Release(std::uint32_t* guard, std::uint32_t value,
              std::uint32_t running_waiting_value) noexcept {
-  int old_v = std::atomic_ref(*guard).exchange(value, std::memory_order_release);
+  std::uint32_t old_v =
+      std::atomic_ref(*guard).exchange(value, std::memory_order_release);
   if (old_v == running_waiting_value) FutexWakeAll(guard);
 }
 

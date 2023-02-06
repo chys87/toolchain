@@ -59,7 +59,7 @@ int pthread_create(pthread_t*, const pthread_attr_t*,
                    void *(*)(void *), void *) {
   const char* msg = "Your program links in single_threaded.cc; "
                     "creating new threading is disallowed.\n";
-  fsys_write(2, msg, strlen(msg));
+  [[maybe_unused]] ssize_t l = fsys_write(2, msg, strlen(msg));
   abort();
 }
 

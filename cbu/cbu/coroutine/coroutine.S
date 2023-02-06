@@ -26,9 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if !defined __x86_64__ || !defined __LP64__
-# error "Sorry, we only support x86-64"
-#endif
+#if defined __x86_64__ && !defined __LP64__
 
     .section .text.cbu_coroutine_asm,"ax",@progbits
     .globl  cbu_coroutine_switch_context
@@ -57,5 +55,7 @@ cbu_coroutine_switch_context:
     mov     8 * 8(%rsi), %rdi   # RDI isn't callee-preserved, but we set it for
                                 # convenient start up of new coroutines.
     ret
+
+#endif
 
     .section    .note.GNU-stack,"",@progbits

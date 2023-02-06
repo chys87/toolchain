@@ -181,7 +181,7 @@ std::size_t CommonPrefixSuffixCodec::common_suffix_max_7(std::string_view a,
 #endif
 
   std::size_t suffix = 0;
-  while (suffix < 31 && suffix < l && *pa-- == *pb--) ++suffix;
+  while (suffix < 7 && suffix < l && *pa-- == *pb--) ++suffix;
   return suffix;
 }
 
