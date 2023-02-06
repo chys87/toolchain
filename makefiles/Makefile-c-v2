@@ -5,6 +5,7 @@ export GCC_COLORS=1
 
 SELF_MAKEFILE := $(realpath $(lastword $(MAKEFILE_LIST)))
 MULTIPLE_OUTPUT_HELPER := $(dir $(SELF_MAKEFILE))/multiple-output-helper.py
+PYTHONDEP := $(dir $(SELF_MAKEFILE))/../scripts/pythondep
 UT_RUNNER := $(dir $(SELF_MAKEFILE))/../scripts/fast_gtest
 UT_RUNNER_ADDITIONAL_FLAGS :=
 
@@ -454,7 +455,7 @@ $(AUTO_GENERATED_PYTHON): $(BUILDDIR)/%:$(DIR)/%.py
 # Add extra dependency of Python generators introduced by "import"
 $(AUTO_GENERATED_PYTHON_DEPS): private NAME := PYDEP
 $(AUTO_GENERATED_PYTHON_DEPS): $(BUILDDIR)/%.py.P: $(DIR)/%.py
-	$(Q)env PYTHONPATH="$(dir $<):$(dir $@):$$PYTHONPATH" pythondep -t '$@ $(@:%.py.P=%)' $< > $@
+	$(Q)env PYTHONPATH="$(dir $<):$(dir $@):$$PYTHONPATH" $(PYTHONDEP) -t '$@ $(@:%.py.P=%)' $< > $@
 
 $(AUTO_GENERATED_PYTHON): $(BUILDDIR)/%: | $(BUILDDIR)/%.py.P
 
