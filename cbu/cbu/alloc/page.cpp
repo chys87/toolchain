@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -716,6 +716,9 @@ void Arena::clear_description_list(Description* clean) noexcept {
 
 #if defined __x86_64__ && defined __LP64__
 constexpr size_t kPointerValidBits = 47;
+#elif defined __aarch64__
+// Recent aarch64 and Linux kernel can enable 52-bit address space
+constexpr size_t kPointerValidBits = 52;
 #else
 constexpr size_t kPointerValidBits = sizeof(void*) * 8;
 #endif
