@@ -299,6 +299,13 @@ ifneq "$(subst clang,,$(CC))" "$(CC)"
  IS_CLANG := 1
 endif
 
+CC_TARGET := $(shell $(CC) -dumpmachine)
+ifneq "" "$(findstring x86_64,$(CC_TARGET))"
+ IS_X86_64 := 1
+else
+ IS_X86_64 := 0
+endif
+
 ifeq "$(TARGETS)" ""
 $(eval $(call define_target,$(notdir $(realpath $(DIR))),$(OBJS:$(BUILDDIR)/%.o=%)))
 endif
@@ -308,8 +315,11 @@ ifeq "$(CXXSRCS)" ""
 endif
 
 ifeq "$(IS_CLANG)" "1"
- EXTRA_CFLAGS += -fveclib=libmvec
- EXTRA_CXXFLAGS += -fveclib=libmvec -fstrict-vtable-pointers
+ EXTRA_CXXFLAGS += -fstrict-vtable-pointers
+ ifeq "$(IS_X86_64)" "1"
+  EXTRA_CFLAGS += -fveclib=libmvec
+  EXTRA_CXXFLAGS += -fveclib=libmvec
+ endif
  AR ?= llvm-ar
  STRIP ?= llvm-strip --strip-all --strip-unneeded -R .comment -R .GCC.command.line
 else
