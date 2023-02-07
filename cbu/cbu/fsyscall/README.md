@@ -7,7 +7,8 @@ Inline system call wrapper for the crazy people
 Why?
 ====
 
-Very simple - I would like to have my program use the `syscall` instruction (x86-64)
+Very simple - I would like to have my program use the
+`syscall` (x86-64) and `svc` (aarch64) instructions
 directly, instead of calling a glibc wrapper function.
 
 
@@ -119,7 +120,7 @@ Pros:
 
 Cons:
 
-* This wrapper only works for standard SysV/x86-64 and [x32](http://en.wikipedia.org/wiki/X32_ABI) ABIs.
+* This wrapper only works for standard SysV/x86-64, [x32](http://en.wikipedia.org/wiki/X32_ABI) and aarch64 ABIs.
   It has no effect on other platforms or ABIs.
   (NOTE: The x32 ABI is a new ABI for x86-64.  It is not the ABI used on 32-bit x86 systems.)
 * The performance benefit is very very tiny.
@@ -128,6 +129,6 @@ Cons:
 * When Linus releases new system calls and obsoletes some old ones,
   "standard" programs automatically take advantage of the new ones when glibc is upgraded,
   while program using fsyscall needs recompilation.
-* `fsys_` functions fall back to glibc wrappers on platforms other than x86-64.
+* `fsys_` functions fall back to glibc wrappers on platforms other than x86-64 and aarch64.
   They often have different header requirement than the inline versions, which causes
   pains in developing programs intended to be portable.
