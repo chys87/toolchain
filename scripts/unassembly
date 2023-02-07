@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (c) 2018-2021, chys <admin@CHYS.INFO>
+# Copyright (c) 2018-2023, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -36,7 +36,6 @@ import argparse
 import glob
 import locale
 import os
-import platform
 import re
 import shlex
 import shutil
@@ -387,14 +386,18 @@ def annotate_string_literals(fi):
         yield do_replace(data)
 
 
-def yield_possible_headers(filename):
-    yield f'/usr/include/asm/{filename}'
-    yield from glob.glob(f'/usr/include/*/asm/{filename}')
-    yield from glob.glob(f'/usr/*/include/asm/{filename}')
+def yield_possible_headers(filename, target):
+    target = target.replace('-', '_')  # x86-64 -> x86_64
+
+    yield from glob.iglob(f'/usr/include/{target}*/{filename}')
+    yield from glob.iglob(f'/usr/{target}*/include/{filename}')
+
+    if os.uname().machine == target:
+        yield f'/usr/include/{filename}'
 
 
-def read_header(filename):
-    for path in yield_possible_headers(filename):
+def read_header(filename, target):
+    for path in yield_possible_headers(filename, target):
         try:
             with open(path, 'rb') as f:
                 return f.read()
@@ -402,6 +405,25 @@ def read_header(filename):
             pass
     else:
         sys.exit(f'Unable to find a proper header file {filename}')
+
+
+def read_syscall_table(target):
+    pattern = re.compile(br'^#define\s+__NR_(\w+)\s+(\d+)$', re.M)
+    if target == 'x86_64':
+        filename = 'asm/unistd_64.h'
+    else:
+        filename = 'asm-generic/unistd.h'
+    table = {int(m.group(2)): m.group(1)
+             for m in pattern.finditer(read_header(filename, target))}
+
+    if target == 'x86_64':
+        # x86-64 ILP32 (x32 ABI) syscalls
+        pattern = re.compile(
+            br'^#define\s+__NR_([_a-z\d]+)\s+\(__X32_SYSCALL_BIT \+ (\d+)\)$', re.M)
+        table.update((int(m.group(2)) + 0x40000000, m.group(1))
+                     for m in pattern.finditer(read_header('asm/unistd_x32.h', target)))
+
+    return table
 
 
 def split_tail_lines(data: bytes, k: int = 1):
@@ -422,21 +444,19 @@ def split_tail_lines(data: bytes, k: int = 1):
 def syscall_replace(fi):
     data = get_lines(fi, 3)  # In cases of static libraries, we need 3 lines
 
-    if b'x86-64' not in data:  # If not x86-64, skip the expensive steps
+    if b'x86-64' in data:
+        yield from syscall_replace_x86_64(fi, data)
+    elif b'aarch64' in data:
+        yield from syscall_replace_aarch64(fi, data)
+    else:
         yield data
         yield from fi
         return
 
-    # x86-64 LP64 syscalls
-    pattern = re.compile(br'^#define\s+__NR_(\w+)\s+(\d+)$', re.M)
-    table = {int(m.group(2)): m.group(1)
-             for m in pattern.finditer(read_header('unistd_64.h'))}
 
-    # x86-64 ILP32 (x32 ABI) syscalls
-    pattern = re.compile(
-        br'^#define\s+__NR_([_a-z\d]+)\s+\(__X32_SYSCALL_BIT \+ (\d+)\)$', re.M)
-    table.update((int(m.group(2)) + 0x40000000, m.group(1))
-                 for m in pattern.finditer(read_header('unistd_x32.h')))
+def syscall_replace_x86_64(fi, data):
+    # x86-64 LP64 syscalls
+    table = read_syscall_table('x86_64')
 
     pattern_syscall_instruction = re.compile(
             br'(?:mov[blq]?\s+\$((?:0x)?[a-f\d]+),\s*%[er]?a[xl]|xor[lq]?\s+%[er]ax,\s*%[er]ax)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.+\ssyscall)')
@@ -473,7 +493,45 @@ def syscall_replace(fi):
 
     # Yield remaining things
     if data:
-        data = pattern.sub(sub, data)
+        data = pattern_syscall_instruction.sub(sub, data)
+        data = pattern_syscall_function.sub(sub, data)
+        yield data
+
+
+def syscall_replace_aarch64(fi, data):
+    # aarch64 LP64 syscalls
+    table = read_syscall_table('aarch64')
+
+    pattern_svc_instruction = re.compile(
+            br'mov\s+x8,\s*#(\d+|0x[a-f\d]+)\s*(?:\/\/\s*#\d+)?(?=\n([\da-f:\s]*\n|.+(mov\s|ldr\s|str\s|nop).*\n){,5}.+\ssvc\s+#(0|0x0)(\s|\n))')
+
+    def sub(match):
+        no_str = match.group(1)
+        no = int(no_str, 0)
+        res = match.group(0)
+        try:
+            res += b'\t\t // ' + table[no]
+        except KeyError:
+            pass
+        return res
+
+    while fi is not None:
+        newdata = get_lines(fi, 100)  # An arbitrary threshold
+        if newdata.count(b'\n') < 100:
+            fi = None
+        if not newdata:
+            break
+        data += newdata
+        data = pattern_svc_instruction.sub(sub, data)
+
+        # Yield all lines except the last 6
+        yield_data, data = split_tail_lines(data, 6)
+        if yield_data:
+            yield yield_data
+
+    # Yield remaining things
+    if data:
+        data = pattern_svc_instruction.sub(sub, data)
         yield data
 
 
@@ -519,7 +577,7 @@ def main():
     fi = objdump.stdout
     fi = cppfilter(fi)
 
-    if sys.platform.startswith('linux') and platform.machine() == 'x86_64':
+    if sys.platform.startswith('linux'):
         fi = syscall_replace(fi)
 
     if not args.no_string_literal_annotation:
