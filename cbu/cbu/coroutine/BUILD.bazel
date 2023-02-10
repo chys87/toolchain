@@ -24,27 +24,8 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-config_setting(
-  name = "x86_build",
-  values = {"cpu": "x86"},
-)
-
 cc_library(
   name = 'coroutine',
-  srcs = [],
-  hdrs = glob(['*.h']),
-  deps = select({
-    ':x86_build': ['coroutine_x86_64'],
-    '//conditions:default': [],
-  }),
-  # cbu is a collection of really TINY utilities so you may always want to
-  # use static linking
-  linkstatic=True,
-  visibility = ["//visibility:public"],
-)
-
-cc_library(
-  name = 'coroutine_x86_64',
   srcs = glob(['*.cpp', '*.S'],
               exclude=['*_test.cpp']),
   hdrs = glob(['*.h']),

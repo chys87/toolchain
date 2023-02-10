@@ -182,7 +182,7 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
     }
   }
 
-  if (ipv4) w = IPv4(u32[3], std::endian::big).to_string(w);
+  if (ipv4) w = IPv4(u32[3], std::endian::big).ToString(w);
   return w;
 }
 
@@ -232,7 +232,7 @@ ParseResult<uint16_t> parse_hex_uint16(const char* s, const char* e) noexcept {
 
 std::optional<IPv6> IPv6::FromString(std::string_view s) noexcept {
   // First check if it's a valid IPv4 address
-  if (std::optional<IPv4> ipv4_opt = IPv4::from_common_string(s))
+  if (std::optional<IPv4> ipv4_opt = IPv4::FromCommonString(s))
     return IPv6(*ipv4_opt);
 
   // Surrounded by [ ]
@@ -266,7 +266,7 @@ std::optional<IPv6> IPv6::FromString(std::string_view s) noexcept {
     if (endptr < e && *endptr == '.') {
       if (k > 6 || (k < 6 && omit_pos < 0)) [[unlikely]]
         return std::nullopt;
-      std::optional<IPv4> ipv4_opt = IPv4::from_common_string({p, e});
+      std::optional<IPv4> ipv4_opt = IPv4::FromCommonString({p, e});
       if (!ipv4_opt) [[unlikely]]
         return std::nullopt;
       uint32_t ipv4_be = ipv4_opt->value(std::endian::big);
@@ -349,6 +349,12 @@ short_string<IPv6Port::kMaxStringLen> IPv6Port::ToString() const noexcept {
   *w = '\0';
   res.set_length(w - res.buffer());
   return res;
+}
+
+void IPv6::OutputTo(std::ostream& os) const {
+  char buffer[kMaxStringLen];
+  char* p = ToString(buffer);
+  os << std::string_view(buffer, p - buffer);
 }
 
 }  // namespace cbu

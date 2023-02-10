@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef __x86_64__
+#if defined __x86_64__ && !defined __LP64__
 
 #include <fcntl.h>
 #include <poll.h>

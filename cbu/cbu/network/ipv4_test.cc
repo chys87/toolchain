@@ -49,72 +49,71 @@ static_assert((IPv4(127, 0, 0, 1) & IPv4(255, 0, 0, 0)) == IPv4(127, 0, 0, 0));
 TEST(IPv4Test, ToStringTest) {
   for (int i = 0; i < 256; ++i) {
     IPv4 ip(192, 168, 1, i);
-    ASSERT_EQ("192.168.1." + std::to_string(i),
-              ip.to_string().string());
+    ASSERT_EQ("192.168.1." + std::to_string(i), ip.ToString().string());
   }
 }
 
 TEST(IPv4Test, FromCommonStringTest) {
-  auto ip = IPv4::from_common_string("232.32.2.0");
+  auto ip = IPv4::FromCommonString("232.32.2.0");
   EXPECT_TRUE(ip.has_value());
   EXPECT_EQ(232, ip->a());
   EXPECT_EQ(32, ip->b());
   EXPECT_EQ(2, ip->c());
   EXPECT_EQ(0, ip->d());
 
-  EXPECT_FALSE(IPv4::from_common_string("192.168.00.105").has_value());
-  EXPECT_FALSE(IPv4::from_common_string("192.168.01.105").has_value());
+  EXPECT_FALSE(IPv4::FromCommonString("192.168.00.105").has_value());
+  EXPECT_FALSE(IPv4::FromCommonString("192.168.01.105").has_value());
 
-  EXPECT_TRUE(IPv4::from_common_string("255.255.255.255").has_value());
-  EXPECT_FALSE(IPv4::from_common_string("255.255.256.255").has_value());
-  EXPECT_FALSE(IPv4::from_common_string("255.270.255.255").has_value());
+  EXPECT_TRUE(IPv4::FromCommonString("255.255.255.255").has_value());
+  EXPECT_FALSE(IPv4::FromCommonString("255.255.256.255").has_value());
+  EXPECT_FALSE(IPv4::FromCommonString("255.270.255.255").has_value());
 
-  EXPECT_FALSE(IPv4::from_common_string("192.168.1.105x").has_value());
-  EXPECT_FALSE(IPv4::from_common_string("192.168.1#105").has_value());
-  EXPECT_FALSE(IPv4::from_common_string(" 192.168.1.105").has_value());
-  EXPECT_FALSE(IPv4::from_common_string("192.168.1..105").has_value());
+  EXPECT_FALSE(IPv4::FromCommonString("192.168.1.105x").has_value());
+  EXPECT_FALSE(IPv4::FromCommonString("192.168.1#105").has_value());
+  EXPECT_FALSE(IPv4::FromCommonString(" 192.168.1.105").has_value());
+  EXPECT_FALSE(IPv4::FromCommonString("192.168.1..105").has_value());
 }
 
 TEST(IPv4Test, FromStringTest) {
-  EXPECT_EQ(IPv4::from_string("192.168.25.54"), IPv4(0xc0a81936));
-  EXPECT_EQ(IPv4::from_string("192.168.6454"), IPv4(0xc0a81936));
-  EXPECT_EQ(IPv4::from_string("192.11016502"), IPv4(0xc0a81936));
-  EXPECT_EQ(IPv4::from_string("3232241974"), IPv4(0xc0a81936));
+  EXPECT_EQ(IPv4::FromString("192.168.25.54"), IPv4(0xc0a81936));
+  EXPECT_EQ(IPv4::FromString("192.168.6454"), IPv4(0xc0a81936));
+  EXPECT_EQ(IPv4::FromString("192.11016502"), IPv4(0xc0a81936));
+  EXPECT_EQ(IPv4::FromString("3232241974"), IPv4(0xc0a81936));
 
   // Overflow test
-  EXPECT_EQ(IPv4::from_string("4294967295"), IPv4(0xffffffff));
-  EXPECT_EQ(IPv4::from_string("4294967296"), std::nullopt);
-  EXPECT_EQ(IPv4::from_string("192.16777215"), IPv4(0xc0ffffff));
-  EXPECT_EQ(IPv4::from_string("192.16777216"), std::nullopt);
-  EXPECT_EQ(IPv4::from_string("192.168.65535"), IPv4(0xc0a8ffff));
-  EXPECT_EQ(IPv4::from_string("192.168.65536"), std::nullopt);
-  EXPECT_EQ(IPv4::from_string("192.168.25.255"), IPv4(0xc0a819ff));
-  EXPECT_EQ(IPv4::from_string("192.168.25.256"), std::nullopt);
-  EXPECT_EQ(IPv4::from_string("192.168.255.54"), IPv4(0xc0a8ff36));
-  EXPECT_EQ(IPv4::from_string("192.168.256.54"), std::nullopt);
+  EXPECT_EQ(IPv4::FromString("4294967295"), IPv4(0xffffffff));
+  EXPECT_EQ(IPv4::FromString("4294967296"), std::nullopt);
+  EXPECT_EQ(IPv4::FromString("192.16777215"), IPv4(0xc0ffffff));
+  EXPECT_EQ(IPv4::FromString("192.16777216"), std::nullopt);
+  EXPECT_EQ(IPv4::FromString("192.168.65535"), IPv4(0xc0a8ffff));
+  EXPECT_EQ(IPv4::FromString("192.168.65536"), std::nullopt);
+  EXPECT_EQ(IPv4::FromString("192.168.25.255"), IPv4(0xc0a819ff));
+  EXPECT_EQ(IPv4::FromString("192.168.25.256"), std::nullopt);
+  EXPECT_EQ(IPv4::FromString("192.168.255.54"), IPv4(0xc0a8ff36));
+  EXPECT_EQ(IPv4::FromString("192.168.256.54"), std::nullopt);
 
   // Octal / hexadecimal
-  EXPECT_EQ(IPv4::from_string("0x7f000001"), IPv4(0x7f000001));
-  EXPECT_EQ(IPv4::from_string("0x7f.00410"), IPv4(0x7f000108));
-  EXPECT_EQ(IPv4::from_string("127.0.1"), IPv4(0x7f000001));
-  EXPECT_EQ(IPv4::from_string("0177.0.1"), IPv4(0x7f000001));
-  EXPECT_FALSE(IPv4::from_string("0x1ffffffff").has_value());
-  EXPECT_TRUE(IPv4::from_string("037777777777").has_value());
-  EXPECT_FALSE(IPv4::from_string("040000000000").has_value());
+  EXPECT_EQ(IPv4::FromString("0x7f000001"), IPv4(0x7f000001));
+  EXPECT_EQ(IPv4::FromString("0x7f.00410"), IPv4(0x7f000108));
+  EXPECT_EQ(IPv4::FromString("127.0.1"), IPv4(0x7f000001));
+  EXPECT_EQ(IPv4::FromString("0177.0.1"), IPv4(0x7f000001));
+  EXPECT_FALSE(IPv4::FromString("0x1ffffffff").has_value());
+  EXPECT_TRUE(IPv4::FromString("037777777777").has_value());
+  EXPECT_FALSE(IPv4::FromString("040000000000").has_value());
 
   // Bad formats
-  EXPECT_FALSE(IPv4::from_string("192.168.1.105x").has_value());
-  EXPECT_FALSE(IPv4::from_string("192.168.1#105").has_value());
-  EXPECT_FALSE(IPv4::from_string(" 192.168.1.105").has_value());
-  EXPECT_FALSE(IPv4::from_string("192.168.1..105").has_value());
-  EXPECT_FALSE(IPv4::from_string("0xx7f.0.0.1").has_value());
+  EXPECT_FALSE(IPv4::FromString("192.168.1.105x").has_value());
+  EXPECT_FALSE(IPv4::FromString("192.168.1#105").has_value());
+  EXPECT_FALSE(IPv4::FromString(" 192.168.1.105").has_value());
+  EXPECT_FALSE(IPv4::FromString("192.168.1..105").has_value());
+  EXPECT_FALSE(IPv4::FromString("0xx7f.0.0.1").has_value());
 }
 
 TEST(IPv4Test, InAddrTest) {
   in_addr addr;
   ASSERT_NE(inet_pton(AF_INET, "192.168.5.4", &addr), 0);
   IPv4 ip(addr);
-  ASSERT_EQ(std::string_view(ip.to_string()), "192.168.5.4"sv);
+  ASSERT_EQ(std::string_view(ip.ToString()), "192.168.5.4"sv);
 
   ip.To(&addr);
   char buffer[32];

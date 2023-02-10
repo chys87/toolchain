@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -84,22 +84,22 @@ class IPv4 {
     return BrokeIPv4{a(), b(), c(), d()};
   }
 
-  char* to_string(char* buffer) const noexcept;
-  short_string<15> to_string() const;
+  char* ToString(char* buffer) const noexcept;
+  short_string<15> ToString() const noexcept;
 
   constexpr void To(in_addr* addr) const noexcept {
     addr->s_addr = bswap_be(v_);
   }
 
-  // from_common_string supports only the common "a.b.c.d" format
-  static std::optional<IPv4> from_common_string(std::string_view s) noexcept;
-  // from_string supports all legal formats,
+  // FromCommonString supports only the common "a.b.c.d" format
+  static std::optional<IPv4> FromCommonString(std::string_view s) noexcept;
+  // FromString supports all legal formats,
   // e.g. "127.0.0.1" may be represented as any of the following:
   // "127.0.0.1", "127.0.1", "127.1", "2130706433", "0x7f000001", "0x7f.0.0.1",
   // "017700000001", and so on...
   // However, some implementation doesn't check for overflowed values, but we
   // do it strictly.
-  static std::optional<IPv4> from_string(std::string_view s) noexcept;
+  static std::optional<IPv4> FromString(std::string_view s) noexcept;
 
   constexpr IPv4& operator&=(const IPv4& o) noexcept {
     v_ &= o.v_;
@@ -124,12 +124,12 @@ class IPv4 {
   }
 
   friend std::ostream& operator<<(std::ostream& os, const IPv4& ip) {
-    ip.output_to(os);
+    ip.OutputTo(os);
     return os;
   }
 
  private:
-  void output_to(std::ostream& os) const;
+  void OutputTo(std::ostream& os) const;
 
  private:
   std::uint32_t v_;

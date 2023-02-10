@@ -28,6 +28,8 @@
 
 #pragma once
 
+#if defined __x86_64__ && !defined __LP64__
+
 #include <poll.h>
 #include <stdint.h>
 #include <chrono>
@@ -163,3 +165,5 @@ inline bool WaitFor(CoId other_id) {
 
 } // namespace coroutine
 } // namespace cbu
+
+#endif

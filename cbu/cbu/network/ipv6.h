@@ -38,6 +38,7 @@
 
 #include <algorithm>
 #include <compare>
+#include <ostream>
 #include <string_view>
 
 #include "cbu/common/byteorder.h"
@@ -137,12 +138,19 @@ class IPv6 {
   // translated to ::ffff:a.b.c.d)
   static std::optional<IPv6> FromString(std::string_view s) noexcept;
 
+  friend std::ostream& operator<<(std::ostream& os, const IPv6& ip) {
+    ip.OutputTo(os);
+    return os;
+  }
+
  private:
 #ifdef __SSE4_2__
   __m128i ToVec() const noexcept {
     return *reinterpret_cast<const __m128i_u*>(a_.s6_addr);
   }
 #endif
+
+  void OutputTo(std::ostream& os) const;
 
  private:
   // We want IPv6 to be a literal type, so we try out best to use only a_.s6_addr

@@ -150,7 +150,7 @@ ParseResult<std::uint32_t> parse_any_uint32(const char* s,
 
 } // namespace
 
-char* IPv4::to_string(char* p) const noexcept {
+char* IPv4::ToString(char* p) const noexcept {
 #if defined __AVX512VL__ && defined __AVX512BW__
   __v4su v = __v4su(_mm_cvtepu8_epi32(_mm_cvtsi32_si128(v_)));
   __v4su hundreds = (v * 41) >> 12;
@@ -189,15 +189,15 @@ char* IPv4::to_string(char* p) const noexcept {
   return p;
 }
 
-short_string<15> IPv4::to_string() const {
+short_string<15> IPv4::ToString() const noexcept {
   short_string<15> res(kUninitialized);  // The max length of an IPv4 is 15
-  char* w = to_string(res.buffer());
+  char* w = ToString(res.buffer());
   *w = '\0';
   res.set_length(w - res.buffer());
   return res;
 }
 
-std::optional<IPv4> IPv4::from_common_string(std::string_view s) noexcept {
+std::optional<IPv4> IPv4::FromCommonString(std::string_view s) noexcept {
   const char* p = s.data();
   const char* e = p + s.size();
   auto [a_ok, a, a_s] = parse_uint8(p, e);
@@ -221,7 +221,7 @@ std::optional<IPv4> IPv4::from_common_string(std::string_view s) noexcept {
   return IPv4(a, b, c, d);
 }
 
-std::optional<IPv4> IPv4::from_string(std::string_view s) noexcept {
+std::optional<IPv4> IPv4::FromString(std::string_view s) noexcept {
   if (s.empty()) return std::nullopt;
 
   const char* p = s.data();
@@ -253,9 +253,9 @@ std::optional<IPv4> IPv4::from_string(std::string_view s) noexcept {
   return IPv4(ip);
 }
 
-void IPv4::output_to(std::ostream& os) const {
+void IPv4::OutputTo(std::ostream& os) const {
   char buffer[16];
-  char* p = to_string(buffer);
+  char* p = ToString(buffer);
   os << std::string_view(buffer, p - buffer);
 }
 

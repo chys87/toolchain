@@ -26,6 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if defined __x86_64__ && !defined __LP64__
+
 #include "coroutine.h"
 
 #include <stdio.h>
@@ -329,3 +331,5 @@ std::unique_ptr<CoRoutine> CoContainer::MakeCoRoutine(
 
 } // namespace coroutine
 } // namespace cbu
+
+#endif

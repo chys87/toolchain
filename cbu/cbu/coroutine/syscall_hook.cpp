@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,6 +25,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#if defined __x86_64__ && !defined __LP64__
 
 #include "syscall_hook.h"
 #include <fcntl.h>
@@ -141,3 +143,5 @@ int hook_epoll_wait(int epfd, epoll_event* events, int maxevents,
 } // extern "C"
 } // namespace coroutine
 } // namespace cbu
+
+#endif
