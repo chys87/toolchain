@@ -87,8 +87,21 @@ class IPv4 {
   char* ToString(char* buffer) const noexcept;
   short_string<15> ToString() const noexcept;
 
-  constexpr void To(in_addr* addr) const noexcept {
-    addr->s_addr = bswap_be(v_);
+  constexpr in_addr Get() const noexcept {
+    in_addr res;
+    res.s_addr = bswap_be(v_);
+    return res;
+  }
+
+  static IPv4 FromRaw(const void* data) noexcept {
+    std::uint32_t v;
+    __builtin_memcpy(&v, data, 4);
+    return IPv4(v, network_endian);
+  }
+
+  void ToRaw(void* data) const noexcept {
+    std::uint32_t v = value(network_endian);
+    __builtin_memcpy(data, &v, 4);
   }
 
   // FromCommonString supports only the common "a.b.c.d" format

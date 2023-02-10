@@ -83,6 +83,16 @@ class IPv6 {
 
   constexpr const in6_addr& Get() const noexcept { return a_; }
 
+  static IPv6 FromRaw(const void* data) noexcept {
+    IPv6 res;
+    __builtin_memcpy(res.a_.s6_addr, data, 16);
+    return res;
+  }
+
+  void ToRaw(void* data) const noexcept {
+    __builtin_memcpy(data, a_.s6_addr, 16);
+  }
+
   constexpr bool IsIPv4() const noexcept {
     return mempick<uint64_t>(a_.s6_addr) == 0 &&
            mempick<uint32_t>(a_.s6_addr + 8) == bswap_be(0x0000ffffu);
