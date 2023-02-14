@@ -115,7 +115,7 @@ TEST(IPv4Test, InAddrTest) {
   IPv4 ip(addr);
   ASSERT_EQ(std::string_view(ip.ToString()), "192.168.5.4"sv);
 
-  ip.To(&addr);
+  addr = ip.Get();
   char buffer[32];
   ASSERT_NE(inet_ntop(AF_INET, &addr, buffer, sizeof(buffer)), nullptr);
   ASSERT_STREQ(buffer, "192.168.5.4");
