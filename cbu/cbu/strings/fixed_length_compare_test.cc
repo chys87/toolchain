@@ -57,11 +57,23 @@ constexpr std::array<std::size_t, kLengthCount> kLengths = GenLengths();
 template <std::size_t Len>
 void RunTest(char (&buffer)[kMax]) {
   for (std::size_t from = 0; from < 128 && from + Len <= kMax; ++from) {
+
+    if (from) buffer[from - 1] = 127;
+    if (from + Len < kMax) buffer[from + Len] = 127;
     ASSERT_TRUE(IsAllZero<Len>(buffer + from))
         << "from = " << from << " Len = " << Len;
+    ASSERT_TRUE(
+        (IsAllZero<Len, IsAllZeroOptions{.right_align = true}>(buffer + from)))
+        << "from = " << from << " Len = " << Len;
+    if (from) buffer[from - 1] = 0;
+    if (from + Len < kMax) buffer[from + Len] = 0;
+
     for (std::size_t i = 0; i < Len; ++i) {
       buffer[from + i] = 127;
       ASSERT_FALSE(IsAllZero<Len>(buffer + from))
+          << "from = " << from << " Len = " << Len << " i = " << i;
+      ASSERT_FALSE((
+          IsAllZero<Len, IsAllZeroOptions{.right_align = true}>(buffer + from)))
           << "from = " << from << " Len = " << Len << " i = " << i;
       buffer[from + i] = 0;
     }
@@ -72,9 +84,8 @@ TEST(FixedLengthCompareTest, DefaultTest) {
   char buffer[kMax]{};
 
   auto test_all = [&]<std::size_t... I>(std::index_sequence<I...>) noexcept {
-    ((!HasFatalFailure() ? static_cast<void>(RunTest<kLengths[I]>(buffer))
-                         : static_cast<void>(0)),
-     ...);
+    static_cast<void>(
+        ((RunTest<kLengths[I]>(buffer), !HasFatalFailure()) && ...));
   };
 
   test_all(std::make_index_sequence<kLengthCount>());
