@@ -125,6 +125,12 @@ This one is just a hobby - a crazy one.
 * `string_pack.h`: Implements a high-performance storage for a list of strings
 * `vlq.h`: Implements unsigned [VLQ (variable-length quantity) encoding](https://en.wikipedia.org/wiki/Variable-length_quantity)
 
+### cbu/strings
+
+[`cbu/strings`](cbu/strings): String utilities
+
+* `fixed_length_compare.h`: Implements fast comparison of buffers with compile-time constant lengths
+
 ### cbu/sys
 
 [`cbu/sys`](cbu/sys): System utilities
