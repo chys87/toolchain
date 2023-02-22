@@ -15,6 +15,38 @@ void* memset(void* dst, int ch, size_t n) {
                : "+D"(dst), "+c"(n)
                : "a"(ch)
                : "memory", "cc");
+#elif __has_builtin(__builtin_memset_inline)
+  char* p = (char*)dst;
+  if (n > 32) {
+    while (n > 32) {
+      __builtin_memset_inline(p, ch, 32);
+      p += 32;
+      n -= 32;
+    }
+    __builtin_memset_inline(p + n - 32, ch, 32);
+    return dst;
+  }
+
+  uint64_t vv = (uint8_t)ch * 0x0101010101010101ull;
+
+  if (n > 8) {
+    if (n >= 16) {
+      *(uint64_t*)(p + 8) = vv;
+      *(uint64_t*)p = vv;
+      *(uint64_t*)(p + n - 8) = vv;
+      *(uint64_t*)(p + n - 16) = vv;
+    } else {
+      *(uint64_t*)p = vv;
+      *(uint64_t*)(p + n - 8) = vv;
+    }
+  } else if (n >= 4) {
+    *(uint32_t*)p = vv;
+    *(uint32_t*)(p + n - 4) = vv;
+  } else if (n) {
+    p[0] = ch;
+    p[n / 2] = ch;
+    p[n - 1] = ch;
+  }
 #else
   char* p = (char*)dst;
   for (; n; --n) *p++ = ch;
@@ -30,6 +62,44 @@ void* memcpy(void* dst, const void* src, size_t n) {
 void* mempcpy(void* dst, const void* src, size_t n) {
 #ifdef __x86_64__
   asm volatile("rep movsb" DUMMY_ASM : "+D"(dst), "+S"(src), "+c"(n)::"memory");
+#elif defined __ARM_NEON && __has_builtin(__builtin_memcpy_inline)
+  char* d = (char*)dst;
+  const char* s = (const char*)src;
+  dst = d + n;
+  if (n > 32) {
+    while (n > 32) {
+      __builtin_memcpy_inline(d, s, 32);
+      d += 32;
+      s += 32;
+      n -= 32;
+    }
+    __builtin_memcpy_inline(d + n - 32, s + n - 32, 32);
+  } else if (n > 8) {
+    if (n > 16) {
+      uint64x2_t a = *(const uint64x2_t*)s;
+      uint64x2_t b = *(const uint64x2_t*)(s + n - 16);
+      *(uint64x2_t*)d = a;
+      *(uint64x2_t*)(d + n - 16) = b;
+    } else {
+      uint64_t a = *(const uint64_t*)s;
+      uint64_t b = *(const uint64_t*)(s + n - 8);
+      *(uint64_t*)d = a;
+      *(uint64_t*)(d + n - 8) = b;
+    }
+  } else if (n >= 4) {
+    uint32_t a = *(const uint32_t*)s;
+    uint32_t b = *(const uint32_t*)(s + n - 4);
+    *(uint32_t*)d = a;
+    *(uint32_t*)(d + n - 4) = b;
+  } else if (n) {
+    // n is 0, 1 or 2
+    uint8_t a = s[0];
+    uint8_t b = s[n / 2];
+    uint8_t c = s[n - 1];
+    d[0] = a;
+    d[n / 2] = b;
+    d[n - 1] = c;
+  }
 #else
   char* d = (char*)dst;
   const char* s = (const char*)src;
@@ -83,6 +153,18 @@ size_t strlen(const char* s) {
     mask = __builtin_ia32_pmovmskb128(cmp);
   }
   return ((char*)p - s - 16 + __builtin_ctz(mask));
+#elif defined __ARM_NEON
+  uint8x16_t ref = {};
+  unsigned filter_bytes = (uintptr_t)s & 15;
+  const uint8x16_t* p = (const uint8x16_t*)((uintptr_t)s & ~15);
+  uint8x8_t cmp = vshrn_n_u16(vreinterpretq_u16_u8(*p == ref), 4);
+  uint64_t mask = ((uint64_t)(-1) << (filter_bytes * 4)) &
+                  vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
+  while (mask == 0) {
+    cmp = vshrn_n_u16(vreinterpretq_u16_u8(ref == *++p), 4);
+    mask = vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
+  }
+  return ((char*)p - s + __builtin_ctzll(mask) / 4);
 #endif
 
   size_t r = 0;
