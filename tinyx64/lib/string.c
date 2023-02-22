@@ -1,6 +1,8 @@
 #include "tinyx64.h"
 
+#ifdef __x86_64__
 #include <x86intrin.h>
+#endif
 
 // Make GCC think the assembler sequence is longer, so that it tends to use its own builtin version instead
 #define DUMMY_ASM "\n\
@@ -8,10 +10,15 @@
 "
 
 void* memset(void* dst, int ch, size_t n) {
+#ifdef __x86_64__
   asm volatile("rep stosb" DUMMY_ASM
                : "+D"(dst), "+c"(n)
                : "a"(ch)
                : "memory", "cc");
+#else
+  char* p = (char*)dst;
+  for (; n; --n) *p++ = ch;
+#endif
   return dst;
 }
 
@@ -21,17 +28,30 @@ void* memcpy(void* dst, const void* src, size_t n) {
 }
 
 void* mempcpy(void* dst, const void* src, size_t n) {
+#ifdef __x86_64__
   asm volatile("rep movsb" DUMMY_ASM : "+D"(dst), "+S"(src), "+c"(n)::"memory");
+#else
+  char* d = (char*)dst;
+  const char* s = (const char*)src;
+  for (; n; --n) *d++ = *s++;
+  dst = d;
+#endif
   return dst;
 }
 
 void* memmove(void* dst, const void* src, size_t n) {
   if ((size_t)(dst - src) < n /*dst >= src && dst < src + n*/) {
     void* ret = dst;
+#ifdef __x86_64__
     dst = (void*)((uintptr_t)dst + n - 1);
     src = (void*)((uintptr_t)src + n - 1);
     asm volatile("std; rep movsb; cld" DUMMY_ASM
                  : "+D"(dst), "+S"(src), "+c"(n)::"memory");
+#else
+    char* d = (char*)dst;
+    const char* s = (const char*)src;
+    for (; n; --n) d[n - 1] = s[n - 1];
+#endif
     return ret;
   } else {
     return memcpy(dst, src, n);

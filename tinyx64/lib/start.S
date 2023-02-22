@@ -1,6 +1,4 @@
-#if !defined __x86_64__ || !defined __linux__ || !defined __LP64__
-# error "Only Linux x86-64 is supported."
-#endif
+#if defined __x86_64__ && defined __linux__ && defined __LP64__
 
 #include <asm/unistd.h>
 
@@ -24,5 +22,41 @@ exit:
     mov     $__NR_exit_group, %eax
     syscall
     ud2
+
+#elif defined __aarch64__ && defined __linux__ && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+
+#include <asm/unistd.h>
+
+    .section    .text.startup,"ax",@progbits
+    .align    4
+    .globl    _start
+_start:
+    # initial frame
+    mov     lr, xzr     // lr is x30
+    mov     fp, xzr     // fp is x29
+
+    add     x2, sp, #16
+
+    ldr     x0, [sp, #0]    // argc
+    add     x1, sp, #8      // argv
+
+    # environ = sp + argc + 2
+    add     x2, x2, x0, lsl #3
+
+    bl      main
+
+    .globl  exit
+exit:
+    .globl  _exit
+    .set    _exit, exit
+    mov     x8, #__NR_exit_group
+    svc     0
+    udf     0
+
+#else
+
+# error "Unsupported architecture"
+
+#endif
 
     .section    .note.GNU-stack,"",@progbits

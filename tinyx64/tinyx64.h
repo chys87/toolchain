@@ -1,7 +1,11 @@
 #pragma once
 
-#if !defined __GNUC__ || !defined __x86_64__ || !defined __LP64__ || !defined __linux__
-# error "Only Linux x86-64 is supported."
+#if !defined __GNUC__ || (!defined __x86_64__ && !defined __aarch64__) || !defined __LP64__ || !defined __linux__
+# error "Only Linux x86-64 / aarch64 is supported."
+#endif
+
+#if __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+# error "Only little endian is supported."
 #endif
 
 #if defined __PIC__ || defined __PIE__
@@ -21,8 +25,15 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <x86intrin.h>
 #include <sys/types.h>
+
+#ifdef __x86_64__
+#include <x86intrin.h>
+#endif
+
+#ifdef __ARM_NEON
+#include <arm_neon.h>
+#endif
 
 #ifdef __cplusplus
 # define TX64_INLINE inline
