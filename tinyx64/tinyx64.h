@@ -84,6 +84,8 @@ size_t strlen(const char* s) TX64_NOTHROW
     __attribute__((__pure__, __nonnull__(1)));
 int memcmp(const void*, const void*, size_t) TX64_NOTHROW
     __attribute__((__pure__, __nonnull__(1, 2)));
+int bcmp(const void*, const void*, size_t) TX64_NOTHROW
+    __attribute__((__pure__, __nonnull__(1, 2)));
 
 #ifdef __cplusplus
 } // extern "C"
@@ -130,6 +132,18 @@ int strncmp(const char*, const char*, size_t) TX64_NOTHROW
 // Non-standard string.c
 char *utoa10(unsigned value, char *str);
 char *itoa10(int value, char *str);
+
+typedef struct StrRChrEx {
+  char* ptr;
+  char* eos;
+
+#ifdef __cplusplus
+  constexpr size_t size() const { return eos - ptr; }
+#endif
+
+} StrRChrEx;
+StrRChrEx strrchr_ex(const char* s, int c);
+StrRChrEx basename_ex(const char* s);
 
 #ifdef __cplusplus
 } // extern "C"

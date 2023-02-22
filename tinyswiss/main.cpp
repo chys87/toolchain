@@ -46,8 +46,9 @@ extern "C" int main(int argc, char **argv, char **envp) {
     unknown_subcommand();
     return 1;
   }
-  const char *bname = basename(name);
-  if (strncmp(bname, "TS", 2) == 0 && (bname[2] == '\0' || bname[2] == '.')) {
+  StrRChrEx bname = basename_ex(name);
+  if (bname.size() >= 2 && bcmp(bname.ptr, "TS", 2) == 0 &&
+      (bname.size() == 2 || bname.ptr[2] == '.')) {
     --argc;
     ++argv;
     name = *argv;
@@ -55,12 +56,12 @@ extern "C" int main(int argc, char **argv, char **envp) {
       print_subcommands();
       return 0;
     }
-    bname = basename(name);
+    bname = basename_ex(name);
   }
 
-  size_t bname_len = strlen(bname);
   for (const Dispatch &disp: dispatch) {
-    if (disp.name_len == bname_len && memcmp(disp.name, bname, bname_len) == 0)
+    if (disp.name_len == bname.size() &&
+        bcmp(disp.name, bname.ptr, bname.size()) == 0)
       return disp.func(argc - 1, argv + 1, envp);
   }
 

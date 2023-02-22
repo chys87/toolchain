@@ -28,8 +28,8 @@ const Browser supported_browsers[] = {
 const Browser *identify_browser(std::string_view exe) {
   for (const Browser &browser: supported_browsers)
     if (browser.key_len <= exe.length() &&
-        memcmp(browser.key, exe.data() + exe.length() - browser.key_len,
-               browser.key_len) == 0)
+        bcmp(browser.key, exe.data() + exe.length() - browser.key_len,
+             browser.key_len) == 0)
       return &browser;
   return nullptr;
 }

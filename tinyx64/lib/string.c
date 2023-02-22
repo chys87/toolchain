@@ -181,6 +181,28 @@ int memcmp(const void* a, const void* b, size_t n) {
   return 0;
 }
 
+int bcmp(const void* a, const void* b, size_t n) {
+  const char* p = a;
+  const char* q = b;
+  if (n > 8) {
+    while (n > 8) {
+      if (*(const uint64_t*)p != *(const uint64_t*)q) return 1;
+      p += 8;
+      q += 8;
+      n -= 8;
+    }
+    return *(const uint64_t*)(p + n - 8) != *(const uint64_t*)(q + n - 8);
+  } else if (n >= 4) {
+    return *(const uint32_t*)p != *(const uint32_t*)q ||
+           *(const uint32_t*)(p + n - 4) != *(const uint32_t*)(q + n - 4);
+  } else if (n) {
+    return p[0] != q[0] || p[n / 2] != q[n / 2] || p[n - 1] != q[n - 1];
+  } else {
+    return 0;
+  }
+  return 0;
+}
+
 void* memchr(const void* s, int c, size_t n) {
   const char* p = s;
   for (; n; ++p, --n) {
@@ -216,14 +238,17 @@ char* strchrnul(const char* s, int c) {
   return (char*)p;
 }
 
-char *strrchr(const char *s, int c) {
-  char *r = NULL;
-  for (char *p = (char *)s; *p; ++p) {
+char* strrchr(const char* s, int c) { return strrchr_ex(s, c).ptr; }
+
+StrRChrEx strrchr_ex(const char* s, int c) {
+  char* r = NULL;
+  char* p = (char*)s;
+  for (; *p; ++p) {
     if (*p == (char)c) {
       r = p;
     }
   }
-  return r;
+  return (StrRChrEx){r, p};
 }
 
 int strcmp(const char *a, const char *b) {
@@ -289,4 +314,14 @@ char *basename(const char *s) {
   } else {
     return (char *)s;
   }
+}
+
+StrRChrEx basename_ex(const char *s) {
+  StrRChrEx res = strrchr_ex(s, '/');
+  if (res.ptr) {
+    ++res.ptr;
+  } else {
+    res.ptr = (char*)s;
+  }
+  return res;
 }
