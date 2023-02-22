@@ -1,6 +1,7 @@
 #include <dirent.h>
 #include <limits.h>
 #include <sys/fcntl.h>
+#include <sys/stat.h>
 #include <tinyx64.h>
 
 #include <string_view>
@@ -24,9 +25,23 @@ int latest(std::string_view prefix, size_t argc, char **argv, char **envp) {
   int last_fddir = -1;
   char last_name[kPathMax];
 
+  uint64_t last_path_key = 0;
+
   for (const char* path : {"/usr/local/bin", "/usr/bin", "/bin"}) {
     int fddir = fsys_open2(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
     if (fddir < 0) continue;
+
+    {
+      struct statx stx;
+      int rc = fsys_statx(fddir, "", AT_EMPTY_PATH | AT_STATX_DONT_SYNC, STATX_INO, &stx);
+      if (rc == 0) {
+        uint64_t path_key =
+            (stx.stx_dev_major | ((uint64_t)stx.stx_dev_minor << 32)) ^
+            stx.stx_ino;
+        if (path_key == last_path_key) continue;
+        last_path_key = path_key;
+      }
+    }
 
     // Don't bother to close fddir
     fsys_aux::readdir<fsys_aux::ReadDirNoSkipDots,
