@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,14 +45,15 @@ static_assert(kPageSize == 4096);
 #endif
 
 // Transparent Huge Page size
-#if (defined __x86_64__ || defined __i386__) && defined __linux__
+#if (defined __x86_64__ || defined __i386__ || defined __aarch64__) && \
+    defined __linux__
 constexpr unsigned kTHPSize = 2048 * 1024;
 #else
 constexpr unsigned kTHPSize = 0;
 #endif
 
 // Cache line
-// We know for sure modern x86 has 64-byte cache lines.
+// We know for sure modern x86 and most modern aarch64 have 64-byte cache lines.
 // This is probably also a good guess for other architectures.
 constexpr unsigned kCacheLineSize = 64;
 
