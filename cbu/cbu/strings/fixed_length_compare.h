@@ -31,6 +31,9 @@
 #if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
 # include <x86intrin.h>
 #endif
+#ifdef __ARM_NEON
+#  include <arm_neon.h>
+#endif
 
 #include <array>
 #include <concepts>
@@ -225,6 +228,23 @@ inline constexpr bool IsAllZero(const T* p) {
           u |= *(const __m128i_u*)(p + i - 16);
       }
       return _mm_testz_si128(u, u);
+#endif
+#ifdef __ARM_NEON
+    } else if constexpr (N == 16) {
+      return (Pick<8>(p) | Pick<8>(p + 8)) == 0;
+    } else if constexpr (N > 24) {
+      uint8x16_t u = {};
+      if constexpr (Opts.right_align) {
+        if constexpr (N % 16) u = *(const uint8x16_t*)p;
+        for (std::size_t i = N % 16; i < N; i += 16)
+          u |= *(const uint8x16_t*)(p + i);
+      } else {
+        if constexpr (N % 16) u = *(const uint8x16_t*)(p + N - 16);
+        for (std::size_t i = N / 16 * 16; i; i -= 16)
+          u |= *(const uint8x16_t*)(p + i - 16);
+      }
+      u = vpmaxq_u8(u, u);
+      return vgetq_lane_u64(vreinterpretq_u64_u8(u), 0) == 0;
 #endif
     } else {
       constexpr std::size_t UZ = [&]() constexpr noexcept {
