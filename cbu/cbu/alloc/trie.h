@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,7 @@
 
 #include "cbu/alloc/alloc.h"
 #include "cbu/alloc/permanent.h"
+#include "cbu/alloc/private.h"
 #include "cbu/common/bit.h"
 #include "cbu/compat/atomic_ref.h"
 #include "cbu/tweak/tweak.h"
@@ -68,9 +69,8 @@ Node* ensure_node_heavy(Node **ptr, SimplePermaAlloc<Node> &allocator) {
 
 template <typename Node>
 inline Node* ensure_node(Node** ptr, SimplePermaAlloc<Node>& allocator) {
-  Node *next = std::atomic_ref<Node*>(*ptr).load(std::memory_order_acquire);
-  if (next == nullptr)
-    next = ensure_node_heavy(ptr, allocator);
+  Node* next = load_acquire(ptr);
+  if (next == nullptr) next = ensure_node_heavy(ptr, allocator);
   return next;
 }
 
@@ -123,8 +123,7 @@ ValueType* Trie<TotalBits, ValueType>::lookup_fail_crash(uintptr_t v) {
 #endif
   for (int i = (Levels - 1) * LevelBits; i >= 0; i -= LevelBits) {
     size_t o = (v >> (i + LeafBits)) & levelmask;
-    node = reinterpret_cast<Node *>(
-        std::atomic_ref<Node*>(node->link[o]).load(std::memory_order_acquire));
+    node = load_acquire(&node->link[o]);
   }
   return &node->tbl[v & ((1 << LeafBits) - 1)];
 }

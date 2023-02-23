@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,9 +32,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <atomic>
+#include <type_traits>
+
 #include "cbu/alloc/pagesize.h"
 #include "cbu/common/bit.h"
+#include "cbu/compat/atomic_ref.h"
 #include "cbu/sys/low_level_mutex.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -154,6 +159,22 @@ inline constinit RawPageAllocator RawPageAllocator::instance_brk{true, true};
 inline constinit RawPageAllocator RawPageAllocator::instance_mmap{false, true};
 inline constinit RawPageAllocator RawPageAllocator::instance_mmap_no_thp{false,
                                                                          false};
+
+template <typename T>
+T load_acquire(T* ptr) {
+  if (tweak::SINGLE_THREADED)
+    return *ptr;
+  else
+    return std::atomic_ref(*ptr).load(std::memory_order_acquire);
+}
+
+template <typename T>
+void store_release(T* ptr, std::type_identity_t<T> value) {
+  if (tweak::SINGLE_THREADED)
+    *ptr = value;
+  else
+    std::atomic_ref(*ptr).store(value, std::memory_order_release);
+}
 
 }  // namespace alloc
 }  // namespace cbu
