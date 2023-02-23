@@ -80,6 +80,8 @@ inline std::size_t memcnt(std::string_view sv, char c) noexcept {
 int strnumcmp(const char *, const char *) noexcept
   __attribute__((__nonnull__(1, 2), __pure__));
 
+int strnumcmp(std::string_view a, std::string_view b) noexcept
+    __attribute__((__pure__));
 
 // Same as std::reverse, but more optimized (at least for x86)
 char *reverse(char *, char *) noexcept;

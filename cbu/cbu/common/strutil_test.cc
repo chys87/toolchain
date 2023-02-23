@@ -76,6 +76,47 @@ TEST(StrUtilTest, StrNumCmp) {
   EXPECT_LT(0, strnumcmp("abcd12a", "abcd9a"));
   EXPECT_EQ(0, strnumcmp("abcd12a", "abcd12a"));
   EXPECT_GT(0, strnumcmp("abcd12a", "abcd23a"));
+
+  EXPECT_LT(0, strnumcmp("abcd12a"sv, "abcd9a"sv));
+  EXPECT_EQ(0, strnumcmp("abcd12a"sv, "abcd12a"sv));
+  EXPECT_GT(0, strnumcmp("abcd12a"sv, "abcd23a"sv));
+  EXPECT_GT(strnumcmp("abcd12a"sv, "abcd3"sv), 0);
+  EXPECT_GT(strnumcmp("abcd12a"sv, "abcd"sv), 0);
+  EXPECT_GT(strnumcmp("abcd12a"sv, "abcdx"sv), 0);
+  EXPECT_EQ(strnumcmp("abcd123"sv, "abcd123"sv), 0);
+  EXPECT_LT(strnumcmp("abcd123"sv, "abcd123x"sv), 0);
+  EXPECT_GT(strnumcmp("abcd123"sv, "abcd103x"sv), 0);
+  EXPECT_GT(strnumcmp("abcd123"sv, "abcd103"sv), 0);
+  EXPECT_LT(strnumcmp("abcd123"sv, "abcd0230"sv), 0);
+  EXPECT_GT(strnumcmp("abcd0230"sv, "abcd123"sv), 0);
+  EXPECT_GT(strnumcmp("abcd123x"sv, "abcd123"sv), 0);
+  EXPECT_LT(strnumcmp("abcd103x"sv, "abcd123"sv), 0);
+
+  // SIMD test
+#define LS "A long long string is here"
+  EXPECT_GT(strnumcmp(LS "abcd12a"sv, LS "abcd3"sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd12a"sv, LS "abcd"sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd12a"sv, LS "abcdx"sv), 0);
+  EXPECT_EQ(strnumcmp(LS "abcd123"sv, LS "abcd123"sv), 0);
+  EXPECT_LT(strnumcmp(LS "abcd123"sv, LS "abcd123x"sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd123"sv, LS "abcd103x"sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd123"sv, LS "abcd103"sv), 0);
+  EXPECT_LT(strnumcmp(LS "abcd123"sv, LS "abcd0230"sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd0230"sv, LS "abcd123"sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd123x"sv, LS "abcd123"sv), 0);
+  EXPECT_LT(strnumcmp(LS "abcd103x"sv, LS "abcd123"sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd12a" LS ""sv, LS "abcd3" LS ""sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd12a" LS ""sv, LS "abcd" LS ""sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd12a" LS ""sv, LS "abcdx" LS ""sv), 0);
+  EXPECT_EQ(strnumcmp(LS "abcd123" LS ""sv, LS "abcd123" LS ""sv), 0);
+  EXPECT_LT(strnumcmp(LS "abcd123" LS ""sv, LS "abcd123x" LS ""sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd123" LS ""sv, LS "abcd103x" LS ""sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd123" LS ""sv, LS "abcd103" LS ""sv), 0);
+  EXPECT_LT(strnumcmp(LS "abcd123" LS ""sv, LS "abcd0230" LS ""sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd0230" LS ""sv, LS "abcd123" LS ""sv), 0);
+  EXPECT_GT(strnumcmp(LS "abcd123x" LS ""sv, LS "abcd123" LS ""sv), 0);
+  EXPECT_LT(strnumcmp(LS "abcd103x" LS ""sv, LS "abcd123" LS ""sv), 0);
+#undef LS
 }
 
 TEST(StrUtilTest, AnyToStringView) {

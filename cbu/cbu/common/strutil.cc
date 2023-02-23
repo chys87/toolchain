@@ -35,6 +35,9 @@
 #if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
 #  include <x86intrin.h>
 #endif
+#ifdef __ARM_NEON
+#  include <arm_neon.h>
+#endif
 
 #include "cbu/common/bit.h"
 #include "cbu/common/byteorder.h"
@@ -254,6 +257,91 @@ int strnumcmp(const char *a, const char *b) noexcept {
     } else {
       // Neither is a digit
       return cmpresult;
+    }
+    U = *u++;
+    V = *v++;
+  }
+}
+
+int strnumcmp(std::string_view a, std::string_view b) noexcept {
+  const uint8_t* u = reinterpret_cast<const uint8_t*>(a.data());
+  const uint8_t* ue = u + a.size();
+  const uint8_t* v = reinterpret_cast<const uint8_t*>(b.data());
+  const uint8_t* ve = v + b.size();
+  unsigned U, V;
+
+#ifdef __SSE4_1__
+  for (size_t xl = std::min(a.size(), b.size()) / 16; xl; --xl) {
+    __m128i uv = *(const __m128i_u*)u;
+    __m128i vv = *(const __m128i_u*)v;
+    __m128i diff = uv ^ vv;
+    if (!_mm_testz_si128(diff, diff)) {
+      uint32_t mask = _mm_movemask_epi8(_mm_cmpeq_epi8(uv, vv));
+      long offset = __builtin_ctz(mask);
+      u += offset;
+      v += offset;
+      break;
+    }
+    u += 16;
+    v += 16;
+  }
+#elif defined __ARM_NEON
+  for (size_t xl = std::min(a.size(), b.size()) / 16; xl; --xl) {
+    uint8x8_t cmp = vshrn_n_u16(
+        vreinterpretq_u16_u8(*(const uint8x16_t*)u == *(const uint8x16_t*)v),
+        4);
+    uint64_t mask = vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
+    if (mask != 0) {
+      long offset = __builtin_ctz(mask) / 4;
+      u += offset;
+      v += offset;
+      break;
+    }
+    u += 16;
+    v += 16;
+  }
+#endif
+  for (;;) {
+    if (u >= ue) {
+      if (v >= ve) return 0;
+      return -1;
+    } else if (v >= ve) {
+      return 1;
+    }
+    U = *u++;
+    V = *v++;
+    if (U != V) break;
+  }
+
+  int cmpresult = U - V;
+
+  for (;;) {
+    U -= '0';
+    V -= '0';
+    if (U < 10) {
+      if (V >= 10) {
+        // Only U is a digit
+        return 1;
+      }
+    } else if (V < 10) {
+      // Only V is a digit
+      return -1;
+    } else {
+      // Neither is a digit
+      return cmpresult;
+    }
+    if (u >= ue) {
+      if (v >= ve)
+        return cmpresult;
+      else if (*v >= '0' && *v <= '9')
+        return -1;
+      else
+        return cmpresult;
+    } else if (v >= ve) {
+      if (*u >= '0' && *u <= '9')
+        return 1;
+      else
+        return cmpresult;
     }
     U = *u++;
     V = *v++;
