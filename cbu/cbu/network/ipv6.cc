@@ -33,6 +33,9 @@
 #if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
 #  include <x86intrin.h>
 #endif
+#ifdef __ARM_NEON
+#  include <arm_neon.h>
+#endif
 
 #include "cbu/common/bit.h"
 #include "cbu/common/byteorder.h"
@@ -73,6 +76,15 @@ inline char* FormatField(char* w, uint16_t v) noexcept {
                        _mm_cvtsi32_si128(vext >> (skip_bytes * 8)));
   memdrop(w, __v4si(chars_v)[0]);
   return w + 4 - skip_bytes;
+#elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  uint32_t skip_bytes = (cbu::clz(uint32_t(v | 1)) - 16) / 4;
+  uint32_t vext =
+      ((v & 0xf) << 24) | ((v & 0xf0) << 12) | (v & 0xf00) | (v >> 12);
+  uint8x8_t chars_v =
+      vqtbl1_u8(*(const uint8x16_t*)"0123456789abcdef",
+                vreinterpret_u8_u32(vmov_n_u32(vext >> (skip_bytes * 8))));
+  memdrop(w, vreinterpret_u32_u8(chars_v)[0]);
+  return w + 4 - skip_bytes;
 #endif
   if (v >= 0x1000) *w++ = FormatChar(v >> 12);
   if (v >= 0x100) *w++ = FormatChar((v >> 8) & 0xf);
@@ -89,6 +101,8 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
 
 #ifdef __SSE2__
   __m128i v6 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(addr.s6_addr));
+#elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  uint16x8_t v6 = *reinterpret_cast<const uint16x8_t*>(addr.s6_addr);
 #endif
 
   uint32_t zero_mask = 0;
@@ -100,6 +114,11 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
     __m128i v = _mm_cmpeq_epi16(_mm_setzero_si128(), v6);
     v = _mm_packs_epi16(v, _mm_setzero_si128());
     zero_mask = _mm_movemask_epi8(v);
+  }
+#elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  {
+    uint16x8_t v = (v6 == 0) & uint16x8_t{1, 2, 4, 8, 16, 32, 64, 128};
+    zero_mask = vaddvq_u16(v);
   }
 #else
   for (size_t i = 0; i < 8; ++i)
