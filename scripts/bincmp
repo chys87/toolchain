@@ -63,7 +63,7 @@ RE_ARM_OFFSET_FROM_REG = re.compile(
 RE_ARM_OFFSET_FROM_REG_2 = re.compile(
     br'(x\d+), (x\d+), #0x[a-f\d]{2,3}\b', re.A)
 RE_ARM_ADRP = re.compile(
-    br'(adrp\s+x\d+, )<.*>\s*$', re.M | re.A)
+    br'(adrp\s+x\d+, )<.*>', re.A)
 RE_RIP_RELATIVE = re.compile(br'0x[\da-f]+\(%rip\)', re.A)
 RE_ABS_ADDR = re.compile(
     br'0x(?:[1-9a-f][\da-f]{4,5}|1[\da-f]{6}|8[0-4][\da-f]{5})(?![\da-f])',
