@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -114,16 +114,7 @@ constexpr unsigned clz(T x) noexcept {
 // std::countl_zero.
 template <std::integral T>
 constexpr unsigned bsr(T x) noexcept {
-#if (defined __GNUC__ && (defined __i386__ || defined __x86_64__)) \
-    && !defined __clang__
-  if !consteval {
-      if constexpr (sizeof(T) == 4)
-        return __builtin_ia32_bsrsi(x);
-      else if constexpr (sizeof(T) == 8)
-        return __builtin_ia32_bsrdi(x);
-  }
-#endif
-  return clz(x) ^ (8 * sizeof(T) - 1);
+  return (8 * sizeof(T) - 1) - clz(x);
 }
 
 // popcnt is equivalent to std::popcount, except that it also accepts signed
