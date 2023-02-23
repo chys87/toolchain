@@ -285,14 +285,14 @@ int strnumcmp(std::string_view a, std::string_view b) noexcept {
     u += 16;
     v += 16;
   }
-#elif defined __ARM_NEON
+#elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   for (size_t xl = std::min(a.size(), b.size()) / 16; xl; --xl) {
     uint8x8_t cmp = vshrn_n_u16(
         vreinterpretq_u16_u8(*(const uint8x16_t*)u == *(const uint8x16_t*)v),
         4);
     uint64_t mask = vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
     if (mask != 0) {
-      long offset = __builtin_ctz(mask) / 4;
+      long offset = ctz(mask) / 4;
       u += offset;
       v += offset;
       break;
@@ -582,6 +582,16 @@ size_t char_span_length(const void* buffer, size_t len, char c) noexcept {
     uint32_t zmask =
         _mm256_movemask_epi8(_mm256_cmpeq_epi8(v, _mm256_setzero_si256()));
     return i + _tzcnt_u32(~zmask);
+  }
+#endif
+
+#if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  while (i + 16 <= len) {
+    uint8x16_t v = vdupq_n_u8(c) != *reinterpret_cast<const uint8x16_t*>(p + i);
+    uint8x8_t cmp = vshrn_n_u16(vreinterpretq_u16_u8(v), 4);
+    uint64_t mask = vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
+    if (mask) return i + ctz(mask) / 4;
+    i += 16;
   }
 #endif
 

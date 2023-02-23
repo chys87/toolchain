@@ -210,6 +210,8 @@ TEST(StrUtilTest, CharSpanLength) {
   std::fill_n(bytes, std::size(bytes), 'b');
 
   for (size_t m = 0; m < 128; ++m) {
+    // bytes[0..m-1] = 'a'
+    // bytes[m..] = 'b'
     for (size_t i = 0; i < 1024; ++i) {
       for (size_t j = i; j < N; j += j / 2 + 1) {
         size_t expected = m <= i ? 0 : std::min(j, m) - i;
