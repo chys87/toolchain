@@ -49,7 +49,7 @@ int latest(std::string_view prefix, size_t argc, char **argv, char **envp) {
       if (ent->d_type != DT_UNKNOWN && ent->d_type != DT_LNK &&
           ent->d_type != DT_REG)
         return;
-      if (strncmp(ent->d_name, prefix.data(), prefix.length()) == 0) {
+      if (bcmp(ent->d_name, prefix.data(), prefix.length()) == 0) {
         size_t d_name_len =
             prefix.length() + strlen(ent->d_name + prefix.length());
         if (d_name_len >= kPathMax) return;
@@ -75,9 +75,9 @@ int latest(std::string_view prefix, size_t argc, char **argv, char **envp) {
 } // namespace
 
 int python3_latest_main(size_t argc, char **argv, char **envp) {
-  return latest("python3.", argc, argv, envp);
+  return latest("python3."sv, argc, argv, envp);
 }
 
 int python_latest_main(size_t argc, char **argv, char **envp) {
-  return latest("python", argc, argv, envp);
+  return latest("python"sv, argc, argv, envp);
 }
