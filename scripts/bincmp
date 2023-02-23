@@ -58,6 +58,10 @@ RE_ADDRESS_FOR_SYM = re.compile(br'[\da-f]+\s+<', re.A)
 RE_RESOLVED_ABS_ADDR = re.compile(br'# [\da-f]+$', re.M | re.A)
 RE_OFFSET_FROM_SYM = re.compile(
     br'<([][ \w<>:@*&()~,.+\-*/=]+)[+\-]0x[\da-f]+>', re.A)
+RE_ARM_OFFSET_FROM_REG = re.compile(
+    br'\[(x\d+), #\d\d\d\d?\]', re.A)
+RE_ARM_OFFSET_FROM_REG_2 = re.compile(
+    br'(x\d+), \1, #0x[a-f\d]{2,3}\b', re.A)
 RE_RIP_RELATIVE = re.compile(br'0x[\da-f]+\(%rip\)', re.A)
 RE_ABS_ADDR = re.compile(
     br'0x(?:[1-9a-f][\da-f]{4,5}|1[\da-f]{6}|8[0-4][\da-f]{5})(?![\da-f])',
@@ -75,6 +79,9 @@ def dump_filter(txt):
     txt = RE_RESOLVED_ABS_ADDR.sub(b'', txt)
     # Remove offsets relative to symbols
     txt = RE_OFFSET_FROM_SYM.sub(br'<\1+0x....>', txt)
+    # Remove offsets relative to register (ARM)
+    txt = RE_ARM_OFFSET_FROM_REG.sub(br'[\1, #...]', txt)
+    txt = RE_ARM_OFFSET_FROM_REG_2.sub(br'\1, \1, #0x...', txt)
     # Remove offsets relative to RIP
     txt = RE_RIP_RELATIVE.sub(b'0x....(%rip)', txt)
     # Obfuscate what appear to be absolute addresses
