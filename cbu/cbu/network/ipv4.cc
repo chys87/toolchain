@@ -31,6 +31,9 @@
 #if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
 #  include <x86intrin.h>
 #endif
+#ifdef __ARM_NEON
+#  include <arm_neon.h>
+#endif
 
 #include <limits>
 
@@ -177,6 +180,31 @@ char* IPv4::ToString(char* p) const noexcept {
   *(uint16_t*)(p + 12) = __v8hu(bytes)[0];
   *(p + 14) = __v16qu(bytes)[2];
   p += 15l - skipped_bytes[0];
+  return p;
+#elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  uint32x4_t v =
+      vmovl_u16(vget_low_u16(vmovl_u8(vreinterpret_u8_u32(uint32x2_t{v_, 0}))));
+  uint32x4_t hundreds = (v * 41) >> 12;
+  uint32x4_t rem = v - hundreds * 100;
+  uint32x4_t tens = (rem * 103) >> 10;
+  uint32x4_t ones = rem - tens * 10;
+  uint32x4_t combined = hundreds | (tens << 8) | (ones << 16);
+
+  int32x4_t skipped_bytes =
+      vbslq_s32(v < 10, vdupq_n_s32(-2), vreinterpretq_s32_u32(v < 100));
+
+  uint32x4_t bytes =
+      vshlq_u32(combined | vdupq_n_u32(0x2e303030), skipped_bytes * 8);
+
+  *(uint32_t*)p = bytes[3];
+  p += skipped_bytes[3];
+  *(uint32_t*)(p + 4) = bytes[2];
+  p += skipped_bytes[2];
+  *(uint32_t*)(p + 8) = bytes[1];
+  p += skipped_bytes[1];
+  *(uint16_t*)(p + 12) = vreinterpretq_u16_u32(bytes)[0];
+  *(p + 14) = vreinterpretq_u8_u32(bytes)[2];
+  p += 15l + skipped_bytes[0];
   return p;
 #endif
   p = uint8_to_string(p, a());
