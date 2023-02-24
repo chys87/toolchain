@@ -327,30 +327,27 @@ std::optional<IPv6> IPv6::FromString(std::string_view s) noexcept {
 }
 
 char* IPv6Port::PortToString(char* buf, uint16_t port) noexcept {
-  if (port >= 10000) {
-    *buf++ = cbu::fastdiv<10000, 65536>(port) + '0';
-    port = cbu::fastmod<10000, 65536>(port);
-    goto _1000;
-  }
-  if (port >= 1000) {
-_1000:
-    *buf++ = cbu::fastdiv<1000, 10000>(port) + '0';
-    port = cbu::fastmod<1000, 10000>(port);
-    goto _100;
-  }
-  if (port >= 100) {
-_100:
-    *buf++ = cbu::fastdiv<100, 1000>(port) + '0';
-    port = cbu::fastmod<100, 1000>(port);
-    goto _10;
-  }
-  if (port >= 10) {
-_10:
-    *buf++ = cbu::fastdiv<10, 100>(port) + '0';
-    port = cbu::fastmod<10, 100>(port);
-  }
-  *buf++ = port + '0';
-  return buf;
+  unsigned myriads = cbu::fastdiv<10000, 65536>(port);
+  unsigned rem = port - 10000 * myriads;
+  unsigned thousands = cbu::fastdiv<1000, 10000>(rem);
+  rem -= thousands * 1000;
+  unsigned hundreds = cbu::fastdiv<100, 1000>(rem);
+  rem -= hundreds * 100;
+  unsigned tens = cbu::fastdiv<10, 100>(rem);
+  unsigned ones = rem - tens * 10;
+
+  uint64_t str = myriads | (thousands << 8) | (hundreds << 16) | (tens << 24) |
+                 uint64_t(ones) << 32;
+
+  unsigned skip_bytes = ctz(str | (1ull << 32)) / 8;
+  str >>= skip_bytes * 8;
+
+  str |= 0x30303030'30303030ull;
+
+  memdrop_le<uint32_t>(buf, str);
+  buf[4] = str >> 32;
+
+  return buf + 5 - skip_bytes;
 }
 
 char* IPv6Port::ToString(char* buf) const noexcept {

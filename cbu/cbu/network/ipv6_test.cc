@@ -78,6 +78,21 @@ TEST(IPv6Test, IPv6PortTest) {
   EXPECT_EQ(
       std::string_view(IPv6Port{IPv6{IPv4{192, 168, 25, 54}}, 79}.ToString()),
       "[::ffff:192.168.25.54]:79"sv);
+  EXPECT_EQ(
+      std::string_view(IPv6Port{IPv6{IPv4{192, 168, 25, 54}}, 0}.ToString()),
+      "[::ffff:192.168.25.54]:0"sv);
+  EXPECT_EQ(
+      std::string_view(IPv6Port{IPv6{IPv4{192, 168, 25, 54}}, 7}.ToString()),
+      "[::ffff:192.168.25.54]:7"sv);
+  EXPECT_EQ(
+      std::string_view(IPv6Port{IPv6{IPv4{192, 168, 25, 54}}, 179}.ToString()),
+      "[::ffff:192.168.25.54]:179"sv);
+  EXPECT_EQ(
+      std::string_view(IPv6Port{IPv6{IPv4{192, 168, 25, 54}}, 5179}.ToString()),
+      "[::ffff:192.168.25.54]:5179"sv);
+  EXPECT_EQ(
+      std::string_view(IPv6Port{IPv6{IPv4{192, 168, 25, 54}}, 51793}.ToString()),
+      "[::ffff:192.168.25.54]:51793"sv);
 }
 
 TEST(IPv6Test, FromStringTest) {
