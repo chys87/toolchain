@@ -14,3 +14,4 @@ This repository includes many of my favorite little hobbies
 * `scripts/pythondep`: Build Makefile-style dependency for Python
 * `scripts/unassembly`: A convenient wrapper of [objdump](https://sourceware.org/binutils/docs/binutils/objdump.html)
 * `tinyx64`: A tiny x86-64 / aarch64 runtime
+* `patches`: Patches to libstdc++ headers
