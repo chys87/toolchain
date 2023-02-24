@@ -152,7 +152,7 @@ ParseResult<std::uint32_t> parse_any_uint32(const char* s,
 } // namespace
 
 char* IPv4::ToString(char* p) const noexcept {
-#if defined __AVX512VL__ && defined __AVX512BW__
+#ifdef __SSE4_1__
   __v4su v = __v4su(_mm_cvtepu8_epi32(_mm_cvtsi32_si128(v_)));
   __v4su hundreds = (v * 41) >> 12;
   __v4su rem = v - hundreds * 100;
@@ -160,12 +160,7 @@ char* IPv4::ToString(char* p) const noexcept {
   __v4su ones = rem - tens * 10;
   __v4su combined = hundreds | (tens << 8) | (ones << 16);
 
-  __mmask8 mask_lt10 = _mm_cmplt_epu32_mask(__m128i(v), _mm_set1_epi32(10));
-  __mmask8 mask_lt100 = _mm_cmplt_epu32_mask(__m128i(v), _mm_set1_epi32(100));
-  __v4su skipped_bytes = __v4su(_mm_mask_blend_epi32(
-      mask_lt10,
-      _mm_mask_blend_epi32(mask_lt100, _mm_setzero_si128(), _mm_set1_epi32(1)),
-      _mm_set1_epi32(2)));
+  __v4su skipped_bytes = __v4su(((__v4si(v) < 10) & 1) + ((__v4si(v) < 100) & 1));
 
   __v4su bytes = __v4su(_mm_srlv_epi32(__m128i(combined | 0x2e303030),
                                        __m128i(skipped_bytes * 8)));
