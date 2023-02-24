@@ -31,6 +31,7 @@
 #include <netinet/in.h>
 
 #include <bit>
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
@@ -127,6 +128,10 @@ class IPv4 {
                                           const IPv4& rhs) noexcept {
     return lhs.v_ == rhs.v_;
   }
+  friend inline constexpr std::strong_ordering operator<=>(
+      const IPv4& lhs, const IPv4& rhs) noexcept {
+    return lhs.v_ <=> rhs.v_;
+  }
   friend inline constexpr IPv4 operator&(const IPv4& lhs,
                                          const IPv4& rhs) noexcept {
     return IPv4(lhs.v_ & rhs.v_);
@@ -149,3 +154,14 @@ class IPv4 {
 };
 
 } // namespace cbu
+
+namespace std {
+
+template <>
+struct hash<::cbu::IPv4> {
+  constexpr size_t operator()(const ::cbu::IPv4& ip) const noexcept {
+    return ip.value();
+  }
+};
+
+}  // namespace std

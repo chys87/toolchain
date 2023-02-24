@@ -84,12 +84,10 @@ ParseResult<std::uint8_t> parse_uint8(const char* s, const char* e) noexcept {
     return {true, 0, s + 1};
   }
   unsigned int x = (*s++ - '0');
-  if (s < e && *s >= '0' && *s <= '9') {
+  if (s < e && (*s >= '0' && *s <= '9')) {
     x = x * 10 + (*s++ - '0');
-    if (s < e && ((x < 25 && (*s >= '0' && *s <= '9')) ||
-                  (x == 25 && (*s >= '0' && *s <= '5')))) {
-      x = x * 10 + (*s++ - '0');
-    }
+    if (s < e && x <= 25 && std::uint8_t(*s - '0') <= (x == 25 ? 5 : 9))
+      x = x * 10 + std::uint8_t(*s++ - '0');
   }
   return {true, std::uint8_t(x), s};
 }
@@ -190,8 +188,7 @@ char* IPv4::ToString(char* p) const noexcept {
   uint32x4_t ones = rem - tens * 10;
   uint32x4_t combined = hundreds | (tens << 8) | (ones << 16);
 
-  int32x4_t skipped_bytes =
-      vbslq_s32(v < 10, vdupq_n_s32(-2), vreinterpretq_s32_u32(v < 100));
+  int32x4_t skipped_bytes = vreinterpretq_s32_u32((v < 10) + (v < 100));
 
   uint32x4_t bytes =
       vshlq_u32(combined | vdupq_n_u32(0x2e303030), skipped_bytes * 8);
@@ -231,22 +228,26 @@ std::optional<IPv4> IPv4::FromCommonString(std::string_view s) noexcept {
   auto [a_ok, a, a_s] = parse_uint8(p, e);
   if (!a_ok) return std::nullopt;
   p = a_s;
+  uint32_t ip = a;
 
   if (*p++ != '.') return std::nullopt;
   auto [b_ok, b, b_s] = parse_uint8(p, e);
   if (!b_ok) return std::nullopt;
   p = b_s;
+  ip = ip * 256 + b;
 
   if (*p++ != '.') return std::nullopt;
   auto [c_ok, c, c_s] = parse_uint8(p, e);
   if (!c_ok) return std::nullopt;
   p = c_s;
+  ip = ip * 256 + c;
 
   if (*p++ != '.') return std::nullopt;
   auto [d_ok, d, d_s] = parse_uint8(p, e);
   if (!d_ok || d_s != e) return std::nullopt;
+  ip = ip * 256 + d;
 
-  return IPv4(a, b, c, d);
+  return IPv4(ip);
 }
 
 std::optional<IPv4> IPv4::FromString(std::string_view s) noexcept {
