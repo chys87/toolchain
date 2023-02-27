@@ -739,13 +739,13 @@ uint32_t* lookup_large_block_fail_crash(const Page* page) {
 bool add_large_block_size(Page* page, size_t n) {
   uint32_t* ptr = lookup_large_block(page);
   if (false_no_fail(ptr == nullptr)) return false;
-  store_release(ptr, n);
+  store_release(ptr, n >> kPageSizeBits);
   return true;
 }
 
 size_t lookup_large_block_size_fail_crash(Page* page) {
   uint32_t* ptr = lookup_large_block_fail_crash(page);
-  return load_acquire(ptr);
+  return size_t(load_acquire(ptr)) << kPageSizeBits;
 }
 
 Page* allocate_page_uncached(size_t size, AllocateOptions options) {
@@ -924,12 +924,12 @@ void* realloc_large(void* ptr, size_t newsize) noexcept {
   newsize = pagesize_ceil(newsize);
   Page* page = (Page*)ptr;
   uint32_t* desc = lookup_large_block_fail_crash((Page*)ptr);
-  size_t oldsize = load_acquire(desc);
+  size_t oldsize = load_acquire(desc) << kPageSizeBits;
   if (oldsize == newsize) {
     return ptr;
   } else if (oldsize > newsize) {
     // Shrink
-    store_release(desc, newsize);
+    store_release(desc, newsize >> kPageSizeBits);
     reclaim_page(byte_advance(page, newsize), oldsize - newsize,
                  RECLAIM_PAGE_NOMERGE_LEFT);
     return ptr;
@@ -937,7 +937,7 @@ void* realloc_large(void* ptr, size_t newsize) noexcept {
     // Extend
     Arena* arena = &arena_mmap;
     if (arena->extend_nomove((Page*)ptr, oldsize, newsize - oldsize)) {
-      store_release(desc, newsize);
+      store_release(desc, newsize >> kPageSizeBits);
       return ptr;
     } else {
       void* nptr = alloc_large(newsize, false);
@@ -952,7 +952,7 @@ void* realloc_large(void* ptr, size_t newsize) noexcept {
 }
 
 size_t large_allocated_size(const void* ptr) noexcept {
-  return *lookup_large_block((const Page*)ptr);
+  return size_t(*lookup_large_block((const Page*)ptr)) << kPageSizeBits;
 }
 
 void large_trim(size_t pad) noexcept {
