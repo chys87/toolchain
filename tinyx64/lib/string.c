@@ -104,9 +104,13 @@ static void* mempcpy_impl(void* dst, const void* src, size_t n) {
   return dst;
 }
 
-void* memcpy(void* dst, const void* src, size_t n) {
+static void* memcpy_impl(void* dst, const void* src, size_t n) {
   mempcpy_impl(dst, src, n);
   return dst;
+}
+
+void* memcpy(void* dst, const void* src, size_t n) {
+  return memcpy_impl(dst, src, n);
 }
 
 void* mempcpy(void* dst, const void* src, size_t n) {
@@ -128,7 +132,7 @@ void* memmove(void* dst, const void* src, size_t n) {
 #endif
     return ret;
   } else {
-    return memcpy(dst, src, n);
+    return memcpy_impl(dst, src, n);
   }
 }
 
