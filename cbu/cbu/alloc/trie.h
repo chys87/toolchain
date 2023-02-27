@@ -97,8 +97,8 @@ class Trie {
   static constexpr unsigned TopBits = (TotalBits - LeafBits) % LevelBits;
 
   union Node {
-    alignas(16) Node* link[1 << LevelBits];
-    alignas(16) ValueType tbl[1 << LeafBits];
+    alignas(NodeSize) Node* link[1 << LevelBits];
+    alignas(NodeSize) ValueType tbl[1 << LeafBits];
   };
 
  public:
