@@ -12,10 +12,6 @@
 # error "PIC or PIE must be disabled."
 #endif
 
-#if __STDC_HOSTED__
-# error "-ffreestanding is reuqired"
-#endif
-
 #include "fsyscall.h"
 
 #if ! FSYSCALL_USE

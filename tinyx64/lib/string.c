@@ -54,12 +54,7 @@ void* memset(void* dst, int ch, size_t n) {
   return dst;
 }
 
-void* memcpy(void* dst, const void* src, size_t n) {
-  mempcpy(dst, src, n);
-  return dst;
-}
-
-void* mempcpy(void* dst, const void* src, size_t n) {
+static void* mempcpy_impl(void* dst, const void* src, size_t n) {
 #ifdef __x86_64__
   asm volatile("rep movsb" DUMMY_ASM : "+D"(dst), "+S"(src), "+c"(n)::"memory");
 #elif defined __ARM_NEON && __has_builtin(__builtin_memcpy_inline)
@@ -107,6 +102,15 @@ void* mempcpy(void* dst, const void* src, size_t n) {
   dst = d;
 #endif
   return dst;
+}
+
+void* memcpy(void* dst, const void* src, size_t n) {
+  mempcpy_impl(dst, src, n);
+  return dst;
+}
+
+void* mempcpy(void* dst, const void* src, size_t n) {
+  return mempcpy_impl(dst, src, n);
 }
 
 void* memmove(void* dst, const void* src, size_t n) {
