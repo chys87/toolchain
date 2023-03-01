@@ -59,18 +59,16 @@ class IPv6 {
   static short_string<kMaxStringLen> Format(const in6_addr& addr6) noexcept;
 
  public:
-  constexpr IPv6() noexcept : a_() {}
+  constexpr IPv6() noexcept : a_{} {}
   constexpr IPv6(const in6_addr& addr6) noexcept : a_(addr6) {}
 
-  constexpr IPv6(const in_addr& addr4) noexcept {
-    std::fill_n(a_.s6_addr, 10, 0);
+  constexpr IPv6(const in_addr& addr4) noexcept : a_{} {
     a_.s6_addr[10] = 0xff;
     a_.s6_addr[11] = 0xff;
     memdrop(a_.s6_addr + 12, addr4.s_addr);
   }
   constexpr IPv6(const IPv6&) noexcept = default;
-  constexpr IPv6(const IPv4& ip)noexcept {
-    std::fill_n(a_.s6_addr, 10, 0);
+  constexpr IPv6(const IPv4& ip) noexcept : a_{} {
     a_.s6_addr[10] = 0xff;
     a_.s6_addr[11] = 0xff;
     memdrop_be(a_.s6_addr + 12, ip.value());
