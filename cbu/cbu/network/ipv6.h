@@ -108,6 +108,23 @@ class IPv6 {
     return r;
   }
 
+  static consteval IPv6 Localhost() noexcept {
+    // ::1
+    IPv6 res;
+    res.a_.s6_addr[15] = 1;
+    return res;
+  }
+
+  constexpr bool IsIPv6Localhost() const noexcept {
+    return *this == Localhost();
+  }
+  constexpr bool IsIPv4Localhost() const noexcept {
+    return IsIPv4() && GetIPv4().IsLocalhost();
+  }
+  constexpr bool IsIPv4CanonicalLocalhost() const noexcept {
+    return *this == IPv6(IPv4::CanonicalLocalhost());
+  }
+
   friend constexpr bool operator==(const IPv6& a, const IPv6& b) noexcept {
 #ifdef __SSE4_2__
     if !consteval {

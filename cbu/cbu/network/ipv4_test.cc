@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -119,6 +119,14 @@ TEST(IPv4Test, InAddrTest) {
   char buffer[32];
   ASSERT_NE(inet_ntop(AF_INET, &addr, buffer, sizeof(buffer)), nullptr);
   ASSERT_STREQ(buffer, "192.168.5.4");
+}
+
+TEST(IPv4Test, LocalhostTest) {
+  ASSERT_EQ(IPv4::CanonicalLocalhost().ToString().string_view(), "127.0.0.1"sv);
+  ASSERT_TRUE(IPv4(127, 2, 3, 4).IsLocalhost());
+  ASSERT_FALSE(IPv4(127, 2, 3, 4).IsCanonicalLocalhost());
+  ASSERT_FALSE(IPv4(128, 2, 3, 4).IsLocalhost());
+  ASSERT_FALSE(IPv4(128, 2, 3, 4).IsCanonicalLocalhost());
 }
 
 }  // namespace cbu

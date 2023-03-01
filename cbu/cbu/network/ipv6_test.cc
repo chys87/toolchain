@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -124,6 +124,15 @@ TEST(IPv6Test, FromStringTest) {
   test_invalid("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:abcd");
   test_valid("64:ff9b::", "64:ff9b::0.0.0.0");
   test_valid("64:ff9b::1.2.3.4", "64:ff9b::1.2.3.4");
+}
+
+TEST(IPv6Test, LocalhostTest) {
+  ASSERT_EQ(IPv6::Localhost().ToString().string_view(), "::1"sv);
+  ASSERT_TRUE(IPv6::Localhost().IsIPv6Localhost());
+  ASSERT_TRUE(IPv6(IPv4(127, 2, 3, 4)).IsIPv4Localhost());
+  ASSERT_FALSE(IPv6(IPv4(127, 2, 3, 4)).IsIPv4CanonicalLocalhost());
+  ASSERT_FALSE(IPv6(IPv4(128, 2, 3, 4)).IsIPv4Localhost());
+  ASSERT_FALSE(IPv6(IPv4(128, 2, 3, 4)).IsIPv4CanonicalLocalhost());
 }
 
 }  // namespace

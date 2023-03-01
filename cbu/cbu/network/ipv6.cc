@@ -58,7 +58,7 @@ inline bool FormatLastTwoFieldsAsIPv4(const in6_addr& addr) noexcept {
   // 64:ff9b::/96
   if (u64_0_be == bswap_be<uint64_t>(0x64'ff9b'00000000) && u32_2_be == 0)
     return true;
-  // 64::ff9b:1::/48
+  // 64:ff9b:1::/48
   if ((u64_0_be & bswap_be<uint64_t>(0xffff'ffff'ffff'0000)) ==
       bswap_be<uint64_t>(0x64'ff9b'0001'0000))
     return true;

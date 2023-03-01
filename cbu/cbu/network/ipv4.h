@@ -115,6 +115,15 @@ class IPv4 {
   // do it strictly.
   static std::optional<IPv4> FromString(std::string_view s) noexcept;
 
+  static consteval IPv4 CanonicalLocalhost() noexcept {
+    return IPv4(127, 0, 0, 1);
+  }
+
+  constexpr bool IsLocalhost() const noexcept { return a() == 127; }
+  constexpr bool IsCanonicalLocalhost() const noexcept {
+    return *this == CanonicalLocalhost();
+  }
+
   constexpr IPv4& operator&=(const IPv4& o) noexcept {
     v_ &= o.v_;
     return *this;
