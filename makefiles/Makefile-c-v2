@@ -323,6 +323,8 @@ ifeq "$(IS_CLANG)" "1"
  AR ?= llvm-ar
  STRIP ?= llvm-strip --strip-all --strip-unneeded -R .comment -R .GCC.command.line
 else
+ # GCC has -fimplicit-constexpr, which clang lacks
+ EXTRA_CXXFLAGS += -fimplicit-constexpr
  AR ?= gcc-ar
  STRIP ?= strip --strip-unneeded -R .comment -R .GCC.command.line
 endif
