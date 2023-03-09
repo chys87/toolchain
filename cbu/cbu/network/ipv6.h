@@ -211,6 +211,10 @@ struct IPv6Port {
   IPv6 ip;
   uint16_t port;
 
+  // The extra field, which is otherwise a padding, is explicitly declared, so
+  // that the user may utilize it for other purposes if necessary.
+  uint16_t extra;
+
   static constexpr IPv6Port FromSockAddr(const sockaddr_in6& s) {
     return {IPv6(s.sin6_addr), bswap_be(s.sin6_port)};
   }
@@ -257,6 +261,7 @@ struct IPv6Port {
     return r;
   }
 
+  // Fast comparisons, with the same meaning as cbu::IPv6::FastCompare
   constexpr std::strong_ordering FastCompare(
       const IPv6Port& rhs) const noexcept {
     std::strong_ordering r = ip.FastCompare(rhs.ip);
@@ -275,6 +280,62 @@ struct IPv6Port {
     constexpr bool operator()(const IPv6Port& a,
                               const IPv6Port& b) const noexcept {
       return a.FastCompare(b) > 0;
+    }
+  };
+
+  // Comparisons taking into account of extra field.
+  constexpr uint32_t port_extra(bool port_high = false) const noexcept {
+    // Clang can compile this to a single load.
+    uint32_t v = port | (uint32_t(extra) << 16);
+    if (port_high) {
+      v = (v << 16) | (v >> 16);
+    }
+    return v;
+  }
+
+  constexpr bool IsEqualWithExtra(const IPv6Port& rhs) const noexcept {
+    return ip == rhs.ip && port_extra() == rhs.port_extra();
+  }
+  constexpr std::strong_ordering CompareWithExtra(
+      const IPv6Port& rhs) const noexcept {
+    auto r = ip <=> rhs.ip;
+    if (r != 0) r = port_extra(true) <=> rhs.port_extra(true);
+    return r;
+  }
+  constexpr std::strong_ordering FastCompareWithExtra(
+      const IPv6Port& rhs) const noexcept {
+    auto r = ip.FastCompare(rhs.ip);
+    if (r != 0) r = port_extra() <=> rhs.port_extra();
+    return r;
+  }
+  struct EqualWithExtra {
+    constexpr bool operator()(const IPv6Port& a,
+                              const IPv6Port& b) const noexcept {
+      return a.IsEqualWithExtra(b);
+    }
+  };
+  struct LessWithExtra {
+    constexpr bool operator()(const IPv6Port& a,
+                              const IPv6Port& b) const noexcept {
+      return a.CompareWithExtra(b) < 0;
+    }
+  };
+  struct GreaterWithExtra {
+    constexpr bool operator()(const IPv6Port& a,
+                              const IPv6Port& b) const noexcept {
+      return a.CompareWithExtra(b) > 0;
+    }
+  };
+  struct FastLessWithExtra {
+    constexpr bool operator()(const IPv6Port& a,
+                              const IPv6Port& b) const noexcept {
+      return a.FastCompareWithExtra(b) < 0;
+    }
+  };
+  struct FastGreaterWithExtra {
+    constexpr bool operator()(const IPv6Port& a,
+                              const IPv6Port& b) const noexcept {
+      return a.FastCompareWithExtra(b) > 0;
     }
   };
 };
