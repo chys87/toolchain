@@ -169,6 +169,29 @@ class IPv6 {
     return os;
   }
 
+  // FastCompare yields faster comparison code, but result may be
+  // counter-intuitive, or inconsistent across builds
+  constexpr std::strong_ordering FastCompare(const IPv6& rhs) const noexcept {
+    std::strong_ordering r =
+        mempick<uint64_t>(a_.s6_addr) <=> mempick<uint64_t>(rhs.a_.s6_addr);
+    if (r == 0)
+      r = mempick<uint64_t>(a_.s6_addr + 8) <=>
+          mempick<uint64_t>(rhs.a_.s6_addr + 8);
+    return r;
+  }
+
+  struct FastLess {
+    constexpr bool operator()(const IPv6& a, const IPv6& b) const noexcept {
+      return a.FastCompare(b) < 0;
+    }
+  };
+
+  struct FastGreater {
+    constexpr bool operator()(const IPv6& a, const IPv6& b) const noexcept {
+      return a.FastCompare(b) > 0;
+    }
+  };
+
  private:
 #ifdef __SSE4_2__
   __m128i ToVec() const noexcept {
@@ -233,6 +256,27 @@ struct IPv6Port {
     if (r == 0) r = a.port <=> b.port;
     return r;
   }
+
+  constexpr std::strong_ordering FastCompare(
+      const IPv6Port& rhs) const noexcept {
+    std::strong_ordering r = ip.FastCompare(rhs.ip);
+    if (r == 0) r = port <=> rhs.port;
+    return r;
+  }
+
+  struct FastLess {
+    constexpr bool operator()(const IPv6Port& a,
+                              const IPv6Port& b) const noexcept {
+      return a.FastCompare(b) < 0;
+    }
+  };
+
+  struct FastGreater {
+    constexpr bool operator()(const IPv6Port& a,
+                              const IPv6Port& b) const noexcept {
+      return a.FastCompare(b) > 0;
+    }
+  };
 };
 
 }  // namespace cbu
