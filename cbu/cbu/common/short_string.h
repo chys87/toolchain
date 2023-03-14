@@ -144,7 +144,7 @@ class fixed_length_string {
   }
 
   constexpr void assign(std::string_view src) noexcept {
-    constexpr std::size_t copy_len = std::min(Len, src.size());
+    std::size_t copy_len = std::min(Len, src.size());
     std::copy_n(src.data(), copy_len, s_);
     std::fill_n(s_ + copy_len, sizeof(s_) - copy_len, 0);
   }
