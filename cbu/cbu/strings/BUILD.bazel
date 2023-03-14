@@ -30,6 +30,7 @@ cc_library(
   srcs = [],
   hdrs = [
     'fixed_length_compare.h',
+    'hex.h',
   ],
   deps = [
   ],
