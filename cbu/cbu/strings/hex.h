@@ -26,6 +26,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#  include <arm_neon.h>
+#endif
+
 #include <cstdint>
 
 namespace cbu {
@@ -43,6 +47,16 @@ constexpr char* LittleEndian16ToHex(char* dst, std::uint16_t x) noexcept {
 }
 
 constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
+#if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  if !consteval {
+    uint8x8_t vx = vreinterpret_u8_u16(vget_low_u8(
+        (vmovl_u8(vreinterpret_u8_u32(vcreate_u32(x & 0x0f0f0f0f))) << 8) |
+        (vmovl_u8(vreinterpret_u8_u32(vcreate_u32(x & 0xf0f0f0f0))) >> 4)));
+    *(uint8x8_t*)dst =
+        vqtbl1_u8(*(const uint8x16_t*)"0123456789abcdef", vx & 0xf);
+    return dst + 8;
+  }
+#endif
   for (int i = 0; i < 4; ++i) {
     dst = ToHex(dst, std::uint8_t(x));
     x >>= 8;
@@ -51,6 +65,19 @@ constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
 }
 
 constexpr char* LittleEndian64ToHex(char* dst, std::uint64_t x) noexcept {
+#if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  if !consteval {
+    uint8x16_t vx = vreinterpretq_u8_u16(
+        (vmovl_u8(vreinterpret_u8_u64(vcreate_u64(x & 0x0f0f0f0f0f0f0f0f)))
+         << 8) |
+        (vmovl_u8(vreinterpret_u8_u64(vcreate_u64(x & 0xf0f0f0f0f0f0f0f0))) >>
+         4));
+    *(uint8x16_t*)dst =
+        vqtbl1q_u8(*(const uint8x16_t*)"0123456789abcdef", vx & 0xf);
+    return dst + 16;
+  }
+#endif
+
   for (int i = 0; i < 8; ++i) {
     dst = ToHex(dst, std::uint8_t(x));
     x >>= 8;

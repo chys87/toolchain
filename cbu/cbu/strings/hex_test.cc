@@ -43,6 +43,9 @@ TEST(HexTest, ToHexTest) {
   ToHex(buf, 0xab);
   ASSERT_EQ(std::string_view(buf, 2), "ab"sv);
 
+  LittleEndian32ToHex(buf, 0x90abcdef);
+  ASSERT_EQ(std::string_view(buf, 8), "efcdab90"sv);
+
   LittleEndian64ToHex(buf, 0x1234567890abcdef);
   ASSERT_EQ(std::string_view(buf, 16), "efcdab9078563412"sv);
 }
