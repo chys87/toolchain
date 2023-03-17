@@ -29,6 +29,9 @@
 #if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 #  include <arm_neon.h>
 #endif
+#if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
+#  include <x86intrin.h>
+#endif
 
 #include <cstdint>
 
@@ -56,6 +59,14 @@ constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
         vqtbl1_u8(*(const uint8x16_t*)"0123456789abcdef", vx & 0xf);
     return dst + 8;
   }
+#elif defined __SSSE3__
+  if !consteval {
+    __m128i vx =
+        _mm_unpacklo_epi8(_mm_cvtsi32_si128(x >> 4), _mm_cvtsi32_si128(x));
+    *(uint64_t*)dst = _mm_cvtsi128_si64(_mm_shuffle_epi8(
+        *(const __m128i_u*)"0123456789abcdef", vx & _mm_set1_epi8(0x0f)));
+    return dst + 16;
+  }
 #endif
   for (int i = 0; i < 4; ++i) {
     dst = ToHex(dst, std::uint8_t(x));
@@ -74,6 +85,14 @@ constexpr char* LittleEndian64ToHex(char* dst, std::uint64_t x) noexcept {
          4));
     *(uint8x16_t*)dst =
         vqtbl1q_u8(*(const uint8x16_t*)"0123456789abcdef", vx & 0xf);
+    return dst + 16;
+  }
+#elif defined __SSSE3__
+  if !consteval {
+    __m128i vx =
+        _mm_unpacklo_epi8(_mm_cvtsi64_si128(x >> 4), _mm_cvtsi64_si128(x));
+    *(__m128i_u*)dst = _mm_shuffle_epi8(*(const __m128i_u*)"0123456789abcdef",
+                                        vx & _mm_set1_epi8(0x0f));
     return dst + 16;
   }
 #endif
