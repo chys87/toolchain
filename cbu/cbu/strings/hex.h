@@ -52,7 +52,7 @@ constexpr char* LittleEndian16ToHex(char* dst, std::uint16_t x) noexcept {
 constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
 #if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   if !consteval {
-    uint8x8_t vx = vreinterpret_u8_u16(vget_low_u8(
+    uint8x8_t vx = vget_low_u8(vreinterpretq_u8_u16(
         (vmovl_u8(vreinterpret_u8_u32(vcreate_u32(x & 0x0f0f0f0f))) << 8) |
         (vmovl_u8(vreinterpret_u8_u32(vcreate_u32(x & 0xf0f0f0f0))) >> 4)));
     *(uint8x8_t*)dst =
