@@ -37,18 +37,24 @@
 namespace cbu {
 namespace alloc {
 
+enum RbColor : uint32_t { kBlack = 0, kRed = 1 };
+
 template <typename Node>
 struct RbLink {
-  Node* left_;
+  uintptr_t left_;
   uintptr_t right_color_;
 
   Node* get(bool lft) const noexcept {
-    // Use this trick to generate cmov if possible
-    auto r = right();
-    auto l = left();
-    return (lft ? l : r);
+    const uintptr_t& u = lft ? left_ : right_color_;
+    return reinterpret_cast<Node*>(u & ~1);
   }
-  Node* left() const noexcept { return left_; }
+
+  void set(bool lft, Node* v) noexcept {
+    uintptr_t& u = lft ? left_ : right_color_;
+    u = (u & 1) | reinterpret_cast<uintptr_t>(v);
+  }
+
+  Node* left() const noexcept { return reinterpret_cast<Node*>(left_); }
   Node* right() const noexcept {
     // Put the static assertion here so that it's evaluated after
     // Node is complete
@@ -57,20 +63,21 @@ struct RbLink {
                   "(we exploit the least significant bit for color)");
     return reinterpret_cast<Node*>(right_color_ & ~1);
   }
-  void left(Node* v) noexcept { left_ = v; }
+  void left(Node* v) noexcept { left_ = reinterpret_cast<uintptr_t>(v); }
   void right(Node* v) noexcept {
     right_color_ = (right_color_ & 1) | reinterpret_cast<uintptr_t>(v);
   }
+
   uint32_t color() const noexcept { return right_color_ & 1; }
   void color(uint32_t color) noexcept {
-    if (__builtin_constant_p(color != 0) && (color != 0))
-      right_color_ |= 1;
-    else
-      right_color_ = (right_color_ & ~1) | color;
+    right_color_ = (right_color_ & ~1) | color;
   }
   void right_color_set(Node* v, uint32_t color) noexcept {
     right_color_ = reinterpret_cast<uintptr_t>(v) | color;
   }
+
+  void red_set() noexcept { right_color_ |= kRed; }
+  void black_set() noexcept { right_color_ &= ~1; }
 };
 
 template <typename Node>
@@ -99,6 +106,10 @@ class RbBase {
     link(p, lp)->right(right);
   }
 
+  static void set(Node* p, bool set_left, Node* child, LinkPtr lp) noexcept {
+    link(p, lp)->set(set_left, child);
+  }
+
   static Node* left_exchange(Node* p, Node* child, LinkPtr lp) noexcept {
     auto ret = left(p, lp);
     left(p, child, lp);
@@ -116,8 +127,8 @@ class RbBase {
   static void color(Node* p, uint32_t clr, LinkPtr lp) noexcept {
     link(p, lp)->color(clr);
   }
-  static void red_set(Node* p, LinkPtr lp) noexcept { color(p, kRed, lp); }
-  static void black_set(Node* p, LinkPtr lp) noexcept { color(p, kBlack, lp); }
+  static void red_set(Node* p, LinkPtr lp) noexcept { link(p, lp)->red_set(); }
+  static void black_set(Node* p, LinkPtr lp) noexcept { link(p, lp)->black_set(); }
   static void right_color_set(Node* p, Node* right, uint32_t color,
                               LinkPtr lp) noexcept {
     link(p, lp)->right_color_set(right, color);
@@ -167,10 +178,7 @@ class RbBase {
   static void ucmpxchg_child(Node* node, Node* oldval, Node* newval,
                              LinkPtr lp) noexcept {
     assert(left(node, lp) == oldval || right(node, lp) == oldval);
-    if (left(node, lp) == oldval)
-      left(node, newval, lp);
-    else
-      right(node, newval, lp);
+    set(node, left(node, lp) == oldval, newval, lp);
   }
 
   static Node* move_red_left(Node* node, LinkPtr lp) noexcept;
@@ -359,6 +367,10 @@ class Rb : public RbBase<typename Accessor::Node> {
   }
   Node* insert(Node* node) noexcept;
   Node* remove(Node* node) noexcept;
+
+  // Remove and return the leftmost node.
+  // This is a common operation so write a separate function to make it fast.
+  Node* try_pop_first() noexcept;
 
  public:
   constexpr Rb() noexcept = default;
@@ -635,6 +647,96 @@ auto Rb<Accessor>::remove(Node* node) noexcept -> Node* {
       }
     }
   }
+  // Update root
+  root_ = left(&s);
+
+  return node;
+}
+
+template <typename Accessor>
+auto Rb<Accessor>::try_pop_first() noexcept -> Node* {
+  if (root_ == nullptr) return nullptr;
+
+  if (left(root_) == nullptr) {
+    // The node to delete is the root itself.
+    // In this case, there must be only 1 or 2 nodes left.
+    Node* node = root_;
+    Node* rchild = right(node);
+    root_ = rchild;
+    if (rchild) right_color_set(rchild, nullptr, kBlack);
+    return node;
+  }
+
+  // The node to delete is within the left child.
+  Node s;
+  left(&s, root_);
+  right_color_set(&s, nullptr, kBlack);
+  Node* p = &s;
+  Node* c = root_;
+  Node* xp = nullptr;
+
+  // Find the first node
+  Node* node = left(c);
+  while (left(node)) node = left(node);
+
+  if (Node* t = left(c); is_red(t) || (left(t) && is_red(left(t)))) {
+    // Move left.
+    p = c;
+    c = left(c);
+  } else {
+    // Apply standard transform to prepare for left move.
+    c = move_red_left(c);
+    black_set(c);
+    left(p, c);
+  }
+
+  for (;;) {
+    if (node != c) {
+      Node* t = left(c);
+      if (t == nullptr) {
+        // c now refers to the successor node to relocate, and xp/node refer to
+        // the context for the relocation.
+        *link(c) = *link(node);
+        ucmpxchg_child(xp, node, c);
+        ucmpxchg_child(p, c, nullptr);
+        break;
+      }
+      if (is_black(t) && (!left(t) || is_black(left(t)))) {
+        Node* rt = move_red_left(c);
+        ucmpxchg_child(p, c, rt);
+        c = rt;
+      } else {
+        p = c;
+        c = left(c);
+      }
+    } else {
+      if (right(c)) {
+        // This is the node we want to delete, but we will instead swap it
+        // with its successor and delete the successor.  Record enough
+        // information to do the swap later. xp is node's parent.
+        xp = p;
+      } else {
+        // Delete leaf node.
+        Node* t = nullptr;
+        /*
+        if (left(c)) {
+          t = lean_right(c);
+          right(t, nullptr);
+        }*/
+        ucmpxchg_child(p, c, t);
+        break;
+      }
+      if (Node* t = right(c); t && left(t) && is_red(left(t))) {
+        p = c;
+        c = right(c);
+      } else {
+        Node* rt = move_red_right(c);
+        ucmpxchg_child(p, c, rt);
+        c = rt;
+      }
+    }
+  }
+
   // Update root
   root_ = left(&s);
 

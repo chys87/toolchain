@@ -124,11 +124,10 @@ void free_description(Description* desc) {
   description_cache.desc_list = desc;
 }
 
-template <int LinkIdx = 1>
+template <RbLink<Description> Description::*rblink>
 struct DescriptionAdRbAccessor {
   using Node = Description;
-  static constexpr auto link =
-      (LinkIdx == 1) ? &Node::rblink_1 : &Node::rblink_2;
+  static constexpr auto link = rblink;
 
   static std::weak_ordering cmp(const Page* a, const Node* b) noexcept {
     return a <=> b->addr;
@@ -182,20 +181,19 @@ class PageTreeAllocator {
   Description* remove_from_szad(Description* desc) noexcept;
   Description* insert_to_szad(Description* desc) noexcept;
 
-  static constexpr size_t small_size_to_idx(size_t size) noexcept {
-    // This is written in a way that helps x86-64 generate best code
-    return size_t(unsigned(size) / kPageSize) - 1;
+  static constexpr unsigned small_size_to_idx(size_t size) noexcept {
+    return (size >> kPageSizeBits) - 1;
   }
   static constexpr size_t small_idx_to_size(unsigned idx) noexcept {
-    return (idx + 1) * unsigned(kPageSize);
+    return (idx + 1) << kPageSizeBits;
   }
 
  private:
-  Rb<DescriptionAdRbAccessor<1>> ad_;
+  Rb<DescriptionAdRbAccessor<&Description::rblink_1>> ad_;
 
   static constexpr size_t kSmallCount = 4;
   static constexpr size_t kSmallMaxSize = kSmallCount * kPageSize;
-  Rb<DescriptionAdRbAccessor<2>> szad_small_[kSmallCount];
+  Rb<DescriptionAdRbAccessor<&Description::rblink_2>> szad_small_[kSmallCount];
   Rb<DescriptionSzAdRbAccessor> szad_large_;
 };
 
@@ -216,8 +214,7 @@ Description* PageTreeAllocator::insert_to_szad(Description* desc) noexcept {
 Page* PageTreeAllocator::allocate(size_t size) noexcept {
   if (size <= kSmallMaxSize) {
     size_t k = small_size_to_idx(size);
-    if (Description* desc = szad_small_[k].first()) {
-      desc = szad_small_[k].remove(desc);
+    if (Description* desc = szad_small_[k].try_pop_first()) {
       desc = ad_.remove(desc);
       Page* ret = desc->addr;
       free_description(desc);
@@ -225,8 +222,7 @@ Page* PageTreeAllocator::allocate(size_t size) noexcept {
     }
 
     while (++k < kSmallCount) {
-      if (Description* desc = szad_small_[k].first()) {
-        desc = szad_small_[k].remove(desc);
+      if (Description* desc = szad_small_[k].try_pop_first()) {
         Page* ret = desc->addr;
         desc->addr = byte_advance(ret, size);
         desc->size = small_idx_to_size(k) - size;
@@ -392,8 +388,7 @@ Description* PageTreeAllocator::get_deallocate_candidates(
   for (size_t i = kSmallMaxSize; i > 0 && i >= threshold; i -= kPageSize) {
     size_t idx = small_size_to_idx(i);
     auto& tree = szad_small_[idx];
-    while (Description* p = tree.first()) {
-      p = tree.remove(p);
+    while (Description* p = tree.try_pop_first()) {
       p = ad_.remove(p);
       p->rblink_1.left(list);
       list = p;
@@ -736,14 +731,14 @@ uint32_t* lookup_large_block_fail_crash(const Page* page) {
                                             kPageSizeBits);
 }
 
-bool add_large_block_size(Page* page, size_t n) {
+bool set_large_block_size(Page* page, size_t n) noexcept {
   uint32_t* ptr = lookup_large_block(page);
   if (false_no_fail(ptr == nullptr)) return false;
   store_release(ptr, n >> kPageSizeBits);
   return true;
 }
 
-size_t lookup_large_block_size_fail_crash(Page* page) {
+size_t lookup_large_block_size_fail_crash(const Page* page) {
   uint32_t* ptr = lookup_large_block_fail_crash(page);
   return size_t(load_acquire(ptr)) << kPageSizeBits;
 }
@@ -900,7 +895,7 @@ void* alloc_large(size_t n, bool zero) noexcept {
   }
   Page* page = allocate_page(n, alloc::AllocateOptions().with_zero(zero));
   if (false_no_fail(!page)) return nullptr;
-  if (!add_large_block_size(page, n)) {
+  if (!set_large_block_size(page, n)) {
     reclaim_page(page, n);
     return nullptr;
   }
@@ -952,7 +947,7 @@ void* realloc_large(void* ptr, size_t newsize) noexcept {
 }
 
 size_t large_allocated_size(const void* ptr) noexcept {
-  return size_t(*lookup_large_block((const Page*)ptr)) << kPageSizeBits;
+  return lookup_large_block_size_fail_crash(static_cast<const Page*>(ptr));
 }
 
 void large_trim(size_t pad) noexcept {

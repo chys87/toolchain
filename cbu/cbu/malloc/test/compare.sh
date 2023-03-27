@@ -2,10 +2,10 @@
 
 set -e
 
-bazel build ...
-
 t1=${1:-cbu}
 t2=${2:-tc}
+
+bazel build :${t1}malloc_test :${t2}malloc_test
 
 exedir=$PWD/../../../bazel-bin/cbu/malloc/test
 PATH="$exedir:$PATH"

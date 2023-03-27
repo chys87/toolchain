@@ -118,9 +118,7 @@ ValueType* Trie<TotalBits, ValueType>::lookup_fail_crash(uintptr_t v) {
   uintptr_t levelmask = (uintptr_t(1) << LevelBits) - 1;
   Node* node = reinterpret_cast<Node *>(
       head_[TopBits ? (v >> (Levels * LevelBits + LeafBits)) : 0]);
-#ifndef __clang__
 #pragma GCC unroll 16
-#endif
   for (int i = (Levels - 1) * LevelBits; i >= 0; i -= LevelBits) {
     size_t o = (v >> (i + LeafBits)) & levelmask;
     node = load_acquire(&node->link[o]);
