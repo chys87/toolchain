@@ -315,7 +315,8 @@ ifeq "$(CXXSRCS)" ""
 endif
 
 ifeq "$(IS_CLANG)" "1"
- EXTRA_CXXFLAGS += -fstrict-vtable-pointers
+ EXTRA_CFLAGS += -flax-vector-conversions=none
+ EXTRA_CXXFLAGS += -fstrict-vtable-pointers -flax-vector-conversions=none
  ifeq "$(IS_X86_64)" "1"
   EXTRA_CFLAGS += -fveclib=libmvec
   EXTRA_CXXFLAGS += -fveclib=libmvec
