@@ -43,24 +43,17 @@
 namespace cbu {
 namespace {
 
-inline consteval std::array<char, 32> make_special_escape_map() {
-  std::array<char, 32> res{};
-  // '\v' is not universally accepted.
-  res['\b'] = 'b';
-  res['\f'] = 'f';
-  res['\n'] = 'n';
-  res['\r'] = 'r';
-  res['\t'] = 't';
-  return res;
-}
-
-constexpr std::array<char, 32> SPECIAL_ESCAPE_MAP = make_special_escape_map();
-
 inline constexpr char* escape_char(char* w, std::uint8_t c, EscapeStyle style) {
   if (c < 0x20) {
-    if (char special = SPECIAL_ESCAPE_MAP[c]) {
+    // '\v' (0x11) is not universally accepted.
+    static_assert('\b' == 8);
+    static_assert('\t' == 9);
+    static_assert('\n' == 10);
+    static_assert('\f' == 12);
+    static_assert('\r' == 13);
+    if (c >= 8 && c <= 13 && c != 11) {
       *w++ = '\\';
-      *w++ = special;
+      *w++ = "btnvfr"[c - 8];
     } else {
       if (style == EscapeStyle::JSON) {
         *w++ = '\\';
