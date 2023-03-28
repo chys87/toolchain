@@ -99,9 +99,9 @@ constexpr char* escape_string_naive(
 #ifdef __AVX2__
 inline __m256i get_encoding_mask(__m256i chars, EscapeStyle style) noexcept {
   __v32qu vq = __v32qu(chars);
-  __v32qu mask = ((vq < 0x20) | (vq == '\\') | (vq == '\"'));
+  __v32qu mask = __v32qu((vq < 0x20) | (vq == '\\') | (vq == '\"'));
   if (style == EscapeStyle::JSON) {
-    mask |= (vq == '/');
+    mask |= __v32qu(vq == '/');
   }
   return __m256i(mask);
 }

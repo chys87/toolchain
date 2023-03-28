@@ -361,9 +361,9 @@ inline constexpr std::optional<unsigned> convert_4xdigit(
 #if defined __SSE4_1__ && defined __BMI2__
   if !consteval {
     __v16qu v = __v16qu(__v4su{mempick_be<uint32_t>(s), 0, 0, 0});
-    __v16qu digits = (v - '0' <= 9);
+    __v16qu digits = __v16qu(v - '0' <= 9);
     __v16qu v_alpha = (v | 0x20) - 'a';
-    __v16qu alpha = (v_alpha < 6);
+    __v16qu alpha = __v16qu(v_alpha < 6);
     if (!assume_valid &&
         !_mm_testc_si128(__m128i(digits | alpha), _mm_setr_epi32(-1, 0, 0, 0)))
       return std::nullopt;
@@ -390,9 +390,9 @@ inline constexpr std::optional<unsigned> convert_8xdigit(
 #if defined __x86_64__ && defined __SSE4_1__ && defined __BMI2__
   if !consteval {
     __v16qu v = __v16qu(__v2du{mempick_be<uint64_t>(s), 0});
-    __v16qu digits = (v - '0' <= 9);
+    __v16qu digits = __v16qu(v - '0' <= 9);
     __v16qu v_alpha = (v | 0x20) - 'a';
-    __v16qu alpha = (v_alpha < 6);
+    __v16qu alpha = __v16qu(v_alpha < 6);
     if (!assume_valid &&
         !_mm_testc_si128(__m128i(digits | alpha), _mm_setr_epi32(-1, -1, 0, 0)))
       return std::nullopt;
@@ -416,9 +416,9 @@ inline constexpr std::optional<std::uint64_t> convert_16xdigit(
     __v16qu v = __v16qu(_mm_shuffle_epi8(
           *(const __m128i_u*)s,
           _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)));
-    __v16qu digits = (v - '0' <= 9);
+    __v16qu digits = __v16qu(v - '0' <= 9);
     __v16qu v_alpha = (v | 0x20) - 'a';
-    __v16qu alpha = (v_alpha < 6);
+    __v16qu alpha = __v16qu(v_alpha < 6);
     if (!assume_valid &&
         !_mm_testc_si128(__m128i(digits | alpha), _mm_set1_epi8(-1)))
       return std::nullopt;
