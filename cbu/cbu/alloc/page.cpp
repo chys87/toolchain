@@ -92,10 +92,9 @@ Description* alloc_description() {
   }
   description_cache.desc_count--;
   if (node->count > 1) {
-    Description* rnode = node + 1;
+    Description* rnode = description_cache.desc_list = node + 1;
     rnode->next = node->next;
     rnode->count = node->count - 1;
-    description_cache.desc_list = rnode;
   } else {
     description_cache.desc_list = node->next;
   }

@@ -42,8 +42,13 @@ namespace alloc {
 
 struct PermaAllocTag;
 
-// Type T must have next (T *) and count (unsigned) members
 template <typename T>
+concept PermaAllocable = requires(T* p) {
+  {static_cast<unsigned&>(p->count)};
+  {static_cast<T*&>(p->next)};
+};
+
+template <PermaAllocable T>
 class PermaAlloc {
  public:
   static_assert(sizeof(T) <= kPageSize && alignof(T) <= kPageSize);
@@ -65,7 +70,7 @@ class PermaAlloc {
   }
 };
 
-template <typename T>
+template <PermaAllocable T>
 T* PermaAlloc<T>::alloc() {
   if (std::lock_guard locker(lock_); list_) {
     T* node = list_;
@@ -83,7 +88,7 @@ T* PermaAlloc<T>::alloc() {
   }
 
   // Nothing available. Allocate new
-  constexpr size_t alloc_size = pagesize_ceil(4 * sizeof(T));
+  constexpr size_t alloc_size = pagesize_ceil(16 * sizeof(T));
   void* np = raw_page_allocator()->allocate(alloc_size);
   if (false_no_fail(np == nullptr)) return NULL;
 
@@ -98,12 +103,11 @@ T* PermaAlloc<T>::alloc() {
   return node;
 }
 
-template <typename T>
+template <PermaAllocable T>
 T* PermaAlloc<T>::alloc_list(unsigned preferred_count) {
   unsigned count = 0;
-  using Ptr = decltype(T::next);
-  Ptr ret;
-  Ptr* tail = &ret;
+  T* ret;
+  T** tail = &ret;
 
   for (std::lock_guard locker(lock_); list_ && (count < preferred_count);) {
     T* node = list_;
@@ -157,7 +161,7 @@ T* PermaAlloc<T>::alloc_list(unsigned preferred_count) {
   return ret;
 }
 
-template <typename T>
+template <PermaAllocable T>
 void PermaAlloc<T>::free(T* ptr) noexcept {
   std::lock_guard locker(lock_);
   ptr->next = list_;
@@ -165,7 +169,7 @@ void PermaAlloc<T>::free(T* ptr) noexcept {
   list_ = ptr;
 }
 
-template <typename T>
+template <PermaAllocable T>
 void PermaAlloc<T>::free_list(T* ptr) noexcept {
   if (!ptr) return;
   T* tail = ptr;
