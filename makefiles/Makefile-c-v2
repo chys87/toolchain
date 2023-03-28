@@ -223,8 +223,8 @@ ut:	run-$(1)
 run-$(1): $(BUILDDIR)/$(1).success
 UT_SUCCESS_FILES += $(BUILDDIR)/$(1).success
 $(BUILDDIR)/$(1).success: private NAME := UT
-$(BUILDDIR)/$(1).success: $(BUILDDIR)/$(1).n.out
-	$$(Q)if [ -f $$@ ] && md5sum --status -c $$@; then touch $$@; else $(UT_RUNNER) $(BUILDDIR)/$(1).n.out $(UT_RUNNER_ADDITIONAL_FLAGS) && md5sum $$< > $$@; fi
+$(BUILDDIR)/$(1).success: $(BUILDDIR)/$(1).n.out $(BUILDDIR)/$(1).out
+	$$(Q)if [ -f $$@ ] && md5sum --status -c $$@; then touch $$@; else $(UT_RUNNER) $(BUILDDIR)/$(1).n.out $(UT_RUNNER_ADDITIONAL_FLAGS) && md5sum $(BUILDDIR)/$(1).out > $$@; fi
 else
 INST_TARGETS += $(1)
 all:	$(BUILDDIR)/$(1).out
