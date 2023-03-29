@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,13 @@
 #include <concepts>
 #include <cstddef>
 #include <type_traits>
+
+// Heap operations.
+//  heap_* are basic heap functions.
+//  heapq_* are building blocks for an intrusive heap container (not included in
+//                                                               cbu).
+//
+// Note that comparators are in the opposite way as the std heap functions.
 
 namespace cbu {
 namespace heapq_detail {
@@ -190,6 +197,98 @@ void heapq_remove(Heap &heap, std::size_t k, C comp = C(), P pos = P()) {
     heapq_detail::heap_both(&heap[0], k, n - 1, comp, pos);
   }
   heapq_detail::shrink_to(heap, n - 1);
+}
+
+template <typename T, typename C = std::less<>>
+constexpr bool heap_verify(T* heap, std::size_t n, C comp = C()) noexcept {
+  for (std::size_t i = 0; i * 2 + 1 < n; ++i) {
+    std::size_t l = i * 2 + 1;
+    std::size_t r = i * 2 + 2;
+    if (comp(heap[l], heap[i])) return false;
+    if (r < n && comp(heap[r], heap[i])) return false;
+  }
+  return true;
+}
+
+template <typename T, typename C = std::less<>>
+constexpr void heap_down(T* heap, std::size_t i, std::size_t n, C comp = C()) noexcept {
+  while (i * 2 + 1 < n) {
+    std::size_t l = i * 2 + 1;
+    std::size_t r = i * 2 + 2;
+    if (r < n && comp(heap[r], heap[i]) && !comp(heap[l], heap[r])) {
+      std::swap(heap[i], heap[r]);
+      i = r;
+    } else if (comp(heap[l], heap[i])) {
+      std::swap(heap[i], heap[l]);
+      i = l;
+    } else {
+      break;
+    }
+  }
+}
+
+template <typename T, typename C = std::less<>>
+constexpr void heap_make(T* heap, std::size_t n, C comp = C()) noexcept {
+  if (n < 2) return;
+  std::size_t i = (n - 2) / 2;
+  do {
+    heap_down(heap, i, n, comp);
+  } while (i--);
+}
+
+template <typename T, typename C = std::less<>>
+constexpr void heap_push(T* heap, std::size_t n,
+                         std::type_identity_t<T>&& value,
+                         C comp = C()) noexcept {
+  std::size_t i = n;
+  while (i) {
+    std::size_t p = (i - 1) / 2;
+    if (comp(value, heap[p])) {
+      heap[i] = std::move(heap[p]);
+      i = p;
+    } else {
+      break;
+    }
+  }
+  heap[i] = std::move(value);
+}
+
+template <typename T, typename C = std::less<>>
+constexpr void heap_push(T* heap, std::size_t n,
+                         const std::type_identity_t<T>& value,
+                         C comp = C()) noexcept {
+  std::size_t i = n;
+  while (i) {
+    std::size_t p = (i - 1) / 2;
+    if (comp(value, heap[p])) {
+      heap[i] = std::move(heap[p]);
+      i = p;
+    } else {
+      break;
+    }
+  }
+  heap[i] = value;
+}
+
+template <typename T, typename C = std::less<>>
+constexpr void heap_pop(T* heap, std::size_t n, C comp = C()) noexcept {
+  T& value = heap[--n];
+  if (n == 0) return;
+  std::size_t i = 0;
+  while (i * 2 + 1 < n) {
+    std::size_t l = i * 2 + 1;
+    std::size_t r = i * 2 + 2;
+    if (r < n && comp(heap[r], value) && !comp(heap[l], heap[r])) {
+      heap[i] = std::move(heap[r]);
+      i = r;
+    } else if (comp(heap[l], value)) {
+      heap[i] = std::move(heap[l]);
+      i = l;
+    } else {
+      break;
+    }
+  }
+  heap[i] = std::move(value);
 }
 
 } // namespace cbu
