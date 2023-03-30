@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -121,6 +121,14 @@ class ByteSize {
     return *this;
   }
 
+  constexpr ByteSize& operator/=(std::size_t k) noexcept {
+    if constexpr ((sizeof(T) & (sizeof(T) - 1)) == 0) {
+      bytes_ = (bytes_ / k) & ~(sizeof(T) - 1);
+    } else {
+      bytes_ = bytes_ / sizeof(T) / k * sizeof(T);
+    }
+  }
+
   constexpr ByteSize& operator+=(const ByteSize& other) noexcept {
     bytes_ += other.bytes_;
     return *this;
@@ -213,6 +221,24 @@ constexpr ByteSize<T> operator*(U a, const ByteSize<T>& b) noexcept {
 template <typename T, typename U>
 constexpr auto operator*(const ByteSize<T>& a, const ByteSize<U>& b) noexcept {
   return a.size() * b.size();
+}
+
+// division
+template <typename T, std::integral U>
+constexpr ByteSize<T> operator/(const ByteSize<T>& a, U b) noexcept {
+  if constexpr ((sizeof(T) & (sizeof(T) - 1)) == 0)
+    return ByteSize<T>::from_bytes((a.bytes() / b) & ~(sizeof(T) - 1));
+  return ByteSize<T>::from_bytes(a.bytes() / sizeof(T) / b * sizeof(T));
+}
+
+template <typename T, std::integral U>
+constexpr auto operator/(U a, const ByteSize<T>& b) noexcept {
+  return a / std::size_t(b);
+}
+
+template <typename T, typename U>
+constexpr auto operator/(const ByteSize<T>& a, const ByteSize<U>& b) noexcept {
+  return a / std::size_t(b);
 }
 
 // addition
