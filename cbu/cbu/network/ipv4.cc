@@ -183,7 +183,7 @@ char* IPv4::ToString(char* p) const noexcept {
   uint32x4_t ones = rem - tens * 10;
   uint32x4_t combined = hundreds | (tens << 8) | (ones << 16);
 
-  int32x4_t skipped_bytes = vreinterpretq_s32_u32((v < 10) + (v < 100));
+  int32x4_t skipped_bytes = int32x4_t((v < 10) + (v < 100));
 
   uint32x4_t bytes =
       vshlq_u32(combined | vdupq_n_u32(0x2e303030), skipped_bytes * 8);

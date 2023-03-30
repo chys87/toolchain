@@ -117,7 +117,8 @@ char* IPv6::Format(char* w, const in6_addr& addr) noexcept {
   }
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   {
-    uint16x8_t v = (v6 == 0) & uint16x8_t{1, 2, 4, 8, 16, 32, 64, 128};
+    uint16x8_t v =
+        uint16x8_t(v6 == 0) & uint16x8_t{1, 2, 4, 8, 16, 32, 64, 128};
     zero_mask = vaddvq_u16(v);
   }
 #else
