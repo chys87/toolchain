@@ -34,6 +34,8 @@
 #include <cstddef>
 #include <type_traits>
 
+#include "cbu/common/byte_size.h"
+
 // Heap operations.
 //  heap_* are basic heap functions.
 //  heapq_* are building blocks for an intrusive heap container (not included in
@@ -200,26 +202,31 @@ void heapq_remove(Heap &heap, std::size_t k, C comp = C(), P pos = P()) {
 }
 
 template <typename T, typename C = std::less<>>
-constexpr bool heap_verify(T* heap, std::size_t n, C comp = C()) noexcept {
-  for (std::size_t i = 0; i * 2 + 1 < n; ++i) {
-    std::size_t l = i * 2 + 1;
-    std::size_t r = i * 2 + 2;
-    if (comp(heap[l], heap[i])) return false;
-    if (r < n && comp(heap[r], heap[i])) return false;
+constexpr bool heap_verify(const T* heap,
+                           cbu::ByteSize<std::type_identity_t<T>> n,
+                           C comp = C()) noexcept {
+  for (cbu::ByteSize<T> i = 0; i * 2 + 1 < n; ++i) {
+    cbu::ByteSize<T> l = i * 2 + 1;
+    cbu::ByteSize<T> r = i * 2 + 2;
+    if (comp(*(heap + l), *(heap + i))) return false;
+    if (r < n && comp(*(heap + r), *(heap + i))) return false;
   }
   return true;
 }
 
 template <typename T, typename C = std::less<>>
-constexpr void heap_down(T* heap, std::size_t i, std::size_t n, C comp = C()) noexcept {
+constexpr void heap_down(T* heap, cbu::ByteSize<std::type_identity_t<T>> i,
+                         cbu::ByteSize<std::type_identity_t<T>> n,
+                         C comp = C()) noexcept {
   while (i * 2 + 1 < n) {
-    std::size_t l = i * 2 + 1;
-    std::size_t r = i * 2 + 2;
-    if (r < n && comp(heap[r], heap[i]) && !comp(heap[l], heap[r])) {
-      std::swap(heap[i], heap[r]);
+    auto l = i * 2 + 1;
+    auto r = i * 2 + 2;
+    if (r < n && comp(*(heap + r), *(heap + i)) &&
+        !comp(*(heap + l), *(heap + r))) {
+      std::swap(*(heap + i), *(heap + r));
       i = r;
-    } else if (comp(heap[l], heap[i])) {
-      std::swap(heap[i], heap[l]);
+    } else if (comp(*(heap + l), *(heap + i))) {
+      std::swap(*(heap + i), *(heap + l));
       i = l;
     } else {
       break;
@@ -228,67 +235,69 @@ constexpr void heap_down(T* heap, std::size_t i, std::size_t n, C comp = C()) no
 }
 
 template <typename T, typename C = std::less<>>
-constexpr void heap_make(T* heap, std::size_t n, C comp = C()) noexcept {
+constexpr void heap_make(T* heap, cbu::ByteSize<std::type_identity_t<T>> n,
+                         C comp = C()) noexcept {
   if (n < 2) return;
-  std::size_t i = (n - 2) / 2;
+  auto i = (n - 2) / 2;
   do {
     heap_down(heap, i, n, comp);
   } while (i--);
 }
 
 template <typename T, typename C = std::less<>>
-constexpr void heap_push(T* heap, std::size_t n,
+constexpr void heap_push(T* heap, cbu::ByteSize<std::type_identity_t<T>> n,
                          std::type_identity_t<T>&& value,
                          C comp = C()) noexcept {
-  std::size_t i = n;
+  auto i = n;
   while (i) {
-    std::size_t p = (i - 1) / 2;
-    if (comp(value, heap[p])) {
-      heap[i] = std::move(heap[p]);
+    auto p = (i - 1) / 2;
+    if (comp(value, *(heap + p))) {
+      *(heap + i) = std::move(*(heap + p));
       i = p;
     } else {
       break;
     }
   }
-  heap[i] = std::move(value);
+  *(heap + i) = std::move(value);
 }
 
 template <typename T, typename C = std::less<>>
-constexpr void heap_push(T* heap, std::size_t n,
+constexpr void heap_push(T* heap, cbu::ByteSize<std::type_identity_t<T>> n,
                          const std::type_identity_t<T>& value,
                          C comp = C()) noexcept {
-  std::size_t i = n;
+  auto i = n;
   while (i) {
-    std::size_t p = (i - 1) / 2;
-    if (comp(value, heap[p])) {
-      heap[i] = std::move(heap[p]);
+    auto p = (i - 1) / 2;
+    if (comp(value, *(heap + p))) {
+      *(heap + i) = std::move(*(heap + p));
       i = p;
     } else {
       break;
     }
   }
-  heap[i] = value;
+  *(heap + i) = value;
 }
 
 template <typename T, typename C = std::less<>>
-constexpr void heap_pop(T* heap, std::size_t n, C comp = C()) noexcept {
+constexpr void heap_pop(T* heap, cbu::ByteSize<std::type_identity_t<T>> n,
+                        C comp = C()) noexcept {
   T& value = heap[--n];
   if (n == 0) return;
-  std::size_t i = 0;
+  cbu::ByteSize<T> i = 0;
   while (i * 2 + 1 < n) {
-    std::size_t l = i * 2 + 1;
-    std::size_t r = i * 2 + 2;
-    if (r < n && comp(heap[r], value) && !comp(heap[l], heap[r])) {
-      heap[i] = std::move(heap[r]);
+    auto l = i * 2 + 1;
+    auto r = i * 2 + 2;
+    if (r < n && comp(*(heap + r), value) && !comp(*(heap + l), *(heap + r))) {
+      *(heap + i) = std::move(*(heap + r));
       i = r;
-    } else if (comp(heap[l], value)) {
-      heap[i] = std::move(heap[l]);
+    } else if (comp(*(heap + l), value)) {
+      *(heap + i) = std::move(*(heap + l));
       i = l;
     } else {
       break;
     }
   }
-  heap[i] = std::move(value);
+  *(heap + i) = std::move(value);
 }
 
 } // namespace cbu
