@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,10 +51,10 @@ void PrintTo(u8zstring_view, std::ostream*);
 void PrintTo(u16zstring_view, std::ostream*);
 void PrintTo(u32zstring_view, std::ostream*);
 
-template <typename T>
-void PrintTo(cbu::ByteSize<T> size, std::ostream* os) {
-  *os << "ByteSize("sv << std::size_t(size) << ") /* * "sv << sizeof(T)
-      << " = "sv << size.bytes() << " bytes */sv";
+template <typename T, typename U>
+void PrintTo(cbu::ByteSize<T, U> size, std::ostream* os) {
+  *os << "ByteSize("sv << U(size) << ") /* * "sv << sizeof(T) << " = "sv
+      << size.bytes() << " bytes */sv";
 }
 
 }  // namespace cbu

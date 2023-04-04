@@ -79,49 +79,54 @@ constexpr U* byte_back(U* p, std::ptrdiff_t u) {
 // A class with similar semantics as size_t, but stores size in bytes.
 // ByteSize<T> should compile even if T is an incomplete type, so long as
 // sizeof(T) is not required.
-template <typename T>
+template <typename T, typename U = std::size_t>
 class ByteSize {
  public:
   static_assert(std::is_same_v<T, std::remove_cvref_t<T>>);
+  static_assert(std::is_same_v<U, unsigned long long> ||
+                std::is_same_v<U, unsigned long> ||
+                std::is_same_v<U, unsigned> ||
+                std::is_same_v<U, unsigned short> ||
+                std::is_same_v<U, unsigned char>);
 
   // Uninitialized, for performance
   ByteSize() noexcept = default;
-  constexpr ByteSize(std::size_t count) noexcept : bytes_(count * sizeof(T)) {}
+  constexpr ByteSize(U count) noexcept : bytes_(count * sizeof(T)) {}
   constexpr ByteSize(const ByteSize& other) noexcept = default;
 
-  static constexpr ByteSize from_bytes(std::size_t bytes) noexcept {
+  static constexpr ByteSize from_bytes(U bytes) noexcept {
     ByteSize r;
     r.bytes_ = bytes;
     return r;
   }
 
-  template <typename U>
-  constexpr ByteSize(const ByteSize<U>& other) noexcept
-      : bytes_(sizeof(T) >= sizeof(U) && sizeof(T) % sizeof(U) == 0
-                   ? other.bytes() * (sizeof(T) / sizeof(U))
-               : sizeof(T) < sizeof(U) && sizeof(U) % sizeof(T) == 0
-                   ? other.bytes() / (sizeof(U) / sizeof(T))
-                   : other.bytes() / sizeof(U) * sizeof(T)) {}
+  template <typename V, typename W>
+  constexpr ByteSize(const ByteSize<V, W>& other) noexcept
+      : bytes_(sizeof(T) >= sizeof(V) && sizeof(T) % sizeof(V) == 0
+                   ? other.bytes() * (sizeof(T) / sizeof(V))
+               : sizeof(T) < sizeof(V) && sizeof(V) % sizeof(T) == 0
+                   ? other.bytes() / (sizeof(V) / sizeof(T))
+                   : other.bytes() / sizeof(V) * sizeof(T)) {}
 
   constexpr ByteSize& operator=(const ByteSize& other) noexcept = default;
 
-  template <typename U>
-    requires(std::is_convertible_v<U (*)[], T (*)[]>)
-  constexpr ByteSize(const U* lo, const U* hi) noexcept
+  template <typename V>
+    requires(std::is_convertible_v<V (*)[], T (*)[]>)
+  constexpr ByteSize(const V* lo, const V* hi) noexcept
       : bytes_(byte_distance(lo, hi)) {}
 
-  constexpr std::size_t bytes() const noexcept { return bytes_; }
-  constexpr std::size_t size() const noexcept { return bytes_ / sizeof(T); }
+  constexpr U bytes() const noexcept { return bytes_; }
+  constexpr U size() const noexcept { return bytes_ / sizeof(T); }
 
-  constexpr operator std::size_t() const noexcept { return size(); }
+  constexpr operator U() const noexcept { return size(); }
   constexpr explicit operator bool() const noexcept { return bytes_; }
 
-  constexpr ByteSize& operator*=(std::size_t k) noexcept {
+  constexpr ByteSize& operator*=(U k) noexcept {
     bytes_ *= k;
     return *this;
   }
 
-  constexpr ByteSize& operator/=(std::size_t k) noexcept {
+  constexpr ByteSize& operator/=(U k) noexcept {
     if constexpr ((sizeof(T) & (sizeof(T) - 1)) == 0) {
       bytes_ = (bytes_ / k) & ~(sizeof(T) - 1);
     } else {
@@ -139,12 +144,12 @@ class ByteSize {
     return *this;
   }
 
-  constexpr ByteSize& operator+=(std::size_t n) noexcept {
+  constexpr ByteSize& operator+=(U n) noexcept {
     bytes_ += n * sizeof(T);
     return *this;
   }
 
-  constexpr ByteSize& operator-=(std::size_t n) noexcept {
+  constexpr ByteSize& operator-=(U n) noexcept {
     bytes_ -= n * sizeof(T);
     return *this;
   }
@@ -169,13 +174,13 @@ class ByteSize {
   }
 
  private:
-  std::size_t bytes_;
+  U bytes_;
 };
 
 // Comparisons
 
-template <typename T, typename U>
-constexpr bool operator==(const ByteSize<T>& a, const ByteSize<U>& b) noexcept {
+template <typename T, typename TU, typename U, typename UU>
+constexpr bool operator==(const ByteSize<T, TU>& a, const ByteSize<U, UU>& b) noexcept {
   // Don't delete the first if constexpr, so that incomplete types are supported
   if constexpr (std::is_same_v<T, U>)
     return a.bytes() == b.bytes();
@@ -185,9 +190,9 @@ constexpr bool operator==(const ByteSize<T>& a, const ByteSize<U>& b) noexcept {
     return a.size() == b.size();
 }
 
-template <typename T, typename U>
-constexpr auto operator<=>(const ByteSize<T>& a,
-                           const ByteSize<U>& b) noexcept {
+template <typename T, typename TU, typename U, typename UU>
+constexpr auto operator<=>(const ByteSize<T, TU>& a,
+                           const ByteSize<U, UU>& b) noexcept {
   // Don't delete the first if constexpr, so that incomplete types are supported
   if constexpr (std::is_same_v<T, U>)
     return a.bytes() <=> b.bytes();
@@ -197,127 +202,135 @@ constexpr auto operator<=>(const ByteSize<T>& a,
     return std::weak_ordering(a.size() <=> b.size());
 }
 
-template <typename T, std::integral U>
-constexpr bool operator==(const ByteSize<T>& a, U b) noexcept {
+template <typename T, typename TU, std::integral U>
+constexpr bool operator==(const ByteSize<T, TU>& a, U b) noexcept {
   return a.bytes() == b * sizeof(T);
 }
 
-template <typename T, std::integral U>
-constexpr std::weak_ordering operator<=>(const ByteSize<T>& a, U b) noexcept {
+template <typename T, typename TU, std::integral U>
+constexpr std::weak_ordering operator<=>(const ByteSize<T, TU>& a, U b) noexcept {
   return a.bytes() <=> b * sizeof(T);
 }
 
 // multiplication
-template <typename T, std::integral U>
-constexpr ByteSize<T> operator*(const ByteSize<T>& a, U b) noexcept {
-  return ByteSize<T>::from_bytes(a.bytes() * b);
+template <typename T, typename TU, std::integral U>
+constexpr auto operator*(const ByteSize<T, TU>& a, U b) noexcept {
+  return ByteSize<T, std::make_unsigned_t<std::common_type_t<TU, U>>>::
+      from_bytes(a.bytes() * b);
 }
 
-template <typename T, std::integral U>
-constexpr ByteSize<T> operator*(U a, const ByteSize<T>& b) noexcept {
-  return ByteSize<T>::from_bytes(b.bytes() * a);
+template <typename T, typename TU, std::integral U>
+constexpr auto operator*(U a, const ByteSize<T, TU>& b) noexcept {
+  return ByteSize<T, std::make_unsigned_t<std::common_type_t<TU, U>>>::
+      from_bytes(b.bytes() * a);
 }
 
-template <typename T, typename U>
-constexpr auto operator*(const ByteSize<T>& a, const ByteSize<U>& b) noexcept {
+template <typename T, typename TU, typename U, typename UU>
+constexpr auto operator*(const ByteSize<T, TU>& a,
+                         const ByteSize<U, UU>& b) noexcept {
   return a.size() * b.size();
 }
 
 // division
-template <typename T, std::integral U>
-constexpr ByteSize<T> operator/(const ByteSize<T>& a, U b) noexcept {
+template <typename T, typename TU, std::integral U>
+constexpr ByteSize<T, TU> operator/(const ByteSize<T, TU>& a, U b) noexcept {
   if constexpr ((sizeof(T) & (sizeof(T) - 1)) == 0)
     return ByteSize<T>::from_bytes((a.bytes() / b) & ~(sizeof(T) - 1));
   return ByteSize<T>::from_bytes(a.bytes() / sizeof(T) / b * sizeof(T));
 }
 
-template <typename T, std::integral U>
-constexpr auto operator/(U a, const ByteSize<T>& b) noexcept {
-  return a / std::size_t(b);
+template <typename T, typename TU, std::integral U>
+constexpr auto operator/(U a, const ByteSize<T, TU>& b) noexcept {
+  return a / TU(b);
 }
 
-template <typename T, typename U>
-constexpr auto operator/(const ByteSize<T>& a, const ByteSize<U>& b) noexcept {
-  return a / std::size_t(b);
+template <typename T, typename TU, typename U, typename UU>
+constexpr auto operator/(const ByteSize<T, TU>& a, const ByteSize<U, UU>& b) noexcept {
+  return a / TU(UU(b));
 }
 
 // addition
-template <typename T, typename U>
-constexpr auto operator+(const ByteSize<T>& a, const ByteSize<U>& b) noexcept {
+template <typename T, typename TU, typename U, typename UU>
+constexpr auto operator+(const ByteSize<T, TU>& a, const ByteSize<U, UU>& b) noexcept {
   if constexpr (std::is_same_v<T, U>)
-    return ByteSize<T>::from_bytes(a.bytes() + b.bytes());
+    return ByteSize<T, std::common_type_t<TU, UU>>::from_bytes(a.bytes() + b.bytes());
   else
     return a.size() + b.size();
 }
 
-template <typename T, typename U>
-constexpr auto operator-(const ByteSize<T>& a, const ByteSize<U>& b) noexcept {
+template <typename T, typename TU, typename U, typename UU>
+constexpr auto operator-(const ByteSize<T, TU>& a, const ByteSize<U, UU>& b) noexcept {
   if constexpr (std::is_same_v<T, U>)
-    return ByteSize<T>::from_bytes(a.bytes() - b.bytes());
+    return ByteSize<T, std::common_type_t<TU, UU>>::from_bytes(a.bytes() -
+                                                               b.bytes());
   else
     return a.size() - b.size();
 }
 
 // Explicitly define them to avoid "ByteSize + int" being compiled as
 // "size_t(ByteSize) + int"
-template <typename T, std::integral U>
-constexpr ByteSize<T> operator+(const ByteSize<T>& a, U b) noexcept {
-  return ByteSize<T>::from_bytes(a.bytes() + b * sizeof(T));
+template <typename T, typename TU, std::integral U>
+constexpr auto operator+(const ByteSize<T, TU>& a, U b) noexcept {
+  return ByteSize<T, std::make_unsigned_t<std::common_type_t<TU, U>>>::
+      from_bytes(a.bytes() + b * sizeof(T));
 }
 
-template <typename T, std::integral U>
-constexpr ByteSize<T> operator-(const ByteSize<T>& a, U b) noexcept {
-  return ByteSize<T>::from_bytes(a.bytes() - b * sizeof(T));
+template <typename T, typename TU, std::integral U>
+constexpr auto operator-(const ByteSize<T, TU>& a, U b) noexcept {
+  return ByteSize<T, std::make_unsigned_t<std::common_type_t<TU, U>>>::
+      from_bytes(a.bytes() - b * sizeof(T));
 }
 
-template <typename T, std::integral U>
-constexpr ByteSize<T> operator+(U a, const ByteSize<T>& b) noexcept {
-  return ByteSize<T>::from_bytes(a * sizeof(T) + b.bytes());
+template <typename T, typename TU, std::integral U>
+constexpr auto operator+(U a, const ByteSize<T, TU>& b) noexcept {
+  return ByteSize<T, std::make_unsigned_t<std::common_type_t<TU, U>>>::
+      from_bytes(a * sizeof(T) + b.bytes());
 }
 
-template <typename T, std::integral U>
-constexpr ByteSize<T> operator-(U a, const ByteSize<T>& b) noexcept {
-  return ByteSize<T>::from_bytes(a * sizeof(T) - b.bytes());
+template <typename T, typename TU, std::integral U>
+constexpr auto operator-(U a, const ByteSize<T, TU>& b) noexcept {
+  return ByteSize<T, std::make_unsigned_t<std::common_type_t<TU, U>>>::
+      from_bytes(a * sizeof(T) - b.bytes());
 }
 
 // Unfortunately we are unable to overload
 // operator [] (T *, ByteSize<T>)
 
-template <typename T, typename U>
-constexpr T* operator+(T* lo, const ByteSize<U>& diff) noexcept {
+template <typename T, typename U, typename UU>
+constexpr T* operator+(T* lo, const ByteSize<U, UU>& diff) noexcept {
   if constexpr (sizeof(T) == sizeof(U))
     return byte_advance(lo, diff.bytes());
   else
-    return lo + std::size_t(diff);
+    return lo + diff.size();
 }
 
-template <typename T, typename U>
-constexpr T*& operator+=(T*& lo, const ByteSize<U>& diff) noexcept {
+template <typename T, typename U, typename UU>
+constexpr T*& operator+=(T*& lo, const ByteSize<U, UU>& diff) noexcept {
   if constexpr (sizeof(T) == sizeof(U))
     return lo = byte_advance(lo, diff.bytes());
   else
-    return lo += std::size_t(diff);
+    return lo += diff.size();
 }
 
-template <typename T, typename U>
-constexpr T* operator+(const ByteSize<U>& diff, T* lo) noexcept {
+template <typename T, typename U, typename UU>
+constexpr T* operator+(const ByteSize<U, UU>& diff, T* lo) noexcept {
   return lo + diff;
 }
 
-template <typename T, typename U>
-constexpr T* operator-(T* lo, const ByteSize<U>& diff) noexcept {
+template <typename T, typename U, typename UU>
+constexpr T* operator-(T* lo, const ByteSize<U, UU>& diff) noexcept {
   if constexpr (sizeof(T) == sizeof(U))
     return byte_back(lo, diff.bytes());
   else
-    return lo - std::size_t(diff);
+    return lo - diff.size();
 }
 
-template <typename T, typename U>
-constexpr T*& operator-=(T*& lo, const ByteSize<U>& diff) noexcept {
+template <typename T, typename U, typename UU>
+constexpr T*& operator-=(T*& lo, const ByteSize<U, UU>& diff) noexcept {
   if constexpr (sizeof(T) == sizeof(U))
     return lo = byte_back(lo, diff.bytes());
   else
-    return lo -= std::size_t(diff);
+    return lo -= diff.size();
 }
 
 }  // namespace cbu
