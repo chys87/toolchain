@@ -1,3 +1,31 @@
+/*
+ * cbu - chys's basic utilities
+ * Copyright (c) 2013-2023, chys <admin@CHYS.INFO>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of chys <admin@CHYS.INFO> nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY chys <admin@CHYS.INFO> ''AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL chys <admin@CHYS.INFO> BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #define def_fsys_base(funcname, sysname, rettype, clobbermem, argc, ...)    \
   fsys_inline rettype fsys_##funcname(FSYS_FUNC_ARGS_##argc(__VA_ARGS__)) { \
     rettype r;                                                              \
@@ -62,32 +90,40 @@
 #define FSYS_FUNC_ARGS_6(ta,tb,tc,td,te,tf) ta a, tb b, tc c, td d, te e, tf f
 
 #define FSYS_GENERIC_LOAD_ARGS_0()
-#define FSYS_GENERIC_LOAD_ARGS_1(a) \
-  __typeof__((a)) a__ = (a)
-#define FSYS_GENERIC_LOAD_ARGS_2(a,b) \
-  FSYS_GENERIC_LOAD_ARGS_1(a); __typeof__((b)) b__ = (b)
-#define FSYS_GENERIC_LOAD_ARGS_3(a,b,c) \
-  FSYS_GENERIC_LOAD_ARGS_2(a,b); __typeof__((c)) c__ = (c)
-#define FSYS_GENERIC_LOAD_ARGS_4(a,b,c,d) \
-  FSYS_GENERIC_LOAD_ARGS_3(a,b,c); __typeof__((d)) d__ = (d)
-#define FSYS_GENERIC_LOAD_ARGS_5(a,b,c,d,e) \
-  FSYS_GENERIC_LOAD_ARGS_4(a,b,c,d); __typeof__((e)) e__ = (e)
-#define FSYS_GENERIC_LOAD_ARGS_6(a,b,c,d,e,f) \
-  FSYS_GENERIC_LOAD_ARGS_5(a,b,c,d,e); __typeof__((f)) f__ = (f)
+#define FSYS_GENERIC_LOAD_ARGS_1(a) __auto_type a__ = (a)
+#define FSYS_GENERIC_LOAD_ARGS_2(a, b) \
+  FSYS_GENERIC_LOAD_ARGS_1(a);         \
+  __auto_type b__ = (b)
+#define FSYS_GENERIC_LOAD_ARGS_3(a, b, c) \
+  FSYS_GENERIC_LOAD_ARGS_2(a, b);         \
+  __auto_type c__ = (c)
+#define FSYS_GENERIC_LOAD_ARGS_4(a, b, c, d) \
+  FSYS_GENERIC_LOAD_ARGS_3(a, b, c);         \
+  __auto_type d__ = (d)
+#define FSYS_GENERIC_LOAD_ARGS_5(a, b, c, d, e) \
+  FSYS_GENERIC_LOAD_ARGS_4(a, b, c, d);         \
+  __auto_type e__ = (e)
+#define FSYS_GENERIC_LOAD_ARGS_6(a, b, c, d, e, f) \
+  FSYS_GENERIC_LOAD_ARGS_5(a, b, c, d, e);         \
+  __auto_type f__ = (f)
 
 #define FSYS_GENERIC_LOAD_REGS_0
-#define FSYS_GENERIC_LOAD_REGS_1 \
-  __typeof__((a__)) A__ /*__asm__("rdi")*/ = a__
+#define FSYS_GENERIC_LOAD_REGS_1 __auto_type A__ /*__asm__("rdi")*/ = a__
 #define FSYS_GENERIC_LOAD_REGS_2 \
-  FSYS_GENERIC_LOAD_REGS_1; __typeof__((b__)) B__ /*__asm__("rsi")*/ = b__
+  FSYS_GENERIC_LOAD_REGS_1;      \
+  __auto_type B__ /*__asm__("rsi")*/ = b__
 #define FSYS_GENERIC_LOAD_REGS_3 \
-  FSYS_GENERIC_LOAD_REGS_2; __typeof__((c__)) C__ /*__asm__("rdx")*/ = c__
+  FSYS_GENERIC_LOAD_REGS_2;      \
+  __auto_type C__ /*__asm__("rdx")*/ = c__
 #define FSYS_GENERIC_LOAD_REGS_4 \
-  FSYS_GENERIC_LOAD_REGS_3; register __typeof__((d__)) D__ __asm__("r10") = d__
+  FSYS_GENERIC_LOAD_REGS_3;      \
+  register __auto_type D__ __asm__("r10") = d__
 #define FSYS_GENERIC_LOAD_REGS_5 \
-  FSYS_GENERIC_LOAD_REGS_4; register __typeof__((e__)) E__ __asm__("r8") = e__
+  FSYS_GENERIC_LOAD_REGS_4;      \
+  register __auto_type E__ __asm__("r8") = e__
 #define FSYS_GENERIC_LOAD_REGS_6 \
-  FSYS_GENERIC_LOAD_REGS_5; register __typeof__((f__)) F__ __asm__("r9") = f__
+  FSYS_GENERIC_LOAD_REGS_5;      \
+  register __auto_type F__ __asm__("r9") = f__
 
 #define FSYS_GENERIC_ASM_REGS_0
 #define FSYS_GENERIC_ASM_REGS_1 FSYS_GENERIC_ASM_REGS_0,"D"(A__)
