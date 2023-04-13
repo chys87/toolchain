@@ -53,55 +53,54 @@ struct HeapDefaultPositioner {
   }
 };
 
-// Fallback implementation
 template <typename T, typename P>
-inline void swap_pos_impl(T *heap, std::size_t i, std::size_t j, P pos, float) {
+inline constexpr void swap_pos(T* heap,
+                               cbu::ByteSize<std::type_identity_t<T>> i,
+                               cbu::ByteSize<std::type_identity_t<T>> j,
+                               P pos) {
   assert(i != j);
-  std::swap(heap[i], heap[j]);
-  pos(heap[i], i);
-  pos(heap[j], j);
+  if constexpr (std::is_trivially_copyable_v<T>) {
+    T new_j = *(heap + i);
+    *(heap + i) = *(heap + j);
+    pos(*(heap + i), i);
+    *(heap + j) = new_j;
+    pos(*(heap + j), j);
+  } else {
+    std::swap(*(heap + i), *(heap + j));
+    pos(*(heap + i), i);
+    pos(*(heap + j), j);
+  }
 }
 
-template <typename T, typename P>
-requires std::is_trivially_copyable<T>::value
-inline void swap_pos_impl(T *heap, std::size_t i, std::size_t j, P pos, int) {
-  assert(i != j);
-  T new_j = heap[i];
-  heap[i] = heap[j];
-  pos(heap[i], i);
-  heap[j] = new_j;
-  pos(heap[j], j);
-}
-
-template <typename T, typename P>
-inline void swap_pos(T *heap, std::size_t i, std::size_t j, P pos) {
-  swap_pos_impl(heap, i, j, pos, 0);
-}
-
-template<typename T, typename C, typename P>
-std::size_t heap_up(T *heap, std::size_t k, C comp, P pos) {
-  while (k && comp(heap[k], heap[(k - 1) / 2])) {
-    std::size_t parent = (k - 1) / 2;
+template <typename T, typename C, typename P>
+constexpr cbu::ByteSize<T*> heap_up(T* heap,
+                                    cbu::ByteSize<std::type_identity_t<T>> k,
+                                    C comp, P pos) {
+  while (k && comp(*(heap + k), *(heap + (k - 1) / 2))) {
+    auto parent = (k - 1) / 2;
     swap_pos(heap, k, parent, pos);
     k = parent;
   }
   return k;
 }
 
-template<typename T, typename C, typename P>
-std::size_t heap_down(T *heap, std::size_t k, std::size_t n, C comp, P pos) {
+template <typename T, typename C, typename P>
+constexpr cbu::ByteSize<T> heap_down(T* heap,
+                                     cbu::ByteSize<std::type_identity_t<T>> k,
+                                     cbu::ByteSize<std::type_identity_t<T>> n,
+                                     C comp, P pos) {
   while (k * 2 + 1 < n) {
-    std::size_t left = k * 2 + 1;
-    std::size_t right = left + 1;
-    std::size_t new_pos;
-    if ((right < n) && comp(heap[right], heap[k])) {
+    cbu::ByteSize<T> left = k * 2 + 1;
+    cbu::ByteSize<T> right = left + 1;
+    cbu::ByteSize<T> new_pos;
+    if ((right < n) && comp(*(heap + right), *(heap + k))) {
       // right < self
-      if (comp(heap[left], heap[right])) { // left < right < self
+      if (comp(*(heap + left), *(heap + right))) { // left < right < self
         new_pos = left;
       } else { // right < self; right <= left
         new_pos = right;
       }
-    } else if (comp(heap[left], heap[k])) { // left < self <= right
+    } else if (comp(*(heap + left), *(heap + k))) {  // left < self <= right
       new_pos = left;
     } else {
       break;
@@ -112,11 +111,13 @@ std::size_t heap_down(T *heap, std::size_t k, std::size_t n, C comp, P pos) {
   return k;
 }
 
-template<typename T, typename C, typename P>
-std::size_t heap_both(T *heap, std::size_t k, std::size_t n, C comp, P pos) {
-  std::size_t new_k = heap_up(heap, k, comp, pos);
-  if (new_k == k)
-    new_k = heap_down(heap, k, n, comp, pos);
+template <typename T, typename C, typename P>
+constexpr cbu::ByteSize<T*> heap_both(T* heap,
+                                      cbu::ByteSize<std::type_identity_t<T>> k,
+                                      cbu::ByteSize<std::type_identity_t<T>> n,
+                                      C comp, P pos) {
+  auto new_k = heap_up(heap, k, comp, pos);
+  if (new_k == k) new_k = heap_down(heap, k, n, comp, pos);
   return new_k;
 }
 
@@ -126,75 +127,72 @@ template <typename Vec>
 concept Heapq_vector = requires(Vec &vec, std::size_t n) {
   typename Vec::value_type;
   { vec.size() } -> std::convertible_to<std::size_t>;
+  { vec.clear() };
   { vec.resize(n) };
   { vec[n] } -> std::convertible_to<typename Vec::value_type &>;
 };
 
 namespace heapq_detail {
 
-// Some of my own implementation provides shrink_to for shrinking
-template <typename Vec>
-concept Heapq_vector_shrink_to = requires(Vec &vec, std::size_t n) {
-  requires Heapq_vector<Vec>;
-  vec.shrink_to(n);
-};
-
-template <Heapq_vector_shrink_to Heap>
-inline void shrink_to(Heap &heap, std::size_t n) {
-  heap.shrink_to(n);
+// Some of my own implementation provides shrink_to or truncate_to for shrinking
+template <Heapq_vector Heap, typename Size>
+inline constexpr void shrink_to(Heap& heap, Size n) {
+  if constexpr (requires(Heap & heap, Size n) { {heap.shrink_to(n)}; }) {
+    heap.shrink_to(n);
+  } else if constexpr (requires(Heap & heap, Size n) {
+                         {heap.truncate_to(n)};
+                       }) {
+    heap.truncate_to(n);
+  } else {
+    heap.resize(n);
+  }
 }
 
-template <Heapq_vector Heap>
-requires (!Heapq_vector_shrink_to<Heap>)
-inline void shrink_to(Heap &heap, std::size_t n) {
-  heap.resize(n);
-}
-
-} // namespace heapq_detail
+}  // namespace heapq_detail
 
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-constexpr void heapq_pop(Heap &heap, C comp = C(), P pos = P()) {
-  std::size_t n = heap.size();
-  if (n >= 1) {
-    if (n == 1) {
-      heap.clear();
-    } else {
-      heap[0] = std::move(heap[n - 1]);
-      pos(heap[0], 0);
-      heapq_detail::shrink_to(heap, --n);
-      heapq_detail::heap_down(&heap[0], 0, n, comp, pos);
-    }
+constexpr void heapq_pop(Heap& heap, C comp = C(), P pos = P()) {
+  auto n = heap.size();
+  if (n <= 1) {
+    heap.clear();
+  } else {
+    heap[0] = std::move(heap[n - 1]);
+    pos(heap[0], 0);
+    heapq_detail::shrink_to(heap, --n);
+    heapq_detail::heap_down(&heap[0], 0, n, comp, pos);
   }
 }
 
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-constexpr std::size_t heapq_adjust_tail(Heap& heap, C comp = C(), P pos = P()) {
+constexpr auto heapq_adjust_tail(Heap& heap, C comp = C(), P pos = P()) {
   assert(!heap.empty());
   return heapq_detail::heap_up(&heap[0], heap.size() - 1, comp, pos);
 }
 
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-constexpr std::size_t heapq_adjust_top(Heap& heap, C comp = C(), P pos = P()) {
+constexpr auto heapq_adjust_top(Heap& heap, C comp = C(), P pos = P()) {
   assert(!heap.empty());
   return heapq_detail::heap_down(&heap[0], 0, heap.size(), comp, pos);
 }
 
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-constexpr std::size_t heapq_adjust(Heap& heap, std::size_t k, C comp = C(),
-                                   P pos = P()) {
+constexpr auto heapq_adjust(Heap& heap,
+                            cbu::ByteSize<typename Heap::value_type> k,
+                            C comp = C(), P pos = P()) {
   return heapq_detail::heap_both(&heap[0], k, heap.size(), comp, pos);
 }
 
 // Remove an item from any position
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-constexpr void heapq_remove(Heap& heap, std::size_t k, C comp = C(),
-                            P pos = P()) {
-  std::size_t n = heap.size();
+constexpr void heapq_remove(Heap& heap,
+                            cbu::ByteSize<typename Heap::value_type> k,
+                            C comp = C(), P pos = P()) {
+  auto n = heap.size();
   assert(k < n);
   if (k < n - 1) {
     heap[k] = std::move(heap[n - 1]);
