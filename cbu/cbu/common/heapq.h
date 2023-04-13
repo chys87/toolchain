@@ -219,19 +219,23 @@ template <typename T, typename C = std::less<>>
 constexpr void heap_down(T* heap, cbu::ByteSize<std::type_identity_t<T>> i,
                          cbu::ByteSize<std::type_identity_t<T>> n,
                          C comp = C()) noexcept {
-  while (i * 2 + 1 < n) {
+  while (true) {
     auto l = i * 2 + 1;
     auto r = i * 2 + 2;
-    if (r < n && comp(*(heap + r), *(heap + i)) &&
-        !comp(*(heap + l), *(heap + r))) {
-      std::swap(*(heap + i), *(heap + r));
-      i = r;
+    if (r > n /* l >= n */) break;
+    auto next = i;
+    if (r < n && comp(*(heap + r), *(heap + i))) {
+      if (comp(*(heap + l), *(heap + r)))
+        next = l;
+      else
+        next = r;
     } else if (comp(*(heap + l), *(heap + i))) {
-      std::swap(*(heap + i), *(heap + l));
-      i = l;
+      next = l;
     } else {
       break;
     }
+    std::swap(*(heap + i), *(heap + next));
+    i = next;
   }
 }
 
