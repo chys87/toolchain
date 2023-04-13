@@ -32,6 +32,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <type_traits>
 
 namespace cbu {
@@ -334,3 +335,15 @@ constexpr T*& operator-=(T*& lo, const ByteSize<U, UU>& diff) noexcept {
 }
 
 }  // namespace cbu
+
+namespace std {
+
+template <typename T, typename U>
+struct numeric_limits<cbu::ByteSize<T, U>> : std::numeric_limits<U> {
+  static constexpr cbu::ByteSize<T, U> min() noexcept { return 0; }
+  static constexpr cbu::ByteSize<T, U> max() noexcept {
+    return std::numeric_limits<U>::max() / sizeof(T);
+  }
+};
+
+}  // namespace std
