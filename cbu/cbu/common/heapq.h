@@ -125,6 +125,7 @@ std::size_t heap_both(T *heap, std::size_t k, std::size_t n, C comp, P pos) {
 template <typename Vec>
 concept Heapq_vector = requires(Vec &vec, std::size_t n) {
   typename Vec::value_type;
+  { vec.size() } -> std::convertible_to<std::size_t>;
   { vec.resize(n) };
   { vec[n] } -> std::convertible_to<typename Vec::value_type &>;
 };
@@ -153,7 +154,7 @@ inline void shrink_to(Heap &heap, std::size_t n) {
 
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-void heapq_pop(Heap &heap, C comp = C(), P pos = P()) {
+constexpr void heapq_pop(Heap &heap, C comp = C(), P pos = P()) {
   std::size_t n = heap.size();
   if (n >= 1) {
     if (n == 1) {
@@ -169,28 +170,30 @@ void heapq_pop(Heap &heap, C comp = C(), P pos = P()) {
 
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-std::size_t heapq_adjust_tail(Heap &heap, C comp = C(), P pos = P()) {
+constexpr std::size_t heapq_adjust_tail(Heap& heap, C comp = C(), P pos = P()) {
   assert(!heap.empty());
   return heapq_detail::heap_up(&heap[0], heap.size() - 1, comp, pos);
 }
 
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-std::size_t heapq_adjust_top(Heap &heap, C comp = C(), P pos = P()) {
+constexpr std::size_t heapq_adjust_top(Heap& heap, C comp = C(), P pos = P()) {
   assert(!heap.empty());
   return heapq_detail::heap_down(&heap[0], 0, heap.size(), comp, pos);
 }
 
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-std::size_t heapq_adjust(Heap &heap, std::size_t k, C comp = C(), P pos = P()) {
+constexpr std::size_t heapq_adjust(Heap& heap, std::size_t k, C comp = C(),
+                                   P pos = P()) {
   return heapq_detail::heap_both(&heap[0], k, heap.size(), comp, pos);
 }
 
 // Remove an item from any position
 template <Heapq_vector Heap, typename C = std::less<>,
           typename P = heapq_detail::HeapDefaultPositioner>
-void heapq_remove(Heap &heap, std::size_t k, C comp = C(), P pos = P()) {
+constexpr void heapq_remove(Heap& heap, std::size_t k, C comp = C(),
+                            P pos = P()) {
   std::size_t n = heap.size();
   assert(k < n);
   if (k < n - 1) {
