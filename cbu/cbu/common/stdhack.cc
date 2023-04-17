@@ -46,14 +46,29 @@ namespace cbu {
 namespace {
 
 template <typename T>
-T *extend_impl(std::basic_string<T>* buf, std::size_t n) {
+concept HasResizeDefaultInit = requires(std::basic_string<T>* s,
+                                        std::size_t sz) {
+  {s->__resize_default_init(sz)};
+};
+
+template <typename T>
+T* extend_impl(std::basic_string<T>* buf, std::size_t n) {
 #if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
   buf->reserve(buf->size() + n);
-  T *w = buf->data() + buf->size();
+  T* w = buf->data() + buf->size();
   buf->_M_set_length(buf->size() + n);
   return w;
 #else
-  buf->resize(buf->size() + n);
+  if constexpr (HasResizeDefaultInit<T>) {
+    buf->__resize_default_init(buf->size() + n);
+  } else {
+#  if defined __cpp_lib_string_resize_and_overwrite
+    buf->resize_and_overwrite(buf->size() + n,
+                              [](T*, std::size_t r) noexcept { return r; });
+#  else
+    buf->resize(buf->size() + n);
+#  endif
+  }
   return (buf->data() + buf->size() - n);
 #endif
 }
@@ -64,7 +79,12 @@ void truncate_unsafe_impl(std::basic_string<T>* buf, std::size_t n) {
 #if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
   buf->_M_set_length(n);
 #else
-  buf->resize(n);
+  // No difference, but __resize_default_init generates shorter code
+  if constexpr (HasResizeDefaultInit<T>) {
+    buf->__resize_default_init(n);
+  } else {
+    buf->resize(n);
+  }
 #endif
 }
 
@@ -75,7 +95,12 @@ void truncate_unsafer_impl(std::basic_string<T>* buf, std::size_t n) {
 #if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
   buf->_M_length(n);
 #else
-  buf->resize(n);
+  // No difference, but __resize_default_init generates shorter code
+  if constexpr (HasResizeDefaultInit<T>) {
+    buf->__resize_default_init(n);
+  } else {
+    buf->resize(n);
+  }
 #endif
 }
 
