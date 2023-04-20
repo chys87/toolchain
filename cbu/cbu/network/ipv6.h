@@ -81,6 +81,18 @@ class IPv6 {
 
   constexpr const in6_addr& Get() const noexcept { return a_; }
 
+  explicit constexpr operator bool() const noexcept {
+#ifdef __SSE4_1__
+    if !consteval {
+      __m128i v = ToVec();
+      return !_mm_testz_si128(v, v);
+    }
+#endif
+    uint64_t a = mempick<uint64_t>(a_.s6_addr);
+    uint64_t b = mempick<uint64_t>(a_.s6_addr + 8);
+    return (a | b);
+  }
+
   static IPv6 FromRaw(const void* data) noexcept {
     IPv6 res;
     __builtin_memcpy(res.a_.s6_addr, data, 16);
@@ -124,7 +136,7 @@ class IPv6 {
   }
 
   friend constexpr bool operator==(const IPv6& a, const IPv6& b) noexcept {
-#ifdef __SSE4_2__
+#ifdef __SSE4_1__
     if !consteval {
       __m128i v = a.ToVec() ^ b.ToVec();
       return _mm_testz_si128(v, v);
@@ -193,7 +205,7 @@ class IPv6 {
   };
 
  private:
-#ifdef __SSE4_2__
+#ifdef __SSE4_1__
   __m128i ToVec() const noexcept {
     return *reinterpret_cast<const __m128i_u*>(a_.s6_addr);
   }

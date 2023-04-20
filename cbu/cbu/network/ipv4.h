@@ -94,6 +94,8 @@ class IPv4 {
     return res;
   }
 
+  explicit constexpr operator bool() const noexcept { return v_; }
+
   static IPv4 FromRaw(const void* data) noexcept {
     std::uint32_t v;
     __builtin_memcpy(&v, data, 4);
