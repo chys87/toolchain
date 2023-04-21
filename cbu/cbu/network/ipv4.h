@@ -136,13 +136,9 @@ class IPv4 {
   }
 
   friend inline constexpr bool operator==(const IPv4& lhs,
-                                          const IPv4& rhs) noexcept {
-    return lhs.v_ == rhs.v_;
-  }
+                                          const IPv4& rhs) noexcept = default;
   friend inline constexpr std::strong_ordering operator<=>(
-      const IPv4& lhs, const IPv4& rhs) noexcept {
-    return lhs.v_ <=> rhs.v_;
-  }
+      const IPv4& lhs, const IPv4& rhs) noexcept = default;
   friend inline constexpr IPv4 operator&(const IPv4& lhs,
                                          const IPv4& rhs) noexcept {
     return IPv4(lhs.v_ & rhs.v_);
