@@ -26,6 +26,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if defined __cplusplus && !defined __clang__
+#  undef __auto_type
+#  define __auto_type auto
+#endif
+
 #define def_fsys_base(funcname, sysname, rettype, clobbermem, argc, ...)    \
   fsys_inline rettype fsys_##funcname(FSYS_FUNC_ARGS_##argc(__VA_ARGS__)) { \
     rettype r;                                                              \
