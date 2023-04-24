@@ -43,11 +43,11 @@ namespace {
 using std::operator""sv;
 
 TEST(IPv6Test, FormatTest) {
-  auto test = [](const char* src, std::string_view expected) {
+  auto test = [](const char* src, std::string_view expected, int flags = 0) {
     SCOPED_TRACE(src);
     in6_addr addr;
     ASSERT_NE(inet_pton(AF_INET6, src, &addr), 0);
-    EXPECT_EQ(std::string_view(IPv6::Format(addr)), expected);
+    EXPECT_EQ(std::string_view(IPv6::Format(addr, flags)), expected);
   };
   test("0::0", "::");
   test("0::f", "::f");
@@ -65,7 +65,10 @@ TEST(IPv6Test, FormatTest) {
        "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff");
 
   test("0:0::ffff:192.168.1.1", "::ffff:192.168.1.1");
+  test("0:0::ffff:192.168.1.1", "192.168.1.1", IPv6::kPreferBareIPv4);
   test("0:0::ffff:0:192.168.1.1", "::ffff:0:192.168.1.1");
+  test("0:0::ffff:0:192.168.1.1", "::ffff:0:192.168.1.1",
+       IPv6::kPreferBareIPv4);
   test("0:1::ffff:192.168.1.1", "0:1::ffff:c0a8:101");
   test("64:ff9b::", "64:ff9b::0.0.0.0");
   test("64:ff9b:0::2554:909:90a", "64:ff9b::2554:909:90a");

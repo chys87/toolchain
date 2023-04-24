@@ -55,8 +55,13 @@ class IPv6 {
   // strlen("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff") == 39
   // strlen("0064:ff9b:0001:ffff:ffff:ffff:255.255.255.255") == 45
   static inline constexpr size_t kMaxStringLen = INET6_ADDRSTRLEN - 1;
-  static char* Format(char* buf, const in6_addr& addr6) noexcept;
-  static short_string<kMaxStringLen> Format(const in6_addr& addr6) noexcept;
+
+  // If this flag is set, we return "1.2.3.4" instead of "::ffff:1.2.3.4"
+  static inline constexpr int kPreferBareIPv4 = 1;
+
+  static char* Format(char* buf, const in6_addr& addr6, int flags = 0) noexcept;
+  static short_string<kMaxStringLen> Format(const in6_addr& addr6,
+                                            int flags = 0) noexcept;
 
  public:
   constexpr IPv6() noexcept : a_{} {}
@@ -76,8 +81,10 @@ class IPv6 {
 
   constexpr IPv6& operator=(const IPv6&) noexcept = default;
 
-  char* ToString(char* buf) const noexcept { return Format(buf, a_); }
-  short_string<kMaxStringLen> ToString() const noexcept;
+  char* ToString(char* buf, int flags = 0) const noexcept {
+    return Format(buf, a_, flags);
+  }
+  short_string<kMaxStringLen> ToString(int flags = 0) const noexcept;
 
   constexpr const in6_addr& Get() const noexcept { return a_; }
 
