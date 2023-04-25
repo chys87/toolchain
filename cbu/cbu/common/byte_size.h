@@ -133,6 +133,12 @@ class ByteSize {
     } else {
       bytes_ = bytes_ / sizeof(T) / k * sizeof(T);
     }
+    return *this;
+  }
+
+  constexpr ByteSize& operator%=(U k) noexcept {
+    bytes_ %= k * sizeof(T);
+    return *this;
   }
 
   constexpr ByteSize& operator+=(const ByteSize& other) noexcept {
@@ -236,8 +242,8 @@ constexpr auto operator*(const ByteSize<T, TU>& a,
 template <typename T, typename TU, std::integral U>
 constexpr ByteSize<T, TU> operator/(const ByteSize<T, TU>& a, U b) noexcept {
   if constexpr ((sizeof(T) & (sizeof(T) - 1)) == 0)
-    return ByteSize<T>::from_bytes((a.bytes() / b) & ~(sizeof(T) - 1));
-  return ByteSize<T>::from_bytes(a.bytes() / sizeof(T) / b * sizeof(T));
+    return ByteSize<T, TU>::from_bytes((a.bytes() / b) & ~(sizeof(T) - 1));
+  return ByteSize<T, TU>::from_bytes(a.bytes() / sizeof(T) / b * sizeof(T));
 }
 
 template <typename T, typename TU, std::integral U>
@@ -246,8 +252,25 @@ constexpr auto operator/(U a, const ByteSize<T, TU>& b) noexcept {
 }
 
 template <typename T, typename TU, typename U, typename UU>
-constexpr auto operator/(const ByteSize<T, TU>& a, const ByteSize<U, UU>& b) noexcept {
+constexpr auto operator/(const ByteSize<T, TU>& a,
+                         const ByteSize<U, UU>& b) noexcept {
   return a / TU(UU(b));
+}
+
+// modulo
+template <typename T, typename TU, std::integral U>
+constexpr ByteSize<T, TU> operator%(const ByteSize<T, TU>& a, U b) noexcept {
+  return ByteSize<T, TU>::from_bytes(a.bytes() % (b * sizeof(T)));
+}
+
+template <typename T, typename TU, std::integral U>
+constexpr auto operator%(U a, const ByteSize<T, TU>& b) noexcept {
+  return a % TU(b);
+}
+
+template <typename T, typename TU, typename U, typename UU>
+constexpr auto operator%(const ByteSize<T, TU>& a, const ByteSize<U, UU>& b) noexcept {
+  return a % TU(UU(b));
 }
 
 // addition
