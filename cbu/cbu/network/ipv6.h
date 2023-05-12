@@ -318,13 +318,13 @@ struct IPv6Port {
   constexpr std::strong_ordering CompareWithExtra(
       const IPv6Port& rhs) const noexcept {
     auto r = ip <=> rhs.ip;
-    if (r != 0) r = port_extra(true) <=> rhs.port_extra(true);
+    if (r == 0) r = port_extra(true) <=> rhs.port_extra(true);
     return r;
   }
   constexpr std::strong_ordering FastCompareWithExtra(
       const IPv6Port& rhs) const noexcept {
     auto r = ip.FastCompare(rhs.ip);
-    if (r != 0) r = port_extra() <=> rhs.port_extra();
+    if (r == 0) r = port_extra() <=> rhs.port_extra();
     return r;
   }
   struct EqualWithExtra {
