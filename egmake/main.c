@@ -24,6 +24,7 @@ typedef char *gmk_func_type(const char *, unsigned, char **);
 gmk_func_type func_cat;
 gmk_func_type func_cpus;
 gmk_func_type func_expanduser;
+gmk_func_type func_hostname;
 gmk_func_type func_mkdirp;
 gmk_func_type func_pwd;
 gmk_func_type func_readlink;
@@ -34,6 +35,7 @@ int egmake_gmk_setup(void) {
   gmk_add_function("EGM.cat", &func_cat, 1, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.cpus", &func_cpus, 0, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.expanduser", &func_expanduser, 1, 1, GMK_FUNC_DEFAULT);
+  gmk_add_function("EGM.hostname", &func_hostname, 0, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.mkdirp", &func_mkdirp, 0, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.pwd", &func_pwd, 0, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.readlink", &func_readlink, 1, 1, GMK_FUNC_DEFAULT);
