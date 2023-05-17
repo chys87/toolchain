@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,8 @@
 
 #include <utility>
 
+#include "cbu/common/type_traits.h"
+
 // Like <boost/core/swap.hpp>, but we also support swapping by member functions
 // See comments in <boost/core/swap.hpp>
 
@@ -53,6 +55,15 @@ inline constexpr void swap_impl(T &a, U &b) noexcept(noexcept(a.swap(b))) {
 template <typename T, typename U>
 requires (!Member_swap<T, U>)
 inline constexpr void swap_impl(T &a, U &b) noexcept(noexcept(swap(a, b))) {
+  if !consteval {
+    if constexpr (std::is_same_v<T, U> && cbu::bitwise_movable_v<T>) {
+      char tmp[sizeof(T)];
+      __builtin_memcpy(tmp, std::addressof(a), sizeof(T));
+      __builtin_memcpy(std::addressof(a), std::addressof(b), sizeof(T));
+      __builtin_memcpy(std::addressof(b), tmp, sizeof(T));
+      return;
+    }
+  }
   swap(a, b);
 }
 
