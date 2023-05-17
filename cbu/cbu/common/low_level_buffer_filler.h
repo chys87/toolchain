@@ -161,11 +161,17 @@ struct FillSkip {
 template <Raw_char_type Ch>
 struct FillGetPointer {
   Ch** ptr;
+
+  explicit constexpr FillGetPointer(Ch** p) noexcept : ptr(p) {}
+
   constexpr Ch* operator()(Ch* p) const noexcept {
     *ptr = p;
     return p;
   }
 };
+
+template <Raw_char_type Ch>
+FillGetPointer(Ch**) -> FillGetPointer<Ch>;
 
 // Low-level buffer filler
 template <Char_type Ch>

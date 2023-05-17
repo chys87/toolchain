@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -142,11 +142,11 @@ using FastDivType =
 
 // Compute (v / D) (where v is unknown to be < UB)
 // We use tricks to have the compiler generate faster and/or smaller code
-template <typename Type, Type D, Type UB,
-          unsigned int S = fastdiv_detail::magic(D, UB).S,
-          Type M = fastdiv_detail::magic(D, UB).M,
-          unsigned int N = fastdiv_detail::magic(D, UB).N>
+template <typename Type, Type D, Type UB, Magic<Type> Mag = magic(D, UB)>
 inline constexpr Type fastdiv(Type v) noexcept {
+  constexpr auto S = Mag.S;
+  constexpr auto M = Mag.M;
+  constexpr auto N = Mag.N;
   if constexpr (UB <= D) {
     // Special case
     return 0;
@@ -173,33 +173,28 @@ inline constexpr Type fastdiv(Type v) noexcept {
   }
 }
 
-template <typename Type, Type D, Type UB>
-inline constexpr Type fastmod(Type v) noexcept {
-  return (v - fastdiv<Type, D, UB>(v) * D);
-}
-
-template <typename Type, Type D, Type UB>
-inline constexpr std::pair<Type, Type> fastdivmod(Type v) noexcept {
-  auto quo = fastdiv<Type, D, UB>(v);
-  return {quo, v - quo * D};
-}
-
 }  // namespace fastdiv_detail
 
 template <auto D, auto UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
   using Type = fastdiv_detail::FastDivType<D, UB>;
-  return fastdiv_detail::fastdiv<Type, static_cast<Type>(D),
-                                 static_cast<Type>(UB)>(v);
+  if constexpr (UB == 256) {
+    return std::uint8_t(v) / D;
+  } else if constexpr (UB == 65536) {
+    return std::uint16_t(v) / D;
+  } else if constexpr (UB == 4294967296) {
+    return std::uint32_t(v) / D;
+  } else {
+    return fastdiv_detail::fastdiv<Type, static_cast<Type>(D),
+                                   static_cast<Type>(UB)>(v);
+  }
 }
 
 template <auto D, auto UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
-  using Type = fastdiv_detail::FastDivType<D, UB>;
-  return fastdiv_detail::fastmod<Type, static_cast<Type>(D),
-                                 static_cast<Type>(UB)>(v);
+  return v - D * fastdiv<D, UB>(v);
 }
 
 template <auto D, auto UB>
@@ -207,8 +202,8 @@ inline constexpr std::pair<fastdiv_detail::FastDivType<D, UB>,
                            fastdiv_detail::FastDivType<D, UB>>
 fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
   using Type = fastdiv_detail::FastDivType<D, UB>;
-  return fastdiv_detail::fastdivmod<Type, static_cast<Type>(D),
-                                    static_cast<Type>(UB)>(v);
+  Type quo = fastdiv<D, UB>(v);
+  return {quo, v - quo * D};
 }
 
 }  // namespace cbu
