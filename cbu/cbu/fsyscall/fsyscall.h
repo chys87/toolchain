@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2013-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2013-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -95,7 +95,6 @@ struct rusage;
 struct sockaddr;
 struct stat;
 struct statx;
-struct timespec;
 struct timeval;
 struct utsname;
 struct statfs;
@@ -335,13 +334,29 @@ def_fsys(epoll_wait,epoll_wait,int,4,int,struct epoll_event *,int,int)
 #define fsys_epoll_wait(fd,events,n,timeout) fsys_epoll_pwait(fd,events,n,timeout,0)
 #endif
 #define fsys_epoll_pwait(fd,events,n,timeout,sigmask) fsys_epoll_pwait_raw(fd,events,n,timeout,sigmask,_NSIG/8)
-def_fsys(epoll_pwait_raw,epoll_pwait,int,6,int,struct epoll_event *,int,int,const void*,int)
+def_fsys(epoll_pwait_raw,epoll_pwait,int,6,int,struct epoll_event *,int,int,const void*,unsigned long)
+def_fsys(ppoll_raw,ppoll,int,5,struct pollfd*,unsigned long,struct timespec*,const void*,unsigned long)
+
+fsys_inline int fsys_ppoll(struct pollfd* fds, unsigned long nfds, const struct timespec* tmo, const void* sigmask) {
+  // syscall has tmo modified, but glibc ppoll doesn't.  This is ridiculous.
+  struct timespec tmobuf;
+  if (tmo) tmobuf = *tmo;
+  return fsys_ppoll_raw(fds, nfds, tmo ? &tmobuf : NULL, sigmask, _NSIG / 8);
+}
+
 #ifdef __x86_64__
 def_fsys(select,select,int,5,int,/*fd_set*/void*,void*,void*,struct timeval*)
 def_fsys(poll,poll,int,3,struct pollfd *,unsigned long,int)
 #else
 #define fsys_select select
-#define fsys_poll poll
+fsys_inline int fsys_poll(struct pollfd* fds, unsigned long nfds, int timeout) {
+  struct timespec tmobuf;
+  if (timeout >= 0) {
+    tmobuf.tv_sec = (unsigned)timeout / 1000;
+    tmobuf.tv_nsec = (unsigned)timeout % 1000 * 1000000;
+  }
+  return fsys_ppoll(fds, nfds, timeout >= 0 ? &tmobuf : NULL, NULL);
+}
 #endif
 def_fsys(signalfd4,signalfd4,int,4,int,const void/*sigset_t*/*,unsigned long,
          int)
@@ -577,6 +592,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_epoll_ctl epoll_ctl
 #define fsys_epoll_wait epoll_wait
 #define fsys_select select
+#define fsys_ppoll ppoll
 #define fsys_poll poll
 #define fsys_signalfd signalfd
 #define fsys_timerfd_create timerfd_create
