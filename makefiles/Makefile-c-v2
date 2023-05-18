@@ -299,7 +299,7 @@ ifneq "$(subst clang,,$(CC))" "$(CC)"
  IS_CLANG := 1
 endif
 
-CC_TARGET := $(shell $(CC) -dumpmachine)
+CC_TARGET ?= $(shell $(CC) -dumpmachine)
 ifneq "" "$(findstring x86_64,$(CC_TARGET))"
  IS_X86_64 := 1
 else
