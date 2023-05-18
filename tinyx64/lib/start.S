@@ -31,14 +31,13 @@ exit:
     .align    4
     .globl    _start
 _start:
+    ldr     w0, [sp]        // argc
+    add     x2, sp, #16
+    add     x1, sp, #8      // argv
+
     # initial frame
     mov     lr, xzr     // lr is x30
     mov     fp, xzr     // fp is x29
-
-    add     x2, sp, #16
-
-    ldr     x0, [sp, #0]    // argc
-    add     x1, sp, #8      // argv
 
     # environ = sp + argc + 2
     add     x2, x2, x0, lsl #3
