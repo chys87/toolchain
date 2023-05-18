@@ -7,6 +7,7 @@ import glob
 import hashlib
 import os
 import pickle
+import subprocess
 import sys
 
 
@@ -25,7 +26,7 @@ NINJA_TEMPLATE = r'''
 {name}cc = {cc}
 {name}cxx = {cxx}
 {name}cppflags = -I{tinyx64_dir} -D _GNU_SOURCE -D NDEBUG -D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS -D __NO_MATH_INLINES -U _FORTIFY_SOURCE
-{name}commonflags = -O2 -march=native -fno-PIE -fno-PIC -Wall -flto -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables -mno-vzeroupper
+{name}commonflags = -O2 -march=native -fno-PIE -fno-PIC -Wall -flto -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables {arch_flags}
 {name}cflags = -std=gnu2x
 {name}cxxflags = -fno-rtti -std=gnu++2a
 {name}ldflags = -nostdlib -static -fuse-linker-plugin
@@ -107,6 +108,19 @@ def find_compilers():
     raise sys.exit('Failed to find an appropriate C++ compiler')
 
 
+def get_compiler_arch(cc):
+    return subprocess.check_output([cc, '-dumpmachine']).decode('latin1')
+
+
+def get_arch_flags(arch):
+    if 'x86_64' in arch:
+        return '-mno-vzeroupper'
+    elif 'aarch64' in arch:
+        return '-mcmodel=tiny'
+    else:
+        return ''
+
+
 class Binary:
     __slots__ = 'name', 'srcs',
 
@@ -117,7 +131,7 @@ class Binary:
 
 
 class BuildFile:
-    __slots__ = 'binaries', 'cc', 'cxx'
+    __slots__ = 'binaries', 'cc', 'cxx', 'arch'
 
     def __init__(self, filename):
         self.cc, self.cxx = find_compilers()
@@ -144,6 +158,7 @@ class BuildFile:
             sys.exit(f'No target is specified in {filename}')
         self.cc = build_globals['CC']
         self.cxx = build_globals['CXX']
+        self.arch = get_compiler_arch(self.cc)
 
     def __callback_binary(self, *, name, srcs):
         binary = Binary()
@@ -187,6 +202,7 @@ class BuildFile:
             ninja_content += NINJA_TEMPLATE.format(
                 tinyx64_dir=tinyx64_dir, instdir=instdir,
                 name=binary.name, cc=self.cc, cxx=self.cxx, builddir=builddir,
+                arch_flags=get_arch_flags(self.arch),
                 objs=' '.join(sorted(objs)), rules=rules)
 
         return ninja_content
