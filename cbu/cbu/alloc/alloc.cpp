@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -54,14 +54,9 @@ void* allocate(size_t size, AllocateOptions options) noexcept {
     ptr = alloc_large(size, options.zero);
     if (false_no_fail(ptr == nullptr)) return nomem();
   } else if (size != 0) {
-    if (options.zero) {
-      ptr = alloc_small(size);
-      if (false_no_fail(ptr == nullptr)) return nomem();
-      ptr = memset(ptr, 0, size);
-    } else {
-      ptr = alloc_small(size);
-      if (false_no_fail(ptr == nullptr)) return nomem();
-    }
+    ptr = alloc_small(size);
+    if (false_no_fail(ptr == nullptr)) return nomem();
+    if (options.zero) ptr = memset(ptr, 0, size);
   }
   return ptr;
 }
