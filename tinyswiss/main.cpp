@@ -1,6 +1,8 @@
 #include <tinyx64.h>
 #include "utils.h"
 
+int gcc_latest_main(size_t, char **, char **);
+int gxx_latest_main(size_t, char **, char **);
 int j_main(size_t argc, char **argv, char **);
 int mvln_main(size_t argc, char **argv, char **);
 int python3_latest_main(size_t, char **, char **);
@@ -18,8 +20,10 @@ struct Dispatch {
 };
 
 constexpr Dispatch dispatch[] = {
-  {STR_LEN("mvln"), mvln_main},
+  {STR_LEN("gcc-latest"), gcc_latest_main},
+  {STR_LEN("g++-latest"), gxx_latest_main},
   {STR_LEN("j"), j_main},
+  {STR_LEN("mvln"), mvln_main},
   {STR_LEN("python3-latest"), python3_latest_main},
   {STR_LEN("python-latest"), python_latest_main},
   {STR_LEN("running-browser"), running_browser_main},

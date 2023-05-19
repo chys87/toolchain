@@ -81,3 +81,11 @@ int python3_latest_main(size_t argc, char **argv, char **envp) {
 int python_latest_main(size_t argc, char **argv, char **envp) {
   return latest("python"sv, argc, argv, envp);
 }
+
+int gcc_latest_main(size_t argc, char **argv, char **envp) {
+  return latest("gcc"sv, argc, argv, envp);
+}
+
+int gxx_latest_main(size_t argc, char **argv, char **envp) {
+  return latest("g++"sv, argc, argv, envp);
+}
