@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,7 +60,7 @@ class PermaAlloc {
   void free_list(T* ptr) noexcept;
 
  private:
-  LowLevelMutex lock_;
+  [[no_unique_address]] LowLevelMutex lock_;
   T* list_ = nullptr;
 
   static RawPageAllocator* raw_page_allocator() noexcept {

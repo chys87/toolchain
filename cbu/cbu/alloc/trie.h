@@ -46,11 +46,7 @@ Node* ensure_node_heavy(Node **ptr, SimplePermaAlloc<Node> &allocator) {
   Node* next = allocator.alloc();
   if (false_no_fail(next == NULL))
     return NULL;
-#ifdef __cpp_lib_assume_aligned
-  memset(std::assume_aligned<alignof(Node)>(next), 0, sizeof(*next));
-#else
-  memset(next, 0, sizeof(*next));
-#endif
+  *next = {};
 #ifdef CBU_SINGLE_THREADED
   *ptr = next;
 #else

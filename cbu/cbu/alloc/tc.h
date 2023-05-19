@@ -53,9 +53,11 @@ template <typename CacheClass>
 struct CachePool {
   struct alignas(kCacheLineSize) Node {
     CacheClass cache;
-    LowLevelMutex mutex;
+    [[no_unique_address]] LowLevelMutex mutex;
   };
+#ifndef CBU_SINGLE_THREADED
   Node nodes[kHardMaxConcurrency];
+#endif
 };
 
 template <typename CacheClass>

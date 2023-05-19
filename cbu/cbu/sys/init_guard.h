@@ -58,6 +58,9 @@ bool UninitNoRace(std::uint32_t* guard) noexcept {
 
 template <typename Values>
 bool Uninit(std::uint32_t* guard) noexcept {
+#ifdef CBU_SINGLE_THREADED
+  return UninitNoRace<Values>(guard);
+#else
   std::uint32_t v = std::atomic_ref(*guard).load(std::memory_order_acquire);
   while (Values::IsInited(v)) {
     if (std::atomic_ref(*guard).compare_exchange_weak(
@@ -66,8 +69,10 @@ bool Uninit(std::uint32_t* guard) noexcept {
       return true;
   }
   return false;
+#endif
 }
 
+#ifndef CBU_SINGLE_THREADED
 template <typename Values>
 bool Lock(std::uint32_t* guard, std::uint32_t v) noexcept {
   for (;;) {
@@ -93,6 +98,7 @@ bool Lock(std::uint32_t* guard, std::uint32_t v) noexcept {
     v = std::atomic_ref(*guard).load(std::memory_order_relaxed);
   }
 }
+#endif
 
 void Release(std::uint32_t* guard, std::uint32_t value,
              std::uint32_t running_waiting_value) noexcept;

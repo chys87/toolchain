@@ -134,9 +134,6 @@ CBU_MUTEX_INLINE bool LowLevelMutex::try_lock() noexcept {
 #endif
 }
 
-// For compatibility only
-using LowLevelTmMutex = LowLevelMutex;
-
 class SpinLock {
  public:
   constexpr SpinLock() noexcept = default;

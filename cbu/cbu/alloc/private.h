@@ -149,7 +149,7 @@ class RawPageAllocator {
   struct CachedPage;
 
   CachedPage* cached_page_ = nullptr;
-  LowLevelMutex lock_;
+  [[no_unique_address]] LowLevelMutex lock_;
   bool use_brk_;
   bool allow_thp_;
 };

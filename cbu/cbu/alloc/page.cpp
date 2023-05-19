@@ -516,7 +516,7 @@ class alignas(kCacheLineSize) Arena {
 
  private:
   RawPageAllocator* const raw_page_allocator_;
-  LowLevelMutex lock_{};
+  [[no_unique_address]] LowLevelMutex lock_{};
 
   // Count it so that we can determine when to try to do munmap
   size_t reclaim_count_ = 0;
