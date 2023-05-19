@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,7 @@
 
 namespace cbu {
 
+#ifndef CBU_SINGLE_THREADED
 void LowLevelMutex::wait(int c) noexcept {
   for (;;) {
     if ((c == 2) || ({
@@ -55,14 +56,16 @@ void LowLevelMutex::wake() noexcept {
   std::atomic_ref(v_).store(0, std::memory_order_release);
   fsys_futex3(&v_, FUTEX_WAKE_PRIVATE, 1);
 }
+#endif
 
 void LowLevelMutex::yield() noexcept {
-  if (!tweak::SINGLE_THREADED &&
-      std::atomic_ref(v_).load(std::memory_order_relaxed) >= 2u) {
+#ifndef CBU_SINGLE_THREADED
+  if (std::atomic_ref(v_).load(std::memory_order_relaxed) >= 2u) {
     unlock();
     fsys_sched_yield();
     lock();
   }
+#endif
 }
 
 } // namespace cbu

@@ -35,7 +35,6 @@
 #include "cbu/alloc/private.h"
 #include "cbu/fsyscall/fsyscall.h"
 #include "cbu/sys/low_level_mutex.h"
-#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -65,8 +64,11 @@ class PermaAlloc {
   T* list_ = nullptr;
 
   static RawPageAllocator* raw_page_allocator() noexcept {
-    return tweak::USE_BRK ? &RawPageAllocator::instance_brk
-                          : &RawPageAllocator::instance_mmap;
+#ifndef CBU_NO_BRK
+    return &RawPageAllocator::instance_brk;
+#else
+    return &RawPageAllocator::instance_mmap;
+#endif
   }
 };
 

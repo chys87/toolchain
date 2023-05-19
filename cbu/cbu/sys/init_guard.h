@@ -34,7 +34,6 @@
 
 #include "cbu/common/defer.h"
 #include "cbu/compat/atomic_ref.h"
-#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace init_guard {
@@ -113,22 +112,21 @@ void Abort(std::uint32_t* guard) noexcept {
 template <typename Values, typename Foo, typename... Args>
 inline bool InitImpl(std::uint32_t* guard, Foo&& foo, Args&&... args) noexcept(
     noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
-  if (tweak::SINGLE_THREADED) {
-    if (Values::IsInited(*guard)) {
-      return false;
-    } else {
-      std::uint32_t done_value = Values::ABORTED;
-      CBU_DEFER({
-        if (Values::IsInited(done_value))
-          *guard = done_value;
-        else
-          *guard = Values::ABORTED;
-      });
-      done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
-      return Values::IsInited(done_value);
-    }
+#ifdef CBU_SINGLE_THREADED
+  if (Values::IsInited(*guard)) {
+    return false;
+  } else {
+    std::uint32_t done_value = Values::ABORTED;
+    CBU_DEFER({
+      if (Values::IsInited(done_value))
+        *guard = done_value;
+      else
+        *guard = Values::ABORTED;
+    });
+    done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
+    return Values::IsInited(done_value);
   }
-
+#else
   std::uint32_t v = std::atomic_ref(*guard).load(std::memory_order_relaxed);
   if (!Values::IsInited(v) && Lock<Values>(guard, v)) {
     std::uint32_t done_value = Values::ABORTED;
@@ -143,6 +141,7 @@ inline bool InitImpl(std::uint32_t* guard, Foo&& foo, Args&&... args) noexcept(
   } else {
     return false;
   }
+#endif
 }
 
 }  // namespace init_guard
@@ -181,10 +180,11 @@ class InitGuard {
 
   // IMPORTANT: The status may be changed after this function returns
   bool inited() const noexcept {
-    if (tweak::SINGLE_THREADED)
-      return inited(guard_);
-    else
-      return inited(std::atomic_ref(guard_).load(std::memory_order_acquire));
+#ifdef CBU_SINGLE_THREADED
+    return inited(guard_);
+#else
+    return inited(std::atomic_ref(guard_).load(std::memory_order_acquire));
+#endif
   }
 
   bool inited_no_race() const noexcept { return inited(guard_); }

@@ -39,7 +39,6 @@
 #include "cbu/common/byte_size.h"
 #include "cbu/common/hint.h"
 #include "cbu/fsyscall/fsyscall.h"
-#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -149,7 +148,11 @@ Page* RawPageAllocator::allocate(size_t size) noexcept {
 }
 
 bool RawPageAllocator::is_from_brk(void* ptr) noexcept {
-  return tweak::USE_BRK && ptr >= brk_initial && ptr < brk_cur;
+#ifdef CBU_NO_BRK
+  return false;
+#else
+  return ptr >= brk_initial && ptr < brk_cur;
+#endif
 }
 
 }  // namespace alloc

@@ -36,14 +36,6 @@
 
 #include "cbu/fsyscall/fsyscall.h"
 
-namespace cbu {
-namespace tweak {
-
-extern const bool SINGLE_THREADED = true;
-
-} // namespace tweak
-} // namespace cbu
-
 extern "C" {
 
 [[gnu::visibility("hidden")]] char __libc_single_threaded = 1;

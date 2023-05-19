@@ -39,7 +39,6 @@
 #include "cbu/common/bit.h"
 #include "cbu/compat/atomic_ref.h"
 #include "cbu/sys/low_level_mutex.h"
-#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -162,18 +161,20 @@ inline constinit RawPageAllocator RawPageAllocator::instance_mmap_no_thp{false,
 
 template <typename T>
 T load_acquire(T* ptr) {
-  if (tweak::SINGLE_THREADED)
-    return *ptr;
-  else
-    return std::atomic_ref(*ptr).load(std::memory_order_acquire);
+#ifdef CBU_SINGLE_THREADED
+  return *ptr;
+#else
+  return std::atomic_ref(*ptr).load(std::memory_order_acquire);
+#endif
 }
 
 template <typename T>
 void store_release(T* ptr, std::type_identity_t<T> value) {
-  if (tweak::SINGLE_THREADED)
-    *ptr = value;
-  else
-    std::atomic_ref(*ptr).store(value, std::memory_order_release);
+#ifdef CBU_SINGLE_THREADED
+  *ptr = value;
+#else
+  std::atomic_ref(*ptr).store(value, std::memory_order_release);
+#endif
 }
 
 }  // namespace alloc

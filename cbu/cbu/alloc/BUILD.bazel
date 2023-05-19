@@ -35,7 +35,27 @@ cc_library(
     '//cbu/compat:compat',
     '//cbu/fsyscall:fsyscall',
     '//cbu/sys:sys',
-    '//cbu/tweak:tweak',
+  ],
+  # cbu is a collection of really TINY utilities so you may always want to
+  # use static linking
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = 'alloc_nobrk',
+  srcs = glob(['*.cpp', '*.h'],
+              exclude=['*_test.*', 'alloc.h', 'pagesize.h']),
+  # Only alloc.h and pagesize.h are public interfaces
+  hdrs = glob(['alloc.h', 'pagesize.h']),
+  deps = [
+    '//cbu/common:common',
+    '//cbu/compat:compat',
+    '//cbu/fsyscall:fsyscall',
+    '//cbu/sys:sys',
+  ],
+  copts = [
+    '-DCBU_NO_BRK=1',
   ],
   # cbu is a collection of really TINY utilities so you may always want to
   # use static linking

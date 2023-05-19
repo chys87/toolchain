@@ -36,7 +36,6 @@
 #include "cbu/common/byte_size.h"
 #include "cbu/compat/atomic_ref.h"
 #include "cbu/sys/low_level_mutex.h"
-#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -77,11 +76,15 @@ void free_small_list(Block* ptr) {
 
     Run* run = block2run(p);
     auto count = p->count;
-    int remain = cbu::tweak::SINGLE_THREADED
-                     ? (run->allocated -= count)
-                     : std::atomic_ref(run->allocated)
-                               .fetch_sub(count, std::memory_order_release) -
-                           count;
+    int remain =
+#ifdef CBU_SINGLE_THREADED
+        (run->allocated -= count)
+#else
+        std::atomic_ref(run->allocated)
+            .fetch_sub(count, std::memory_order_release) -
+        count
+#endif
+        ;
     if (remain <= 0) {
       if (remain < 0) memory_corrupt();
       reclaim_page((Page*)run, kPageSize);

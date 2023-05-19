@@ -45,7 +45,6 @@
 #include "cbu/common/byte_size.h"
 #include "cbu/common/hint.h"
 #include "cbu/fsyscall/fsyscall.h"
-#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -743,10 +742,12 @@ size_t lookup_large_block_size_fail_crash(const Page* page) {
 }
 
 Page* allocate_page_uncached(size_t size, AllocateOptions options) {
-  if (tweak::USE_BRK && !options.force_mmap) {
+#ifndef CBU_NO_BRK
+  if (!options.force_mmap) {
     Page* page = arena_brk.allocate(size, options.zero);
     if (page) return page;
   }
+#endif
   return (kTHPSize && options.force_mmap ? arena_mmap_no_thp : arena_mmap)
       .allocate(size, options.zero);
 }
@@ -870,11 +871,13 @@ Page* allocate_page(size_t size, AllocateOptions options) noexcept {
   if (!options.zero && size <= PageCategoryCache::page_category_to_size(
                                    PageCategoryCache::kPageMaxCategory)) {
     size_t cat = PageCategoryCache::size_to_page_category(size);
-    if (tweak::USE_BRK && !options.force_mmap) {
+#ifndef CBU_NO_BRK
+    if (!options.force_mmap) {
       Page* ret =
           try_allocate_from_cache_pool(&page_category_cache_pool_brk, cat);
       if (ret) return ret;
     }
+#endif
 
     auto* pool = (kTHPSize && options.force_mmap)
                      ? &page_category_cache_pool_no_thp
@@ -950,11 +953,11 @@ size_t large_allocated_size(const void* ptr) noexcept {
 }
 
 void large_trim(size_t pad) noexcept {
-  if (tweak::USE_BRK) {
-    UniqueCache<PageCategoryCache>::visit_all(
-        &page_category_cache_pool_brk,
-        [](PageCategoryCache* tc) noexcept { tc->clear(&arena_brk); });
-  }
+#ifndef CBU_NO_BRK
+  UniqueCache<PageCategoryCache>::visit_all(
+      &page_category_cache_pool_brk,
+      [](PageCategoryCache* tc) noexcept { tc->clear(&arena_brk); });
+#endif
   UniqueCache<PageCategoryCache>::visit_all(
       &page_category_cache_pool,
       [](PageCategoryCache* tc) noexcept { tc->clear(&arena_mmap); });
@@ -963,11 +966,13 @@ void large_trim(size_t pad) noexcept {
         &page_category_cache_pool_no_thp,
         [](PageCategoryCache* tc) noexcept { tc->clear(&arena_mmap_no_thp); });
 
-  if (tweak::USE_BRK) {
+#ifndef CBU_NO_BRK
+  {
     Arena* arena = &arena_brk;
     Description* clean_list = arena->trim_and_extract(pad);
     arena->clear_description_list(clean_list);
   }
+#endif
 
   {
     Arena* arena = &arena_mmap;

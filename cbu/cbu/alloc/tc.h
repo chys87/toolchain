@@ -38,7 +38,6 @@
 #include "cbu/alloc/private.h"
 #include "cbu/fsyscall/fsyscall.h"
 #include "cbu/sys/low_level_mutex.h"
-#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -91,19 +90,21 @@ template <typename CacheClass>
 template <typename Callback>
 void UniqueCache<CacheClass>::visit_all(CachePool<CacheClass>* pool,
                                         Callback callback) {
-  if (cbu::tweak::SINGLE_THREADED) return;
+#ifndef CBU_SINGLE_THREADED
   uint32_t k = g_used_max_concurrency.load(std::memory_order_relaxed);
   while (k--) {
     std::lock_guard lock(pool->nodes[k].mutex);
     callback(&pool->nodes[k].cache);
   }
+#endif
 }
 
 template <typename CacheClass>
 typename UniqueCache<CacheClass>::Node*
 UniqueCache<CacheClass>::grab(CachePool<CacheClass>* pool) noexcept {
-  if (cbu::tweak::SINGLE_THREADED) return nullptr;
-
+#ifdef CBU_SINGLE_THREADED
+  return nullptr;
+#else
   uint32_t max_concurrency =
       g_used_max_concurrency.load(std::memory_order_relaxed);
   uint32_t k = g_thread_cache_idx;
@@ -132,6 +133,7 @@ UniqueCache<CacheClass>::grab(CachePool<CacheClass>* pool) noexcept {
             std::memory_order_relaxed))
       ++max_concurrency;
   }
+#endif
 }
 
 }  // namespace alloc

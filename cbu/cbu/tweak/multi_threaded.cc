@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,12 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace cbu {
-namespace tweak {
-
-bool SINGLE_THREADED = false;
-
-} // namespace tweak
-} // namespace cbu
+extern "C" {
 
 [[gnu::visibility("hidden")]] char __libc_single_threaded = 0;
+
+} // extern "C"

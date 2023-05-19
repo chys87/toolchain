@@ -37,7 +37,6 @@
 #include "cbu/alloc/private.h"
 #include "cbu/common/bit.h"
 #include "cbu/compat/atomic_ref.h"
-#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 namespace alloc {
@@ -52,18 +51,17 @@ Node* ensure_node_heavy(Node **ptr, SimplePermaAlloc<Node> &allocator) {
 #else
   memset(next, 0, sizeof(*next));
 #endif
-  if (cbu::tweak::SINGLE_THREADED) {
-    *ptr = next;
-    return next;
-  }
-
+#ifdef CBU_SINGLE_THREADED
+  *ptr = next;
+#else
   Node* got = 0;
   if (!std::atomic_ref<Node*>(*ptr).compare_exchange_strong(
-        got, next, std::memory_order_acq_rel, std::memory_order_acquire)) {
+          got, next, std::memory_order_acq_rel, std::memory_order_acquire)) {
     Node* rgot = got;
     allocator.free(next);
     next = rgot;
   }
+#endif
   return next;
 }
 

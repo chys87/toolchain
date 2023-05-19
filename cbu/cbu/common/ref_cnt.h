@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,6 @@
 #include <utility>
 
 #include "cbu/compat/atomic_ref.h"
-#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 
@@ -44,16 +43,20 @@ constexpr int REF_CNT_MAY_NOT_WRITE_ZERO = 2;
 
 // Increase a ref_cnt_t
 inline void ref_cnt_inc(ref_cnt_t* p, int options = 0) noexcept {
-  if ((options & REF_CNT_SINGLE_THREADED) || cbu::tweak::SINGLE_THREADED) {
-    ++*p;
-  } else {
+#ifndef CBU_SINGLE_THREADED
+  if (!(options & REF_CNT_SINGLE_THREADED))
     std::atomic_ref(*p).fetch_add(1, std::memory_order_acquire);
-  }
+  else
+#endif
+    ++*p;
 }
 
 // Decrease a ref_cnt_t, and returns whether it's been decreased to zero
 inline bool ref_cnt_dec(ref_cnt_t* p, int options) noexcept {
-  if ((options & REF_CNT_SINGLE_THREADED) || cbu::tweak::SINGLE_THREADED) {
+#ifdef CBU_SINGLE_THREADED
+  return --*p == 0;
+#endif
+  if ((options & REF_CNT_SINGLE_THREADED)) {
     return --*p == 0;
   }
   if (std::atomic_ref(*p).load(std::memory_order_relaxed) >= 2) {
