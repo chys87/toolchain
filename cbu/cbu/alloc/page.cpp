@@ -708,7 +708,9 @@ void Arena::clear_description_list(Description* clean) noexcept {
 }
 
 #if defined __x86_64__ && defined __LP64__
-constexpr size_t kPointerValidBits = 47;
+// Traditionally x86-64 had 48-bit virtual address, but recent processors
+// support 57 bits (56 bits for user space)
+constexpr size_t kPointerValidBits = 56;
 #elif defined __aarch64__
 // Recent aarch64 and Linux kernel can enable 52-bit address space
 constexpr size_t kPointerValidBits = 52;
