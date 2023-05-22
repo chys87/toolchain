@@ -51,7 +51,7 @@ rule {name}strip
 rule {name}install
   command = install -m755 -C -T -v $in $out
 rule {name}size
-  command = {tinyx64_dir}/../scripts/detailed_size ${name}instdir/{name} ${name}builddir/{name}.out
+  command = {tinyx64_dir}/../scripts/detailed_size -c ${name}instdir/{name} ${name}builddir/{name}.out
 rule {name}bincmp
   command = {tinyx64_dir}/../scripts/bincmp ${name}instdir/{name} ${name}builddir/{name}.out
   pool = console
