@@ -567,12 +567,25 @@ def main():
     parser = argparse.ArgumentParser(
         description='Unassembly a program in a friendly way.')
     parser.add_argument('--no-string-literal-annotation', action='store_true')
+    parser.add_argument('--no-show-raw-insn', action='store_true')
+    parser.add_argument('--no-addresses', action='store_true')
     parser.add_argument('filename', help='File to unassembly')
     args = parser.parse_args()
 
-    objdump = subprocess.Popen(find_objdump() + ['-C', '-r', '-d', args.filename],
-                               close_fds=True,
-                               stdout=subprocess.PIPE,
+    objdump_base = find_objdump()
+    cmd = objdump_base + ['-C', '-r', '-d']
+    if args.no_show_raw_insn:
+        cmd.append('--no-show-raw-insn')
+    if args.no_addresses:
+        # Unfortunately, GNU and LLVM objdump have different flags for this
+        objdump_version = subprocess.check_output(objdump_base + ['--version'])
+        if b'LLVM' in objdump_version:
+            cmd.append('--no-leading-addr')
+        else:
+            cmd.append('--no-addresses')
+    cmd.append(args.filename)
+
+    objdump = subprocess.Popen(cmd, close_fds=True, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
     fi = objdump.stdout
     fi = cppfilter(fi)

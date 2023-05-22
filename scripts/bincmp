@@ -52,8 +52,6 @@ def sub_asterisks(m, *, rex=re.compile(b'[\da-f]', re.A)):
     return rex.sub(b'*', m.group(1))
 
 
-RE_ASTERISKS = re.compile(br'^[ \t]*[\da-f]+:[ \t]*((?:[\da-f][\da-f]\s|[\da-f]{8}\s)*)',
-                          re.M | re.A)
 RE_ADDRESS_FOR_SYM = re.compile(br'[\da-f]+\s+<', re.A)
 RE_RESOLVED_ABS_ADDR = re.compile(br'# [\da-f]+$', re.M | re.A)
 RE_OFFSET_FROM_SYM = re.compile(
@@ -73,8 +71,6 @@ RE_GCC_GEN_FUNCTION_NAMES = re.compile(
 
 
 def dump_filter(txt):
-    # Replace machine code with asterisks. Remove addresses preceding them.
-    txt = RE_ASTERISKS.sub(sub_asterisks, txt)
     # Remove addresses before '<'
     txt = RE_ADDRESS_FOR_SYM.sub(b'<', txt)
     # Remove resolved addresses for ...(%rip) (llvm-objdump only)
@@ -144,9 +140,11 @@ def do_dump(fname, fw, *close_files):
     try:
         PREFERED_SIZE = 65536  # Linux pipe size
 
-        with subprocess.Popen(
-                (unassembly, '--no-string-literal-annotation', fname),
-                stdout=subprocess.PIPE, close_fds=True) as proc:
+        cmd = [unassembly,
+               '--no-addresses', '--no-show-raw-insn',
+               '--no-string-literal-annotation', fname]
+
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE, close_fds=True) as proc:
             fasm = proc.stdout
             txt = fasm.read(PREFERED_SIZE)
 
