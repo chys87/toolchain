@@ -33,6 +33,7 @@
 
 #include "cbu/common/byte_size.h"
 #include "cbu/common/type_traits.h"
+#include "cbu/compat/compilers.h"
 
 namespace cbu {
 
@@ -117,7 +118,10 @@ struct ArrayDeleter {
 
 template <typename T>
 struct RawScalarDeleter {
-  constexpr void operator()(T* p) const noexcept { raw_scalar_delete(p); }
+  CBU_STATIC_CALL constexpr void operator()(T* p)
+      CBU_STATIC_CALL_CONST noexcept {
+    raw_scalar_delete(p);
+  }
 };
 
 template <typename T, std::align_val_t align = std::align_val_t(alignof(T))>
@@ -125,13 +129,6 @@ struct RawArrayDeleter {
   ByteSize<T> size;
   constexpr void operator()(T* p) const noexcept {
     raw_array_delete(p, size, align);
-  }
-};
-
-template <typename T>
-struct RawScalarDelete {
-  constexpr void operator()(T *p) const noexcept {
-    raw_scalar_delete(p);
   }
 };
 

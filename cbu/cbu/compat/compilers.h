@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,10 +29,17 @@
 #pragma once
 
 #define CBU_TRIVIAL_ABI
+#define CBU_STATIC_CALL
+#define CBU_STATIC_CALL_CONST const
 
 #ifdef __clang__
-
 #  undef CBU_TRIVIAL_ABI
 #  define CBU_TRIVIAL_ABI [[clang::trivial_abi]]
+#endif
 
+#ifdef __cpp_static_call_operator
+#  undef CBU_STATIC_CALL
+#  undef CBU_STATIC_CALL_CONST
+#  define CBU_STATIC_CALL static
+#  define CBU_STATIC_CALL_CONST
 #endif
