@@ -459,7 +459,7 @@ def syscall_replace_x86_64(fi, data):
     table = read_syscall_table('x86_64')
 
     pattern_syscall_instruction = re.compile(
-            br'(?:mov[blq]?\s+\$((?:0x)?[a-f\d]+),\s*%[er]?a[xl]|xor[lq]?\s+%[er]ax,\s*%[er]ax)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.+\ssyscall)')
+            br'(?:mov[blq]?\s+\$((?:0x)?[a-f\d]+),\s*%[er]?a[xl]|xor[lq]?\s+%[er]ax,\s*%[er]ax)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.*\ssyscall)')
     pattern_syscall_function = re.compile(
             br'(?:mov[blq]?\s+\$((?:0x)?[a-f\d]+),\s*%[er]?dil?|xor[lq]?\s+%[er]dx,\s*%[er]dx)\s*(?=\n([\da-f:\s]*\n|.+(lea|mov|xor|add|sub|clt|sh[lr]|push|pop).+\n){,5}.+<syscall)')
 
@@ -503,7 +503,7 @@ def syscall_replace_aarch64(fi, data):
     table = read_syscall_table('aarch64')
 
     pattern_svc_instruction = re.compile(
-            br'mov\s+[wx]8,\s*#(\d+|0x[a-f\d]+)\s*(?:\/\/\s*#\d+)?(?=\n([\da-f:\s]*\n|.+(bfi|movk?|ld[rp]|ldr[bh]|ldur|ldrsw|st[rp]|str[bh]|stur|nop|tst|csel|add|sub|mul|sxt[whb]|asr|sbf[mx]|sbfiz)(\s.*)?\n){,8}.+\ssvc\s+#(0|0x0)(\s|\n))')
+            br'mov\s+[wx]8,\s*#(\d+|0x[a-f\d]+)\s*(?:\/\/\s*#\d+)?(?=\n([\da-f:\s]*\n|.+(bfi|movk?|ld[rp]|ldr[bh]|ldur|ldrsw|st[rp]|str[bh]|stur|nop|tst|csel|add|sub|mul|sxt[whb]|asr|sbf[mx]|sbfiz)(\s.*)?\n){,8}.*\ssvc\s+#(0|0x0)(\s|\n))')
 
     def sub(match):
         no_str = match.group(1)
