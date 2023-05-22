@@ -110,4 +110,13 @@ consteval auto NumberToFixedString() noexcept {
   return res;
 }
 
+template <auto Value>
+consteval auto LittleEndianFixedString() noexcept {
+  fixed_string<sizeof(Value)> res;
+  char* p = res.data();
+  for (std::size_t i = 0; i < sizeof(Value); ++i)
+    *p++ = static_cast<unsigned char>((Value >> (i * 8)) & 0xff);
+  return res;
+};
+
 }  // namespace cbu
