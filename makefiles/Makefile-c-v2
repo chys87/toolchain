@@ -346,7 +346,7 @@ ifeq "$(LTO)" "1"
  EXTRA_LDFLAGS += -flto=thin -Wl,--thinlto-cache-dir=$(BUILDDIR)/thinlto-cache
  $(EGM.mkdirp $(BUILDDIR)/thinlto-cache)
  endif
-else
+else ifneq "$(SYMBOL_SECTIONS)" "0"
  OPTIMIZEFLAGS += -ffunction-sections -fdata-sections
 endif
 ifeq "$(PIE)" "1"
@@ -366,10 +366,13 @@ endif
 
 CFLAGS = $(OPTIMIZEFLAGS) $(COPTIMIZEFLAGS) $(ARCHFLAGS) $(CWARNINGFLAGS) $(CSTD) $(INCLUDES) $(DEFS) $(EXTRA_CFLAGS)
 CXXFLAGS = $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS)
-BASE_LDFLAGS = -Wl,-O1 -Wl,--gc-sections -Wl,--fatal-warnings -Wl,--as-needed \
+BASE_LDFLAGS = -Wl,-O1 -Wl,--fatal-warnings -Wl,--as-needed \
   -Wl,-z,relro -Wl,-z,noexecstack \
   -Wl,-z,start-stop-visibility=hidden \
   -Wl,-z,nostart-stop-gc
+ifneq "$(SYMBOL_SECTIONS)" "0"
+BASE_LDFLAGS += -Wl,--gc-sections
+endif
 LDFLAGS = $(ARCHFLAGS) $(OPTIMIZEFLAGS) $(BASE_LDFLAGS) $(EXTRA_LDFLAGS)
 
 all: ut
