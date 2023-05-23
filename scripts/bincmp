@@ -54,7 +54,7 @@ def sub_asterisks(m, *, rex=re.compile(b'[\da-f]', re.A)):
 
 # GNU objdump doesn't show address before symbols with --no-addresses;
 # but LLVM objdump shows.
-RE_ADDRESS_FOR_SYM = re.compile(br'\b[\da-f]+\s+<', re.A)
+RE_ADDRESS_FOR_SYM = re.compile(br'\b[\da-f]{3,}\s+<', re.A)
 RE_RESOLVED_ABS_ADDR = re.compile(br'# [\da-f]+$', re.M | re.A)
 RE_OFFSET_FROM_SYM = re.compile(
     br'<([][ \w<>:@*&()~,.+\-*/=]+)[+\-]0x[\da-f]+>', re.A)
