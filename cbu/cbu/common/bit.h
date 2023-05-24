@@ -117,6 +117,42 @@ constexpr unsigned bsr(T x) noexcept {
   return (8 * sizeof(T) - 1) - clz(x);
 }
 
+// Equivalent to ARM's rbit instruction, and is slow on non-ARM platforms
+template <std::integral T>
+  requires(sizeof(T) <= sizeof(std::uint64_t))
+constexpr std::remove_cvref_t<T> rbit(T x) noexcept {
+  using UT = std::make_unsigned_t<std::remove_cvref_t<T>>;
+  UT y = x;
+#if defined __ARM_ACLE && __has_builtin(__builtin_arm_rbit) && \
+    __has_builtin(__builtin_arm_rbitll)
+#define CBU_RBIT_IS_FAST
+  if !consteval {
+    if constexpr (sizeof(UT) < sizeof(unsigned)) {
+      return __builtin_arm_rbit(y) >> (8 * (sizeof(unsigned) - sizeof(UT)));
+    } else if constexpr (sizeof(UT) == sizeof(unsigned)) {
+      return __builtin_arm_rbit(y);
+    } else if constexpr (sizeof(UT) == sizeof(unsigned long long)) {
+      return __builtin_arm_rbitll(y);
+    }
+  }
+#endif
+
+  if constexpr (sizeof(T) == 2)
+    y = __builtin_bswap16(y);
+  else if constexpr (sizeof(T) == 4)
+    y = __builtin_bswap32(y);
+  else if constexpr (sizeof(T) == 8)
+    y = __builtin_bswap64(y);
+
+  y = ((y & UT(0x0f0f0f0f'0f0f0f0full)) << 4) |
+      ((y & UT(0xf0f0f0f0'f0f0f0f0ull)) >> 4);
+  y = ((y & UT(0x33333333'33333333ull)) << 2) |
+      ((y & UT(0xcccccccc'ccccccccull)) >> 2);
+  y = ((y & UT(0x55555555'55555555ull)) << 1) |
+      ((y & UT(0xaaaaaaaa'aaaaaaaaull)) >> 1);
+  return y;
+}
+
 // popcnt is equivalent to std::popcount, except that it also accepts signed
 // arguments and returns unsigned int.
 template <std::integral T>
@@ -162,30 +198,42 @@ class BitIterator {
   using reference = unsigned int;
   using iterator_category = std::forward_iterator_tag;
 
+  // aarch64 has fast rbit and no ctz, so it's better to do rbit once,
+  // and use only clz in each iteration.
+#if defined __aarch64__ && defined CBU_RBIT_IS_FAST
+  explicit constexpr BitIterator(T v = 0) noexcept : v_(rbit(v)) {}
+#else
   explicit constexpr BitIterator(T v = 0) noexcept : v_(v) {}
+#endif
   constexpr BitIterator(const BitIterator &) noexcept = default;
   constexpr BitIterator &operator = (const BitIterator &) noexcept = default;
 
   constexpr unsigned operator * () const noexcept {
+#if defined __aarch64__ && defined CBU_RBIT_IS_FAST
+    return clz(v_);
+#else
     return ctz(std::common_type_t<T, unsigned>(v_));
+#endif
   }
 
   constexpr BitIterator &operator ++ () {
+#if defined __aarch64__ && defined CBU_RBIT_IS_FAST
+    v_ = v_ & ~(T(1) << (8 * sizeof(T) - 1) >> clz(v_));
+#else
     v_ = blsr(v_);
+#endif
     return *this;
   }
   constexpr BitIterator operator ++ (int) {
-    return BitIterator(std::exchange(v_, blsr(v_)));
+    BitIterator copy = *this;
+    ++*this;
+    return copy;
   }
 
-  constexpr bool operator == (const BitIterator &o) const noexcept {
-    return (v_ == o.v_);
-  }
-  constexpr bool operator != (const BitIterator &o) const noexcept {
-    return (v_ != o.v_);
-  }
+  friend constexpr bool operator==(const BitIterator&,
+                                   const BitIterator&) noexcept = default;
 
-private:
+ private:
   T v_;
 };
 
