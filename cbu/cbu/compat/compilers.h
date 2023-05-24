@@ -43,3 +43,17 @@
 #  define CBU_STATIC_CALL static
 #  define CBU_STATIC_CALL_CONST
 #endif
+
+#ifdef __SANITIZE_ADDRESS__
+#  define CBU_ADDRESS_SANITIZER
+#  define CBU_DISABLE_ADDRESS_SANITIZER [[gnu::no_sanitize("address")]]
+#elif defined __has_feature
+#  if __has_feature(address_sanitizer)
+#    define CBU_ADDRESS_SANITIZER
+#    define CBU_DISABLE_ADDRESS_SANITIZER [[clang::no_sanitize("address")]]
+#  endif
+#endif
+
+#ifndef CBU_DISABLE_ADDRESS_SANITIZER
+#  define CBU_DISABLE_ADDRESS_SANITIZER
+#endif

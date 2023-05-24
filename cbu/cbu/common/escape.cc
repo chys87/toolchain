@@ -38,6 +38,7 @@
 #include "cbu/common/bit.h"
 #include "cbu/common/encoding.h"
 #include "cbu/common/faststr.h"
+#include "cbu/compat/compilers.h"
 #include "cbu/math/common.h"
 
 namespace cbu {
@@ -142,7 +143,7 @@ inline char* encode_by_mask(char* w, const char* s,
 
 char* escape_string(char* w, std::string_view src,
                     EscapeStringOptions options) noexcept {
-#ifdef __AVX2__
+#if defined __AVX2__ && !defined CBU_ADDRESS_SANITIZER
   if (src.empty()) {
     if (options.quotes) {
       *w++ = '"';
