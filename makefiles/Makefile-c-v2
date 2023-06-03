@@ -351,7 +351,7 @@ else ifneq "$(SYMBOL_SECTIONS)" "0"
 endif
 ifeq "$(PIE)" "1"
  OPTIMIZEFLAGS += -fpie -pie
-else
+else ifeq "$(PIE)" "0"
  OPTIMIZEFLAGS += -fno-pie -no-pie
 endif
 ifeq "$(NOPLT)" "1"
