@@ -47,7 +47,7 @@ void fatal_length_prefixed(const char* info) noexcept {
 #else
   fsys_tkill(fsys_gettid(), SIGABRT);
 #endif
-  fsys__exit(127);
+  __builtin_trap();
   __builtin_unreachable();
 #endif
 }
