@@ -34,6 +34,7 @@
 #  include <cxxabi.h>
 #endif
 
+#include "cbu/common/procutil.h"
 #include "cbu/fsyscall/fsyscall.h"
 
 extern "C" {
@@ -49,10 +50,7 @@ extern "C" {
   gnu::visibility("default"), gnu::cold]]
 int pthread_create(pthread_t*, const pthread_attr_t*,
                    void *(*)(void *), void *) {
-  const char* msg = "Your program links in single_threaded.cc; "
-                    "creating new threading is disallowed.\n";
-  [[maybe_unused]] ssize_t l = fsys_write(2, msg, strlen(msg));
-  abort();
+  cbu::fatal<"Creating threads in this program is disallowed">();
 }
 
 #ifdef __GLIBCXX__

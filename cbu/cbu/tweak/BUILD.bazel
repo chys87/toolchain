@@ -30,6 +30,7 @@ cc_library(
   hdrs = [],
   deps = [
     '//cbu/fsyscall:fsyscall',
+    '//cbu/common:procutil',
   ],
   copts = [
     '-std=gnu++2a',
