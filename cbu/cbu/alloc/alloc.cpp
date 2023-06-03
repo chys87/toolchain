@@ -34,6 +34,7 @@
 
 #include "cbu/alloc/pagesize.h"
 #include "cbu/alloc/private.h"
+#include "cbu/common/procutil.h"
 
 namespace cbu {
 namespace alloc {

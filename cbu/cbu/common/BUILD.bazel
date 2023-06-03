@@ -158,6 +158,22 @@ cc_library(
   visibility = ["//visibility:public"],
 )
 
+cc_library(
+  name = 'procutil',
+  srcs = [
+    'procutil.cc',
+  ],
+  hdrs = [
+    'procutil.h',
+  ],
+  deps = [
+    ':header_only',
+    '//cbu/fsyscall',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
 cc_test(
   name = 'common-tests',
   srcs = glob(['*_test.cc', '*_test.h']),

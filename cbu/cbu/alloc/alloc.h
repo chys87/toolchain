@@ -108,8 +108,5 @@ void reclaim_page(Page* page, size_t bytes,
 std::nullptr_t
 nomem() noexcept;
 
-[[noreturn, gnu::cold]] void fatal(
-    const LengthPrefixedStringLiteral<char, uint8_t>& msg) noexcept;
-
 }  // namespace alloc
 }  // namespace cbu

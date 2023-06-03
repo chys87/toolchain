@@ -32,6 +32,7 @@ cc_library(
   hdrs = glob(['alloc.h', 'pagesize.h']),
   deps = [
     '//cbu/common:common',
+    '//cbu/common:procutil',
     '//cbu/compat:compat',
     '//cbu/fsyscall:fsyscall',
     '//cbu/sys:sys',
@@ -50,6 +51,7 @@ cc_library(
   hdrs = glob(['alloc.h', 'pagesize.h']),
   deps = [
     '//cbu/common:common',
+    '//cbu/common:procutil',
     '//cbu/compat:compat',
     '//cbu/fsyscall:fsyscall',
     '//cbu/sys:sys',

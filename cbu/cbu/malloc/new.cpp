@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,7 @@
 
 #include "cbu/alloc/alloc.h"
 #include "cbu/alloc/pagesize.h"
+#include "cbu/common/procutil.h"
 #include "cbu/malloc/visibility.h"
 
 namespace {
@@ -111,7 +112,7 @@ void* operator new(size_t n, std::align_val_t alignment) {
     n = 1;
   if (size_t(alignment) - 1 >= alloc::kPageSize) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-    alloc::fatal("Invalid aligned allocation"_lpsl);
+    cbu::fatal<"Invalid aligned allocation">();
 #else
     throw std::bad_alloc();
 #endif
@@ -121,7 +122,7 @@ void* operator new(size_t n, std::align_val_t alignment) {
   if (ptr == nullptr) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
     // Can fail because of invalid alignment
-    alloc::fatal("Invalid aligned allocation"_lpsl);
+    cbu::fatal<"Invalid aligned allocation">();
 #else
     throw std::bad_alloc();
 #endif
@@ -196,7 +197,7 @@ void* new_aligned_realloc(void* ptr, size_t n, size_t alignment) {
   if (n == 0) n = 1;
   if (size_t(alignment) - 1 >= alloc::kPageSize) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-    alloc::fatal("Invalid aligned allocation"_lpsl);
+    cbu::fatal<"Invalid aligned allocation">();
 #else
     throw std::bad_alloc();
 #endif
@@ -206,7 +207,7 @@ void* new_aligned_realloc(void* ptr, size_t n, size_t alignment) {
   if (ptr == nullptr) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
     // Can fail because of invalid alignment
-    alloc::fatal("Invalid aligned allocation"_lpsl);
+    cbu::fatal<"Invalid aligned allocation">();
 #else
     throw std::bad_alloc();
 #endif

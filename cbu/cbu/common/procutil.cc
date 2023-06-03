@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,26 +26,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
-
-#include "cbu/alloc/alloc.h"
 #include "cbu/common/procutil.h"
 
+#include <signal.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include "cbu/fsyscall/fsyscall.h"
+
 namespace cbu {
-namespace alloc {
 
-void memory_corrupt() noexcept {
-  fatal<"Memory corrupt\n">();
-}
-
-std::nullptr_t nomem() noexcept {
-#ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-  fatal<"Insufficient memory\n">();
+void fatal_length_prefixed(const char* info) noexcept {
+  ssize_t r = fsys_write(2, info + 1, static_cast<unsigned char>(*info));
+  static_cast<void>(r);
+#if !FSYSCALL_USE
+  abort();
 #else
-  errno = ENOMEM;
-  return nullptr;
+#ifdef CBU_SINGLE_THREADED
+  fsys_kill(0, SIGABRT);
+#else
+  fsys_tkill(fsys_gettid(), SIGABRT);
+#endif
+  fsys__exit(127);
+  __builtin_unreachable();
 #endif
 }
 
-}  // namespace alloc
 }  // namespace cbu

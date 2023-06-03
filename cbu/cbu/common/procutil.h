@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,26 +26,28 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <errno.h>
-
-#include "cbu/alloc/alloc.h"
-#include "cbu/common/procutil.h"
+#include "cbu/common/fixed_string.h"
 
 namespace cbu {
-namespace alloc {
 
-void memory_corrupt() noexcept {
-  fatal<"Memory corrupt\n">();
+// Print a message and abort
+[[noreturn, gnu::cold]] void fatal_length_prefixed(const char* info) noexcept;
+
+template <cbu::fixed_string msg>
+  requires(msg.size() > 0 && msg[msg.size() - 1] == '\n')
+[[noreturn, gnu::always_inline]] inline void fatal() noexcept {
+  static constexpr auto str =
+      LittleEndianFixedString<static_cast<unsigned char>(msg.size())>() + msg;
+  fatal_length_prefixed(str.data());
 }
 
-std::nullptr_t nomem() noexcept {
-#ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-  fatal<"Insufficient memory\n">();
-#else
-  errno = ENOMEM;
-  return nullptr;
-#endif
+template <cbu::fixed_string msg>
+  requires(msg.size() == 0 || msg[msg.size() - 1] != '\n')
+[[noreturn, gnu::always_inline]] inline void fatal() noexcept {
+  static constexpr auto str =
+      LittleEndianFixedString<static_cast<unsigned char>(msg.size())>() + msg +
+      LittleEndianFixedString<static_cast<unsigned char>('\n')>();
+  fatal_length_prefixed(str.data());
 }
 
-}  // namespace alloc
 }  // namespace cbu
