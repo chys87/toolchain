@@ -21,7 +21,7 @@ exit:
     .set    _exit, exit
     mov     $__NR_exit_group, %eax
     syscall
-    ud2
+    hlt
 
 #elif defined __aarch64__ && defined __linux__ && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 
@@ -36,8 +36,8 @@ _start:
     add     x1, sp, #8      // argv
 
     # initial frame
-    mov     lr, xzr     // lr is x30
     mov     fp, xzr     // fp is x29
+    # no need to clear lr (x30)
 
     # environ = sp + argc + 2
     add     x2, x2, x0, lsl #3
@@ -50,7 +50,7 @@ exit:
     .set    _exit, exit
     mov     x8, #__NR_exit_group
     svc     0
-    udf     0
+    brk     256
 
 #else
 
