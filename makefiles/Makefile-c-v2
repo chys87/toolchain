@@ -243,7 +243,7 @@ $(BUILDDIR)/$(1).n.out: private NAME := LD
 $(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(4:%=$(BUILDDIR)/lib%.a) $(AUTO_GENERATED_HEADERS)
 	+$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ \
 		$(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) \
-		-Wl,--start-group $(4:%=$(BUILDDIR)/lib%.a) -Wl,--end-group \
+		$(4:%=$(BUILDDIR)/lib%.a) \
 		$(LIBS) $$(LIBS-$(1))
 endef
 
