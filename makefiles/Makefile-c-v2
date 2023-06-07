@@ -123,7 +123,7 @@ OPTIMIZEFLAGS ?= -O2 \
 				 -Qn
 COPTIMIZEFLAGS ?=
 CXXOPTIMIZEFLAGS ?= -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0 -fvisibility-inlines-hidden
-ARCHFLAGS := -march=native
+ARCHFLAGS := -march=native -fomit-frame-pointer
 # -Wabi
 GENERIC_WARNINGFLAGS := -Wall -Wextra -Wshadow=local -Wwrite-strings \
 	-Wno-unused-parameter -Wno-missing-field-initializers \
