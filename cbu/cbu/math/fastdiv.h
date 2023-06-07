@@ -134,7 +134,7 @@ inline constexpr bool use_div7_special_case() {
 template <std::uint32_t D, std::uint32_t UB> requires (D / 7 == 0)
 inline constexpr bool use_div7_special_case() { return false; }
 
-template <auto D, auto UB>
+template <std::uint64_t D, std::uint64_t UB>
 using FastDivType =
     std::conditional_t<D <= std::numeric_limits<std::uint32_t>::max() &&
                            UB <= std::numeric_limits<std::uint32_t>::max(),
@@ -175,7 +175,7 @@ inline constexpr Type fastdiv(Type v) noexcept {
 
 }  // namespace fastdiv_detail
 
-template <auto D, auto UB>
+template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
   using Type = fastdiv_detail::FastDivType<D, UB>;
@@ -191,13 +191,13 @@ inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
   }
 }
 
-template <auto D, auto UB>
+template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
   return v - D * fastdiv<D, UB>(v);
 }
 
-template <auto D, auto UB>
+template <std::uint64_t D, std::uint64_t UB>
 inline constexpr std::pair<fastdiv_detail::FastDivType<D, UB>,
                            fastdiv_detail::FastDivType<D, UB>>
 fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
