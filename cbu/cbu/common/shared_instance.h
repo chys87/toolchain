@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,21 +33,12 @@
 namespace cbu {
 
 template <typename T, auto... args>
-inline T &shared()
-    noexcept(noexcept(T(std::forward<decltype(args)>(args)...))) {
-  static T instance(std::forward<decltype(args)>(args)...);
-  return instance;
-}
-
-#if defined __cpp_constinit && __cpp_constinit >= 201907
-template <typename T, auto... args>
-inline T &shared_constinit() noexcept {
-  static constinit T instance(std::forward<decltype(args)>(args)...);
-  return instance;
-}
-#endif
+inline T shared(std::forward<decltype(args)>(args)...);
 
 template <typename T, auto... args>
-inline constexpr T shared_const{std::forward<decltype(args)>(args)...};
+inline constinit T shared_constinit(std::forward<decltype(args)>(args)...);
+
+template <typename T, auto... args>
+inline constexpr T shared_const(std::forward<decltype(args)>(args)...);
 
 } // namespace cbu

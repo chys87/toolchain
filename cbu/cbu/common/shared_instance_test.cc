@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,26 +36,26 @@
 namespace cbu {
 
 TEST(SharedInstanceTest, Equality) {
-  EXPECT_EQ(0, (shared<int, 0>()));
-  EXPECT_EQ(5, (shared<int, 5>()));
-  EXPECT_EQ("xxxxx", (shared<const std::string, 5, 'x'>()));
+  EXPECT_EQ(0, (shared<int>));
+  EXPECT_EQ(0, (shared<int, 0>));
+  EXPECT_EQ(5, (shared<int, 5>));
+  EXPECT_EQ("xxxxx", (shared<const std::string, 5zu, 'x'>));
 }
 
 TEST(SharedInstanceTest, Uniqueness) {
-  EXPECT_EQ((&shared<std::string, 5, 'x'>()),
-            (&shared<std::string, 5, 'x'>()));
-  EXPECT_NE((&shared<std::string, 5, 'x'>()),
-            (&shared<const std::string, 5, 'x'>()));
+  EXPECT_EQ((&shared<std::string, 5zu, 'x'>), (&shared<std::string, 5zu, 'x'>));
+  EXPECT_NE((&shared<std::string, 5zu, 'x'>),
+            (&shared<const std::string, 5zu, 'x'>));
 }
 
-#if defined __cpp_constinit && __cpp_constinit >= 201907
 TEST(SharedInstanceTest, ConstInit) {
-  EXPECT_EQ(0, (shared_constinit<int, 0>()));
-  EXPECT_EQ(5, (shared_constinit<int, 5>()));
+  EXPECT_EQ(0, (shared_constinit<int>));
+  EXPECT_EQ(0, (shared_constinit<int, 0>));
+  EXPECT_EQ(5, (shared_constinit<int, 5>));
 }
-#endif
 
 TEST(SharedInstanceTest, ConstexprTest) {
+  static_assert(shared_const<int> == 0);
   constexpr const std::pair<int, int>& p =
       shared_const<std::pair<int, int>, 25, 54>;
   static_assert(p.first == 25);
