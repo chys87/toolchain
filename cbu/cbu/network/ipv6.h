@@ -43,6 +43,7 @@
 
 #include "cbu/common/byteorder.h"
 #include "cbu/common/faststr.h"
+#include "cbu/compat/compilers.h"
 #include "cbu/network/ipv4.h"
 
 namespace cbu {
@@ -200,13 +201,15 @@ class IPv6 {
   }
 
   struct FastLess {
-    constexpr bool operator()(const IPv6& a, const IPv6& b) const noexcept {
+    CBU_STATIC_CALL constexpr bool operator()(const IPv6& a, const IPv6& b)
+        CBU_STATIC_CALL_CONST noexcept {
       return a.FastCompare(b) < 0;
     }
   };
 
   struct FastGreater {
-    constexpr bool operator()(const IPv6& a, const IPv6& b) const noexcept {
+    CBU_STATIC_CALL constexpr bool operator()(const IPv6& a, const IPv6& b)
+        CBU_STATIC_CALL_CONST noexcept {
       return a.FastCompare(b) > 0;
     }
   };
@@ -328,32 +331,32 @@ struct IPv6Port {
     return r;
   }
   struct EqualWithExtra {
-    constexpr bool operator()(const IPv6Port& a,
-                              const IPv6Port& b) const noexcept {
+    CBU_STATIC_CALL constexpr bool operator()(
+        const IPv6Port& a, const IPv6Port& b) CBU_STATIC_CALL_CONST noexcept {
       return a.IsEqualWithExtra(b);
     }
   };
   struct LessWithExtra {
-    constexpr bool operator()(const IPv6Port& a,
-                              const IPv6Port& b) const noexcept {
+    CBU_STATIC_CALL constexpr bool operator()(
+        const IPv6Port& a, const IPv6Port& b) CBU_STATIC_CALL_CONST noexcept {
       return a.CompareWithExtra(b) < 0;
     }
   };
   struct GreaterWithExtra {
-    constexpr bool operator()(const IPv6Port& a,
-                              const IPv6Port& b) const noexcept {
+    CBU_STATIC_CALL constexpr bool operator()(
+        const IPv6Port& a, const IPv6Port& b) CBU_STATIC_CALL_CONST noexcept {
       return a.CompareWithExtra(b) > 0;
     }
   };
   struct FastLessWithExtra {
-    constexpr bool operator()(const IPv6Port& a,
-                              const IPv6Port& b) const noexcept {
+    CBU_STATIC_CALL constexpr bool operator()(
+        const IPv6Port& a, const IPv6Port& b) CBU_STATIC_CALL_CONST noexcept {
       return a.FastCompareWithExtra(b) < 0;
     }
   };
   struct FastGreaterWithExtra {
-    constexpr bool operator()(const IPv6Port& a,
-                              const IPv6Port& b) const noexcept {
+    CBU_STATIC_CALL constexpr bool operator()(
+        const IPv6Port& a, const IPv6Port& b) CBU_STATIC_CALL_CONST noexcept {
       return a.FastCompareWithExtra(b) > 0;
     }
   };
@@ -365,14 +368,16 @@ namespace std {
 
 template <>
 struct hash<::cbu::IPv6> {
-  constexpr size_t operator()(const ::cbu::IPv6& ip) const noexcept {
+  CBU_STATIC_CALL constexpr size_t operator()(const ::cbu::IPv6& ip)
+      CBU_STATIC_CALL_CONST noexcept {
     return ip.Hash();
   }
 };
 
 template <>
 struct hash<::cbu::IPv6Port> {
-  constexpr size_t operator()(const ::cbu::IPv6Port& ip_port) const noexcept {
+  CBU_STATIC_CALL constexpr size_t operator()(const ::cbu::IPv6Port& ip_port)
+      CBU_STATIC_CALL_CONST noexcept {
     return ip_port.Hash();
   }
 };

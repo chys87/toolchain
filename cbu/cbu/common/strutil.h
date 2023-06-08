@@ -37,6 +37,7 @@
 #include <string_view>
 
 #include "cbu/common/concepts.h"
+#include "cbu/compat/compilers.h"
 
 namespace cbu {
 namespace strutil_detail {
@@ -187,7 +188,8 @@ struct StrCmpLengthFirst {
   using is_transparent = void;
 
   template <typename T, typename U>
-  constexpr int operator()(const T& a, const U& b) const noexcept {
+  CBU_STATIC_CALL constexpr int operator()(const T& a, const U& b)
+      CBU_STATIC_CALL_CONST noexcept {
     return strcmp_length_first(a, b);
   }
 };
@@ -196,7 +198,8 @@ struct StrLessLengthFirst {
   using is_transparent = void;
 
   template <typename T, typename U>
-  constexpr bool operator()(const T& a, const U& b) const noexcept {
+  CBU_STATIC_CALL constexpr bool operator()(const T& a, const U& b)
+      CBU_STATIC_CALL_CONST noexcept {
     return strcmp_length_first(a, b) < 0;
   }
 };
@@ -205,7 +208,8 @@ struct StrGreaterLengthFirst {
   using is_transparent = void;
 
   template <typename T, typename U>
-  constexpr bool operator()(const T& a, const U& b) const noexcept {
+  CBU_STATIC_CALL constexpr bool operator()(const T& a, const U& b)
+      CBU_STATIC_CALL_CONST noexcept {
     return strcmp_length_first(a, b) > 0;
   }
 };

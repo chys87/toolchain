@@ -39,6 +39,7 @@
 #include <string_view>
 
 #include "cbu/common/byteorder.h"
+#include "cbu/compat/compilers.h"
 
 namespace cbu {
 
@@ -166,7 +167,8 @@ namespace std {
 
 template <>
 struct hash<::cbu::IPv4> {
-  constexpr size_t operator()(const ::cbu::IPv4& ip) const noexcept {
+  CBU_STATIC_CALL constexpr size_t operator()(const ::cbu::IPv4& ip)
+      CBU_STATIC_CALL_CONST noexcept {
     return ip.value();
   }
 };
