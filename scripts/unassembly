@@ -361,7 +361,16 @@ def __to_readable_string(hex_part):
     return res
 
 def annotate_string_literals(fi):
-    ptn = re.compile(br'(?:mov|cmp)(?:[bwlq]|absq?)?\s+\$0x([0-9a-f]+),[^#\n]*(?=\n)')
+    data = get_lines(fi, 3)  # In cases of static libraries, we need 3 lines
+
+    if b'x86-64' in data:
+        ptn = re.compile(br'(?:mov|cmp)(?:[bwlq]|absq?)?\s+\$0x([0-9a-f]+),[^#\n]*(?=\n)')
+    elif b'aarch64' in data:
+        ptn = re.compile(br'(?:mov|cmp)\s+\w+,\s*#0x([0-9a-f]+)[^\n]*(?=\n)')
+    else:
+        yield data
+        yield from fi
+        return
 
     def sub(match):
         hex_part = match.group(1)
@@ -374,7 +383,6 @@ def annotate_string_literals(fi):
     def do_replace(data):
         return ptn.sub(sub, data)
 
-    data = b''
     for txt in fi:
         data += txt
         if len(data) >= 8192:  # An arbitrary threshold
