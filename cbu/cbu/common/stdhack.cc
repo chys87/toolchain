@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -63,8 +63,9 @@ T* extend_impl(std::basic_string<T>* buf, std::size_t n) {
     buf->__resize_default_init(buf->size() + n);
   } else {
 #  if defined __cpp_lib_string_resize_and_overwrite
-    buf->resize_and_overwrite(buf->size() + n,
-                              [](T*, std::size_t r) noexcept { return r; });
+    size_t target_len = buf->size() + n;
+    buf->resize_and_overwrite(
+        target_len, [](T*, std::size_t r) noexcept { return target_len; });
 #  else
     buf->resize(buf->size() + n);
 #  endif
