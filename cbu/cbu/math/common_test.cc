@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -74,6 +74,11 @@ TEST(MapUToFloat, Double) {
 }
 
 TEST(PowLog10, ILog10) {
+  static_assert(ilog10(0) == 0);
+  static_assert(ilog10(2) == 0);
+  static_assert(ilog10(9) == 0);
+  static_assert(ilog10(10) == 1);
+
   EXPECT_EQ(0, ilog10(0));
   EXPECT_EQ(0, ilog10(1));
   EXPECT_EQ(0, ilog10(2));

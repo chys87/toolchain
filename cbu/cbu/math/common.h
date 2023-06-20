@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -151,11 +151,11 @@ inline constexpr unsigned int ilog10(std::uint32_t x) noexcept {
   if consteval {
     std::uint64_t p = 10;
     unsigned int i = 0;
-    while (true) {
-      if (x <= p) return i;
+    while (x >= p) {
       p *= 10;
       ++i;
     }
+    return i;
   } else {
     return ilog10_impl(x);
   }
