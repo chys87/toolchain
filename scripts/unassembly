@@ -60,7 +60,7 @@ def get_lines(it, count):
     return txt
 
 
-def cppfilter(fi):
+def cppfilter(fi, args):
     simple_replaces = (  # Don't use a dict. We want orders.
         (b'(anonymous namespace)', b'(a)'),
         (b'unsigned int', b'uint'),
@@ -140,7 +140,7 @@ def cppfilter(fi):
         else:
             return b'(' + _char[ctype] + b'\"' + print_res + b'\")'
 
-    pattern_replaces = (
+    pattern_replaces = [
         (re.compile(br'::basic_string<char, std::(__\d+::)?char_traits<char>, std::(__\d+::)?allocator<char>>'), b'::string'),
         (re.compile(br'::basic_string<wchar_t, std::(__\d+::)?char_traits<wchar_t>, std::(__\d+::)?allocator<wchar_t>>'), b'::wstring'),
         (re.compile(br'::basic_string<char(\d+)_t, std::(__\d+::)?char_traits<char\1_t>, std::(__\d+::)?allocator<char\1_t>>'), br'::u\1string'),
@@ -195,9 +195,23 @@ def cppfilter(fi):
          br'::\1<\2>'),
         (re.compile(br'(std::\w+)<(' + __type + br'(?:, ' + __type + br')*)>::type'), br'\1_t<\2>'),
         (re.compile(br'(std::\w+)<(' + __type + br'(?:, ' + __type + br')*)>::value'), br'\1_v<\2>'),
-        # Do this after other STL replacements
-        (re.compile(br'std::allocator<' + __type + br'>'),
-         br'std::allocator<(...)>'),
+    ]
+
+    if not args.stricter_cxx_signature:
+        pattern_replaces += [
+            (re.compile(br'std::type_identity_t<(' + __type + br')>'), br'\1'),
+            (re.compile(br'std::is_same_v<(' + __type + br'), \1>'), br'true'),  # But we cannot reliably replace anything by false!!
+            (re.compile(br'std::conditional_t<true, (' + __type + br'), ' + __type + br'>'), br'\1'),
+            (re.compile(br'std::conditional_t<false, ' + __type + br', (' + __type + br')>'), br'\1'),
+            # conditions in enable_if_t appearing in binary must be true
+            (re.compile(br'std::enable_if_t<' + __type + br', (' + __type + br')>'), br'\1'),
+
+            # Do this after other STL replacements
+            (re.compile(br'std::allocator<' + __type + br'>'),
+             br'std::allocator<(...)>'),
+        ]
+
+    pattern_replaces += [
         (re.compile(br'::span<(' + __type + \
                     br'), (?:18446744073709551615ul|4294967295u)>'), br'::span<\1>'),
         (re.compile(br'::span<(' + __type + br'), (?:18446744073709551615ul|4294967295u)>'),
@@ -248,11 +262,6 @@ def cppfilter(fi):
         (re.compile(br'::duration<long(?: long)?, std::ratio<86400l*>>'), br'::days'),
         (re.compile(br'::duration<long(?: long)?, std::ratio<604800l*>>'), br'::weeks'),
 
-        # type traits
-        (re.compile(br'std::is_same<(' + __type + br'), \1>::value'), br'true'),  # But we cannot reliably replace anything by false!!
-        (re.compile(br'std::conditional<true, (' + __type + br'), ' + __type + br'>::type'), br'\1'),
-        (re.compile(br'std::conditional<false, ' + __type + br', (' + __type + br')>::type'), br'\1'),
-
         # absl specific
         (re.compile(br'absl::flat_hash_set<(.+), absl::hash_internal::Hash<\1>, std::(__\d+::)?equal_to<\1>, std::(__\d+::)?allocator<\1>>'),
          br'absl::flat_hash_set<\1>'),
@@ -271,7 +280,7 @@ def cppfilter(fi):
         (re.compile(br'cbu::basic_zstring_view<char>'), b'cbu::zstring_view'),
         (re.compile(br'cbu::basic_zstring_view<wchar_t>'), b'cbu::wzstring_view'),
         (re.compile(br'cbu::basic_zstring_view<char(\d+)_t>'), br'cbu::u\1zstring_view'),
-    )
+    ]
 
     def do_replace(data):
         for _ in range(5):
@@ -579,6 +588,7 @@ def main():
     parser.add_argument('--no-string-literal-annotation', action='store_true')
     parser.add_argument('--no-show-raw-insn', action='store_true')
     parser.add_argument('--no-addresses', action='store_true')
+    parser.add_argument('--stricter-cxx-signature', action='store_true')
     parser.add_argument('filename', help='File to unassembly')
     args = parser.parse_args()
 
@@ -598,7 +608,7 @@ def main():
     objdump = subprocess.Popen(cmd, close_fds=True, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
     fi = objdump.stdout
-    fi = cppfilter(fi)
+    fi = cppfilter(fi, args)
 
     if sys.platform.startswith('linux'):
         fi = syscall_replace(fi)
