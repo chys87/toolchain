@@ -203,6 +203,10 @@ def cppfilter(fi, args):
             (re.compile(br'std::is_same_v<(' + __type + br'), \1>'), br'true'),  # But we cannot reliably replace anything by false!!
             (re.compile(br'std::conditional_t<true, (' + __type + br'), ' + __type + br'>'), br'\1'),
             (re.compile(br'std::conditional_t<false, ' + __type + br', (' + __type + br')>'), br'\1'),
+            (re.compile(br'std::remove_reference_t<(' + __type + br')&>'), br'\1'),
+            (re.compile(br'std::remove_cv_t<(' + __type + br') const volatile>'), br'\1'),
+            (re.compile(br'std::remove_cv_t<(' + __type + br') (?:const|volatile)>'), br'\1'),
+            (re.compile(br'std::remove_cv_t<([^<>]*)>'), br'\1'),
             # conditions in enable_if_t appearing in binary must be true
             (re.compile(br'std::enable_if_t<' + __type + br', (' + __type + br')>'), br'\1'),
 
