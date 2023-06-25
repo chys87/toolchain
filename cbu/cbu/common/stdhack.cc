@@ -65,7 +65,8 @@ T* extend_impl(std::basic_string<T>* buf, std::size_t n) {
 #  if defined __cpp_lib_string_resize_and_overwrite
     size_t target_len = buf->size() + n;
     buf->resize_and_overwrite(
-        target_len, [](T*, std::size_t r) noexcept { return target_len; });
+        target_len,
+        [target_len](T*, std::size_t) noexcept { return target_len; });
 #  else
     buf->resize(buf->size() + n);
 #  endif
