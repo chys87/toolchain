@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/prctl.h>
 #include <unistd.h>
 
 #include "fsyscall.h"
@@ -68,6 +69,8 @@ static char* gen_aarch64(char* w) {
   while (*p == ' ' || *p == '\t') ++p;
   if (*p == ':') ++p;
 
+  bool has_sve = false;
+
   for (;;) {
     while (*p == ' ' || *p == '\t') ++p;
     if (!is_alnum(*p)) break;
@@ -79,12 +82,18 @@ static char* gen_aarch64(char* w) {
     if (EQ("fp") || EQ("aes") || EQ("sha2") || EQ("sha3") || EQ("sm4") ||
         EQ("sve") || EQ("flagm") || EQ("ssbs") || EQ("sb") || EQ("sve2") ||
         EQ("i8mm") || EQ("bf16")) {
+      if (EQ("sve") || EQ("sve2")) has_sve = true;
       *w++ = '+';
       w = Mempcpy(w, p, e - p);
     } else if (EQ("crc32")) {
       w = Mempcpy(w, "+crc", strlen("+crc"));
     }
     p = e;
+  }
+
+  if (has_sve) {
+    int bytes = fsys_prctl_cptr(PR_SVE_GET_VL, NULL) & PR_SVE_VL_LEN_MASK;
+    w += snprintf(w, 64, " -msve-vector-bits=%d", bytes * 8);
   }
 
   return w;
