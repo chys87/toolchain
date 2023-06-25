@@ -324,6 +324,7 @@ ifeq "$(IS_CLANG)" "1"
  endif
  AR ?= llvm-ar
  STRIP ?= llvm-strip --strip-all --strip-unneeded -R .comment -R .GCC.command.line
+ ARCHFLAGS := $(subst -march=native,$(EGM.clang_march_native ),$(ARCHFLAGS))
 else
  # GCC has -fimplicit-constexpr, which clang lacks
  EXTRA_CXXFLAGS += -fimplicit-constexpr

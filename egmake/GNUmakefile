@@ -39,7 +39,7 @@ ifneq "" "$(shell which ccache 2>/dev/null)"
   CC := ccache $(CC)
 endif
 
-CFLAGS := -O2 -march=native -flto -std=gnu99 -fPIC \
+CFLAGS := -O2 -march=native -flto -std=gnu2x -fPIC \
 	-D_GNU_SOURCE -DNDEBUG \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -fno-exceptions \
 	-fvisibility=hidden \
