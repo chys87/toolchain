@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -95,7 +95,7 @@ constexpr void raw_array_delete(
 
 // Same as std::destroy_n, but does destructin in reverse order
 template <typename T, typename Size>
-constexpr void destroy_backward_n(T* begin, Size size) {
+constexpr void destroy_backward_n(T* begin, Size size) noexcept {
   if constexpr (std::is_trivially_destructible_v<T>) return;
   T* p = begin + size;
   while (p != begin) std::destroy_at(--p);
