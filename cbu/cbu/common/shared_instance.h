@@ -28,17 +28,21 @@
 
 #pragma once
 
-#include <utility>
+#include <type_traits>
 
 namespace cbu {
 
 template <typename T, auto... args>
-inline T shared(std::forward<decltype(args)>(args)...);
+inline T shared(args...);
 
 template <typename T, auto... args>
-inline constinit T shared_constinit(std::forward<decltype(args)>(args)...);
+inline constinit T shared_constinit(args...);
 
 template <typename T, auto... args>
-inline constexpr T shared_const(std::forward<decltype(args)>(args)...);
+inline constexpr T shared_const(args...);
+
+template <auto value>
+inline constexpr auto& as_shared =
+    shared_const<std::remove_cvref_t<decltype(value)>, value>;
 
 } // namespace cbu

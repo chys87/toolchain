@@ -27,6 +27,7 @@
  */
 
 #include "cbu/common/fixed_string.h"
+#include "cbu/common/shared_instance.h"
 
 namespace cbu {
 
@@ -36,18 +37,18 @@ namespace cbu {
 template <cbu::fixed_string msg>
   requires(msg.size() > 0 && msg[msg.size() - 1] == '\n')
 [[noreturn, gnu::always_inline]] inline void fatal() noexcept {
-  static constexpr auto str =
+  constexpr auto str =
       LittleEndianFixedString<static_cast<unsigned char>(msg.size())>() + msg;
-  fatal_length_prefixed(str.data());
+  fatal_length_prefixed(as_shared<str>.data());
 }
 
 template <cbu::fixed_string msg>
   requires(msg.size() == 0 || msg[msg.size() - 1] != '\n')
 [[noreturn, gnu::always_inline]] inline void fatal() noexcept {
-  static constexpr auto str =
+  constexpr auto str =
       LittleEndianFixedString<static_cast<unsigned char>(msg.size())>() + msg +
       LittleEndianFixedString<static_cast<unsigned char>('\n')>();
-  fatal_length_prefixed(str.data());
+  fatal_length_prefixed(as_shared<str>.data());
 }
 
 }  // namespace cbu
