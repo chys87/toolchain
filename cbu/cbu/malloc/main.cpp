@@ -28,7 +28,6 @@
 
 #include <errno.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "cbu/alloc/alloc.h"
 #include "cbu/alloc/pagesize.h"

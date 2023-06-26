@@ -27,15 +27,11 @@
  */
 
 #include <pthread.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #if __has_include(<cxxabi.h>)
 #  include <cxxabi.h>
 #endif
 
 #include "cbu/common/procutil.h"
-#include "cbu/fsyscall/fsyscall.h"
 
 extern "C" {
 
