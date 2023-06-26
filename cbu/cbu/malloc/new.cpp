@@ -40,7 +40,6 @@
 namespace {
 
 namespace alloc = cbu::alloc;
-using cbu::operator""_lpsl;
 
 void* new_nothrow(size_t n) noexcept {
   // C standard says malloc(0) may or may not return NULL

@@ -33,8 +33,6 @@
 
 #include <cstddef>
 
-#include "cbu/common/length_prefixed_string_literal.h"  // IWYU pragma: export
-
 namespace cbu {
 namespace alloc {
 
