@@ -61,13 +61,6 @@ struct fsys_linux_dirent64 {
 #endif
 };
 
-#if FSYSCALL_USE
-
-#include <fcntl.h>
-#include <signal.h>
-#include <time.h>
-#include <sys/syscall.h>
-
 // We cannot omit always_inline. At least vfork requires it.
 #if defined __cplusplus
 # define fsys_inline inline __attribute__((__always_inline__))
@@ -76,6 +69,19 @@ struct fsys_linux_dirent64 {
 #else
 # define fsys_inline static __inline__ __attribute__((__always_inline__))
 #endif
+
+#if defined __cplusplus && __cplusplus >= 201402L
+# define fsys_constexpr inline constexpr __attribute__((__always_inline__))
+#else
+# define fsys_constexpr static inline __attribute__((__always_inline__))
+#endif
+
+#if FSYSCALL_USE
+
+#include <fcntl.h>
+#include <signal.h>
+#include <time.h>
+#include <sys/syscall.h>
 
 #ifdef __x86_64__
 # include "fsyscall-macros-x86-64.h"
@@ -108,6 +114,19 @@ struct pollfd;
 struct utimbuf;
 struct sysinfo;
 
+// Glibc defines larger-than-necessary sigset_t.
+// https://unix.stackexchange.com/questions/399342/why-is-sigset-t-in-glibc-musl-128-bytes-large-on-64-bit-linux
+// We use only what the kernel wants.
+struct fsys_sigset_t {
+  unsigned long __val[64 / sizeof(unsigned long)];
+};
+
+#if defined __cplusplus && __cplusplus >= 201103L
+static_assert(_NSIG == 64 || _NSIG == 65, "_NSIG wrong");
+#elif defined __STDC_VERSION__ && __STDC_VERSION__ >= 201112L
+_Static_assert(_NSIG == 64 || _NSIG == 65, "_NSIG wrong");
+#endif
+
 // sigaction class used by Linux kernel, different from glibc's
 struct fsys_sigaction {
 #pragma push_macro("sa_handler")
@@ -122,7 +141,7 @@ struct fsys_sigaction {
 #pragma pop_macro("sa_sigaction")
   unsigned long sa_flags;
   void (*sa_restorer) (void);
-  sigset_t sa_mask;
+  fsys_sigset_t sa_mask;
 };
 
 def_fsys(uname,uname,int,1,struct utsname *)
@@ -258,7 +277,7 @@ def_fsys(munmap,munmap,int,2,void*,unsigned long)
 def_fsys(madvise,madvise,int,3,void*,unsigned long,int)
 def_fsys(mremap,mremap,void*,4,void*,unsigned long,unsigned long,int)
 def_fsys(mprotect,mprotect,int,3,void*,unsigned long,int)
-// Should be sigset_t. But don't want to include signal.h here
+// Should be sigset_t or fsys_sigset_t
 def_fsys(rt_sigprocmask,rt_sigprocmask,int,
          4,int,const void *,void *,unsigned long)
 #define fsys_sigprocmask(a,b,c) fsys_rt_sigprocmask(a,b,c,_NSIG/8)
@@ -460,6 +479,8 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_failure(r) ((long)(r) < 0)
 #define fsys_mmap_failed(r)	((r) == MAP_FAILED)
 
+#define fsys_sigset_t sigset_t
+
 #define fsys_uname uname
 #define fsys_chdir chdir
 #define fsys_fchdir fchdir
@@ -622,3 +643,29 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_copy_file_range copy_file_range
 
 #endif
+
+// We always provide these functions to provide constexpr-ness
+fsys_constexpr int fsys_sigemptyset(fsys_sigset_t* s) {
+  for (int i = 0; i < sizeof(s->__val) / sizeof(s->__val[0]); ++i)
+    s->__val[i] = 0;
+  return 0;
+}
+fsys_constexpr int fsys_sigfillset(fsys_sigset_t* s) {
+  for (int i = 0; i < sizeof(s->__val) / sizeof(s->__val[0]); ++i)
+    s->__val[i] = -1;
+  return 0;
+}
+fsys_constexpr int fsys_sigaddset(fsys_sigset_t* s, unsigned int n) {
+  s->__val[(n - 1) / (8 * sizeof(s->__val[0]))] |=
+      1ul << ((n - 1) % (8 * sizeof(s->__val[0])));
+  return 0;
+}
+fsys_constexpr int fsys_sigdelset(fsys_sigset_t* s, unsigned int n) {
+  s->__val[(n - 1) / (8 * sizeof(s->__val[0]))] &=
+      ~(1ul << ((n - 1) % (8 * sizeof(s->__val[0]))));
+  return 0;
+}
+fsys_constexpr int fsys_sigismember(const fsys_sigset_t* s, unsigned int n) {
+  return !!(s->__val[(n - 1) / (8 * sizeof(s->__val[0]))] &
+            (1ul << ((n - 1) % (8 * sizeof(s->__val[0])))));
+}
