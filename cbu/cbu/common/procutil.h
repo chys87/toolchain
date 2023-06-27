@@ -26,6 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include "cbu/common/fixed_string.h"
 #include "cbu/common/shared_instance.h"
 
