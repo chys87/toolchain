@@ -337,6 +337,7 @@ ifeq "$(NOEXCEPTIONS)" "1"
  OPTIMIZEFLAGS += -fno-unwind-tables -fno-asynchronous-unwind-tables
 endif
 ifeq "$(LTO)" "1"
+ DEFS += -D LTO_ENABLED
  ifeq "$(IS_CLANG)" "0"
  EXTRA_CFLAGS += -flto -fuse-linker-plugin
  EXTRA_CXXFLAGS += -flto -fuse-linker-plugin
