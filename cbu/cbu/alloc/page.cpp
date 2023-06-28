@@ -386,10 +386,10 @@ Description* PageTreeAllocator::get_deallocate_candidates(
   for (size_t i = kSmallMaxSize; i > 0 && i >= threshold; i -= kPageSize) {
     size_t idx = small_size_to_idx(i);
     auto& tree = szad_small_[idx];
-    while (Description* p = tree.try_pop_first()) {
-      p = ad_.remove(p);
-      p->rblink_1.left(list);
-      list = p;
+    while (Description* q = tree.try_pop_first()) {
+      q = ad_.remove(q);
+      q->rblink_1.left(list);
+      list = q;
     }
   }
 
