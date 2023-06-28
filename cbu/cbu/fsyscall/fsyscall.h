@@ -117,9 +117,9 @@ struct sysinfo;
 // Glibc defines larger-than-necessary sigset_t.
 // https://unix.stackexchange.com/questions/399342/why-is-sigset-t-in-glibc-musl-128-bytes-large-on-64-bit-linux
 // We use only what the kernel wants.
-struct fsys_sigset_t {
+typedef struct fsys_sigset_t {
   unsigned long __val[64 / sizeof(unsigned long)];
-};
+} fsys_sigset_t;
 
 #if defined __cplusplus && __cplusplus >= 201103L
 static_assert(_NSIG == 64 || _NSIG == 65, "_NSIG wrong");
