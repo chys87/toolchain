@@ -646,12 +646,12 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 
 // We always provide these functions to provide constexpr-ness
 fsys_constexpr int fsys_sigemptyset(fsys_sigset_t* s) {
-  for (int i = 0; i < sizeof(s->__val) / sizeof(s->__val[0]); ++i)
+  for (size_t i = 0; i < sizeof(s->__val) / sizeof(s->__val[0]); ++i)
     s->__val[i] = 0;
   return 0;
 }
 fsys_constexpr int fsys_sigfillset(fsys_sigset_t* s) {
-  for (int i = 0; i < sizeof(s->__val) / sizeof(s->__val[0]); ++i)
+  for (size_t i = 0; i < sizeof(s->__val) / sizeof(s->__val[0]); ++i)
     s->__val[i] = -1;
   return 0;
 }
