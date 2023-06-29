@@ -64,6 +64,12 @@ TEST(StrUtilTest, Memcnt) {
       memcnt(
           "0123456789abcdef01234567890123456789012345678901234567890123456789012345678999"sv,
           '9'));
+#define REPEAT8(x) x x x x x x x x
+  EXPECT_EQ(72, memcnt(std::string_view(REPEAT8(
+                           "0123456789abcdef0123456789012345678901234567890"
+                           "1234567890123456789012345678999")),
+                       '9'));
+#undef REPEAT8
 }
 
 TEST(StrUtilTest, Reverse) {

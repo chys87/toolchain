@@ -185,6 +185,56 @@ size_t memcnt(const char *s, char c, size_t n) noexcept {
     r += uint32_t(_mm_popcnt_u32(_bzhi_u32(_mm256_movemask_epi8(
         _mm256_cmpeq_epi8(ref, *p++)), tail)));
   }
+#elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ && !defined CBU_ADDRESS_SANITIZER
+  if (n == 0) return 0;
+
+  uint8x16_t ref = vdupq_n_u8(c);
+
+  size_t misalign = (uintptr_t)s & 15;
+  const uint8x16_t* p = (const uint8x16_t*)((uintptr_t)s & -16);
+
+  uint64_t mask =
+      vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(
+                        vreinterpretq_u16_u8(uint8x16_t(ref == *p++)), 4)),
+                    0);
+  mask >>= misalign * 4;
+
+  size_t l = n + misalign - 16;
+  if (ssize_t(l) <= 0) {
+    mask &= (1ull << 4 << ((n - 1) * 4)) - 1;
+    return uint32_t(std::popcount(mask)) / 4;
+  }
+
+  r = uint32_t(std::popcount(mask)) / 4;
+
+  while (!sub_overflow(l, 128, &l)) {
+    uint8x16_t a = uint8x16_t(ref == *p++);
+    uint8x16_t b = uint8x16_t(ref == *p++);
+    uint8x16_t c = uint8x16_t(ref == *p++);
+    uint8x16_t d = uint8x16_t(ref == *p++);
+    uint8x16_t e = uint8x16_t(ref == *p++);
+    uint8x16_t f = uint8x16_t(ref == *p++);
+    uint8x16_t g = uint8x16_t(ref == *p++);
+    uint8x16_t h = uint8x16_t(ref == *p++);
+    uint8x16_t sum = a + b + c + d + e + f + g + h;
+    r -= int8_t(vaddvq_u8(sum));
+  }
+
+  l &= 127;
+  while (!sub_overflow(l, 16, &l)) {
+    uint8x16_t a = uint8x16_t(ref == *p++);
+    uint8_t cnt = -vaddvq_u8(a);
+    r += cnt;
+  }
+
+  unsigned tail = unsigned(l) & 15;
+  if (tail) {
+    uint64_t mask =
+        vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(
+                          vreinterpretq_u16_u8(uint8x16_t(ref == *p++)), 4)),
+                      0);
+    r += std::uint32_t(std::popcount(bzhi(mask, tail * 4))) / 4;
+  }
 #else
   const char *e = s + n;
   const char *t;
@@ -589,10 +639,19 @@ size_t char_span_length(const void* buffer, size_t len, char c) noexcept {
 
 #if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   while (i + 16 <= len) {
+#ifdef __clang__
+    // Clang is clever enough to optimize this, generating cmtst if c is 0
     uint8x16_t v = uint8x16_t(vdupq_n_u8(c) !=
                               *reinterpret_cast<const uint8x16_t*>(p + i));
     uint8x8_t cmp = vshrn_n_u16(vreinterpretq_u16_u8(v), 4);
     uint64_t mask = vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
+#else
+    // GCC is more stupid though
+    uint8x16_t v = uint8x16_t(vdupq_n_u8(c) ==
+                              *reinterpret_cast<const uint8x16_t*>(p + i));
+    uint8x8_t cmp = vshrn_n_u16(vreinterpretq_u16_u8(v), 4);
+    uint64_t mask = ~vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
+#endif
     if (mask) return i + ctz(mask) / 4;
     i += 16;
   }
