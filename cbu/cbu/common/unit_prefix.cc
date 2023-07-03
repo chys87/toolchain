@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,19 +48,18 @@ ScaleUnitPrefix scale_unit_prefix_1000(float value) noexcept {
 
 ScaleUnitPrefix scale_unit_prefix_1024(float value) noexcept {
   if constexpr (std::numeric_limits<float>::is_iec559) {
-    // 0 is a special case in floating point
-    if (equal(value, 0.0f)) return {value, 0};
-    float orig_value = value;
-    std::uint32_t u;
-    std::memcpy(&u, &orig_value, sizeof(u));
+    std::uint32_t u = float_to_uint32(value);
+
+    // Handle 0 and small numbers properly
+    if (u < float_to_uint32(1024.f)) return {value, 0};
+
     // Extract exponent
     // The value is known to be positive, so don't bother to clear sign bit
     unsigned orig_exponent = u >> 23;
     unsigned real_exponent = orig_exponent - 127;
     unsigned prefix_idx = cbu::fastdiv<10, 64>(real_exponent);
     u -= prefix_idx * 10 << 23;
-    float res;
-    std::memcpy(&res, &u, sizeof(res));
+    float res = uint32_to_float(u);
     return {res, prefix_idx};
   } else {
     // Division by 1024 doesn't generate errors, so this could be further

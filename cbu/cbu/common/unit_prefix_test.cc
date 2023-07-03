@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -115,13 +115,22 @@ TEST(UnitPrefixTest, Base1024Test) {
     }
   }
 
+  constexpr float epsilon = std::numeric_limits<float>::epsilon();
+
+  EXPECT_EQ(scale_unit_prefix_1024(0).prefix_idx, 0);
+  EXPECT_EQ(scale_unit_prefix_1024(0.00001).prefix_idx, 0);
+  EXPECT_EQ(scale_unit_prefix_1024(1023.999).prefix_idx, 0);
+  EXPECT_EQ(scale_unit_prefix_1024(1024).prefix_idx, 1);
+  EXPECT_EQ(scale_unit_prefix_1024(1048576 * (1 - epsilon)).prefix_idx, 1);
+  EXPECT_EQ(scale_unit_prefix_1024(1048576).prefix_idx, 2);
+
   for (std::uint64_t v = 0;
        v <= std::uint64_t(std::numeric_limits<std::int64_t>::max());
        v += 1 + v / 17) {
     auto [fv, idx] = scale_unit_prefix_1024(v);
     std::uint64_t idx_base = fast_powu(std::uint64_t(1024), idx);
     if (v != 0) {
-      ASSERT_GE(fv, 1.0f * (1.0f - std::numeric_limits<float>::epsilon()))
+      ASSERT_GE(fv, 1.0f * (1.0f - epsilon))
           << "v=" << v << ", fv=" << fv << ", idx=" << idx;
       ASSERT_LE(fv, 1024.0f) << "v=" << v << ", fv=" << fv << ", idx=" << idx;
     }
