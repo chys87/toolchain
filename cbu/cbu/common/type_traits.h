@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -87,12 +87,15 @@ namespace type_traits_detail {
   template <typename Class, vtype fallback = vtype()>                        \
   struct extract_traits_##name : std::integral_constant<vtype, fallback> {}; \
   template <typename Class, vtype fallback>                                  \
-  requires requires() {                                                      \
-    static_cast<vtype (*)(Class*)>(&Class::name);                            \
-    { Class::name(nullptr) } -> std::convertible_to<vtype>;                  \
-  }                                                                          \
+    requires requires() {                                                    \
+      static_cast<vtype (*)(Class*)>(&Class::name);                          \
+      {                                                                      \
+        Class::name(static_cast<Class*>(nullptr))                            \
+        } -> std::convertible_to<vtype>;                                     \
+    }                                                                        \
   struct extract_traits_##name<Class, fallback>                              \
-      : std::integral_constant<vtype, Class::name(nullptr)> {}
+      : std::integral_constant<vtype,                                        \
+                               Class::name(static_cast<Class*>(nullptr))> {}
 
 CBU_DEFINE_EXTRACT_TRAITS(bitwise_movable, bool);
 CBU_DEFINE_EXTRACT_TRAITS(pass_by_ref, bool);
@@ -168,12 +171,17 @@ struct B : A {
   static constexpr bool bitwise_movable(B*) { return true; }
 };
 struct C : B {};
+struct D {
+  static constexpr bool bitwise_movable(D*) { return false; }
+  static constexpr bool bitwise_movable(decltype(nullptr)) { return true; }
+};
 
 static_assert(!type_traits_detail::extract_traits_bitwise_movable<A>::value,
               "");
 static_assert(type_traits_detail::extract_traits_bitwise_movable<B>::value, "");
 static_assert(!type_traits_detail::extract_traits_bitwise_movable<C>::value,
               "");
+static_assert(!type_traits_detail::extract_traits_bitwise_movable<D>::value);
 
 struct F {
   F(const F&);
