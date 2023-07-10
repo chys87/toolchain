@@ -36,23 +36,67 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
+#if defined __i386__ || defined __x86_64__
 # include <x86intrin.h>
 #endif
+#if defined __aarch64__ && defined __ARM_NEON
+# include <arm_neon.h>
+#endif
+
+#include "cbu/common/faststr.h"
 
 namespace cbu {
 namespace cacheless {
 
-void* store(void* dst, uint32_t value) noexcept;
-void* store(void* dst, uint64_t value) noexcept;
+#ifdef __aarch64__
+template <int offset = 0>
+inline void* store2(void* dst, uint32_t a, uint32_t b) noexcept {
+  // Can't use "m" constraint, stnp not supporting all addressings
+  asm("stnp %w1, %w2, [%0, %3]" :: "r"(dst), "r"(a), "r"(b), "i"(offset) : "memory");
+  return static_cast<char*>(dst) + 8;
+}
 
+template <int offset = 0>
+inline void* store2(void* dst, uint64_t a, uint64_t b) noexcept {
+  // Can't use "m" constraint, stnp not supporting all addressings
+  asm("stnp %1, %2, [%0, %3]" :: "r"(dst), "r"(a), "r"(b), "i"(offset) : "memory");
+  return static_cast<char*>(dst) + 16;
+}
+#endif
+
+inline void* store(void* dst, uint32_t value) noexcept {
+#ifdef __SSE2__  // MOVNTI was introduced as part of SSE2
+  _mm_stream_si32(static_cast<int*>(dst), value);
+  return static_cast<char*>(dst) + 4;
+#else
+  return memdrop(static_cast<char*>(dst), value);
+#endif
+}
+
+inline void* store(void* dst, uint64_t value) noexcept {
 #ifdef __x86_64__
+  _mm_stream_si64(static_cast<long long*>(dst), value);
+  return static_cast<char*>(dst) + 8;
+#elif defined __aarch64__
+  return store2(dst, uint32_t(value), uint32_t(value >> 32));
+#else
+  return memdrop(static_cast<char*>(dst), value);
+#endif
+}
+
+#ifdef __SSE2__
 // dst must be properly aligned
-void* store(void* dst, __m128i value) noexcept;
+inline void* store(void* dst, __m128i value) noexcept {
+  _mm_stream_si128(static_cast<__m128i*>(dst), value);
+  return static_cast<char*>(dst) + 16;
+}
+#endif
 
 #ifdef __AVX__
-void* store(void* dst, __m256i value) noexcept;
-#endif
+inline void* store(void* dst, __m256i value) noexcept {
+  _mm256_stream_si256(static_cast<__m256i*>(dst), value);
+  return static_cast<char*>(dst) + 32;
+}
 #endif
 
 void* copy(void* dst, const void* src, size_t size) noexcept;
@@ -63,7 +107,13 @@ void* fill(void* dst, uint16_t value, size_t size) noexcept;
 void* fill(void* dst, uint32_t value, size_t size) noexcept;
 void* fill(void* dst, uint64_t value, size_t size) noexcept;
 
-void fence() noexcept;
+inline void fence() noexcept {
+#if defined __i386__ || defined __x86_64__
+  _mm_sfence();
+#endif
+  // It appears we don't need to issue fence instructions for aarch64.
+  // Non-temporal stores have no memory-order implication on aarch64.
+}
 
 } // namespace cacheless
 } // namespace cbu

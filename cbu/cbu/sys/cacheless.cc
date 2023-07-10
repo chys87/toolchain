@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2021-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,29 +45,6 @@ namespace cbu {
 namespace cacheless {
 
 #ifdef __x86_64__
-
-void* store(void* dst, uint32_t value) noexcept {
-  _mm_stream_si32(static_cast<int*>(dst), value);
-  return static_cast<char*>(dst) + 4;
-}
-
-void* store(void* dst, uint64_t value) noexcept {
-  _mm_stream_si64(static_cast<long long*>(dst), value);
-  return static_cast<char*>(dst) + 8;
-}
-
-void* store(void* dst, __m128i value) noexcept {
-  _mm_stream_si128(static_cast<__m128i*>(dst), value);
-  return static_cast<char*>(dst) + 16;
-}
-
-#ifdef __AVX__
-void* store(void* dst, __m256i value) noexcept {
-  _mm256_stream_si256(static_cast<__m256i*>(dst), value);
-  return static_cast<char*>(dst) + 32;
-}
-#endif
-
 namespace {
 
 // size is between 0 and 16
@@ -339,19 +316,142 @@ void* fill(void* dst, uint64_t value, size_t size) noexcept {
 #endif
 }
 
-void fence() noexcept {
-  _mm_sfence();
+#elif defined __aarch64__
+
+void* copy(void* dst, const void* src, size_t size) noexcept {
+  const char* s = static_cast<const char*>(src);
+  char* d = static_cast<char*>(dst);
+
+  if (size < 16) {
+    if (size >= 8) {
+      store2(d, mempick4(s), mempick4(s + 4));
+      store2(d + size - 8, mempick4(s + size - 8), mempick4(s + size - 4));
+    } else if (size >= 4) {
+      memdrop4(d, mempick4(s));
+      memdrop4(d + size - 4, mempick4(s + size - 4));
+    } else if (size > 0) {
+      d[0] = s[0];
+      d[size >> 1] = s[size >> 1];
+      d[size - 1] = s[size - 1];
+    }
+    return d + size;
+  }
+
+  while (size >= 128) {
+    uint64x2_t x0 = *(const uint64x2_t*)(s + 16 * 0);
+    uint64x2_t x1 = *(const uint64x2_t*)(s + 16 * 1);
+    uint64x2_t x2 = *(const uint64x2_t*)(s + 16 * 2);
+    uint64x2_t x3 = *(const uint64x2_t*)(s + 16 * 3);
+    uint64x2_t x4 = *(const uint64x2_t*)(s + 16 * 4);
+    uint64x2_t x5 = *(const uint64x2_t*)(s + 16 * 5);
+    uint64x2_t x6 = *(const uint64x2_t*)(s + 16 * 6);
+    uint64x2_t x7 = *(const uint64x2_t*)(s + 16 * 7);
+    s += 128;
+    asm("stnp %q[x0], %q[x1], [%[d], 0]\n"
+        "stnp %q[x2], %q[x3], [%[d], 32]\n"
+        "stnp %q[x4], %q[x5], [%[d], 64]\n"
+        "stnp %q[x6], %q[x7], [%[d], 96]" ::[d] "r"(d),
+        [x0] "x"(x0), [x1] "x"(x1), [x2] "x"(x2), [x3] "x"(x3), [x4] "x"(x4),
+        [x5] "x"(x5), [x6] "x"(x6), [x7] "x"(x7)
+        : "memory");
+    d += 128;
+    size -= 128;
+  }
+  while (size > 16) {
+    uint64_t x0 = mempick8(s);
+    uint64_t x1 = mempick8(s + 8);
+    s += 16;
+    store2(d, x0, x1);
+    d += 16;
+    size -= 16;
+  }
+  d += size;
+  s += size;
+  store2(d - 16, mempick8(s - 16), mempick8(s - 8));
+  return d;
+}
+
+namespace {
+
+void* fill_aarch64(void* dst, uint64x2_t v128, uint64_t v64,
+                   size_t bytes) noexcept {
+  char* d = static_cast<char*>(dst);
+
+  if (bytes <= 16) {
+    if (bytes < 4) {
+      if (bytes & 2) memdrop(d, uint16_t(v64));
+      if (bytes & 1) d[bytes - 1] = uint8_t(v64);
+    } else if (bytes < 8) {
+      memdrop(d, uint32_t(v64));
+      memdrop(d + bytes - 4, uint32_t(v64));
+    } else {
+      store2(d, uint32_t(v64), uint32_t(v64 >> 32));
+      store2<-8>(d + bytes, uint32_t(v64), uint32_t(v64 >> 32));
+    }
+    return d + bytes;
+  }
+
+  store2(d, v64, v64);
+
+  uintptr_t misalign = uintptr_t(d) & 15;
+  d += 16 - misalign;
+  bytes -= 16 - misalign;
+
+  while (bytes >= 128) {
+    asm("stnp %q1, %q1, [%0]\n"
+        "stnp %q1, %q1, [%0, 32]\n"
+        "stnp %q1, %q1, [%0, 64]\n"
+        "stnp %q1, %q1, [%0, 96]"
+        :
+        : "r"(d), "x"(v128)
+        : "memory");
+    d += 128;
+    bytes -= 128;
+  }
+  if (bytes & 64) {
+    asm("stnp %q1, %q1, [%0]\n"
+        "stnp %q1, %q1, [%0, 32]"
+        :
+        : "r"(d), "x"(v128)
+        : "memory");
+    d += 64;
+  }
+  if (bytes & 32) {
+    asm("stnp %q1, %q1, [%0]" : : "r"(d), "x"(v128) : "memory");
+    d += 32;
+  }
+  if (bytes & 16) {
+    store2(d, v64, v64);
+    d += 16;
+  }
+  bytes &= 15;
+  store2<-16>(d + bytes, v64, v64);
+  return d + bytes;
+}
+
+}  // namespace
+
+void* fill(void* dst, uint8_t value, size_t size) noexcept {
+  uint64x2_t v = vreinterpretq_u64_u8(vdupq_n_u8(value));
+  return fill_aarch64(dst, v, v[0], size);
+}
+
+void* fill(void* dst, uint16_t value, size_t size) noexcept {
+  uint64x2_t v = vreinterpretq_u64_u16(vdupq_n_u16(value));
+  return fill_aarch64(dst, v, v[0], size * 2);
+}
+
+void* fill(void* dst, uint32_t value, size_t size) noexcept {
+  uint64x2_t v = vreinterpretq_u64_u32(vdupq_n_u32(value));
+  return fill_aarch64(dst, v, v[0], size * 4);
+}
+
+void* fill(void* dst, uint64_t value, size_t size) noexcept {
+  uint64x2_t v = vdupq_n_u64(value);
+  return fill_aarch64(dst, v, value, size * 8);
 }
 
 #else
-
-void* store(void* dst, uint32_t value) noexcept {
-  return memdrop(static_cast<char*>(dst), value);
-}
-
-void* store(void* dst, uint64_t value) noexcept {
-  return memdrop(static_cast<char*>(dst), value);
-}
 
 void* copy(void* dst, const void* src, size_t size) noexcept {
   return mempcpy(dst, src, size);
@@ -372,8 +472,6 @@ void* fill(void* dst, uint32_t value, size_t size) noexcept {
 void* fill(void* dst, uint64_t value, size_t size) noexcept {
   return std::fill_n(static_cast<uint64_t*>(dst), size, value);
 }
-
-void fence() noexcept {}
 
 #endif  // __x86_64__
 

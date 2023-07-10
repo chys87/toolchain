@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2021-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -91,6 +91,15 @@ class CachelessTest : public testing::Test {
   char src_[BUF];
 };
 
+TEST_F(CachelessTest, SingleStoreTest) {
+  store(dst_ + 1, mempick4(src_ + 1));
+  VerifyCopy(1, 4);
+
+  ResetDst();
+  store(dst_ + 1, mempick8(src_ + 1));
+  VerifyCopy(1, 8);
+}
+
 TEST_F(CachelessTest, CopyTest) {
   for (size_t off = 0; off < 32; off += off / 16 * 3 + 1) {
     for (size_t size = 0; size < N; size += size / 64 + size / 128 * 71 + 1) {
@@ -109,13 +118,13 @@ TEST_F(CachelessTest, FillTest) {
         ResetDst();
         ASSERT_EQ(fill(dst_ + off / U * U, value, size / U),
                   dst_ + off / U * U + size / U * U);
-        VerifyFill(off / U * U, size / U, value);
+        ASSERT_NO_FATAL_FAILURE(VerifyFill(off / U * U, size / U, value));
       };
 
-      do_it(uint8_t(42));
-      do_it(uint16_t(2554));
-      do_it(uint32_t(25542554));
-      do_it(uint64_t(2554255425542554ULL));
+      ASSERT_NO_FATAL_FAILURE(do_it(uint8_t(42)));
+      ASSERT_NO_FATAL_FAILURE(do_it(uint16_t(2554)));
+      ASSERT_NO_FATAL_FAILURE(do_it(uint32_t(25542554)));
+      ASSERT_NO_FATAL_FAILURE(do_it(uint64_t(2554255425542554ULL)));
     }
   }
 }
