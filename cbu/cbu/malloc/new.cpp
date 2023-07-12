@@ -41,15 +41,16 @@ namespace {
 
 namespace alloc = cbu::alloc;
 
-void* new_nothrow(size_t n) noexcept {
+extern "C" void* new_nothrow(size_t n, const std::nothrow_t&) noexcept {
   // C standard says malloc(0) may or may not return NULL
   // C++ standard says ::operator new(0) must reutrn a non-NULL pointer
   if (n == 0) n = 1;
   return alloc::allocate(n);
 }
 
-void* new_throw(size_t n) {
-  void* r = new_nothrow(n);
+extern "C" void* new_throw(size_t n) {
+  if (n == 0) n = 1;
+  void* r = alloc::allocate(n);
 #ifndef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
   if (r == nullptr)
     throw std::bad_alloc();
@@ -57,56 +58,7 @@ void* new_throw(size_t n) {
   return r;
 }
 
-}  // namespace
-
-// Regular new/delete
-cbu_malloc_visibility_default
-void* operator new(size_t n) { return new_throw(n); }
-
-cbu_malloc_visibility_default
-void* operator new[](size_t n) { return new_throw(n); }
-
-cbu_malloc_visibility_default
-void operator delete(void* p) noexcept { alloc::reclaim(p); }
-
-cbu_malloc_visibility_default
-void operator delete[](void* p) noexcept { alloc::reclaim(p); }
-
-// sized delete
-cbu_malloc_visibility_default void operator delete(void* p,
-                                                   size_t size) noexcept {
-  alloc::reclaim(p, size);
-}
-
-cbu_malloc_visibility_default void operator delete[](void* p,
-                                                     size_t size) noexcept {
-  alloc::reclaim(p, size);
-}
-
-// nothrow new/delete
-cbu_malloc_visibility_default
-void* operator new(size_t n, const std::nothrow_t&) noexcept {
-  return new_nothrow(n);
-}
-
-cbu_malloc_visibility_default
-void* operator new[](size_t n, const std::nothrow_t&) noexcept {
-  return new_nothrow(n);
-}
-
-cbu_malloc_visibility_default void operator delete(
-    void* p, const std::nothrow_t&) noexcept {
-  alloc::reclaim(p);
-}
-
-cbu_malloc_visibility_default void operator delete[](
-    void* p, const std::nothrow_t&) noexcept {
-  alloc::reclaim(p);
-}
-
-// aligned new/delete
-cbu_malloc_visibility_default
-void* operator new(size_t n, std::align_val_t alignment) {
+extern "C" void* new_aligned(size_t n, std::align_val_t alignment) {
   if (n == 0)
     n = 1;
   if (size_t(alignment) - 1 >= alloc::kPageSize) {
@@ -129,55 +81,97 @@ void* operator new(size_t n, std::align_val_t alignment) {
   return ptr;
 }
 
-cbu_malloc_visibility_default
-void* operator new[] (size_t n, std::align_val_t align) {
-  return operator new(n, align);
-}
-
-cbu_malloc_visibility_default
-void operator delete(void* ptr, std::align_val_t) noexcept {
-  alloc::reclaim(ptr);
-}
-
-cbu_malloc_visibility_default
-void operator delete [] (void* ptr, std::align_val_t) noexcept {
-  alloc::reclaim(ptr);
-}
-
-cbu_malloc_visibility_default
-void* operator new(size_t n, std::align_val_t alignment,
-                   const std::nothrow_t&) noexcept {
+extern "C" void* new_aligned_nothrow(size_t n, std::align_val_t alignment,
+                                     const std::nothrow_t&) noexcept {
   if (n == 0) n = 1;
   if (size_t(alignment) - 1 >= alloc::kPageSize) return nullptr;
   return alloc::allocate(
       n, alloc::AllocateOptions().with_align(size_t(alignment)));
 }
 
-cbu_malloc_visibility_default
-void* operator new[](size_t n, std::align_val_t alignment,
-                     const std::nothrow_t& nothrow) noexcept {
-  return operator new(n, alignment, nothrow);
+extern "C" void delete_regular(void* p) noexcept { alloc::reclaim(p); }
+extern "C" void delete_sized(void* p, size_t size) noexcept {
+  alloc::reclaim(p, size);
 }
+
+}  // namespace
+
+#if defined __GCC__ && !defined __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattribute-alias"
+#endif
+
+// Regular new/delete
+cbu_malloc_visibility_default __attribute__((alias("new_throw"))) void*
+operator new(size_t n);
+
+cbu_malloc_visibility_default __attribute__((alias("new_throw"))) void*
+operator new[](size_t n);
+
+cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void
+operator delete(void* p) noexcept;
+
+cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void
+operator delete[](void* p) noexcept;
+
+// sized delete
+cbu_malloc_visibility_default __attribute__((alias("delete_sized"))) void
+operator delete(void* p, size_t size) noexcept;
+
+cbu_malloc_visibility_default __attribute__((alias("delete_sized"))) void
+operator delete[](void* p, size_t size) noexcept;
+
+// nothrow new/delete
+cbu_malloc_visibility_default __attribute__((alias("new_nothrow"))) void*
+operator new(size_t n, const std::nothrow_t&) noexcept;
+
+cbu_malloc_visibility_default __attribute__((alias("new_nothrow"))) void*
+operator new[](size_t n, const std::nothrow_t&) noexcept;
+
+cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void
+operator delete(void* p, const std::nothrow_t&) noexcept;
+
+cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void
+operator delete[](void* p, const std::nothrow_t&) noexcept;
+
+// aligned new/delete
+cbu_malloc_visibility_default __attribute__((alias("new_aligned"))) void*
+operator new(size_t n, std::align_val_t alignment);
+
+cbu_malloc_visibility_default __attribute__((alias("new_aligned"))) void*
+operator new[](size_t n, std::align_val_t align);
+
+cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void
+operator delete(void* ptr, std::align_val_t) noexcept;
+
+cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void
+operator delete[](void* ptr, std::align_val_t) noexcept;
 
 cbu_malloc_visibility_default
-void operator delete(void* ptr, size_t size, std::align_val_t) noexcept {
-  alloc::reclaim(ptr, size);
-}
+    __attribute__((alias("new_aligned_nothrow"))) void*
+    operator new(size_t n, std::align_val_t alignment,
+                 const std::nothrow_t&) noexcept;
 
 cbu_malloc_visibility_default
-void operator delete [] (void* ptr, size_t size, std::align_val_t) noexcept {
-  alloc::reclaim(ptr, size);
-}
+    __attribute__((alias("new_aligned_nothrow"))) void*
+    operator new[](size_t n, std::align_val_t alignment,
+                   const std::nothrow_t& nothrow) noexcept;
 
-cbu_malloc_visibility_default void operator delete(
-    void* p, std::align_val_t, const std::nothrow_t&) noexcept {
-  alloc::reclaim(p);
-}
+cbu_malloc_visibility_default __attribute__((alias("delete_sized"))) void
+operator delete(void* ptr, size_t size, std::align_val_t) noexcept;
 
-cbu_malloc_visibility_default void operator delete[](
-    void* p, std::align_val_t, const std::nothrow_t&) noexcept {
-  alloc::reclaim(p);
-}
+cbu_malloc_visibility_default __attribute__((alias("delete_sized")))
+void operator delete [] (void* ptr, size_t size, std::align_val_t) noexcept;
+
+cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void operator delete(
+    void* p, std::align_val_t, const std::nothrow_t&) noexcept;
+
+cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void operator delete[](
+    void* p, std::align_val_t, const std::nothrow_t&) noexcept ;
+
+#if defined __GCC__ && !defined __clang__
+#pragma GCC diagnostic pop
+#endif
 
 namespace cbu {
 
