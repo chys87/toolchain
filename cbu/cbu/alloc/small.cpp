@@ -26,6 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "cbu/alloc/private/small.h"
+
 #include <algorithm>
 #include <atomic>
 #include <mutex>
@@ -40,22 +42,6 @@
 namespace cbu {
 namespace alloc {
 namespace {
-
-struct Block {
-  Block* next;  // In free list
-  unsigned count;
-};
-
-struct ThreadCategory {
-  Block* free;
-  unsigned count_free;
-};
-
-struct SmallCache {
-  ThreadCategory category[kNumCategories] = {};
-
-  void clear() noexcept;
-};
 
 CachePool<SmallCache> small_cache_pool;
 
@@ -142,14 +128,14 @@ void free_small_with_cache(SmallCache* cache, void* ptr) {
   }
 }
 
+}  // namespace
+
 void SmallCache::clear() noexcept {
   for (ThreadCategory& catg : category) {
     catg.count_free = 0;
     free_small_list(std::exchange(catg.free, nullptr));
   }
 }
-
-}  // namespace
 
 void* alloc_small_category(unsigned cat) noexcept {
   if (UniqueCache unique_cache(&small_cache_pool); unique_cache) {
