@@ -28,6 +28,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "cbu/alloc/private/common.h"
 #include "cbu/alloc/private/rb.h"
 
