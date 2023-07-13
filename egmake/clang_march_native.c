@@ -87,6 +87,8 @@ static char* gen_aarch64(char* w) {
       w = Mempcpy(w, p, e - p);
     } else if (EQ("crc32")) {
       w = Mempcpy(w, "+crc", strlen("+crc"));
+    } else if (EQ("atomics")) {
+      w = Mempcpy(w, "+lse", strlen("+lse"));
     }
     p = e;
   }
