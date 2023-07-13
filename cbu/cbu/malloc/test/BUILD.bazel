@@ -1,5 +1,5 @@
 # cbu - chys's basic utilities
-# Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+# Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,15 +24,22 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cc_binary(
-  name = 'cbumalloc_test',
+cc_library(
+  name = 'main',
   srcs = ['main.cpp'],
-  deps = [
-    '//cbu/malloc:malloc',
-  ],
+  deps = [],
   copts = [
     '-O3',
     '-pthread',
+  ],
+)
+
+cc_binary(
+  name = 'cbumalloc_test',
+  srcs = [],
+  deps = [
+    ':main',
+    '//cbu/malloc:malloc',
   ],
   linkopts = [
     '-pthread',
@@ -41,12 +48,9 @@ cc_binary(
 
 cc_binary(
   name = 'ptmalloc_test',
-  srcs = ['main.cpp'],
+  srcs = [],
   deps = [
-  ],
-  copts = [
-    '-O3',
-    '-pthread',
+    ':main',
   ],
   linkopts = [
     '-pthread',
@@ -55,12 +59,9 @@ cc_binary(
 
 cc_binary(
   name = 'jemalloc_test',
-  srcs = ['main.cpp'],
+  srcs = [],
   deps = [
-  ],
-  copts = [
-    '-O3',
-    '-pthread',
+    ':main',
   ],
   linkopts = [
     '-pthread',
@@ -71,12 +72,9 @@ cc_binary(
 
 cc_binary(
   name = 'tcmalloc_test',
-  srcs = ['main.cpp'],
+  srcs = [],
   deps = [
-  ],
-  copts = [
-    '-O3',
-    '-pthread',
+    ':main',
   ],
   linkopts = [
     '-pthread',
