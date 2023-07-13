@@ -175,8 +175,8 @@ size_t small_allocated_size(void* ptr) noexcept {
 }
 
 void small_trim(size_t) noexcept {
-  UniqueCache<SmallCache>::visit_all(
-      &small_cache_pool, [](SmallCache* cache) noexcept { cache->clear(); });
+  if (UniqueCache unique_cache(&small_cache_pool); unique_cache)
+    unique_cache->clear();
   {
     std::lock_guard locker(fallback_cache_lock);
     fallback_cache.clear();

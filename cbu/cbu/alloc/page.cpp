@@ -801,21 +801,10 @@ size_t large_allocated_size(const void* ptr) noexcept {
 
 void large_trim(size_t pad) noexcept {
 #ifndef CBU_NO_BRK
-  UniqueCache<PageCategoryCache>::visit_all(
-      &page_category_cache_pool_brk,
-      [](PageCategoryCache* tc) noexcept { tc->clear(&arena_brk); });
-#endif
-  UniqueCache<PageCategoryCache>::visit_all(
-      &page_category_cache_pool,
-      [](PageCategoryCache* tc) noexcept { tc->clear(&arena_mmap); });
-  if constexpr (kTHPSize > 0)
-    UniqueCache<PageCategoryCache>::visit_all(
-        &page_category_cache_pool_no_thp,
-        [](PageCategoryCache* tc) noexcept { tc->clear(&arena_mmap_no_thp); });
-
-#ifndef CBU_NO_BRK
   {
     Arena* arena = &arena_brk;
+    if (UniqueCache unique_cache(&page_category_cache_pool_brk); unique_cache)
+      unique_cache->clear(arena);
     Description* clean_list = arena->trim_and_extract(pad);
     arena->clear_description_list(clean_list);
   }
@@ -823,12 +812,17 @@ void large_trim(size_t pad) noexcept {
 
   {
     Arena* arena = &arena_mmap;
+    if (UniqueCache unique_cache(&page_category_cache_pool); unique_cache)
+      unique_cache->clear(arena);
     Description* clean_list = arena->trim_and_extract(pad);
     arena->clear_description_list(clean_list);
   }
 
   if constexpr (kTHPSize > 0) {
     Arena* arena = &arena_mmap_no_thp;
+    if (UniqueCache unique_cache(&page_category_cache_pool_no_thp);
+        unique_cache)
+      unique_cache->clear(arena);
     Description* clean_list = arena->trim_and_extract(pad);
     arena->clear_description_list(clean_list);
   }

@@ -72,9 +72,6 @@ class UniqueCache {
   CacheClass& operator*() const noexcept { return ptr_->cache; }
   CacheClass* operator->() const noexcept { return &ptr_->cache; }
 
-  template <typename Callback>
-  static void visit_all(CachePool<CacheClass>* pool, Callback callback);
-
  private:
   using Node = typename CachePool<CacheClass>::Node;
   static Node* grab(CachePool<CacheClass>* pool) noexcept;
@@ -86,19 +83,6 @@ class UniqueCache {
 template <typename CacheClass>
 UniqueCache<CacheClass>::~UniqueCache() noexcept {
   if (ptr_) ptr_->mutex.unlock();
-}
-
-template <typename CacheClass>
-template <typename Callback>
-void UniqueCache<CacheClass>::visit_all(CachePool<CacheClass>* pool,
-                                        Callback callback) {
-#ifndef CBU_SINGLE_THREADED
-  uint32_t k = g_used_max_concurrency.load(std::memory_order_relaxed);
-  while (k--) {
-    std::lock_guard lock(pool->nodes[k].mutex);
-    callback(&pool->nodes[k].cache);
-  }
-#endif
 }
 
 template <typename CacheClass>
