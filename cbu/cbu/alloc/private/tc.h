@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,91 +36,49 @@
 
 #include "cbu/alloc/pagesize.h"
 #include "cbu/alloc/private/common.h"
+#include "cbu/alloc/private/page.h"
+#include "cbu/alloc/private/small.h"
 #include "cbu/fsyscall/fsyscall.h"
 #include "cbu/sys/low_level_mutex.h"
 
 namespace cbu {
 namespace alloc {
 
-// Try to make each active thread use a fixed cache, so that there is minimal
-// race.
-inline thread_local uint32_t g_thread_cache_idx = 0;
-inline std::atomic<uint32_t> g_used_max_concurrency{0};
+enum class TcStatus : unsigned {
+  kInitial = 0,
+  kReady = 1,
+  kSettingUp = 2,
+};
 
-constexpr uint32_t kHardMaxConcurrency = 128;
+struct ThreadCache {
+  struct Dummy {};
 
-template <typename CacheClass>
-struct CachePool {
-  struct alignas(kCacheLineSize) Node {
-    CacheClass cache;
-    [[no_unique_address]] LowLevelMutex mutex;
-  };
-#ifndef CBU_SINGLE_THREADED
-  Node nodes[kHardMaxConcurrency];
+  DescriptionCache description_cache;
+
+#ifndef CBU_NO_BRK
+  PageCategoryCache page_category_cache_brk;
 #endif
+  PageCategoryCache page_category_cache;
+  [[no_unique_address]] std::conditional_t<(kTHPSize > 0), PageCategoryCache,
+                                           Dummy>
+      page_category_cache_no_thp;
+
+  SmallCache small_cache;
+
+  TcStatus status = TcStatus::kInitial;
 };
 
-template <typename CacheClass>
-class UniqueCache {
- public:
-  explicit UniqueCache(CachePool<CacheClass>* pool) noexcept
-      : ptr_(grab(pool)) {}
-  ~UniqueCache() noexcept;
-
-  explicit operator bool() const noexcept { return ptr_; }
-  CacheClass* get() const noexcept { return &ptr_->cache; }
-  CacheClass& operator*() const noexcept { return ptr_->cache; }
-  CacheClass* operator->() const noexcept { return &ptr_->cache; }
-
- private:
-  using Node = typename CachePool<CacheClass>::Node;
-  static Node* grab(CachePool<CacheClass>* pool) noexcept;
-
- private:
-  Node* ptr_;
-};
-
-template <typename CacheClass>
-UniqueCache<CacheClass>::~UniqueCache() noexcept {
-  if (ptr_) ptr_->mutex.unlock();
-}
-
-template <typename CacheClass>
-typename UniqueCache<CacheClass>::Node*
-UniqueCache<CacheClass>::grab(CachePool<CacheClass>* pool) noexcept {
 #ifdef CBU_SINGLE_THREADED
-  return nullptr;
+
+constexpr ThreadCache* get_or_create_thread_cache() noexcept { return nullptr; }
+constexpr ThreadCache* get_thread_cache() noexcept { return nullptr; }
+
 #else
-  uint32_t max_concurrency =
-      g_used_max_concurrency.load(std::memory_order_relaxed);
-  uint32_t k = g_thread_cache_idx;
 
-  // Fast path
-  if (k < max_concurrency && pool->nodes[k].mutex.try_lock())
-    return &pool->nodes[k];
+ThreadCache* get_or_create_thread_cache() noexcept;
+ThreadCache* get_thread_cache() noexcept;
 
-  // Slow path
-  for (;;) {
-    for (uint32_t remaining = max_concurrency; remaining; --remaining) {
-      if (++k >= max_concurrency) k = 0;
-      if (pool->nodes[k].mutex.try_lock()) {
-        g_thread_cache_idx = k;
-        return &pool->nodes[k];
-      }
-    }
-
-    if (max_concurrency >= kHardMaxConcurrency) {
-      fsys_sched_yield();
-      continue;
-    }
-
-    if (g_used_max_concurrency.compare_exchange_strong(
-            max_concurrency, max_concurrency + 1, std::memory_order_relaxed,
-            std::memory_order_relaxed))
-      ++max_concurrency;
-  }
 #endif
-}
 
 }  // namespace alloc
 }  // namespace cbu

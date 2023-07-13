@@ -175,6 +175,12 @@ class alignas(kCacheLineSize) Arena {
   static_assert(kMinTrimThreshold < kMaxTrimThreshold);
 };
 
+#ifndef CBU_NO_BRK
+extern Arena arena_brk;
+#endif
+extern Arena arena_mmap;
+extern Arena arena_mmap_no_thp;
+
 struct DescriptionCache {
   // Description cache
   Description* desc_list = nullptr;

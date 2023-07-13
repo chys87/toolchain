@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,8 +42,6 @@
 namespace cbu {
 namespace alloc {
 namespace {
-
-CachePool<SmallCache> small_cache_pool;
 
 // Allocated on a page
 struct Run {
@@ -138,8 +136,8 @@ void SmallCache::clear() noexcept {
 }
 
 void* alloc_small_category(unsigned cat) noexcept {
-  if (UniqueCache unique_cache(&small_cache_pool); unique_cache) {
-    return alloc_small_category_with_cache(unique_cache.get(), cat);
+  if (ThreadCache* tc = get_or_create_thread_cache()) {
+    return alloc_small_category_with_cache(&tc->small_cache, cat);
   } else {
     std::lock_guard locker(fallback_cache_lock);
     return alloc_small_category_with_cache(&fallback_cache, cat);
@@ -151,8 +149,8 @@ void* alloc_small(size_t size) noexcept {
 }
 
 void free_small(void* ptr) noexcept {
-  if (UniqueCache unique_cache(&small_cache_pool); unique_cache) {
-    free_small_with_cache(unique_cache.get(), ptr);
+  if (ThreadCache* tc = get_or_create_thread_cache()) {
+    free_small_with_cache(&tc->small_cache, ptr);
   } else {
     std::lock_guard locker(fallback_cache_lock);
     free_small_with_cache(&fallback_cache, ptr);
@@ -175,8 +173,7 @@ size_t small_allocated_size(void* ptr) noexcept {
 }
 
 void small_trim(size_t) noexcept {
-  if (UniqueCache unique_cache(&small_cache_pool); unique_cache)
-    unique_cache->clear();
+  if (ThreadCache* tc = get_thread_cache()) tc->small_cache.clear();
   {
     std::lock_guard locker(fallback_cache_lock);
     fallback_cache.clear();
