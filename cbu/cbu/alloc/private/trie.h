@@ -33,8 +33,8 @@
 #include <memory>
 
 #include "cbu/alloc/alloc.h"
-#include "cbu/alloc/permanent.h"
-#include "cbu/alloc/private.h"
+#include "cbu/alloc/private/common.h"
+#include "cbu/alloc/private/permanent.h"
 #include "cbu/common/bit.h"
 #include "cbu/compat/atomic_ref.h"
 

@@ -29,8 +29,8 @@
 #include <errno.h>
 #include <pthread.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 #include <atomic>
 #include <compare>
@@ -38,10 +38,10 @@
 #include <optional>
 
 #include "cbu/alloc/alloc.h"
-#include "cbu/alloc/private.h"
-#include "cbu/alloc/rb.h"
-#include "cbu/alloc/tc.h"
-#include "cbu/alloc/trie.h"
+#include "cbu/alloc/private/common.h"
+#include "cbu/alloc/private/rb.h"
+#include "cbu/alloc/private/tc.h"
+#include "cbu/alloc/private/trie.h"
 #include "cbu/common/byte_size.h"
 #include "cbu/common/hint.h"
 #include "cbu/fsyscall/fsyscall.h"

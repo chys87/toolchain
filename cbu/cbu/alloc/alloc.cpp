@@ -33,7 +33,7 @@
 #include <algorithm>
 
 #include "cbu/alloc/pagesize.h"
-#include "cbu/alloc/private.h"
+#include "cbu/alloc/private/common.h"
 #include "cbu/common/procutil.h"
 
 namespace cbu {

@@ -32,7 +32,7 @@
 #include <mutex>
 
 #include "cbu/alloc/alloc.h"
-#include "cbu/alloc/private.h"
+#include "cbu/alloc/private/common.h"
 #include "cbu/fsyscall/fsyscall.h"
 #include "cbu/sys/low_level_mutex.h"
 

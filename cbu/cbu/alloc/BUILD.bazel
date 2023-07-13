@@ -26,10 +26,9 @@
 
 cc_library(
   name = 'alloc',
-  srcs = glob(['*.cpp', '*.h'],
-              exclude=['*_test.*', 'alloc.h', 'pagesize.h']),
-  # Only alloc.h and pagesize.h are public interfaces
-  hdrs = glob(['alloc.h', 'pagesize.h']),
+  srcs = glob(['*.cpp', 'private/*.cpp', 'private/*.h'],
+              exclude=['*_test.*']),
+  hdrs = glob(['*.h']),
   deps = [
     '//cbu/common:common',
     '//cbu/common:procutil',
@@ -45,10 +44,9 @@ cc_library(
 
 cc_library(
   name = 'alloc_nobrk',
-  srcs = glob(['*.cpp', '*.h'],
-              exclude=['*_test.*', 'alloc.h', 'pagesize.h']),
-  # Only alloc.h and pagesize.h are public interfaces
-  hdrs = glob(['alloc.h', 'pagesize.h']),
+  srcs = glob(['*.cpp', 'private/*.cpp', 'private/*.h'],
+              exclude=['*_test.*']),
+  hdrs = glob(['*.h']),
   deps = [
     '//cbu/common:common',
     '//cbu/common:procutil',

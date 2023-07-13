@@ -34,7 +34,7 @@
 #include <utility>
 
 #include "cbu/alloc/alloc.h"
-#include "cbu/alloc/private.h"
+#include "cbu/alloc/private/common.h"
 #include "cbu/common/bit.h"
 #include "cbu/common/byte_size.h"
 #include "cbu/common/hint.h"
