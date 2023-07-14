@@ -52,15 +52,12 @@ void LowLevelMutex::wait(int c) noexcept {
   }
 }
 
-void LowLevelMutex::wake() noexcept {
-  std::atomic_ref(v_).store(0, std::memory_order_release);
-  fsys_futex3(&v_, FUTEX_WAKE_PRIVATE, 1);
-}
+void LowLevelMutex::wake() noexcept { fsys_futex3(&v_, FUTEX_WAKE_PRIVATE, 1); }
 #endif
 
 void LowLevelMutex::yield() noexcept {
 #ifndef CBU_SINGLE_THREADED
-  if (std::atomic_ref(v_).load(std::memory_order_relaxed) >= 2u) {
+  if (std::atomic_ref(v_).load(std::memory_order_relaxed) & 2) {
     unlock();
     fsys_sched_yield();
     lock();

@@ -110,16 +110,17 @@ CBU_MUTEX_INLINE void LowLevelMutex::lock() noexcept {
   std::uint32_t copy = 0;
   if (!std::atomic_ref(v_).compare_exchange_weak(
           copy, 1, std::memory_order_acquire, std::memory_order_relaxed))
+      [[unlikely]]
     wait(copy);
 #  endif
 }
 
 CBU_MUTEX_INLINE void LowLevelMutex::unlock() noexcept {
-#  ifndef CBU_SINGLE_THREADED
-  std::uint32_t c =
-      std::atomic_ref(v_).fetch_sub(1, std::memory_order_release) - 1;
-  if (__builtin_expect(c, 0) != 0) wake();
-#  endif
+#ifndef CBU_SINGLE_THREADED
+  std::uint32_t c = std::atomic_ref(v_).exchange(0, std::memory_order_release);
+  if (c & 2) [[unlikely]]
+    wake();
+#endif
 }
 
 #endif
