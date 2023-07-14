@@ -42,29 +42,54 @@ constexpr int REF_CNT_SINGLE_THREADED = 1;
 constexpr int REF_CNT_MAY_NOT_WRITE_ZERO = 2;
 
 // Increase a ref_cnt_t
-inline void ref_cnt_inc(ref_cnt_t* p, int options = 0) noexcept {
+template <int OPTIONS = 0>
+inline void ref_cnt_inc(ref_cnt_t* p) noexcept {
 #ifndef CBU_SINGLE_THREADED
-  if (!(options & REF_CNT_SINGLE_THREADED))
-    std::atomic_ref(*p).fetch_add(1, std::memory_order_acquire);
+  if constexpr (!(OPTIONS & REF_CNT_SINGLE_THREADED))
+    std::atomic_ref(*p).fetch_add(1, std::memory_order_relaxed);
   else
 #endif
     ++*p;
 }
 
 // Decrease a ref_cnt_t, and returns whether it's been decreased to zero
-inline bool ref_cnt_dec(ref_cnt_t* p, int options) noexcept {
-#ifdef CBU_SINGLE_THREADED
-  return --*p == 0;
+template <int OPTIONS>
+inline bool ref_cnt_dec(ref_cnt_t* p) noexcept {
+#ifndef CBU_SINGLE_THREADED
+  if constexpr (!(OPTIONS & REF_CNT_SINGLE_THREADED)) {
+#if defined __x86_64__ || defined __i386__
+    // x86 is special. We try to omit issuing lock instructions if possible.
+    if (std::atomic_ref(*p).load(std::memory_order_acquire) >= 2) {
+      return std::atomic_ref(*p).fetch_sub(1, std::memory_order_acq_rel) - 1 ==
+             0;
+    }
+    if constexpr (!(OPTIONS & REF_CNT_MAY_NOT_WRITE_ZERO))
+      std::atomic_ref(*p).store(0, std::memory_order_release);
+    return true;
+#else
+    // On platforms like aarch64, it's not easy to achieve better performance
+    // by omitting writing 0 while maintaining the proper memory order.
+    return std::atomic_ref(*p).fetch_sub(1, std::memory_order_acq_rel) - 1 == 0;
 #endif
-  if ((options & REF_CNT_SINGLE_THREADED)) {
+  }
+#endif
+
+  if constexpr (OPTIONS & REF_CNT_MAY_NOT_WRITE_ZERO) {
+#if defined __x86_64__ || defined __i386__
+    // On x86, issuing the in-place memory dec instruction is fine.
+    return --*p == 0;
+#else
+    ref_cnt_t c = *p - 1;
+    if (c) {
+      *p = c;
+      return false;
+    } else {
+      return true;
+    }
+#endif
+  } else {
     return --*p == 0;
   }
-  if (std::atomic_ref(*p).load(std::memory_order_relaxed) >= 2) {
-    return std::atomic_ref(*p).fetch_sub(1, std::memory_order_release) - 1 == 0;
-  }
-  if (!(options & REF_CNT_MAY_NOT_WRITE_ZERO))
-    std::atomic_ref(*p).store(0, std::memory_order_release);
-  return true;
 }
 
 // A shared_ptr-like but simpler.
@@ -90,7 +115,7 @@ class RefCntPtr {
 
   // Copy etc.
   RefCntPtr(const RefCntPtr& other) noexcept : p_(other.p_) {
-    if (p_) ref_cnt_inc(&p_->cnt, OPTIONS);
+    if (p_) ref_cnt_inc<OPTIONS>(&p_->cnt);
   }
   constexpr RefCntPtr(RefCntPtr&& other) noexcept
       : p_(std::exchange(other.p_, nullptr)) {}
@@ -99,7 +124,7 @@ class RefCntPtr {
     if (this != &other) {
       dec();
       p_ = other.p_;
-      if (p_) ref_cnt_inc(&p_->cnt, OPTIONS);
+      if (p_) ref_cnt_inc<OPTIONS>(&p_->cnt);
     }
     return *this;
   }
@@ -126,7 +151,7 @@ class RefCntPtr {
 
  private:
   void dec() noexcept {
-    if (p_ && ref_cnt_dec(&p_->cnt, OPTIONS | REF_CNT_MAY_NOT_WRITE_ZERO))
+    if (p_ && ref_cnt_dec<OPTIONS | REF_CNT_MAY_NOT_WRITE_ZERO>(&p_->cnt))
       delete p_;
   }
 
