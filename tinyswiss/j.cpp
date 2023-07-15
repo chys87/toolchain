@@ -1,4 +1,5 @@
 #include <sys/fcntl.h>
+#include <sys/resource.h>
 #include <sys/uio.h>
 #include <tinyx64.h>
 
@@ -55,6 +56,8 @@ unsigned get_load_limit(unsigned nprocs) {
 } // namespace
 
 int j_main(size_t argc, char **argv, char **envp) {
+
+  fsys_setpriority(PRIO_PROCESS, 0, 10);
 
   int fd_null = fsys_open2("/dev/null", O_RDONLY | O_CLOEXEC);
   if (fd_null >= 0)
