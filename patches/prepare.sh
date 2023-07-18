@@ -25,6 +25,6 @@ for try in \
   /usr/include/c++/$version
 do
   if [[ -d "$try" ]]; then
-    echo "cd $try && patch -N -p1 < $tmp"
+    echo "cd $try && patch --dry-run -N -p1 < $tmp && patch -N -p1 < $tmp"
   fi
 done
