@@ -179,6 +179,10 @@ template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
   using Type = fastdiv_detail::FastDivType<D, UB>;
+#if defined __clang__ && __has_builtin(__builtin_assume)
+  __builtin_assume(v < UB);
+  return v / Type(D);
+#else
   if constexpr (UB == 256) {
     return std::uint8_t(v) / D;
   } else if constexpr (UB == 65536) {
@@ -189,12 +193,19 @@ inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
     return fastdiv_detail::fastdiv<Type, static_cast<Type>(D),
                                    static_cast<Type>(UB)>(v);
   }
+#endif
 }
 
 template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
+  using Type = fastdiv_detail::FastDivType<D, UB>;
+#if defined __clang__ && __has_builtin(__builtin_assume)
+  __builtin_assume(v < UB);
+  return v % Type(D);
+#else
   return v - D * fastdiv<D, UB>(v);
+#endif
 }
 
 template <std::uint64_t D, std::uint64_t UB>
@@ -202,8 +213,13 @@ inline constexpr std::pair<fastdiv_detail::FastDivType<D, UB>,
                            fastdiv_detail::FastDivType<D, UB>>
 fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
   using Type = fastdiv_detail::FastDivType<D, UB>;
+#if defined __clang__ && __has_builtin(__builtin_assume)
+  __builtin_assume(v < UB);
+  return {v / Type(D), v % Type(D)};
+#else
   Type quo = fastdiv<D, UB>(v);
   return {quo, v - quo * D};
+#endif
 }
 
 }  // namespace cbu
