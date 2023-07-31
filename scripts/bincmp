@@ -247,8 +247,13 @@ def main():
     locale.setlocale(locale.LC_ALL, 'C')
 
     # Unassembly can be very large. Limit memory usage.
-    resource.setrlimit(resource.RLIMIT_AS,
-                       (2 * 1024 * 1024 * 1024, resource.RLIM_INFINITY))
+    try:
+        expected = 2 * 1024 * 1024 * 1024
+        old_cur, old_max = resource.getrlimit(resource.RLIMIT_AS)
+        if old_cur > expected:
+            resource.setrlimit(resource.RLIMIT_AS, (expected, old_max))
+    except ValueError:
+        pass
 
     parser = argparse.ArgumentParser(description='Compare two object files')
     parser.add_argument('files', nargs=2, metavar='filename')
