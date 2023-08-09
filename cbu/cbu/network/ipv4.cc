@@ -85,9 +85,11 @@ ParseResult<std::uint8_t> parse_uint8(const char* s, const char* e) noexcept {
   }
   unsigned int x = (*s++ - '0');
   if (s < e && (*s >= '0' && *s <= '9')) {
-    x = x * 10 + (*s++ - '0');
-    if (s < e && x <= 25 && std::uint8_t(*s - '0') <= (x == 25 ? 5 : 9))
+    x = x * 10 + std::uint8_t(*s++ - '0');
+    if (s < e && (*s >= '0' && *s <= '9')) {
       x = x * 10 + std::uint8_t(*s++ - '0');
+      if (std::uint8_t(x) != x) return {false};
+    }
   }
   return {true, std::uint8_t(x), s};
 }
