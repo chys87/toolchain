@@ -27,7 +27,12 @@ int latest(std::string_view prefix, size_t argc, char **argv, char **envp) {
 
   uint64_t last_path_key = 0;
 
-  for (const char* path : {"/usr/local/bin", "/usr/bin", "/bin"}) {
+  static const char paths[] = "\x0e/usr/local/bin\0\x08/usr/bin\0\x04/bin\0";
+
+  for (const char* pp = paths; *pp; ) {
+    const char* path = pp + 1;
+    pp += uint8_t(*pp) + 2;
+
     int fddir = fsys_open2(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
     if (fddir < 0) continue;
 
