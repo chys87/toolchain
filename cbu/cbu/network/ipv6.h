@@ -80,6 +80,26 @@ class IPv6 {
     memdrop_be(a_.s6_addr + 12, ip.value());
   }
 
+  constexpr IPv6(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e,
+                 uint16_t f, uint16_t g, uint16_t h) noexcept {
+    a_.s6_addr[0] = a >> 8;
+    a_.s6_addr[1] = a;
+    a_.s6_addr[2] = b >> 8;
+    a_.s6_addr[3] = b;
+    a_.s6_addr[4] = c >> 8;
+    a_.s6_addr[5] = c;
+    a_.s6_addr[6] = d >> 8;
+    a_.s6_addr[7] = d;
+    a_.s6_addr[8] = e >> 8;
+    a_.s6_addr[9] = e;
+    a_.s6_addr[10] = f >> 8;
+    a_.s6_addr[11] = f;
+    a_.s6_addr[12] = g >> 8;
+    a_.s6_addr[13] = g;
+    a_.s6_addr[14] = h >> 8;
+    a_.s6_addr[15] = h;
+  }
+
   constexpr IPv6& operator=(const IPv6&) noexcept = default;
 
   char* ToString(char* buf, int flags = 0) const noexcept {
