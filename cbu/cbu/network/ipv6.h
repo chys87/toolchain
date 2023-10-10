@@ -81,7 +81,8 @@ class IPv6 {
   }
 
   constexpr IPv6(uint16_t a, uint16_t b, uint16_t c, uint16_t d, uint16_t e,
-                 uint16_t f, uint16_t g, uint16_t h) noexcept {
+                 uint16_t f, uint16_t g, uint16_t h) noexcept
+      : a_{} {
     a_.s6_addr[0] = a >> 8;
     a_.s6_addr[1] = a;
     a_.s6_addr[2] = b >> 8;

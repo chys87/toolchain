@@ -127,6 +127,9 @@ TEST(IPv6Test, FromStringTest) {
   test_invalid("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:abcd");
   test_valid("64:ff9b::", "64:ff9b::0.0.0.0");
   test_valid("64:ff9b::1.2.3.4", "64:ff9b::1.2.3.4");
+
+  ASSERT_EQ(IPv6::FromString("2554::1987").value_or(IPv6()),
+            IPv6(0x2554, 0, 0, 0, 0, 0, 0, 0x1987));
 }
 
 TEST(IPv6Test, LocalhostTest) {
