@@ -107,6 +107,9 @@ class IPv6 {
     return Format(buf, a_, flags);
   }
   short_string<kMaxStringLen> ToString(int flags = 0) const noexcept;
+  std::string_view ToStringView(char (&buffer)[kMaxStringLen]) const noexcept {
+    return {buffer, size_t(ToString(buffer) - buffer)};
+  }
 
   constexpr const in6_addr& Get() const noexcept { return a_; }
 
@@ -287,6 +290,9 @@ struct IPv6Port {
 
   char* ToString(char* buf) const noexcept;
   short_string<kMaxStringLen> ToString() const noexcept;
+  std::string_view ToStringView(char (&buffer)[kMaxStringLen]) const noexcept {
+    return {buffer, size_t(ToString(buffer) - buffer)};
+  }
 
   constexpr size_t Hash() const noexcept {
     uint64_t h = ip.Hash();

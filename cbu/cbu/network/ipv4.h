@@ -58,6 +58,10 @@ struct BrokeIPv4 {
 // Represents an IPv4 address
 class IPv4 {
  public:
+  // strlen("255.255.255.255") == 15
+  static inline constexpr size_t kMaxStringLen = 15;
+
+ public:
   constexpr IPv4() noexcept : v_(0) {}
   constexpr explicit IPv4(std::uint32_t v,
                           std::endian byte_order = native_endian) noexcept
@@ -87,7 +91,10 @@ class IPv4 {
   }
 
   char* ToString(char* buffer) const noexcept;
-  short_string<15> ToString() const noexcept;
+  short_string<kMaxStringLen> ToString() const noexcept;
+  std::string_view ToStringView(char (&buffer)[kMaxStringLen]) const noexcept {
+    return {buffer, size_t(ToString(buffer) - buffer)};
+  }
 
   constexpr in_addr Get() const noexcept {
     in_addr res;
