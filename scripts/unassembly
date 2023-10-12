@@ -381,7 +381,7 @@ def annotate_string_literals(fi):
     if b'x86-64' in data:
         ptn = re.compile(br'(?:mov|cmp)(?:[bwlq]|absq?)?\s+\$0x([0-9a-f]+),[^#\n]*(?=\n)')
     elif b'aarch64' in data:
-        ptn = re.compile(br'(?:mov|cmp)\s+\w+,\s*#0x([0-9a-f]+)[^\n]*(?=\n)')
+        ptn = re.compile(br'(?:movk?|cmp)\s+\w+,\s*#0x([0-9a-f]+)[^\n]*(?=\n)')
     else:
         yield data
         yield from fi
