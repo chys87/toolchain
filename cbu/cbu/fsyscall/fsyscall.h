@@ -239,6 +239,7 @@ def_fsys(rename,rename,int,2,const char *,const char *)
 #define fsys_rename(a,b) fsys_renameat(AT_FDCWD,a,AT_FDCWD,b)
 #endif
 def_fsys(renameat,renameat,int,4,int,const char *,int,const char *)
+def_fsys(renameat2,renameat2,int,5,int,const char *,int,const char *,unsigned)
 def_fsys(statfs,statfs,int,2,const char *,struct statfs *)
 def_fsys(fstatfs,fstatfs,int,2,int,struct statfs *)
 def_fsys(getdents64,getdents64,long,3,int,void *,unsigned long)
@@ -538,6 +539,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_sched_getcpu sched_getcpu
 #define fsys_rename rename
 #define fsys_renameat renameat
+#define fsys_renameat2 renameat2
 #define fsys_statfs statfs
 #define fsys_fstatfs fstatfs
 #define fsys_getdents(...) syscall(__NR_getdents,__VA_ARGS__)
