@@ -94,6 +94,8 @@ struct fsys_linux_dirent64 {
 
 #define fsys_errno(r,err) ((r) == (__typeof__(r))(-(err)))
 #define fsys_errno_val(r) (-(int)(long long)(r))
+#define fsys_errno_val_long(r) (-(long)(long long)(r))
+#define fsys_errno_val_long_long(r) (-(long long)(r))
 #define fsys_failure(r) ((unsigned long long)(long long)(r) >= -4095ULL)
 #define fsys_mmap_failed(r) ((unsigned long)(r) >= -4095UL)
 
@@ -477,6 +479,8 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 
 #define fsys_errno(r,err) (errno==err)
 #define fsys_errno_val(r) errno
+#define fsys_errno_val_long(r) ((long)errno)
+#define fsys_errno_val_long_long(r) ((long long)errno)
 #define fsys_failure(r) ((long)(r) < 0)
 #define fsys_mmap_failed(r)	((r) == MAP_FAILED)
 
