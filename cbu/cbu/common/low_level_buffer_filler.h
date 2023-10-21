@@ -228,8 +228,9 @@ class LowLevelBufferFiller {
   }
 
   template <typename... Args>
-  constexpr LowLevelBufferFiller& operator<<(const std::tuple<Args...>& args) noexcept {
-    ApplyTuple(args, std::make_index_sequence<sizeof...(Args)>());
+  constexpr LowLevelBufferFiller& operator<<(
+      const std::tuple<Args...>& tpl) noexcept {
+    std::apply([this](const Args&... args) { (*this << ... << args); }, tpl);
     return *this;
   }
 
@@ -244,12 +245,6 @@ class LowLevelBufferFiller {
   }
 
   constexpr Ch* pointer() const noexcept { return p_; }
-
- private:
-  template <typename Tpl, std::size_t... I>
-  constexpr void ApplyTuple(const Tpl& args, std::index_sequence<I...>) {
-    (*this << ... << std::get<I>(args));
-  }
 
  private:
   Ch* p_;
