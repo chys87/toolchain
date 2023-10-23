@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,13 +34,13 @@ namespace cbu {
 TEST(DeferTest, Defer) {
   int x = 1;
   {
-    CBU_DEFER(x += 2);
+    CBU_DEFER { x += 2; };
   }
   EXPECT_EQ(3, x);
 
   {
-    CBU_DEFER(x = 4);
-    CBU_DEFER(x = 5);
+    CBU_DEFER { x = 4; };
+    CBU_DEFER { x = 5; };
   }
   EXPECT_EQ(4, x);
 }

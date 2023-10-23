@@ -123,12 +123,12 @@ inline bool InitImpl(std::uint32_t* guard, Foo&& foo, Args&&... args) noexcept(
     return false;
   } else {
     std::uint32_t done_value = Values::ABORTED;
-    CBU_DEFER({
+    CBU_DEFER {
       if (Values::IsInited(done_value))
         *guard = done_value;
       else
         *guard = Values::ABORTED;
-    });
+    };
     done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
     return Values::IsInited(done_value);
   }
@@ -136,12 +136,12 @@ inline bool InitImpl(std::uint32_t* guard, Foo&& foo, Args&&... args) noexcept(
   std::uint32_t v = std::atomic_ref(*guard).load(std::memory_order_relaxed);
   if (!Values::IsInited(v) && Lock<Values>(guard, v)) {
     std::uint32_t done_value = Values::ABORTED;
-    CBU_DEFER({
+    CBU_DEFER {
       if (Values::IsInited(done_value))
         Release<Values>(guard, done_value);
       else
         Abort<Values>(guard);
-    });
+    };
     done_value = std::forward<Foo>(foo)(std::forward<Args>(args)...);
     return Values::IsInited(done_value);
   } else {

@@ -35,7 +35,7 @@ namespace cbu {
 template <typename F>
 class Defer {
  public:
-  Defer(F f) noexcept : f_(std::move(f)) {}
+  explicit Defer(F f) noexcept : f_(std::move(f)) {}
 
   Defer(const Defer&) = delete;
   void operator=(const Defer&) = delete;
@@ -48,31 +48,20 @@ class Defer {
 
 namespace defer_detail {
 
-// class PreventReturn transforms "return" statements in CBU_DEFER(...) to
-// a compilation error.
-class PreventReturn {
- private:
-  constexpr PreventReturn() {}
-
+class Maker {
  public:
-  static constexpr PreventReturn Make() noexcept { return {}; }
-
-  constexpr PreventReturn(const PreventReturn&) = default;
-  constexpr PreventReturn(PreventReturn&&) = default;
-
-  PreventReturn(auto&&...) = delete;
+  template <typename T>
+  Defer<T> operator|(T func) noexcept(noexcept(std::move(func))) {
+    return Defer<T>(std::move(func));
+  }
 };
 
 }  // namespace defer_detail
 
 }  // namespace cbu
 
-#define CBU_DEFER(...) CBU_DEFER_(__COUNTER__, __VA_ARGS__)
-#define CBU_DEFER_(cnt, ...) CBU_DEFER__(cnt, __VA_ARGS__)
-#define CBU_DEFER__(cnt, ...)                              \
-  [[maybe_unused]] ::cbu::Defer cbu_RAII_defer_##cnt {     \
-    [&]() noexcept -> ::cbu::defer_detail::PreventReturn { \
-      __VA_ARGS__;                                         \
-      return ::cbu::defer_detail::PreventReturn::Make();   \
-    }                                                      \
-  }
+#define CBU_DEFER CBU_DEFER_(__COUNTER__)
+#define CBU_DEFER_(cnt) CBU_DEFER__(cnt)
+#define CBU_DEFER__(cnt)                       \
+  [[maybe_unused]] auto cbu_RAII_defer_##cnt = \
+      ::cbu::defer_detail::Maker() | [&]() noexcept -> void

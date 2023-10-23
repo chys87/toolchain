@@ -279,7 +279,7 @@ TEST(StrToFpTest, CornerCases) {
     unsigned int new_mxcsr =
         (i == 0) ? old_mxcsr & ~(0x8000 | 0x40) : old_mxcsr | (0x8000 | 0x40);
     _mm_setcsr(new_mxcsr);
-    CBU_DEFER(_mm_setcsr(old_mxcsr));
+    CBU_DEFER { _mm_setcsr(old_mxcsr); };
 
     SCOPED_TRACE((i == 0 ? "Default mode" : "FTZ & DAZ"));
 #endif

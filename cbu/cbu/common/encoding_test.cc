@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -164,7 +164,7 @@ TEST(Utf8Test, ValidateUtf8) {
 
   // Starting from a valid string, and then add random noise.
   iconv_t cd = iconv_open("UTF-16LE", "UTF-8");
-  CBU_DEFER(iconv_close(cd));
+  CBU_DEFER { iconv_close(cd); };
   auto naive_validate = [cd](std::string_view sv) {
     char buffer[65536];
     char* inbuf = const_cast<char*>(sv.data());
