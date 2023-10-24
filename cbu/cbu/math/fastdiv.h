@@ -199,8 +199,8 @@ inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
 template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
-  using Type = fastdiv_detail::FastDivType<D, UB>;
 #if defined __clang__ && __has_builtin(__builtin_assume)
+  using Type = fastdiv_detail::FastDivType<D, UB>;
   __builtin_assume(v < UB);
   return v % Type(D);
 #else
