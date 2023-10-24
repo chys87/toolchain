@@ -95,6 +95,7 @@ This one is just a hobby - a crazy one.
 
 * `fileutil.h`: Misc file utilities
 * `scoped_fd.h`: Wraps a file descriptor in a class
+* `statx.h`: Wraps Linux's `statx` syscall
 
 ### cbu/malloc
 
