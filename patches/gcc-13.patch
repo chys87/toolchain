@@ -1,8 +1,8 @@
 diff --git a/gcc/common/config/i386/cpuinfo.h b/gcc/common/config/i386/cpuinfo.h
-index 61559ed9de2..29fa19caab7 100644
+index 441fae0cdc9..43a79a39cbc 100644
 --- a/gcc/common/config/i386/cpuinfo.h
 +++ b/gcc/common/config/i386/cpuinfo.h
-@@ -686,6 +686,12 @@ get_available_features (struct __processor_model *cpu_model,
+@@ -696,6 +696,12 @@ get_available_features (struct __processor_model *cpu_model,
  #define set_feature(f) \
    set_cpu_feature (cpu_model, cpu_features2, f)
  
@@ -16,28 +16,28 @@ index 61559ed9de2..29fa19caab7 100644
      set_feature (FEATURE_CMOV);
    if (edx & bit_MMX)
 diff --git a/libstdc++-v3/include/bits/basic_string.h b/libstdc++-v3/include/bits/basic_string.h
-index 8247ee6bdc6..bfe829ab8b9 100644
+index 11b62af8fb2..d32d93b4df5 100644
 --- a/libstdc++-v3/include/bits/basic_string.h
 +++ b/libstdc++-v3/include/bits/basic_string.h
-@@ -683,7 +683,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
- 	if (__str._M_is_local())
+@@ -671,7 +671,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
  	  {
+ 	    (void)_M_use_local_data();
  	    traits_type::copy(_M_local_buf, __str._M_local_buf,
 -			      __str.length() + 1);
 +			      _S_local_capacity + 1);
  	  }
  	else
  	  {
-@@ -722,7 +722,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
- 	if (__str._M_is_local())
+@@ -711,7 +711,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
  	  {
+ 	    (void)_M_use_local_data();
  	    traits_type::copy(_M_local_buf, __str._M_local_buf,
 -			      __str.length() + 1);
 +			      _S_local_capacity + 1);
  	    _M_length(__str.length());
  	    __str._M_set_length(0);
  	  }
-@@ -1114,6 +1114,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+@@ -1103,6 +1103,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        resize(size_type __n)
        { this->resize(__n, _CharT()); }
  
@@ -49,7 +49,7 @@ index 8247ee6bdc6..bfe829ab8b9 100644
  #if __cplusplus >= 201103L
  #pragma GCC diagnostic push
  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-@@ -1169,8 +1174,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+@@ -1158,8 +1163,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        size_type
        capacity() const _GLIBCXX_NOEXCEPT
        {
@@ -61,14 +61,15 @@ index 8247ee6bdc6..bfe829ab8b9 100644
  
        /**
 diff --git a/libstdc++-v3/include/bits/basic_string.tcc b/libstdc++-v3/include/bits/basic_string.tcc
-index 99fdbeee5ad..bb0531bc500 100644
+index 3495a69df6b..8c09ee1d66b 100644
 --- a/libstdc++-v3/include/bits/basic_string.tcc
 +++ b/libstdc++-v3/include/bits/basic_string.tcc
-@@ -67,38 +67,21 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+@@ -67,15 +67,15 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
        if (_M_is_local())
  	if (__s._M_is_local())
  	  {
 -	    if (length() && __s.length())
++	    if (true)
  	      {
  		_CharT __tmp_data[_S_local_capacity + 1];
  		traits_type::copy(__tmp_data, __s._M_local_buf,
@@ -79,37 +80,22 @@ index 99fdbeee5ad..bb0531bc500 100644
 +				  _S_local_capacity + 1);
  		traits_type::copy(_M_local_buf, __tmp_data,
 -				  __s.length() + 1);
--	      }
--	    else if (__s.length())
--	      {
--		traits_type::copy(_M_local_buf, __s._M_local_buf,
--				  __s.length() + 1);
--		_M_length(__s.length());
--		__s._M_set_length(0);
--		return;
--	      }
--	    else if (length())
--	      {
--		traits_type::copy(__s._M_local_buf, _M_local_buf,
--				  length() + 1);
--		__s._M_length(length());
--		_M_set_length(0);
--		return;
 +				  _S_local_capacity + 1);
  	      }
- 	  }
- 	else
- 	  {
+ 	    else if (__s.length())
+ 	      {
+@@ -101,7 +101,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
  	    const size_type __tmp_capacity = __s._M_allocated_capacity;
+ 	    (void)__s._M_use_local_data();
  	    traits_type::copy(__s._M_local_buf, _M_local_buf,
 -			      length() + 1);
 +			      _S_local_capacity + 1);
  	    _M_data(__s._M_data());
  	    __s._M_data(__s._M_local_buf);
  	    _M_capacity(__tmp_capacity);
-@@ -109,7 +92,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
- 	  if (__s._M_is_local())
+@@ -113,7 +113,7 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
  	    {
+ 	      (void)_M_use_local_data();
  	      traits_type::copy(_M_local_buf, __s._M_local_buf,
 -				__s.length() + 1);
 +				_S_local_capacity + 1);
