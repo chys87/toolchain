@@ -526,7 +526,7 @@ def syscall_replace_aarch64(fi, data):
     table = read_syscall_table('aarch64')
 
     pattern_svc_instruction = re.compile(
-            br'mov\s+[wx]8,\s*#(\d+|0x[a-f\d]+)\s*(?:\/\/\s*#\d+)?(?=\n([\da-f:\s]*\n|.+(bfi|movk?|ld[rp]|ldr[bh]|ldur|ldrsw|st[rp]|str[bh]|stur|nop|tst|csel|add|sub|mul|sxt[whb]|asr|sbf[mx]|sbfiz)(\s.*)?\n){,8}.*\ssvc\s+#(0|0x0)(\s|\n))')
+            br'mov\s+[wx]8,\s*#(\d+|0x[a-f\d]+)\s*(?:\/\/\s*#\d+)?(?=\n([\da-f:\s]*\n|.+(adrp?|bfi|movk?|ld[rp]|ldr[bh]|ldur|ldrsw|st[rp]|str[bh]|stur|nop|tst|csel|add|sub|mul|sxt[whb]|asr|sbf[mx]|sbfiz)(\s.*)?\n){,8}.*\ssvc\s+#(0|0x0)(\s|\n))')
 
     def sub(match):
         no_str = match.group(1)
