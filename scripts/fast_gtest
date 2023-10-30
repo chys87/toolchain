@@ -38,6 +38,8 @@
 # test cases.
 
 import argparse
+import fcntl
+import io
 import json
 import os
 import re
@@ -48,44 +50,76 @@ import sys
 import tempfile
 import time
 
-import redis
-
 
 class SpeedMemo:
     '''Remebers the time each test requires.
-    This requires local redis.
     '''
     def __init__(self, binary):
         self.binary = os.path.realpath(binary)
-        self.rd = redis.StrictRedis()
+        self.fname = os.path.expanduser('~/.chys.fast_gtest.json')
+        self.update_dic = {}
 
     def _get_key(self, test_desc):
-        return 'chys-fast-gtest-' + json.dumps((self.binary, test_desc))
+        return '|'.join(test_desc).rstrip('|')
+
+    def _load(self):
+        try:
+            with open(self.fname) as f:
+                fcntl.flock(f, fcntl.LOCK_SH)
+                if old_json := f.read():
+                    return json.loads(old_json)
+                else:
+                    return {}
+        except FileNotFoundError:
+            return {}
 
     def sort_tests(self, tests):
-        memo_times = self.rd.mget([self._get_key(test_desc)
-                                   for test_desc in tests])
-        memo_time_dict = {}
-        for test_desc, memo_time in zip(tests, memo_times):
-            if memo_time:
-                try:
-                    memo_time_dict[test_desc] = float(memo_time)
-                except ValueError:
-                    pass
-
-        tests.sort(key=lambda test_desc: memo_time_dict.get(test_desc, 1e10),
+        dic = self._load().get(self.binary, {})
+        tests.sort(key=lambda test_desc: \
+                        dic.get(self._get_key(test_desc), [1e10, 0])[0],
                    reverse=True)
 
     def remember(self, test_desc, ms):
-        key = self._get_key(test_desc)
-        old_time = self.rd.get(key)
-        if old_time:
-            try:
-                ms = (float(old_time) + ms) * .5
-            except ValueError:
-                pass
+        self.update_dic[self._get_key(test_desc)] = ms
 
-        self.rd.setex(key, 128 * 86400, repr(ms))
+    def _save(self):
+        now = int(time.time())
+        expire_time = now + 128 * 86400
+
+        with open(self.fname, 'r+') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            if old_json := f.read():
+                dic = json.loads(old_json)
+            else:
+                dic = {}
+
+            # Update into dic
+            binary_dic = dic.setdefault(self.binary, {})
+            for test_desc, ms in self.update_dic.items():
+                if old := binary_dic.get(test_desc):
+                    ms = (old[0] + ms) * .5
+                binary_dic[test_desc] = [ms, expire_time]
+
+            # Remove expired items
+            for binary, binary_dic in list(dic.items()):
+                for test_desc, (ms, exp) in list(binary_dic.items()):
+                    if exp <= now:
+                        del binary_dic[test_desc]
+                if not binary_dic:
+                    del dic[binary]
+
+            # Save
+            f.seek(0, io.SEEK_SET)
+            f.truncate(0)
+            json.dump(dic, f, ensure_ascii=False)
+
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self.update_dic:
+            self._save()
 
 
 class Executor:
@@ -126,56 +160,56 @@ def main():
     parser.add_argument('--wrapper', help='Executable wrapper (e.g. Intel SDE)')
     args = parser.parse_args()
 
-    speed_memo = SpeedMemo(args.binary)
-    exe = Executor(args.binary, args.additional_args, args.wrapper)
-    tests = exe.get_tests()
-    speed_memo.sort_tests(tests)
+    with SpeedMemo(args.binary) as speed_memo:
+        exe = Executor(args.binary, args.additional_args, args.wrapper)
+        tests = exe.get_tests()
+        speed_memo.sort_tests(tests)
 
-    tests_n = len(tests)
-    if tests_n == 0:
-        return
-    if tests_n == 1:
-        r = exe.run()
-        sys.exit(r.returncode)
+        tests_n = len(tests)
+        if tests_n == 0:
+            return
+        if tests_n == 1:
+            r = exe.run()
+            sys.exit(r.returncode)
 
-    concurrency = min(os.cpu_count(), tests_n)
+        concurrency = min(os.cpu_count(), tests_n)
 
-    pending = tests[::-1]
-    running = []
+        pending = tests[::-1]
+        running = []
 
-    signals = {signal.SIGCLD}
-    signal.pthread_sigmask(signal.SIG_BLOCK, signals)
+        signals = {signal.SIGCLD}
+        signal.pthread_sigmask(signal.SIG_BLOCK, signals)
 
-    ret_code = 0
+        ret_code = 0
 
-    while running or (ret_code == 0 and pending):
-        while ret_code == 0 and pending and len(running) < concurrency:
-            test, comment = pending.pop()
-            f, proc = exe.start_test(test)
-            running.append((test, comment, f, proc, time.time()))
-            print(f'\033[32;1m[ RUN    ]\033[0m {test}{comment or ""}')
+        while running or (ret_code == 0 and pending):
+            while ret_code == 0 and pending and len(running) < concurrency:
+                test, comment = pending.pop()
+                f, proc = exe.start_test(test)
+                running.append((test, comment, f, proc, time.time()))
+                print(f'\033[32;1m[ RUN    ]\033[0m {test}{comment or ""}')
 
-        signal.sigwait(signals)
+            signal.sigwait(signals)
 
-        for i in range(len(running) - 1, -1, -1):
-            test, comment, f, proc, start_ts = running[i]
-            code = proc.poll()
-            if code is None:
-                continue
-            del running[i]
-            ms = int((time.time() - start_ts) * 1000)
-            speed_memo.remember((test, comment), ms)
-            if code == 0:
-                print(f'\033[32;1m[     OK ]\033[0m {test} ({ms} ms)')
-                if args.verbose:
+            for i in range(len(running) - 1, -1, -1):
+                test, comment, f, proc, start_ts = running[i]
+                code = proc.poll()
+                if code is None:
+                    continue
+                del running[i]
+                ms = int((time.time() - start_ts) * 1000)
+                speed_memo.remember((test, comment), ms)
+                if code == 0:
+                    print(f'\033[32;1m[     OK ]\033[0m {test} ({ms} ms)')
+                    if args.verbose:
+                        f.seek(0)
+                        sys.stdout.buffer.write(f.read())
+                else:
+                    print(f'\033[31;1m[ FAILED ]\033[0m {test} ({ms} ms)')
                     f.seek(0)
                     sys.stdout.buffer.write(f.read())
-            else:
-                print(f'\033[31;1m[ FAILED ]\033[0m {test} ({ms} ms)')
-                f.seek(0)
-                sys.stdout.buffer.write(f.read())
-                ret_code = ret_code or code
-    sys.exit(ret_code)
+                    ret_code = ret_code or code
+        sys.exit(ret_code)
 
 
 if __name__ == '__main__':
