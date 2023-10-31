@@ -96,6 +96,12 @@ TEST(IPv6Test, IPv6PortTest) {
   EXPECT_EQ(
       std::string_view(IPv6Port{IPv6{IPv4{192, 168, 25, 54}}, 51793}.ToString()),
       "[::ffff:192.168.25.54]:51793"sv);
+  EXPECT_EQ(std::string_view(IPv6Port{IPv6{IPv4{127, 0, 0, 1}}, 11111}.ToString(
+                IPv6Port::kPreferBareIPv4)),
+            "127.0.0.1:11111");
+  EXPECT_EQ(
+      std::string_view(IPv6Port{IPv6{IPv4{127, 0, 0, 1}}, 11111}.ToString()),
+      "[::ffff:127.0.0.1]:11111");
 }
 
 TEST(IPv6Test, FromStringTest) {

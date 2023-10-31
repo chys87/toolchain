@@ -245,7 +245,10 @@ class IPv6 {
   }
 #endif
 
-  void OutputTo(std::ostream& os) const;
+  void OutputTo(std::ostream& os) const {
+    char buffer[kMaxStringLen];
+    os << ToStringView(buffer);
+  }
 
  private:
   // We want IPv6 to be a literal type, so we try out best to use only a_.s6_addr
@@ -285,13 +288,15 @@ struct IPv6Port {
     s->sin6_port = bswap_be<uint16_t>(port);
   }
 
+  static inline constexpr int kPreferBareIPv4 = IPv6::kPreferBareIPv4;
   static inline constexpr size_t kMaxStringLen = IPv6::kMaxStringLen + 8;
   static char* PortToString(char* buf, uint16_t port) noexcept;
 
-  char* ToString(char* buf) const noexcept;
-  short_string<kMaxStringLen> ToString() const noexcept;
-  std::string_view ToStringView(char (&buffer)[kMaxStringLen]) const noexcept {
-    return {buffer, size_t(ToString(buffer) - buffer)};
+  char* ToString(char* buf, int flags = 0) const noexcept;
+  short_string<kMaxStringLen> ToString(int flags = 0) const noexcept;
+  std::string_view ToStringView(char (&buffer)[kMaxStringLen],
+                                int flags = 0) const noexcept {
+    return {buffer, ToString(buffer, flags)};
   }
 
   constexpr size_t Hash() const noexcept {

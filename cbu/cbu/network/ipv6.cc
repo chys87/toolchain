@@ -356,27 +356,26 @@ char* IPv6Port::PortToString(char* buf, uint16_t port) noexcept {
   return buf + 5 - skip_bytes;
 }
 
-char* IPv6Port::ToString(char* buf) const noexcept {
-  *buf++ = '[';
-  buf = ip.ToString(buf);
-  *buf++ = ']';
+char* IPv6Port::ToString(char* buf, int flags) const noexcept {
+  if ((flags & kPreferBareIPv4) && ip.IsIPv4()) {
+    buf = ip.GetIPv4().ToString(buf);
+  } else {
+    *buf++ = '[';
+    buf = ip.ToString(buf);
+    *buf++ = ']';
+  }
   *buf++ = ':';
   buf = PortToString(buf, port);
   return buf;
 }
 
-short_string<IPv6Port::kMaxStringLen> IPv6Port::ToString() const noexcept {
+short_string<IPv6Port::kMaxStringLen> IPv6Port::ToString(
+    int flags) const noexcept {
   short_string<kMaxStringLen> res(kUninitialized);
-  char* w = ToString(res.buffer());
+  char* w = ToString(res.buffer(), flags);
   *w = '\0';
   res.set_length(w - res.buffer());
   return res;
-}
-
-void IPv6::OutputTo(std::ostream& os) const {
-  char buffer[kMaxStringLen];
-  char* p = ToString(buffer);
-  os << std::string_view(buffer, p - buffer);
 }
 
 }  // namespace cbu
