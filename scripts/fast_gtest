@@ -86,7 +86,9 @@ class SpeedMemo:
         now = int(time.time())
         expire_time = now + 128 * 86400
 
-        with open(self.fname, 'r+') as f:
+        fd = os.open(self.fname, os.O_CREAT | os.O_RDWR)
+
+        with os.fdopen(fd, 'r+') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             if old_json := f.read():
                 dic = json.loads(old_json)
