@@ -175,8 +175,8 @@ TEST(StrUtilTest, CommonPrefix) {
 }
 
 TEST(StrUtilTest, CommonPrefix_Utf8) {
-  EXPECT_EQ(common_prefix(u8"一丁", u8"一一"), 3);
-  EXPECT_EQ(common_prefix((const char*)u8"一丁", (const char*)u8"一一"), 5);
+  EXPECT_EQ(common_prefix(u8"一不", u8"一一"), 3);
+  EXPECT_EQ(common_prefix((const char*)u8"一不", (const char*)u8"一一"), 5);
 }
 
 inline size_t naive_common_suffix(std::string_view a, std::string_view b) {
@@ -208,6 +208,17 @@ TEST(StrUtilTest, CommonSuffix) {
 TEST(StrUtilTest, CommonSuffix_Utf8) {
   EXPECT_EQ(common_suffix(u8"帀一", u8"一一"), 3);
   EXPECT_EQ(common_suffix((const char*)u8"帀一", (const char*)u8"一一"), 5);
+}
+
+TEST(StrUtilTest, TruncateStringUtf8) {
+  EXPECT_EQ(truncate_string_utf8("abcd"sv, 3), "abc"sv);
+  EXPECT_EQ(truncate_string_utf8("abc"sv, 3), "abc"sv);
+  EXPECT_EQ(truncate_string_utf8("ab"sv, 3), "ab"sv);
+  EXPECT_EQ(truncate_string_utf8("一二"sv, 3), "一"sv);
+  EXPECT_EQ(truncate_string_utf8("一二"sv, 5), "一"sv);
+  EXPECT_EQ(truncate_string_utf8("一二"sv, 6), "一二"sv);
+  EXPECT_EQ(truncate_string_utf8("一二"sv, 8), "一二"sv);
+  EXPECT_EQ(truncate_string_utf8("一二"sv, 2), ""sv);
 }
 
 TEST(StrUtilTest, CharSpanLength) {

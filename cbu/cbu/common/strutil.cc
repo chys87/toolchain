@@ -603,6 +603,12 @@ size_t common_suffix_ex(const void* pa, const void* pb, size_t maxl,
   return aend - a;
 }
 
+size_t truncate_string_utf8_impl(const void* s, size_t n) noexcept {
+  const char8_t* p = static_cast<const char8_t*>(s);
+  while (n && utf8_byte_type(p[n]) == Utf8ByteType::TRAILING) --n;
+  return n;
+}
+
 size_t char_span_length(const void* buffer, size_t len, char c) noexcept {
   const char* p = static_cast<const char*>(buffer);
   size_t i = 0;

@@ -255,6 +255,19 @@ inline size_t common_suffix(std::u8string_view sa,
   return common_suffix_ex(sa.end(), sb.end(), maxl, true);
 }
 
+// Returns the prefix of s, but always cut on UTF-8 character boundaries
+[[gnu::pure]] size_t truncate_string_utf8_impl(const void* s, size_t n) noexcept;
+inline std::string_view truncate_string_utf8(std::string_view s,
+                                             size_t n) noexcept {
+  if (n >= s.size()) return s;
+  return {s.data(), truncate_string_utf8_impl(s.data(), n)};
+}
+inline std::u8string_view truncate_string_utf8(std::u8string_view s,
+                                               size_t n) noexcept {
+  if (n >= s.size()) return s;
+  return {s.data(), truncate_string_utf8_impl(s.data(), n)};
+}
+
 // Return the length of prefix composed only of character c
 [[gnu::pure]] size_t char_span_length(const void* buffer, size_t len, char c) noexcept;
 
