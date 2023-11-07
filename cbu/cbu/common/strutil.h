@@ -117,17 +117,16 @@ inline constexpr int compare_string_view(std::string_view a,
   }
 }
 
-// Returns negative if (a < b), 0 or positive otherwise
-int compare_string_view_for_lt_impl(std::string_view a,
-                                    std::string_view b) noexcept
+// Returns (a < b), implemented in an optimized way
+bool string_view_lt_impl(std::string_view a, std::string_view b) noexcept
     __attribute__((__pure__));
 
-inline constexpr int compare_string_view_for_lt(std::string_view a,
-                                                std::string_view b) noexcept {
+inline constexpr int string_view_lt(std::string_view a,
+                                    std::string_view b) noexcept {
   if consteval {
-    return (a < b) ? -1 : 0;
+    return (a < b);
   } else {
-    return compare_string_view_for_lt_impl(a, b);
+    return string_view_lt_impl(a, b);
   }
 }
 
@@ -183,6 +182,15 @@ inline constexpr int strcmp_length_first(const T& a, const U& b) noexcept {
     return Traits::compare(sv_a.data(), sv_b.data(), sv_a.length());
   }
 }
+
+struct StrLess {
+  using is_transparent = void;
+
+  template <Any_to_string_view_compat T, Any_to_string_view_compat U>
+  static constexpr int operator()(const T& a, const U& b) noexcept {
+    return string_view_lt(a, b);
+  }
+};
 
 struct StrCmpLengthFirst {
   using is_transparent = void;

@@ -438,15 +438,11 @@ int compare_string_view_impl(std::string_view a, std::string_view b) noexcept {
   }
 }
 
-int compare_string_view_for_lt_impl(std::string_view a,
-                                    std::string_view b) noexcept {
+bool string_view_lt_impl(std::string_view a, std::string_view b) noexcept {
   if (a.length() >= b.length()) {
-    return memcmp(a.data(), b.data(), b.length());
+    return memcmp(a.data(), b.data(), b.length()) < 0;
   } else {
-    int rc = memcmp(a.data(), b.data(), a.length());
-    if (rc == 0)
-      rc = -1;
-    return rc;
+    return memcmp(a.data(), b.data(), a.length()) <= 0;
   }
 }
 

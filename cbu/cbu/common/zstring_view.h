@@ -168,7 +168,7 @@ inline constexpr bool operator<(const basic_zstring_view<C, T>& a,
                                 const basic_zstring_view<C, T>& b) noexcept {
   if constexpr (std::is_same_v<C, char> &&
                 std::is_same_v<T, std::char_traits<char>>) {
-    return compare_string_view_for_lt(a, b) < 0;
+    return string_view_lt(a, b);
   }
   return std::basic_string_view<C, T>(a) < std::basic_string_view<C, T>(b);
 }
