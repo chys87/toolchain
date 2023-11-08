@@ -104,29 +104,29 @@ inline constexpr const char *c_str(const T &s) noexcept(noexcept(s->c_str())) {
   return s->c_str();
 }
 
-// Compares two string views, and returns negative, 0, and positive
-int compare_string_view_impl(std::string_view a, std::string_view b) noexcept
-    __attribute__((__pure__));
-
+// Equivalent to, but faster than libstdc++ version of, a.compare(b)
 inline constexpr int compare_string_view(std::string_view a,
                                          std::string_view b) noexcept {
   if consteval {
     return (a < b) ? -1 : (a == b) ? 0 : 1;
   } else {
-    return compare_string_view_impl(a, b);
+    size_t l = a.size() < b.size() ? a.size() : b.size();
+    int rc = __builtin_memcmp(a.data(), b.data(), l);
+    if (rc == 0)
+      rc = (a.size() < b.size()) ? -1 : (a.size() == b.size()) ? 0 : 1;
+    return rc;
   }
 }
 
-// Returns (a < b), implemented in an optimized way
-bool string_view_lt_impl(std::string_view a, std::string_view b) noexcept
-    __attribute__((__pure__));
-
+// Returns (a < b), implemented in an optimized way (compared to libstdc++)
 inline constexpr int string_view_lt(std::string_view a,
                                     std::string_view b) noexcept {
   if consteval {
     return (a < b);
   } else {
-    return string_view_lt_impl(a, b);
+    size_t l = a.size() < b.size() ? a.size() : b.size();
+    int rc = __builtin_memcmp(a.data(), b.data(), l);
+    return (a.size() < b.size()) ? (rc <= 0) : (rc < 0);
   }
 }
 
@@ -189,6 +189,15 @@ struct StrLess {
   template <Any_to_string_view_compat T, Any_to_string_view_compat U>
   static constexpr int operator()(const T& a, const U& b) noexcept {
     return string_view_lt(a, b);
+  }
+};
+
+struct StrGreater {
+  using is_transparent = void;
+
+  template <Any_to_string_view_compat T, Any_to_string_view_compat U>
+  static constexpr int operator()(const T& a, const U& b) noexcept {
+    return string_view_lt(b, a);
   }
 };
 

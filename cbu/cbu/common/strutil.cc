@@ -422,30 +422,6 @@ char *reverse(char *p, char *q) noexcept {
   return ret;
 }
 
-int compare_string_view_impl(std::string_view a, std::string_view b) noexcept {
-  if (a.length() == b.length()) {
-    return std::memcmp(a.data(), b.data(), a.length());
-  } else if (a.length() < b.length()) {
-    int rc = std::memcmp(a.data(), b.data(), a.length());
-    if (rc == 0)
-      rc = -1;
-    return rc;
-  } else {
-    int rc = std::memcmp(a.data(), b.data(), b.length());
-    if (rc == 0)
-      rc = 1;
-    return rc;
-  }
-}
-
-bool string_view_lt_impl(std::string_view a, std::string_view b) noexcept {
-  if (a.length() >= b.length()) {
-    return memcmp(a.data(), b.data(), b.length()) < 0;
-  } else {
-    return memcmp(a.data(), b.data(), a.length()) <= 0;
-  }
-}
-
 size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl,
                         bool utf8) noexcept {
   const char* a = static_cast<const char*>(pa);
