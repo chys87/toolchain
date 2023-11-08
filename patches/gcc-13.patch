@@ -16,10 +16,23 @@ index 441fae0cdc9..43a79a39cbc 100644
      set_feature (FEATURE_CMOV);
    if (edx & bit_MMX)
 diff --git a/libstdc++-v3/include/bits/basic_string.h b/libstdc++-v3/include/bits/basic_string.h
-index 11b62af8fb2..d32d93b4df5 100644
+index 11b62af8fb2..d43ea0c8f91 100644
 --- a/libstdc++-v3/include/bits/basic_string.h
 +++ b/libstdc++-v3/include/bits/basic_string.h
-@@ -671,7 +671,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+@@ -477,6 +477,12 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+       static int
+       _S_compare(size_type __n1, size_type __n2) _GLIBCXX_NOEXCEPT
+       {
++        if (__n1 < __n2)
++          return -1;
++        else if (__n1 == __n2)
++          return 0;
++        else
++          return 1;
+ 	const difference_type __d = difference_type(__n1 - __n2);
+ 
+ 	if (__d > __gnu_cxx::__numeric_traits<int>::__max)
+@@ -671,7 +677,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
  	  {
  	    (void)_M_use_local_data();
  	    traits_type::copy(_M_local_buf, __str._M_local_buf,
@@ -28,7 +41,7 @@ index 11b62af8fb2..d32d93b4df5 100644
  	  }
  	else
  	  {
-@@ -711,7 +711,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+@@ -711,7 +717,7 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
  	  {
  	    (void)_M_use_local_data();
  	    traits_type::copy(_M_local_buf, __str._M_local_buf,
@@ -37,7 +50,7 @@ index 11b62af8fb2..d32d93b4df5 100644
  	    _M_length(__str.length());
  	    __str._M_set_length(0);
  	  }
-@@ -1103,6 +1103,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+@@ -1103,6 +1109,11 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        resize(size_type __n)
        { this->resize(__n, _CharT()); }
  
@@ -49,7 +62,7 @@ index 11b62af8fb2..d32d93b4df5 100644
  #if __cplusplus >= 201103L
  #pragma GCC diagnostic push
  #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-@@ -1158,8 +1163,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
+@@ -1158,8 +1169,9 @@ _GLIBCXX_BEGIN_NAMESPACE_CXX11
        size_type
        capacity() const _GLIBCXX_NOEXCEPT
        {
@@ -143,6 +156,23 @@ index 854b61e435d..5550ca5cd92 100644
  	}
        return __ret;
      }
+diff --git a/libstdc++-v3/include/std/string_view b/libstdc++-v3/include/std/string_view
+index be9036a20a3..28ff31dd2f3 100644
+--- a/libstdc++-v3/include/std/string_view
++++ b/libstdc++-v3/include/std/string_view
+@@ -571,6 +571,12 @@ _GLIBCXX_BEGIN_NAMESPACE_VERSION
+       static constexpr int
+       _S_compare(size_type __n1, size_type __n2) noexcept
+       {
++        if (__n1 < __n2)
++          return -1;
++        else if (__n1 == __n2)
++          return 0;
++        else
++          return 1;
+ 	using __limits = __gnu_cxx::__int_traits<int>;
+ 	const difference_type __diff = __n1 - __n2;
+ 	if (__diff > __limits::__max)
 diff --git a/libstdc++-v3/libsupc++/exception_ptr.h b/libstdc++-v3/libsupc++/exception_ptr.h
 index 5be69817a8f..74c6250c43b 100644
 --- a/libstdc++-v3/libsupc++/exception_ptr.h
