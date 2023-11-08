@@ -196,12 +196,15 @@ def_fsys(readlink,readlink,long,3,const char *,char *, unsigned long)
 #endif
 def_fsys(readlinkat,readlinkat,long,4,int,const char *,char *, unsigned long)
 #ifdef __x86_64__
-def_fsys(chmod,chmod,int,2,const char *,int)
+def_fsys(chmod,chmod,int,2,const char *,unsigned)
 #else
-#define fsys_chmod(filename,mode) fsys_fchmodat_raw(AT_FDCWD,filename,mode,0)
+#define fsys_chmod(filename,mode) fsys_fchmodat_raw(AT_FDCWD,filename,mode)
 #endif
 def_fsys_nomem(fchmod,fchmod,int,2,int,int)
-def_fsys(fchmodat_raw,fchmodat,int,4,int,const char*,int,int)
+def_fsys(fchmodat_raw,fchmodat,int,3,int,const char*,unsigned)
+#ifdef __NR_fchmodat2
+def_fsys(fchmodat,fchmodat2,int,4,int,const char*,unsigned,int)
+#endif
 def_fsys_nomem(readahead,readahead,long,3,int,long,unsigned long)
 def_fsys_nomem(flock,flock,int,2,int,int)
 def_fsys_nomem(umask,umask,int,1,int)
@@ -522,6 +525,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_readlinkat readlinkat
 #define fsys_chmod chmod
 #define fsys_fchmod fchmod
+#define fsys_fchmodat fchmodat
 #define fsys_readahead readahead
 #define fsys_flock flock
 #define fsys_umask umask
