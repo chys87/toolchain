@@ -23,7 +23,7 @@ sed -i -e 's!libstdc++-v3/include/!!g' "$tmp"
     /usr/include/c++/$version
   do
     if [[ -d "$try" ]]; then
-      echo "cd $try && patch --dry-run -N -p1 < $tmp && patch -N -p1 < $tmp"
+      echo "cd $try && patch --verbose -N -p1 < $tmp"
     fi
   done
 } > "/tmp/patch-gcc-$version.sh"
