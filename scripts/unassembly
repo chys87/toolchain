@@ -308,6 +308,55 @@ def cppfilter(fi, args):
         yield do_replace(data)
 
 
+def long_function_name_filter(fi):
+    cur_fun = None
+    tail = b''
+    for txt in fi:
+        buffer = tail + txt
+        out = b''
+
+        last_ln_idx = buffer.rfind(b'\n')
+        if last_ln_idx < 0:
+            tail = buffer
+            continue
+        tail = buffer[last_ln_idx+1:]
+        buffer = buffer[:last_ln_idx+1]
+
+        start_idx = 0
+
+
+        while True:
+            next_fun_end_idx = buffer.find(b'>:\n', start_idx)
+            if next_fun_end_idx < 0:
+                break
+
+            start_line_idx = buffer.rfind(b'\n', 0, next_fun_end_idx) + 1
+            if cur_fun is not None:
+                out += buffer[start_idx:start_line_idx].replace(cur_fun, b'(self)')
+            else:
+                out += buffer[start_idx:start_line_idx]
+
+            start_func_name_idx = buffer.find(b'<', start_line_idx, next_fun_end_idx)
+            if start_func_name_idx >= 0 and next_fun_end_idx - start_func_name_idx >= 32:
+                cur_fun = buffer[start_func_name_idx:next_fun_end_idx]
+            else:
+                cur_fun = None
+
+            start_idx = next_fun_end_idx + 3
+            out += buffer[start_line_idx:start_idx]
+
+        if cur_fun is not None:
+            out += buffer[start_idx:].replace(cur_fun, b'(self)')
+        else:
+            out += buffer[start_idx:]
+
+        if out:
+            yield out
+
+    if tail:
+        yield tail
+
+
 __special_readable_chars = {
     ord('\r'): b'\\r',
     ord('\n'): b'\\n',
@@ -613,6 +662,7 @@ def main():
                                stderr=subprocess.STDOUT)
     fi = objdump.stdout
     fi = cppfilter(fi, args)
+    fi = long_function_name_filter(fi)
 
     if sys.platform.startswith('linux'):
         fi = syscall_replace(fi)
