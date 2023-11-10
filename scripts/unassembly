@@ -338,7 +338,7 @@ def long_function_name_filter(fi):
 
             start_func_name_idx = buffer.find(b'<', start_line_idx, next_fun_end_idx)
             if start_func_name_idx >= 0 and next_fun_end_idx - start_func_name_idx >= 32:
-                cur_fun = buffer[start_func_name_idx:next_fun_end_idx]
+                cur_fun = buffer[start_func_name_idx+1:next_fun_end_idx]
             else:
                 cur_fun = None
 
