@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -94,6 +94,8 @@ std::optional<time_t> get_file_mtime_opt(int) noexcept;
 
 void touch_file(AtFile, time_t) noexcept;
 void touch_file(int, time_t) noexcept;
+void touch_file(AtFile) noexcept;
+void touch_file(int) noexcept;
 
 // If a file doesn't exist, create it.
 bool ensure_file(AtFile, mode_t) noexcept;

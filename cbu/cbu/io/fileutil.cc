@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -102,6 +102,18 @@ void touch_file(int fd, time_t timestamp) noexcept {
   struct timespec ts[2] = {{timestamp, 0}, {timestamp, 0}};
   fsys_futimens(fd, ts);
 }
+
+void touch_file(AtFile atfile) noexcept {
+  int rv = fsys_utimensat(atfile.fd(), atfile.name(), nullptr, 0);
+  if ((rv != 0) && fsys_errno(rv, ENOENT)) {
+    // Maybe the file does not exist
+    int fd = fsys_openat4(atfile.fd(), atfile.name(),
+                          O_WRONLY | O_CREAT | O_CLOEXEC, 0666);
+    if (fd >= 0) fsys_close(fd);
+  }
+}
+
+void touch_file(int fd) noexcept { fsys_futimens(fd, nullptr); }
 
 bool ensure_file(AtFile atfile, mode_t mode) noexcept {
   if (fsys_faccessat(atfile.fd(), atfile.name(), F_OK, 0) == 0)
