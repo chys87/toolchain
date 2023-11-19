@@ -3,7 +3,7 @@
 # vim:ts=8 sts=4 sw=4 expandtab ft=python
 
 #
-# Copyright (c) 2013-2022, chys <admin@CHYS.INFO>
+# Copyright (c) 2013-2023, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -117,16 +117,24 @@ def print_compare(data_list):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--compare', action='store_true',
-                        help='Highlight differences and hide equalities.')
+                        help='Highlight differences if stdout is a tty')
+    parser.add_argument('-C', '--compare-always', action='store_true',
+                        help='Highlight differences always')
     parser.add_argument('filename', nargs='+')
     args = parser.parse_args()
 
     if len(args.filename) < 2:
-        args.compare = False
+        compare = False
+    elif args.compare_always:
+        compare = True
+    elif args.compare:
+        compare = os.isatty(1)
+    else:
+        compare = False
 
     error = 0
 
-    if args.compare:
+    if compare:
         data_list = []
         for filename in args.filename:
             try:
