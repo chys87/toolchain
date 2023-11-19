@@ -7,6 +7,9 @@ SELF_MAKEFILE := $(realpath $(lastword $(MAKEFILE_LIST)))
 MULTIPLE_OUTPUT_HELPER := $(dir $(SELF_MAKEFILE))/multiple-output-helper.py
 PYTHONDEP := $(dir $(SELF_MAKEFILE))/../scripts/pythondep
 UT_RUNNER := $(dir $(SELF_MAKEFILE))/../scripts/fast_gtest
+BINCMP := $(dir $(SELF_MAKEFILE))/../scripts/bincmp
+DETAILED_SIZE := $(dir $(SELF_MAKEFILE))/../scripts/detailed_size
+UNASSEMBLY :=  $(dir $(SELF_MAKEFILE))/../scripts/unassembly
 UT_RUNNER_ADDITIONAL_FLAGS :=
 
 ifeq "$(origin V)" "command line"
@@ -392,14 +395,14 @@ bincmp:
 # $(1) = binname
 define define_size_unassembly_bincmp
 size-$(1):
-	$(Q)detailed_size -c $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out
-SIZE_COMMANDS += detailed_size -c $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out;
+	$(Q)$(DETAILED_SIZE) -c $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out
+SIZE_COMMANDS += $(DETAILED_SIZE) -c $(wildcard $(INSTDIR)/$(1)) $(BUILDDIR)/$(1).out;
 un-$(1):
-	$(Q)unassembly $(BUILDDIR)/$(1).n.out
-UN_COMMANDS += unassembly $(BUILDDIR)/$(1).n.out;
+	$(Q)$(UNASSEMBLY) $(BUILDDIR)/$(1).n.out
+UN_COMMANDS += $(UNASSEMBLY) $(BUILDDIR)/$(1).n.out;
 bincmp-$(1):
-	$(Q)bincmp $(INSTDIR)/$(1) $(BUILDDIR)/$(1).out
-BINCMP_COMMANDS += bincmp $(INSTDIR)/$(1) $(BUILDDIR)/$(1).out;
+	$(Q)$(BINCMP) $(INSTDIR)/$(1) $(BUILDDIR)/$(1).out
+BINCMP_COMMANDS += $(BINCMP) $(INSTDIR)/$(1) $(BUILDDIR)/$(1).out;
 endef
 
 $(foreach x,$(INST_TARGETS),$(eval $(call define_size_unassembly_bincmp,$(x))))
