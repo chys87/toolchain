@@ -16,12 +16,12 @@ struct Browser {
 };
 
 const Browser supported_browsers[] = {
-    {STR_LEN("Google Chrome"),
-     STR_LEN("/chrome"),
-     {"google-chrome-stable", "google-chrome"}},
     {STR_LEN("Edge"),
      STR_LEN("/msedge"),
      {"microsoft-edge-stable", "microsoft-edge"}},
+    {STR_LEN("Google Chrome"),
+     STR_LEN("/chrome"),
+     {"google-chrome-stable", "google-chrome"}},
     {STR_LEN("Firefox"), STR_LEN("/firefox-bin"), {"firefox", "firefox-bin"}},
 };
 
