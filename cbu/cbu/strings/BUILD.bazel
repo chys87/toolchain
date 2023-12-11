@@ -39,6 +39,23 @@ cc_library(
 )
 
 cc_library(
+  name = 'str_cat',
+  srcs = [
+    'str_cat.cc',
+  ],
+  hdrs = [
+    'str_cat.h',
+  ],
+  deps = [
+    '//cbu/common:stdhack',
+  ],
+  # cbu is a collection of really TINY utilities so you may always want to
+  # use static linking
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
   name = 'misc',
   srcs = [
     'misc.cc',
@@ -60,6 +77,7 @@ cc_test(
   deps = [
     ':misc',
     ':header_only',
+    ':str_cat',
     '@com_google_googletest//:gtest_main',
     '//cbu/debug:gtest_formatters',
   ],
