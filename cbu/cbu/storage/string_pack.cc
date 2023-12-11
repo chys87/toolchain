@@ -35,6 +35,7 @@
 #include "cbu/common/bit.h"
 #include "cbu/storage/vlq.h"
 #include "cbu/strings/faststr.h"
+#include "cbu/strings/str_cat.h"
 
 namespace cbu {
 namespace string_pack_detail {
@@ -79,7 +80,7 @@ ConsumeOneString<zstring_view> consume_one_string_z_unsafe(
 void StringPack::add(std::string_view s){
   std::size_t l = s.size();
   EncodedVlq ev = vlq_encode_small(l);
-  append(&s_, {ev.as_string_view(), s});
+  StrAppend(&s_, ev.as_string_view(), s);
 }
 
 bool StringPack::verify(std::string_view s) noexcept {

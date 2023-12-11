@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -159,37 +159,6 @@ TEST(MemPickDropConstexprTest, MemDropNumber) {
   static_assert(a.buf_[1] == 0xcd);
   static_assert(a.buf_[2] == 0xab);
   static_assert(a.buf_[3] == 0x03);
-}
-
-TEST(FastStrTest, NPrintf) {
-  std::string u;
-  EXPECT_EQ(11, append_nprintf(&u, 32, "Hello %s", "world"));
-  EXPECT_EQ("Hello world"sv, u);
-
-  u.clear();
-  EXPECT_EQ(11, append_nprintf(&u, 2, "Hello %s", "world"));
-  EXPECT_EQ("Hello world"sv, u);
-
-  EXPECT_EQ("Hello world"sv, nprintf(2, "Hello %s", "world"));
-}
-
-TEST(FastStrTest, Append) {
-  std::wstring u = L"Hello";
-  append(&u, {L" ", L"world"});
-  EXPECT_EQ(L"Hello world"sv, u);
-  append(&u, {L", "});
-  EXPECT_EQ(L"Hello world, "sv, u);
-  append(&u, {});
-  EXPECT_EQ(L"Hello world, "sv, u);
-  append(&u, {L"a", L"b", L"c"});
-  EXPECT_EQ(L"Hello world, abc"sv, u);
-}
-
-TEST(FastStrTest, Concat) {
-  EXPECT_EQ("Hello world"sv,
-            concat({"Hello", " ", "world"}));
-  EXPECT_EQ(L"Hello world"sv,
-            concat({L"Hello", L" ", L"world"}));
 }
 
 } // namespace cbu
