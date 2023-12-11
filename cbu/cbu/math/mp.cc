@@ -39,11 +39,11 @@
 
 #include "cbu/common/bit.h"
 #include "cbu/common/byteorder.h"
-#include "cbu/common/faststr.h"
-#include "cbu/common/strutil.h"
 #include "cbu/math/common.h"
 #include "cbu/math/fastdiv.h"
 #include "cbu/math/strict_overflow.h"
+#include "cbu/strings/faststr.h"
+#include "cbu/strings/strutil.h"
 
 namespace cbu {
 namespace mp {

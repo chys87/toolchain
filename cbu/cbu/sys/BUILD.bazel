@@ -30,7 +30,8 @@ cc_library(
               exclude=['*_test.cc']),
   hdrs = glob(['*.h']),
   deps = [
-    '//cbu/common',
+    '//cbu/common:common',
+    '//cbu/strings:common',
     '//cbu/compat',
     '//cbu/fsyscall',
   ],

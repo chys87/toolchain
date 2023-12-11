@@ -42,9 +42,9 @@
 #include <string_view>
 
 #include "cbu/common/byteorder.h"
-#include "cbu/common/faststr.h"
 #include "cbu/compat/compilers.h"
 #include "cbu/network/ipv4.h"
+#include "cbu/strings/faststr.h"
 
 namespace cbu {
 

@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/strutil.h"
+#include "cbu/strings/strutil.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -41,11 +41,11 @@
 
 #include "cbu/common/bit.h"
 #include "cbu/common/byteorder.h"
-#include "cbu/common/encoding.h"
-#include "cbu/common/faststr.h"
 #include "cbu/compat/compilers.h"
 #include "cbu/math/common.h"
 #include "cbu/math/strict_overflow.h"
+#include "cbu/strings/encoding.h"
+#include "cbu/strings/faststr.h"
 
 namespace cbu {
 

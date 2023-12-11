@@ -29,10 +29,19 @@ cc_library(
   name = 'header_only',
   srcs = [],
   hdrs = [
+    'bytes_view.h',
     'fixed_length_compare.h',
+    'fixed_string.h',
     'hex.h',
+    'immutable_string.h',
+    'length_prefixed_string_literal.h',
+    'short_string.h',
+    'str_split.h',
+    'str_to_number.h',
+    'str_to_number_internal.h',
   ],
   deps = [
+    '//cbu/common:header_only',
   ],
   linkstatic=True,
   visibility = ["//visibility:public"],
@@ -51,6 +60,55 @@ cc_library(
   ],
   # cbu is a collection of really TINY utilities so you may always want to
   # use static linking
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = 'common',
+  srcs = [
+    'encoding.cc',
+    'escape.cc',
+    'strutil.cc',
+  ],
+  hdrs = [
+    'encoding.h',
+    'escape.h',
+    'strutil.h',
+    'zstring_view.h',
+  ],
+  deps = [
+    ':header_only',
+    ':faststr',
+    '//cbu/math:common',
+    '//cbu/math:strict_overflow',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = 'faststr',
+  srcs = ['faststr.cc'],
+  hdrs = ['faststr.h'],
+  deps = [
+    '//cbu/common:header_only',
+    '//cbu/common:stdhack',
+    '//cbu/math:common',
+    '//cbu/math:strict_overflow',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
+  name = 'low_level_buffer_filler',
+  srcs = [],
+  hdrs = ['low_level_buffer_filler.h'],
+  deps = [
+    '//cbu/math:fastdiv',
+    ':common',
+  ],
   linkstatic=True,
   visibility = ["//visibility:public"],
 )
@@ -78,6 +136,8 @@ cc_test(
     ':misc',
     ':header_only',
     ':str_cat',
+    ':common',
+    ':low_level_buffer_filler',
     '@com_google_googletest//:gtest_main',
     '//cbu/debug:gtest_formatters',
   ],

@@ -43,7 +43,7 @@ cc_library(
   srcs = ['fileutil.cc'],
   hdrs = ['fileutil.h'],
   deps = [
-    '//cbu/common:strutil',
+    '//cbu/strings:common',
     '//cbu/fsyscall',
   ],
   linkstatic=True,

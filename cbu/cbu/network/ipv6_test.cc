@@ -34,8 +34,8 @@
 
 #include <gtest/gtest.h>
 
-#include "cbu/common/short_string.h"
 #include "cbu/debug/gtest_formatters.h"
+#include "cbu/strings/short_string.h"
 
 namespace cbu {
 namespace {

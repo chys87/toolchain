@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/strutil.h"
+#include "cbu/strings/strutil.h"
 
 #include <string>
 #include <string_view>

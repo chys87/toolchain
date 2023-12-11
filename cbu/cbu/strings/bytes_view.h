@@ -32,7 +32,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include "concepts.h"
+#include "cbu/common/concepts.h"
 
 // This header provides a "bytes view" class, which behaves somewhat like
 // std::string_view, but provides additional interfaces for convenient

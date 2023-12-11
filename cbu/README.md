@@ -46,34 +46,22 @@ If you use anything else, you have to take care of it yourself.
 * `bitmask_ref.h`: A non-owning alternative to `std::bitset`
 * `byteorder.h`: Conversion between little-endian and big-endian data
 * `byte_size.h`: Provides `ByteSize`, that represents the size of an array, has semantics of an integer, but stores data in bytes
-* `bytes_view.h`: Provides `BytesView`, similar with [`std::string_view`](https://en.cppreference.com/w/cpp/string/basic_string_view),
-   with additional interfaces for convenient cast to and from pointers of other character types (`signed char`, `unsigned char`, `char8_t`, `std::bytes`)
-   and `const void*` (explicit).
 * `concepts.h`: Somewhat like C++20's [`<concepts>`](https://en.cppreference.com/w/cpp/header/concepts)
 * `defer.h`: Provides macro `CBU_DEFER` for easier [RAII](https://en.cppreference.com/w/cpp/language/raii)
-* `encoding.h`: UTF-8 functions
-* `escape.h`: C/JSON style string escaping utilities
-* `faststr.h`: Provides `mempick`, `memdrop`, `append`, `concat` and similar functions for easy string operations
 * `fifo_list.h`: Provides `fifo_list<T>`, a first-in-first-out singly-linked container type with fast access to both ends
-* `fixed_string.h`: Provides `fixed_string<N>`, a helper class to allow the use of string literal as template argument (ref [PR0732R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0732r2.pdf), part of C++20)
 * `heapq.h`: Heap operations
 * `immutable_string.h`: An "immutable" string class that holds either a `string_view` or a real `string` object.
 * `memory.h`: Provides memory operation utilities, including some C++20 memory functions that are missing from GCC 9
 * `once.h`: Provides macro `CBU_ONCE`, somewhat like but easier to use than [`pthread_once`](https://linux.die.net/man/3/pthread_once)
 * `ref_cnt.h`: Reference-counting operations
 * `shared_instance.h`: An enhanced singleton implementation
-* `short_string.h`: A class for storing very short strings efficiently
 * `stdhack.h`: Hacks standard strings and containers, providing resizing without initialization
-* `str_split.h`: Splitting a string with small code size, inspired by [`absl::StrSplit`](https://abseil.io/docs/cpp/guides/strings#abslstrsplit-for-splitting-strings)
-* `str_to_integer.h`: Conversion from string to integer
-* `strutil.h`: Various string utilities, higher level than `faststr.h`
 * `swap.h`: Like [boost::swap](https://www.boost.org/doc/libs/1_64_0/libs/core/doc/html/core/swap.html), but also suports swapping by calling a member function named `swap`
 * `tags.h`: Define some empty structures for common tags
 * `type_traits.h`: Adds some type traits missing from [`<type_traits>`](https://en.cppreference.com/w/cpp/header/type_traits)
 * `unit_prefix.h`: Handles SI and IEC prefixes (K, M, G, etc)
 * `utility.h`: Adds some generic utilities missing from [`<utility>`](https://en.cppreference.com/w/cpp/header/utility),
    e.g. POD pair type, `reversed` (like Python's counterpart), `enumerate` (like Python's counterpart)
-* `zstring_view.h`: Provides `cbu::zstring_view`, a subtype of `std::string_view` that assumes a null terminator is present
 
 ### cbu/compat
 
@@ -130,7 +118,20 @@ This one is just a hobby - a crazy one.
 
 [`cbu/strings`](cbu/strings): String utilities
 
+* `bytes_view.h`: Provides `BytesView`, similar with [`std::string_view`](https://en.cppreference.com/w/cpp/string/basic_string_view),
+   with additional interfaces for convenient cast to and from pointers of other character types (`signed char`, `unsigned char`, `char8_t`, `std::bytes`)
+   and `const void*` (explicit).
+* `encoding.h`: UTF-8 functions
+* `escape.h`: C/JSON style string escaping utilities
+* `faststr.h`: Provides `mempick`, `memdrop`, `append`, `concat` and similar functions for easy string operations
 * `fixed_length_compare.h`: Implements fast comparison of buffers with compile-time constant lengths
+* `fixed_string.h`: Provides `fixed_string<N>`, a helper class to allow the use of string literal as template argument (ref [PR0732R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0732r2.pdf), part of C++20)
+* `short_string.h`: A class for storing very short strings efficiently
+* `str_cat.h`: Concatenating and apennding strings
+* `str_split.h`: Splitting a string with small code size, inspired by [`absl::StrSplit`](https://abseil.io/docs/cpp/guides/strings#abslstrsplit-for-splitting-strings)
+* `str_to_number.h`: Conversion from string to number
+* `strutil.h`: Various string utilities, higher level than `faststr.h`
+* `zstring_view.h`: Provides `cbu::zstring_view`, a subtype of `std::string_view` that assumes a null terminator is present
 
 ### cbu/sys
 

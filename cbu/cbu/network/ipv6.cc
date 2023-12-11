@@ -39,10 +39,10 @@
 
 #include "cbu/common/bit.h"
 #include "cbu/common/byteorder.h"
-#include "cbu/common/faststr.h"
-#include "cbu/common/short_string.h"
 #include "cbu/math/fastdiv.h"
 #include "cbu/network/ipv4.h"
+#include "cbu/strings/faststr.h"
+#include "cbu/strings/short_string.h"
 
 namespace cbu {
 namespace {

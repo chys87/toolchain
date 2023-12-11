@@ -31,7 +31,7 @@
 #include <string_view>
 
 #include "cbu/common/concepts.h"
-#include "cbu/common/strutil.h"
+#include "cbu/strings/strutil.h"
 
 namespace cbu {
 

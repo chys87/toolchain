@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/low_level_buffer_filler.h"
+#include "cbu/strings/low_level_buffer_filler.h"
 
 #include <gtest/gtest.h>
 

@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/encoding.h"
+#include "cbu/strings/encoding.h"
 
 #if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
 # include <x86intrin.h>
@@ -34,7 +34,7 @@
 
 #include "cbu/common/arch.h"
 #include "cbu/common/bit.h"
-#include "cbu/common/faststr.h"
+#include "cbu/strings/faststr.h"
 
 namespace cbu {
 

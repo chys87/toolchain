@@ -33,7 +33,8 @@
 #include <string_view>
 #include <type_traits>
 #include <variant>
-#include "concepts.h"
+
+#include "cbu/common/concepts.h"
 
 // Provides an immutable string class that either holds a string
 // (for flexibility) or a string view (for performance)

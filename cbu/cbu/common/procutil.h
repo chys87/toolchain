@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "cbu/common/fixed_string.h"
 #include "cbu/common/shared_instance.h"
+#include "cbu/strings/fixed_string.h"
 
 namespace cbu {
 

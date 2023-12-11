@@ -27,21 +27,15 @@
 cc_library(
   name = 'common',
   srcs = [
-    'escape.cc',
     'unit_prefix.cc',
   ],
   hdrs = [
-    'escape.h',
     'unit_prefix.h',
   ],
   deps = [
     ':header_only',
-    ':faststr',
-    ':low_level_buffer_filler',
     ':stdhack',
-    ':strutil',
     '//cbu/compat',
-    '//cbu/fsyscall',
     '//cbu/math:common',
     '//cbu/math:fastdiv',
   ],
@@ -62,24 +56,15 @@ cc_library(
     'bitmask_ref.h',
     'byteorder.h',
     'byte_size.h',
-    'bytes_view.h',
     'compare.h',
     'defer.h',
     'fifo_list.h',
-    'fixed_string.h',
     'heapq.h',
     'hint.h',
-    'immutable_string.h',
-    'length_prefixed_string_literal.h',
     'memory.h',
     'once.h',
     'ref_cnt.h',
     'shared_instance.h',
-    'short_string.h',
-    'str_split.h',
-    'str_to_integer.h',
-    'str_to_number.h',
-    'str_to_number_internal.h',
     'swap.h',
     'tags.h',
     'type_traits.h',
@@ -102,57 +87,11 @@ cc_library(
 )
 
 cc_library(
-  name = 'faststr',
-  srcs = ['faststr.cc'],
-  hdrs = ['faststr.h'],
-  deps = [
-    ':header_only',
-    ':stdhack',
-    '//cbu/math:common',
-    '//cbu/math:strict_overflow',
-  ],
-  linkstatic=True,
-  visibility = ["//visibility:public"],
-)
-
-cc_library(
-  name = 'low_level_buffer_filler',
-  srcs = [],
-  hdrs = ['low_level_buffer_filler.h'],
-  deps = [
-    '//cbu/math:fastdiv',
-  ],
-  linkstatic=True,
-  visibility = ["//visibility:public"],
-)
-
-cc_library(
   name = 'stdhack',
   srcs = ['stdhack.cc'],
   hdrs = ['stdhack.h'],
   deps = [
     '//cbu/compat:compat',
-  ],
-  linkstatic=True,
-  visibility = ["//visibility:public"],
-)
-
-cc_library(
-  name = 'strutil',
-  srcs = [
-    'encoding.cc',
-    'strutil.cc',
-  ],
-  hdrs = [
-    'encoding.h',
-    'strutil.h',
-    'zstring_view.h',
-  ],
-  deps = [
-    ':header_only',
-    ':faststr',
-    '//cbu/math:common',
-    '//cbu/math:strict_overflow',
   ],
   linkstatic=True,
   visibility = ["//visibility:public"],
@@ -167,7 +106,7 @@ cc_library(
     'procutil.h',
   ],
   deps = [
-    ':header_only',
+    '//cbu/strings:header_only',
     '//cbu/fsyscall',
   ],
   linkstatic=True,

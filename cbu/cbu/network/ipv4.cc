@@ -37,10 +37,10 @@
 
 #include <limits>
 
-#include "cbu/common/faststr.h"
-#include "cbu/common/short_string.h"
 #include "cbu/math/common.h"
 #include "cbu/math/fastdiv.h"
+#include "cbu/strings/faststr.h"
+#include "cbu/strings/short_string.h"
 
 namespace cbu {
 namespace {

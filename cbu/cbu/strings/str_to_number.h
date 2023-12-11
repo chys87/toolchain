@@ -32,8 +32,8 @@
 #include <optional>
 #include <string_view>
 
-#include "cbu/common/str_to_number_internal.h"  // IWYU pragma: export
 #include "cbu/common/tags.h"
+#include "cbu/strings/str_to_number_internal.h"  // IWYU pragma: export
 
 namespace cbu {
 

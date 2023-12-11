@@ -31,7 +31,7 @@
 #include <string_view>
 #include <type_traits>
 
-#include "cbu/common/zstring_view.h"
+#include "cbu/strings/zstring_view.h"
 
 // StringPack is a simple zero-copy-serializable storage of a list of strings.
 // It aims to be fast and small, and has optional support for compaction.

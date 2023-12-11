@@ -33,8 +33,8 @@
 #endif
 
 #include "cbu/common/bit.h"
-#include "cbu/common/faststr.h"
 #include "cbu/storage/vlq.h"
+#include "cbu/strings/faststr.h"
 
 namespace cbu {
 namespace string_pack_detail {

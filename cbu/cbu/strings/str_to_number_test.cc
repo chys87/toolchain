@@ -35,7 +35,7 @@
 #include <gtest/gtest.h>
 
 #include "cbu/common/defer.h"
-#include "cbu/common/str_to_number.h"
+#include "cbu/strings/str_to_number.h"
 
 namespace cbu {
 

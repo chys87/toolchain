@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/length_prefixed_string_literal.h"
+#include "cbu/strings/length_prefixed_string_literal.h"
 
 #include <gtest/gtest.h>
 

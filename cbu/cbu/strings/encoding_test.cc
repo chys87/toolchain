@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/encoding.h"
+#include "cbu/strings/encoding.h"
 
 #include <iconv.h>
 

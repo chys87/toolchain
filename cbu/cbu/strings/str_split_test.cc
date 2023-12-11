@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/str_split.h"
+#include "cbu/strings/str_split.h"
 
 #include <queue>
 #include <set>

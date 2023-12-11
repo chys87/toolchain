@@ -30,9 +30,9 @@
 
 #include <string_view>
 
-#include "cbu/common/encoding.h"
 #include "cbu/common/memory.h"
-#include "cbu/common/zstring_view.h"
+#include "cbu/strings/encoding.h"
+#include "cbu/strings/zstring_view.h"
 
 namespace std {
 

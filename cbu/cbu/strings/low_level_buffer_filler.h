@@ -33,14 +33,14 @@
 #include <cstddef>
 #include <cstring>
 #include <optional>
-#include <tuple>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 
 #include "cbu/common/byteorder.h"
 #include "cbu/common/concepts.h"
-#include "cbu/common/faststr.h"
 #include "cbu/math/fastdiv.h"
+#include "cbu/strings/faststr.h"
 
 namespace cbu {
 

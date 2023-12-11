@@ -43,7 +43,7 @@
 # include <arm_neon.h>
 #endif
 
-#include "cbu/common/faststr.h"
+#include "cbu/strings/faststr.h"
 
 namespace cbu {
 namespace cacheless {

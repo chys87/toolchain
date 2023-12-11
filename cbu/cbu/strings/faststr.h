@@ -43,10 +43,10 @@
 #include <type_traits>
 #include <utility>
 
-#include "byteorder.h"
+#include "cbu/common/byteorder.h"
+#include "cbu/common/concepts.h"
+#include "cbu/common/stdhack.h"
 #include "cbu/compat/string.h"
-#include "concepts.h"
-#include "stdhack.h"
 
 namespace cbu {
 

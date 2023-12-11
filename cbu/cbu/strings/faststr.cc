@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/faststr.h"
+#include "cbu/strings/faststr.h"
 
 #include <stdarg.h>
 #include <stdio.h>
