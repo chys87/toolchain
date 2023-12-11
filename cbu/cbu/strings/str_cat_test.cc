@@ -45,8 +45,8 @@ TEST(StrAppendTest, AppendTest) {
   ASSERT_EQ(r, "A3");
   StrAppend(&r, "B"sv, 54, "C", 25);
   ASSERT_EQ(r, "A3B54C25");
-  StrAppend(&r, -54, -54);
-  ASSERT_EQ(r, "A3B54C25-54-54");
+  StrAppend(&r, -54, -2554);
+  ASSERT_EQ(r, "A3B54C25-54-2554");
 }
 
 TEST(StrCatTest, CatTest) {

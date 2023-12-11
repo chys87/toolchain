@@ -41,8 +41,11 @@
 namespace cbu {
 namespace str_cat_detail {
 
+void Append(std::string* dst, std::string_view a, std::string_view b);
 void Append(std::string* dst, const std::string_view* array, std::size_t cnt,
             std::size_t total_size);
+
+std::string Cat(std::string_view a, std::string_view b);
 std::string Cat(const std::string_view* array, std::size_t cnt,
                 std::size_t total_size);
 
@@ -162,8 +165,16 @@ inline constexpr void StrAppend(std::string* dst, const T& arg) {
   dst->append(str_cat_detail::Prepare(&buffer, arg));
 }
 
+template <str_cat_detail::Supported T, str_cat_detail::Supported U>
+inline constexpr void StrAppend(std::string* dst, const T& arg, const U& argu) {
+  str_cat_detail::TempBuffer<T> buffer;
+  str_cat_detail::TempBuffer<U> bufferu;
+  str_cat_detail::Append(dst, str_cat_detail::Prepare(&buffer, arg),
+                         str_cat_detail::Prepare(&bufferu, argu));
+}
+
 template <str_cat_detail::Supported... T>
-  requires(sizeof...(T) > 1)
+  requires(sizeof...(T) > 2)
 inline void StrAppend(std::string* dst, const T&... args) {
   str_cat_detail::StrAppend(dst, std::make_index_sequence<sizeof...(T)>(),
                             std::tuple<const T&...>{args...});
@@ -175,8 +186,16 @@ inline constexpr std::string StrCat(const T& arg) {
   return std::string(str_cat_detail::Prepare(&buffer, arg));
 }
 
+template <str_cat_detail::Supported T,str_cat_detail::Supported U>
+inline constexpr std::string StrCat(const T& arg, const U& argu) {
+  str_cat_detail::TempBuffer<T> buffer;
+  str_cat_detail::TempBuffer<U> bufferu;
+  return str_cat_detail::Cat(str_cat_detail::Prepare(&buffer, arg),
+                             str_cat_detail::Prepare(&bufferu, argu));
+}
+
 template <str_cat_detail::Supported... T>
-  requires(sizeof...(T) > 1)
+  requires(sizeof...(T) > 2)
 inline std::string StrCat(const T&... args) {
   return str_cat_detail::StrCat(std::make_index_sequence<sizeof...(T)>(),
                                 std::tuple<const T&...>{args...});

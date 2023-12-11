@@ -51,7 +51,7 @@ void str_cat_detail::Append(std::string* dst, const std::string_view* array,
   std::size_t old_size = dst->size();
   dst->resize_and_overwrite(
       old_size + total_size,
-      [array, cnt, total_size, old_size](char* w, std::size_t) {
+      [array, cnt, total_size, old_size](char* w, std::size_t) noexcept {
         Copy(w + old_size, array, cnt);
         return old_size + total_size;
       });
@@ -61,14 +61,32 @@ void str_cat_detail::Append(std::string* dst, const std::string_view* array,
 #endif
 }
 
+void str_cat_detail::Append(std::string* dst, std::string_view a,
+                            std::string_view b) {
+  auto w = extend(dst, a.size() + b.size());
+  w = static_cast<char*>(__builtin_mempcpy(w, a.data(), a.size()));
+  __builtin_mempcpy(w, b.data(), b.size());
+}
+
 std::string str_cat_detail::Cat(const std::string_view* array, std::size_t cnt,
                                 std::size_t total_size) {
   std::string res;
-  res.resize_and_overwrite(total_size,
-                           [array, cnt, total_size](char* w, std::size_t) {
-                             Copy(w, array, cnt);
-                             return total_size;
-                           });
+  res.resize_and_overwrite(
+      total_size, [array, cnt, total_size](char* w, std::size_t) noexcept {
+        Copy(w, array, cnt);
+        return total_size;
+      });
+  return res;
+}
+
+std::string str_cat_detail::Cat(std::string_view a, std::string_view b) {
+  std::string res;
+  std::size_t sz = a.size() + b.size();
+  res.resize_and_overwrite(sz, [a, b, sz](char* w, std::size_t) noexcept {
+    w = static_cast<char*>(__builtin_mempcpy(w, a.data(), a.size()));
+    __builtin_mempcpy(w, b.data(), b.size());
+    return sz;
+  });
   return res;
 }
 
