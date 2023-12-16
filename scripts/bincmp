@@ -48,10 +48,6 @@ import stat
 UNASSEMBLY = 'unassembly'
 
 
-def sub_asterisks(m, *, rex=re.compile(b'[\da-f]', re.A)):
-    return rex.sub(b'*', m.group(1))
-
-
 # GNU objdump doesn't show address before symbols with --no-addresses;
 # but LLVM objdump shows.
 RE_ADDRESS_FOR_SYM = re.compile(br'\b[\da-f]{3,}\s+<', re.A)
