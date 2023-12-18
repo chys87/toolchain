@@ -107,8 +107,9 @@ class IPv6 {
     return Format(buf, a_, flags);
   }
   short_string<kMaxStringLen> ToString(int flags = 0) const noexcept;
-  std::string_view ToStringView(char (&buffer)[kMaxStringLen]) const noexcept {
-    return {buffer, size_t(ToString(buffer) - buffer)};
+  std::string_view ToStringView(char (&buffer)[kMaxStringLen],
+                                int flags = 0) const noexcept {
+    return {buffer, size_t(ToString(buffer, flags) - buffer)};
   }
 
   constexpr const in6_addr& Get() const noexcept { return a_; }
