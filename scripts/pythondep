@@ -105,14 +105,12 @@ class _NinjaDynDepFormatter(_Formatter):
 def _print_dependency(args):
     import modulefinder
 
-    path = sys.path[:]
-    path[0] = os.path.dirname(args.filename)
-
-    finder = modulefinder.ModuleFinder(path=path)
+    finder = modulefinder.ModuleFinder()
     try:
-        finder.load_file(args.filename)
+        finder.run_script(args.filename)
     except AttributeError:  # No idea why
-        pass
+        # Try again, it likely works
+        finder.run_script(args.filename)
 
     if args.format == 'ninja_dyndep':
         formatter = _NinjaDynDepFormatter()
