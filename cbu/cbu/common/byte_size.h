@@ -119,6 +119,8 @@ class ByteSize {
   constexpr U bytes() const noexcept { return bytes_; }
   constexpr U size() const noexcept { return bytes_ / sizeof(T); }
 
+  constexpr bool valid() const noexcept { return bytes_ % sizeof(T) == 0; }
+
   constexpr operator U() const noexcept { return size(); }
   constexpr explicit operator bool() const noexcept { return bytes_; }
 
