@@ -71,6 +71,8 @@ AUTO_GENERATED_HEADERS := $(filter %.h %.hpp, $(AUTO_GENERATED))
 HANDWRITTEN_HEADERS := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.h $(x)/*.hpp $(x)/*.h++ $(x)/%.hh $(x)/%.H))
 HANDWRITTEN_SRCS := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.c $(x)/*.cc $(x)/*.cpp $(x)/*.C $(x)/*.cxx $(x)/*.S))
 
+gen: $(AUTO_GENERATED)
+
 SRCS := $(HANDWRITTEN_SRCS) $(AUTO_GENERATED_SRCS)
 
 ifeq "$(SRCS)" ""
@@ -288,7 +290,7 @@ ifneq "$(AUTO_GENERATED_HEADERS)" ""
 $(OBJS) $(DEPS): | $(AUTO_GENERATED_HEADERS)
 endif
 
-.PHONY:	all install install-data size bincmp purge clean clobber un compare ut
+.PHONY:	all install install-data size bincmp purge clean clobber un compare ut gen
 .DEFAULT_GOAL := all
 
 -include Makefile-spec
