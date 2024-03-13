@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -121,8 +122,18 @@ class fixed_length_string {
   explicit fixed_length_string(UninitializedTag) noexcept {}
 
   constexpr fixed_length_string() noexcept : s_{} {}
-  consteval fixed_length_string(std::string_view src) noexcept : s_{} {
-    assign(src);
+
+  consteval fixed_length_string(const char (&s)[Len + 1]) noexcept : s_{} {
+    assign(s);
+  }
+
+  constexpr fixed_length_string(std::span<const char, Len> s) noexcept : s_{} {
+    assign(s);
+  }
+
+  constexpr fixed_length_string(UnsafeTag, std::string_view src) noexcept
+      : s_{} {
+    assign_unsafe(src);
   }
 
   constexpr char* data() noexcept { return s_; }
@@ -143,7 +154,14 @@ class fixed_length_string {
     return {s_, Len};
   }
 
-  constexpr void assign(std::string_view src) noexcept {
+  constexpr void assign(std::span<const char, Len> src) noexcept {
+    assign_unsafe(std::string_view(src.data(), src.size()));
+  }
+  constexpr void assign(const char (&s)[Len+1]) noexcept {
+    assign_unsafe({s, Len});
+  }
+
+  constexpr void assign_unsafe(std::string_view src) noexcept {
     std::size_t copy_len = std::min(Len, src.size());
     std::copy_n(src.data(), copy_len, s_);
     std::fill_n(s_ + copy_len, sizeof(s_) - copy_len, 0);

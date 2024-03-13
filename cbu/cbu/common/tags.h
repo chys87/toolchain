@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,9 @@ inline constexpr ReservedTag kReserved;
 
 struct UninitializedTag {};
 inline constexpr UninitializedTag kUninitialized;
+
+struct UnsafeTag {};
+inline constexpr UnsafeTag kUnsafe;
 
 // specifying radix
 template <int>
