@@ -24,11 +24,16 @@ SRCS := $(wildcard *.c)
 OBJS := $(SRCS:%.c=%.o)
 DEPS := $(SRCS:%.c=%.P)
 
+LDFLAGS := -shared -Wl,-O1,--gc-sections,--as-needed
+
 ifneq "" "$(shell which clang 2>/dev/null)"
   CC := clang
+endif
+
+ifneq "" "$(findstring clang,$(CC))"
   STRIP := llvm-strip
   ifneq "" "$(shell which lld 2>/dev/null)"
-    CC += -fuse-ld=lld
+    LDFLAGS += -fuse-ld=lld
   endif
 else
   CC := gcc
@@ -81,16 +86,14 @@ CFLAGS := -O2 -march=native -flto -std=gnu2x -fPIC \
 	-Werror=old-style-declaration -Werror=old-style-definition \
 	-Werror=missing-parameter-type \
 	-Werror=strict-prototypes \
-	-Werror=jump-misses-init \
-	-fmax-errors=5
+	-Werror=jump-misses-init
 
 ifneq "" "$(findstring aarch64,$(shell $(CC) -dumpmachine))"
 	CFLAGS += -mcmodel=tiny
 	# ldd doesn't support tiny model correctly when generating DSO
-	CC := $(subst -fuse-ld=lld,-fuse-ld=ld,$(CC))
+	LDFLAGS := $(subst -fuse-ld=lld,-fuse-ld=ld,$(LDFLAGS))
 endif
 
-LDFLAGS := -shared -Wl,-O1,--gc-sections,--as-needed
 INSTNAME := ~/bin/egmake.so
 
 -include Makefile-spec

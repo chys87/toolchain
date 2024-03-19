@@ -39,6 +39,7 @@ static int do_symlink(const char* target, const char* link) {
 
 char* func_symlinkrel(const char* nm, unsigned int argc, char** argv) {
   if (argc != 2) return NULL;
+  int rc;
   char* orig_target = argv[0];
   const char* link = argv[1];
   const char* slash = strrchr(link, '/');
@@ -55,7 +56,7 @@ char* func_symlinkrel(const char* nm, unsigned int argc, char** argv) {
     free(base_dir);
   }
   if (target == NULL) goto error;
-  int rc = do_symlink(target, link);
+  rc = do_symlink(target, link);
   free(target);
   if (rc != 0) goto error;
   return NULL;
