@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 
 def get_make_pid():
@@ -27,13 +28,25 @@ def get_make_pid():
         pid = int(m.group(1))
 
 
+def clear_old_files(dirname):
+    threshold = time.time() - 3600
+    with os.scandir(dirname) as it:
+        for entry in it:
+            try:
+                if entry.is_file(follow_symlinks=False) and \
+                        entry.stat(follow_symlinks=False).st_mtime < threshold:
+                    os.unlink(entry.path)
+            except OSError:
+                pass
+
+
 def main():
     if len(sys.argv) < 3:
         print('Too few arguments', file=sys.stderr)
         sys.exit(127)
 
     make_pid = get_make_pid()
-    if not make_pid:
+    if make_pid is None:
         print('Unable to find a running make session', file=sys.stderr)
         sys.exit(127)
 
@@ -43,9 +56,11 @@ def main():
     except FileExistsError:
         pass
 
+    clear_old_files(track_dir)
+
     track_file = os.path.join(
         track_dir,
-        '{}-{}'.format(make_pid, sys.argv[1].replace('/', '--')))
+        '{}-{}.tag'.format(make_pid, sys.argv[1].replace('/', '--')))
     try:
         fd = os.open(track_file, os.O_RDWR | os.O_CREAT, 0o600)
     except OSError:
