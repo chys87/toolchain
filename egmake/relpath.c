@@ -94,12 +94,15 @@ static bool abspath_get(const char* path, AbsPath* res) {
 
 char *func_relpath(const char *nm, unsigned int argc, char **argv) {
   if (argc != 2) return NULL;
+  return egmake_relpath(argv[0], argv[1]);
+}
 
+char* egmake_relpath(const char* path, const char* base) {
   AbsPath path_abs;
-  if (!abspath_get(argv[0], &path_abs)) return NULL;
+  if (!abspath_get(path, &path_abs)) return NULL;
 
   AbsPath start_abs;
-  if (!abspath_get(argv[1], &start_abs)) {
+  if (!abspath_get(base, &start_abs)) {
     abspath_free(&path_abs);
     return NULL;
   }

@@ -1,6 +1,6 @@
 /*
 egmake, Enhanced GNU make
-Copyright (C) 2014-2023, chys <admin@CHYS.INFO>
+Copyright (C) 2014-2024, chys <admin@CHYS.INFO>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -32,3 +32,6 @@ char *Mempcpy(char *d, const void *s, size_t n);
 
 char *strdup_to_gmk_with_len(const char *s, size_t l);
 char *strdup_to_gmk(const char *s);
+
+// relpath.c
+char* egmake_relpath(const char* path, const char* base);

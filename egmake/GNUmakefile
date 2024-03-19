@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-.PHONY: all install clean test
+.PHONY: all install clean test un size bincmp
 .SUFFIXES:
 .DELETE_ON_ERROR:
 
@@ -84,6 +84,12 @@ CFLAGS := -O2 -march=native -flto -std=gnu2x -fPIC \
 	-Werror=jump-misses-init \
 	-fmax-errors=5
 
+ifneq "" "$(findstring aarch64,$(shell $(CC) -dumpmachine))"
+	CFLAGS += -mcmodel=tiny
+	# ldd doesn't support tiny model correctly when generating DSO
+	CC := $(subst -fuse-ld=lld,-fuse-ld=ld,$(CC))
+endif
+
 LDFLAGS := -shared -Wl,-O1,--gc-sections,--as-needed
 INSTNAME := ~/bin/egmake.so
 
@@ -99,7 +105,7 @@ $(OBJS): %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(DEPS): %.P: %.c
-	$(CC) $(CFLAGS) -MM -MP -MF $@ -MT '$@ $(basename $@).o' $<
+	$(CC) $(CFLAGS) -MM -MP -MF $@ -MT '$@ $(@:%.P=%.o)' $<
 
 ifneq "$(MAKECMDGOALS)" "clean"
 include $(DEPS)
@@ -111,6 +117,15 @@ clean:
 install: $(INSTNAME)
 $(INSTNAME): egmake.so
 	install -m755 -C -T -v $< $@
+
+un: egmake-unstripped.so
+	../scripts/unassembly $<
+
+size: egmake.so
+	../scripts/detailed_size $(wildcard $(INSTNAME)) egmake.so
+
+bincmp:
+	../scripts/bincmp $(INSTNAME) egmake.so
 
 define define_test
 .PHONY: test-$(1)
