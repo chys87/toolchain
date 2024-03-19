@@ -74,8 +74,7 @@ def main():
 
     ret = subprocess.call(sys.argv[2:])
     os.lseek(fd, 0, os.SEEK_SET)
-    os.write(fd, str(ret).encode())
-    os.close(fd)
+    os.pwrite(fd, str(ret).encode(), 0)
     sys.exit(ret)
 
 
