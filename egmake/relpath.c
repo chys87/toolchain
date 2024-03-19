@@ -32,7 +32,7 @@ typedef struct PathPart {
 } PathPart;
 
 static bool part_equal(const PathPart* a, const PathPart* b) {
-  return (a->l == b->l && memcmp(a->p, b->p, a->l) == 0);
+  return (a->l == b->l && __memcmpeq(a->p, b->p, a->l) == 0);
 }
 
 typedef struct AbsPath {
