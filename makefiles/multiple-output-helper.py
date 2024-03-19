@@ -7,9 +7,6 @@ import subprocess
 import sys
 
 
-TEMP_DIR = '/tmp/makefile-multiple-output-helper'
-
-
 def get_make_pid():
     pid = os.getppid()
     while True:
