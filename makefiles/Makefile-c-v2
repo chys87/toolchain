@@ -125,6 +125,7 @@ OPTIMIZEFLAGS ?= -O2 \
 				 -fno-ident \
 				 -ffp-contract=fast \
 				 -fno-stack-protector \
+				 -fno-stack-clash-protection \
 				 -Qn
 COPTIMIZEFLAGS ?=
 CXXOPTIMIZEFLAGS ?= -fno-enforce-eh-specs -fabi-version=0 -ftemplate-backtrace-limit=0 -fvisibility-inlines-hidden
@@ -374,7 +375,7 @@ endif
 CFLAGS = $(OPTIMIZEFLAGS) $(COPTIMIZEFLAGS) $(ARCHFLAGS) $(CWARNINGFLAGS) $(CSTD) $(INCLUDES) $(DEFS) $(EXTRA_CFLAGS)
 CXXFLAGS = $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) $(CXXSTD) $(INCLUDES) $(DEFS) $(EXTRA_CXXFLAGS)
 BASE_LDFLAGS = -Wl,-O1 -Wl,--fatal-warnings -Wl,--as-needed \
-  -Wl,-z,relro -Wl,-z,noexecstack \
+  -Wl,-z,relro -Wl,-z,lazy -Wl,-z,noexecstack \
   -Wl,-z,start-stop-visibility=hidden \
   -Wl,-z,nostart-stop-gc
 ifneq "$(SYMBOL_SECTIONS)" "0"
