@@ -33,6 +33,7 @@ gmk_func_type func_readlink;
 gmk_func_type func_relpath;
 gmk_func_type func_symlink;
 gmk_func_type func_symlinkrel;
+gmk_func_type func_which;
 
 int egmake_gmk_setup(void) __attribute__((visibility("default")));
 int egmake_gmk_setup(void) {
@@ -48,5 +49,6 @@ int egmake_gmk_setup(void) {
   gmk_add_function("EGM.relpath", &func_relpath, 2, 2, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.symlink", &func_symlink, 2, 2, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.symlinkrel", &func_symlinkrel, 2, 2, GMK_FUNC_DEFAULT);
+  gmk_add_function("EGM.which", &func_which, 1, 1, GMK_FUNC_DEFAULT);
   return 1;
 }
