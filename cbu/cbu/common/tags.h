@@ -39,6 +39,9 @@ inline constexpr UninitializedTag kUninitialized;
 struct UnsafeTag {};
 inline constexpr UnsafeTag kUnsafe;
 
+struct RefTag {};
+inline constexpr RefTag kRef;
+
 // specifying radix
 template <int>
 struct RadixTag {};
