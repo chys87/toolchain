@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "cbu/compat/atomic_ref.h"
+#include "cbu/compat/compilers.h"
 
 namespace cbu {
 
@@ -96,7 +97,7 @@ inline bool ref_cnt_dec(ref_cnt_t* p) noexcept {
 // It doesn't support consturcting a derived type.
 // Nor does it support other advanced features of shared_ptr.
 template <typename T, int OPTIONS = 0>
-class RefCntPtr {
+class CBU_TRIVIAL_ABI RefCntPtr {
  public:
   constexpr RefCntPtr(decltype(nullptr) = nullptr) noexcept
       : p_(nullptr) {}
@@ -136,7 +137,7 @@ class RefCntPtr {
 
   void swap(RefCntPtr& other) noexcept { std::swap(p_, other.p_); }
 
-  ~RefCntPtr() noexcept { dec(); }
+  constexpr ~RefCntPtr() noexcept { dec(); }
 
   explicit constexpr operator bool() const noexcept { return p_; }
 
@@ -149,8 +150,10 @@ class RefCntPtr {
   T* operator->() noexcept { return &p_->v; }
   const T* operator->() const noexcept { return &p_->v; }
 
+  static constexpr inline bool bitwise_movable(RefCntPtr*) { return true; }
+
  private:
-  void dec() noexcept {
+  constexpr void dec() noexcept {
     if (p_ && ref_cnt_dec<OPTIONS | REF_CNT_MAY_NOT_WRITE_ZERO>(&p_->cnt))
       delete p_;
   }
