@@ -236,7 +236,7 @@ INST_TARGETS += $(1)
 all:	$(BUILDDIR)/$(1).out
 .PHONY: install-$(1)
 install-$(1): $(INSTDIR)/$(1)
-install: install-$(1)
+install-bin: install-$(1)
 $(INSTDIR)/$(1):$(BUILDDIR)/$(1).out ut
 	$(INSTALL) $$< $$@
 endif
@@ -291,8 +291,11 @@ ifneq "$(AUTO_GENERATED_HEADERS)" ""
 $(OBJS) $(DEPS): | $(AUTO_GENERATED_HEADERS)
 endif
 
-.PHONY:	all install install-data size bincmp purge clean clobber un compare ut gen
+.PHONY:	all install install-bin install-data size bincmp purge clean clobber un compare ut gen
 .DEFAULT_GOAL := all
+
+all: ut
+install: install-data install-bin
 
 -include Makefile-spec
 
@@ -382,8 +385,6 @@ ifneq "$(SYMBOL_SECTIONS)" "0"
 BASE_LDFLAGS += -Wl,--gc-sections
 endif
 LDFLAGS = $(ARCHFLAGS) $(OPTIMIZEFLAGS) $(BASE_LDFLAGS) $(EXTRA_LDFLAGS)
-
-all: ut
 
 SIZE_COMMANDS :=
 UN_COMMANDS :=
