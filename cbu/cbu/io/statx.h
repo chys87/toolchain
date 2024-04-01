@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -97,6 +97,7 @@ using StatxModeOnly = StatxField<STATX_MODE, &struct_statx::stx_mode>;
 using StatxType = StatxField<STATX_TYPE, &struct_statx::stx_mode>;
 using StatxUid = StatxField<STATX_UID, &struct_statx::stx_uid>;
 using StatxGid = StatxField<STATX_GID, &struct_statx::stx_gid>;
+using StatxNLink = StatxField<STATX_NLINK, &struct_statx::stx_nlink>;
 
 template <detail::Statx_spec RealTimeSpec>
 struct StatxCombineTime : RealTimeSpec {
