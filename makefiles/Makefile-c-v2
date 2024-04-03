@@ -174,6 +174,7 @@ GENERIC_WARNINGFLAGS := -Wall -Wextra -Wshadow=local -Wwrite-strings \
 	-Werror=sizeof-pointer-memaccess \
 	-Werror=sizeof-array-argument \
 	-Werror=address-of-packed-member \
+	-Werror=uninitialized \
 	-fmax-errors=5
 #	-Werror=array-bounds (this doesn't work well with [1] arrays at the end of structures)
 CWARNINGFLAGS = $(GENERIC_WARNINGFLAGS) \
@@ -334,11 +335,13 @@ ifeq "$(IS_CLANG)" "1"
  AR ?= llvm-ar
  STRIP ?= llvm-strip --strip-all --strip-unneeded -R .comment -R .GCC.command.line
  ARCHFLAGS := $(subst -march=native,$(EGM.clang_march_native ),$(ARCHFLAGS))
+ GENERIC_WARNINGFLAGS += -Werror=sometimes-uninitialized
 else
  # GCC has -fimplicit-constexpr, which clang lacks
  EXTRA_CXXFLAGS += -fimplicit-constexpr
  AR ?= gcc-ar
  STRIP ?= strip --strip-unneeded -R .comment -R .GCC.command.line
+ GENERIC_WARNINGFLAGS += -Werror=maybe-uninitialized
 endif
 
 ifeq "$(NOEXCEPTIONS)" "1"
