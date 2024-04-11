@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,6 @@ char8_t *extend(std::u8string* buf, std::size_t n);
 #endif
 
 // Same as resize, but caller should guarantee n <= buf->size()
-// and (*buf)[n] == '\0'
 void truncate_unsafe(std::string* buf, std::size_t n);
 void truncate_unsafe(std::wstring* buf, std::size_t n);
 void truncate_unsafe(std::u16string* buf, std::size_t n);
