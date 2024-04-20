@@ -493,19 +493,19 @@ ifneq "" "$(AUTO_GENERATED_PROTOBUF_SRCS)"
 endif
 
 $(AUTO_GENERATED_PROTOBUF_SRCS): private NAME := PROTOC
-$(AUTO_GENERATED_PROTOBUF_SRCS): $(BUILDDIR)/%.pb.cc:$(DIR)/%.proto | $(PROTOC)
+$(AUTO_GENERATED_PROTOBUF_SRCS): $(BUILDDIR)/%.pb.cc:$(DIR)/%.proto $(PROTOC)
 	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(PROTOC) $(PROTOCFLAGS) --dependency_out=$(@:%.pb.cc=%.proto.P) --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 $(AUTO_GENERATED_PROTOBUF_HEADERS): private NAME := PROTOC
-$(AUTO_GENERATED_PROTOBUF_HEADERS): $(BUILDDIR)/%.pb.h:$(DIR)/%.proto | $(PROTOC)
+$(AUTO_GENERATED_PROTOBUF_HEADERS): $(BUILDDIR)/%.pb.h:$(DIR)/%.proto $(PROTOC)
 	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(PROTOC) $(PROTOCFLAGS) --dependency_out=$(@:%.pb.h=%.proto.P) --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 $(AUTO_GENERATED_PROTOBUF_DEPS): private NAME := PROTOC
-$(AUTO_GENERATED_PROTOBUF_DEPS): $(BUILDDIR)/%.proto.P:$(DIR)/%.proto | $(PROTOC)
+$(AUTO_GENERATED_PROTOBUF_DEPS): $(BUILDDIR)/%.proto.P:$(DIR)/%.proto $(PROTOC)
 	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(PROTOC) $(PROTOCFLAGS) --dependency_out=$@ --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 $(AUTO_GENERATED_PROTOBUF_PYTHON): private NAME := PROTOC
-$(AUTO_GENERATED_PROTOBUF_PYTHON): $(BUILDDIR)/%_pb2.py:$(DIR)/%.proto | $(PROTOC)
+$(AUTO_GENERATED_PROTOBUF_PYTHON): $(BUILDDIR)/%_pb2.py:$(DIR)/%.proto $(PROTOC)
 	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(PROTOC) $(PROTOCFLAGS) --dependency_out=$(@:%_pb2.py=%.proto.P) --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
 
 ifneq "" "$(AUTO_GENERATED_FLATBUF_HEADERS)"
@@ -514,11 +514,11 @@ endif
 
 # flatc prints error message to stdout!!! So we have to cat $@
 $(AUTO_GENERATED_FLATBUF_DEPS): private NAME := FLATCDEP
-$(AUTO_GENERATED_FLATBUF_DEPS): $(BUILDDIR)/%.fbs.P:$(DIR)/%.fbs | $(FLATC)
+$(AUTO_GENERATED_FLATBUF_DEPS): $(BUILDDIR)/%.fbs.P:$(DIR)/%.fbs $(FLATC)
 	$(Q)$(FLATC) -M -o $(@D) $(FLATCFLAGS) $(FLAGS-$(<F)) --cpp $< > $@ || ( [ -r $@ ] && cat $@ >&2; rm -f $@; exit 1)
 
 $(AUTO_GENERATED_FLATBUF_HEADERS): private NAME := FLATC
-$(AUTO_GENERATED_FLATBUF_HEADERS): $(BUILDDIR)/%_generated.h:$(DIR)/%.fbs | $(FLATC)
+$(AUTO_GENERATED_FLATBUF_HEADERS): $(BUILDDIR)/%_generated.h:$(DIR)/%.fbs $(FLATC)
 	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(FLATC) -o $(@D) $(FLATCFLAGS) $(FLAGS-$(<F)) --python --cpp $<
 
 ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
