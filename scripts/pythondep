@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (c) 2014-2022 chys <admin@CHYS.INFO>
+# Copyright (c) 2014-2024 chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -61,11 +61,10 @@ def _check_python_version(args):
     else:
         full_interpreter = interpreter
 
-    if full_interpreter == sys.executable or interpreter == sys.argv[0] \
-            or full_interpreter == sys.argv[0]:
+    if full_interpreter == sys.executable:
         return True, None
 
-    return False, shebang + [__file__] + sys.argv[1:]
+    return False, shebang + sys.argv
 
 
 class _Formatter:
