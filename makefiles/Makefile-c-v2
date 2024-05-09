@@ -103,7 +103,7 @@ DEPS    := $(sort $(CDEPS) $(CXXDEPS) $(ASMDEPS))
 CC := ccache gcc
 CXX := ccache g++
 
-INCLUDES := -iquote $(DIR) -iquote $(BUILDDIR) $(foreach x,$(AUTO_GENERATED_HEADERS),-iquote $(dir $(x)))
+INCLUDES := -iquote $(DIR) -iquote $(BUILDDIR)
 LIBS :=
 DEFS := -D _GNU_SOURCE -D NDEBUG \
 	-D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS \
@@ -247,7 +247,7 @@ else
 $(BUILDDIR)/$(1).n.out: private CLINKER = $(CXX)
 endif
 $(BUILDDIR)/$(1).n.out: private NAME := LD
-$(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(4:%=$(BUILDDIR)/lib%.a) $(AUTO_GENERATED_HEADERS)
+$(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(4:%=$(BUILDDIR)/lib%.a)
 	+$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ \
 		$(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) \
 		$(4:%=$(BUILDDIR)/lib%.a) \
