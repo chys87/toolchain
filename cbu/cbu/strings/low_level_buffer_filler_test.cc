@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -104,6 +104,24 @@ TEST(LowLevelBufferFillerTest, FillDec) {
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 5);
     ASSERT_EQ(std::string(buffer, p - buffer), "@@123");
+  }
+  // Not using kDigits99
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<130, FillOptions<2>>(132);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 2);
+    ASSERT_EQ(std::string(buffer, p - buffer), "32");
+  }
+  // Using kDigits99
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<100, FillOptions<2>>(17);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 2);
+    ASSERT_EQ(std::string(buffer, p - buffer), "17");
   }
 }
 

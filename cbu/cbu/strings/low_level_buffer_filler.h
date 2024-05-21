@@ -95,37 +95,52 @@ struct FillDec {
     }
   }
 
-  template <std::uint64_t UB, unsigned K, Raw_char_type Ch>
+  template <std::uint64_t UB, unsigned W, Raw_char_type Ch>
   static constexpr void conv_fixed_digit(std::uint64_t v, Ch* p) noexcept {
-    if constexpr (Options::fill != '0' && K < Options::width) {
+    if constexpr (Options::fill != '0' && W < Options::width) {
       if (v == 0) {
-        for (unsigned k = K; k; --k) p[k - 1] = Options::fill;
+        for (unsigned k = W; k; --k) p[k - 1] = Options::fill;
         return;
       }
     }
 
-    std::uint64_t quot;
-    std::uint32_t rem;
-    if constexpr (UB == 0) {
-      quot = v / 10;
-      rem = v % 10;
-    } else {
-      quot = cbu::fastdiv<10, UB>(v);
-      rem = cbu::fastmod<10, UB>(v);
-    }
+    if constexpr (W >= 2 && Options::fill == '0' && UB >= 11) {
+      std::uint64_t quot;
+      std::uint64_t rem;
+      if constexpr (UB == 0) {
+        quot = v / 100;
+        rem = v % 100;
+      } else {
+        quot = cbu::fastdiv<100, UB>(v);
+        rem = cbu::fastmod<100, UB>(v);
+      }
+      const char* __restrict dg = kDigits99 + 2 * rem;
+      memdrop2(p + W - 2, mempick2(dg));
 
-    if constexpr (K <= 1) {
-      if constexpr (K == 1) p[0] = Ch(rem + '0');
+      constexpr std::uint64_t NextUB =
+          UB == 0 ? std::uint64_t(-1) / 100 + 1 : (UB - 1) / 100 + 1;
+      conv_fixed_digit<NextUB, W - 2>(quot, p);
       return;
-    }
+    } else {
+      std::uint64_t quot;
+      std::uint32_t rem;
+      if constexpr (UB == 0) {
+        quot = v / 10;
+        rem = v % 10;
+      } else {
+        quot = cbu::fastdiv<10, UB>(v);
+        rem = cbu::fastmod<10, UB>(v);
+      }
 
-    p[K - 1] = Ch(rem + '0');
-    // K - 1 should work (as K == 0 doesn't reach here), but GCC's template
-    // instantiater apparently doesn't know this.
-    constexpr unsigned NextK = K ? K - 1 : 0;
-    constexpr std::uint64_t NextUB =
-        UB == 0 ? std::uint64_t(-1) / 10 + 1 : (UB - 1) / 10 + 1;
-    conv_fixed_digit<NextUB, NextK>(quot, p);
+      if constexpr (W <= 1) {
+        if constexpr (W == 1) p[0] = Ch(rem + '0');
+      } else {
+        p[W - 1] = Ch(rem + '0');
+        constexpr std::uint64_t NextUB =
+            UB == 0 ? std::uint64_t(-1) / 10 + 1 : (UB - 1) / 10 + 1;
+        conv_fixed_digit<NextUB, W - 1>(quot, p);
+      }
+    }
   }
 
   template <Raw_char_type Ch>
