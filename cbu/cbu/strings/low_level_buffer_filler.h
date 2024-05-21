@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -245,6 +245,7 @@ class LowLevelBufferFiller {
   }
 
   constexpr Ch* pointer() const noexcept { return p_; }
+  constexpr void set_pointer(Ch* p) noexcept { p_ = p; }
 
  private:
   Ch* p_;
