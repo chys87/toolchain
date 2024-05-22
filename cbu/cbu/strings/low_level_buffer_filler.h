@@ -89,9 +89,7 @@ struct FillDec {
       conv_fixed_digit<UpperBound, Options::width>(value, p);
       return p + Options::width;
     } else {
-      Ch* q = conv_flexible_digit(value, p);
-      std::reverse(p, q);
-      return q;
+      return conv_flexible_digit(value, p);
     }
   }
 
@@ -145,16 +143,47 @@ struct FillDec {
 
   template <Raw_char_type Ch>
   static constexpr Ch* conv_flexible_digit(std::uint64_t v, Ch* p) noexcept {
+    Ch* s = p;
     if constexpr (UpperBound == 0) {
       do {
         *p++ = Ch(v % 10 + '0');
       } while ((v /= 10) != 0);
+      reverse(s, p);
+    } else if constexpr (UpperBound <= 10) {
+      *p++ = Ch(v + '0');
+    } else if constexpr (UpperBound <= 20) {
+      if (v < 10) {
+        *p++ = Ch(v + '0');
+      } else {
+        *p++ = '1';
+        *p++ = Ch(v - 10 + '0');
+      }
+    } else if constexpr (UpperBound <= 100) {
+      if (v < 10) {
+        *p++ = Ch(v + '0');
+      } else {
+        p = cbu::memdrop2(p, cbu::mempick2(kDigits99 + 2 * v));
+      }
     } else {
       do {
         *p++ = Ch(cbu::fastmod<10, UpperBound>(v) + '0');
       } while ((v = cbu::fastdiv<10, UpperBound>(v)) != 0);
+      reverse(s, p);
     }
     return p;
+  }
+
+  template <Raw_char_type Ch>
+  static constexpr void reverse(Ch* p, Ch* q) noexcept {
+#ifdef __clang__
+#pragma clang loop vectorize(disable) unroll(disable)
+#endif
+    while (p < --q) {
+      Ch tmp = *p;
+      *p = *q;
+      *q = tmp;
+      ++p;
+    }
   }
 };
 

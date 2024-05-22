@@ -74,7 +74,7 @@ TEST(LowLevelBufferFillerTest, ConstExpr) {
 TEST(LowLevelBufferFillerTest, FillDec) {
 
   {
-    char buffer[4096] = {};
+    char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
     filler << FillDec<0>(12345);
     char* p = filler.pointer();
@@ -82,7 +82,31 @@ TEST(LowLevelBufferFillerTest, FillDec) {
     ASSERT_EQ(std::string(buffer, p - buffer), "12345");
   }
   {
-    char buffer[4096] = {};
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<9>(5);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 1);
+    ASSERT_EQ(std::string(buffer, p - buffer), "5");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<20>(15);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 2);
+    ASSERT_EQ(std::string(buffer, p - buffer), "15");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<99>(54);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 2);
+    ASSERT_EQ(std::string(buffer, p - buffer), "54");
+  }
+  {
+    char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
     filler << FillDec<99999>(12345);
     char* p = filler.pointer();
@@ -90,7 +114,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
     ASSERT_EQ(std::string(buffer, p - buffer), "12345");
   }
   {
-    char buffer[4096] = {};
+    char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
     filler << FillDec<99999, FillOptions<>::with_width<5>>(123);
     char* p = filler.pointer();
@@ -98,7 +122,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
     ASSERT_EQ(std::string(buffer, p - buffer), "00123");
   }
   {
-    char buffer[4096] = {};
+    char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
     filler << FillDec<99999, FillOptions<>::with_width<5>::with_fill<'@'>>(123);
     char* p = filler.pointer();
