@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -179,33 +179,43 @@ template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
   using Type = fastdiv_detail::FastDivType<D, UB>;
-#if defined __clang__ && __has_builtin(__builtin_assume)
-  __builtin_assume(v < UB);
-  return v / Type(D);
-#else
-  if constexpr (UB == 256) {
+  if constexpr (UB <= D) {
+    return 0;
+  } else if constexpr (D == 1) {
+    return v;
+  } else if constexpr (UB == 256) {
     return std::uint8_t(v) / D;
   } else if constexpr (UB == 65536) {
     return std::uint16_t(v) / D;
   } else if constexpr (UB == 4294967296) {
     return std::uint32_t(v) / D;
   } else {
+#if defined __clang__ && __has_builtin(__builtin_assume)
+    __builtin_assume(v < UB);
+    return v / Type(D);
+#else
     return fastdiv_detail::fastdiv<Type, static_cast<Type>(D),
                                    static_cast<Type>(UB)>(v);
-  }
 #endif
+  }
 }
 
 template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
-#if defined __clang__ && __has_builtin(__builtin_assume)
-  using Type = fastdiv_detail::FastDivType<D, UB>;
-  __builtin_assume(v < UB);
-  return v % Type(D);
+  if constexpr (UB <= 1 || D == 1) {
+    return 0;
+  } else if constexpr (UB <= D) {
+    return v;
+  } else {
+#if __has_builtin(__builtin_assume)
+    using Type = fastdiv_detail::FastDivType<D, UB>;
+    __builtin_assume(v < UB);
+    return v % Type(D);
 #else
-  return v - D * fastdiv<D, UB>(v);
+    return v - D * fastdiv<D, UB>(v);
 #endif
+  }
 }
 
 template <std::uint64_t D, std::uint64_t UB>
@@ -213,13 +223,21 @@ inline constexpr std::pair<fastdiv_detail::FastDivType<D, UB>,
                            fastdiv_detail::FastDivType<D, UB>>
 fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
   using Type = fastdiv_detail::FastDivType<D, UB>;
+  if constexpr (UB <= 1) {
+    return {0, 0};
+  } else if constexpr (D == 1) {
+    return {v, 0};
+  } else if constexpr (UB <= D) {
+    return {0, Type(v)};
+  } else {
 #if defined __clang__ && __has_builtin(__builtin_assume)
-  __builtin_assume(v < UB);
-  return {v / Type(D), v % Type(D)};
+    __builtin_assume(v < UB);
+    return {v / Type(D), v % Type(D)};
 #else
-  Type quo = fastdiv<D, UB>(v);
-  return {quo, v - quo * D};
+    Type quo = fastdiv<D, UB>(v);
+    return {quo, v - quo * D};
 #endif
+  }
 }
 
 }  // namespace cbu
