@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,4 +56,32 @@
 
 #ifndef CBU_DISABLE_ADDRESS_SANITIZER
 #  define CBU_DISABLE_ADDRESS_SANITIZER
+#endif
+
+// Some early clang versions recognize them but segfaults
+#if defined __clang__ && __clang_major__ >= 17 && \
+    (defined __x86_64__ || defined __aarch64__)
+#define CBU_PRESERVE_ALL [[clang::preserve_all]]
+#define CBU_PRESERVE_MOST [[clang::preserve_most]]
+#if __clang_major__ >= 19
+#define CBU_PRESERVE_NONE [[clang::preserve_none]]
+#else
+#define CBU_PRESERVE_NONE
+#endif
+#else
+#define CBU_PRESERVE_ALL
+#define CBU_PRESERVE_MOST
+#define CBU_PRESERVE_NONE
+#endif
+
+// preserve_all and preserve_most are obviously more useful on aarch64 than
+// x86-64
+#ifdef __aarch64__
+#define CBU_AARCH64_PRESERVE_ALL CBU_AARCH64_PRESERVE_ALL
+#define CBU_AARCH64_PRESERVE_MOST CBU_AARCH64_PRESERVE_MOST
+#define CBU_AARCH64_PRESERVE_NONE CBU_AARCH64_PRESERVE_NONE
+#else
+#define CBU_AARCH64_PRESERVE_ALL
+#define CBU_AARCH64_PRESERVE_MOST
+#define CBU_AARCH64_PRESERVE_NONE
 #endif
