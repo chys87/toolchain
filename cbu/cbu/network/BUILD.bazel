@@ -31,6 +31,7 @@ cc_library(
   hdrs = glob(['*.h']),
   deps = [
     '//cbu/common:common',
+    '//cbu/compat:compat',
     '//cbu/strings:common',
     '//cbu/fsyscall',
     '//cbu/math:fastdiv',

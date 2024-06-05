@@ -90,9 +90,11 @@ class IPv4 {
     return BrokeIPv4{a(), b(), c(), d()};
   }
 
-  char* ToString(char* buffer) const noexcept;
-  short_string<kMaxStringLen> ToString() const noexcept;
-  std::string_view ToStringView(char (&buffer)[kMaxStringLen]) const noexcept {
+  CBU_AARCH64_PRESERVE_ALL char* ToString(char* buffer) const noexcept;
+  CBU_AARCH64_PRESERVE_ALL short_string<kMaxStringLen> ToString()
+      const noexcept;
+  CBU_AARCH64_PRESERVE_ALL std::string_view ToStringView(
+      char (&buffer)[kMaxStringLen]) const noexcept {
     return {buffer, size_t(ToString(buffer) - buffer)};
   }
 
@@ -116,7 +118,8 @@ class IPv4 {
   }
 
   // FromCommonString supports only the common "a.b.c.d" format
-  static std::optional<IPv4> FromCommonString(std::string_view s) noexcept;
+  CBU_AARCH64_PRESERVE_ALL static std::optional<IPv4> FromCommonString(
+      std::string_view s) noexcept;
   // FromString supports all legal formats,
   // e.g. "127.0.0.1" may be represented as any of the following:
   // "127.0.0.1", "127.0.1", "127.1", "2130706433", "0x7f000001", "0x7f.0.0.1",

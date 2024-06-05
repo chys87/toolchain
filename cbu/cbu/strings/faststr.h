@@ -46,6 +46,7 @@
 #include "cbu/common/byteorder.h"
 #include "cbu/common/concepts.h"
 #include "cbu/common/stdhack.h"
+#include "cbu/compat/compilers.h"
 #include "cbu/compat/string.h"
 
 namespace cbu {
@@ -277,8 +278,8 @@ inline constexpr std::optional<unsigned> convert_2xdigit(
 }
 
 // Convert 4 hexadecimal digits
-inline constexpr std::optional<unsigned> convert_4xdigit(
-    const char *s, bool assume_valid = false) noexcept {
+CBU_AARCH64_PRESERVE_ALL inline constexpr std::optional<unsigned>
+convert_4xdigit(const char* s, bool assume_valid = false) noexcept {
 #if defined __SSE4_1__ && defined __BMI2__
   if !consteval {
     __v16qu v = __v16qu(__v4su{mempick_be<uint32_t>(s), 0, 0, 0});

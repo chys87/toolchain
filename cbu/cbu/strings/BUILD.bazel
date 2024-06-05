@@ -94,6 +94,7 @@ cc_library(
   deps = [
     '//cbu/common:header_only',
     '//cbu/common:stdhack',
+    '//cbu/compat:compat',
     '//cbu/math:common',
     '//cbu/math:strict_overflow',
   ],

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,7 +45,7 @@
 namespace cbu {
 namespace {
 
-char* uint8_to_string(char* p, std::uint8_t v) noexcept {
+inline char* uint8_to_string(char* p, std::uint8_t v) noexcept {
   if (v >= 100) {
     if (v >= 200) {
       *p++ = '2';
@@ -72,7 +72,8 @@ struct ParseResult {
   const char* s;
 };
 
-ParseResult<std::uint8_t> parse_uint8(const char* s, const char* e) noexcept {
+inline ParseResult<std::uint8_t> parse_uint8(const char* s,
+                                             const char* e) noexcept {
   if (s >= e) {
     return {false};
   }

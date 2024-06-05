@@ -30,6 +30,8 @@
 
 #include <assert.h>
 
+#include "cbu/compat/compilers.h"
+
 // Adapted from jemalloc's rb implementation
 // This implementation requires all elements to be unique, which is the caller's
 // responsibility to guarantee.
@@ -145,44 +147,54 @@ class RbBase {
     return ret;
   }
 
-  static Node* first(const Node* root, LinkPtr lp) noexcept;
-  static Node* last(const Node* root, LinkPtr lp) noexcept;
+  CBU_AARCH64_PRESERVE_ALL static Node* first(const Node* root,
+                                              LinkPtr lp) noexcept;
+  CBU_AARCH64_PRESERVE_ALL static Node* last(const Node* root,
+                                             LinkPtr lp) noexcept;
 
-  static Node* rotate_left(Node* node, LinkPtr lp) noexcept {
+  CBU_AARCH64_PRESERVE_ALL static Node* rotate_left(Node* node,
+                                                    LinkPtr lp) noexcept {
     Node* r = right(node, lp);
     right(node, left_exchange(r, node, lp), lp);
     return r;
   }
-  static Node* rotate_right(Node* node, LinkPtr lp) noexcept {
+  CBU_AARCH64_PRESERVE_ALL static Node* rotate_right(Node* node,
+                                                     LinkPtr lp) noexcept {
     Node* r = left(node, lp);
     left(node, right_exchange(r, node, lp), lp);
     return r;
   }
-  static Node* lean_left(Node* node, LinkPtr lp) noexcept {
+  CBU_AARCH64_PRESERVE_ALL static Node* lean_left(Node* node,
+                                                  LinkPtr lp) noexcept {
     Node* r = rotate_left(node, lp);
     color(r, color_exchange(node, kRed, lp), lp);
     return r;
   }
-  static Node* lean_right(Node* node, LinkPtr lp) noexcept {
+  CBU_AARCH64_PRESERVE_ALL static Node* lean_right(Node* node,
+                                                   LinkPtr lp) noexcept {
     Node* r = rotate_right(node, lp);
     color(r, color_exchange(node, kRed, lp), lp);
     return r;
   }
-  static void cmpxchg_child(Node* node, Node* oldval, Node* newval,
-                            LinkPtr lp) noexcept {
+  CBU_AARCH64_PRESERVE_ALL static void cmpxchg_child(Node* node, Node* oldval,
+                                                     Node* newval,
+                                                     LinkPtr lp) noexcept {
     if (left(node, lp) == oldval)
       left(node, newval, lp);
     else if (right(node, lp) == oldval)
       right(node, newval, lp);
   }
-  static void ucmpxchg_child(Node* node, Node* oldval, Node* newval,
-                             LinkPtr lp) noexcept {
+  CBU_AARCH64_PRESERVE_ALL static void ucmpxchg_child(Node* node, Node* oldval,
+                                                      Node* newval,
+                                                      LinkPtr lp) noexcept {
     assert(left(node, lp) == oldval || right(node, lp) == oldval);
     set(node, left(node, lp) == oldval, newval, lp);
   }
 
-  static Node* move_red_left(Node* node, LinkPtr lp) noexcept;
-  static Node* move_red_right(Node* node, LinkPtr lp) noexcept;
+  CBU_AARCH64_PRESERVE_ALL static Node* move_red_left(Node* node,
+                                                      LinkPtr lp) noexcept;
+  CBU_AARCH64_PRESERVE_ALL static Node* move_red_right(Node* node,
+                                                       LinkPtr lp) noexcept;
 };
 
 template <typename Node>
@@ -365,12 +377,12 @@ class Rb : public RbBase<typename Accessor::Node> {
   static Node* move_red_right(Node* node) noexcept {
     return Base::move_red_right(node, kLp);
   }
-  Node* insert(Node* node) noexcept;
-  Node* remove(Node* node) noexcept;
+  CBU_AARCH64_PRESERVE_ALL Node* insert(Node* node) noexcept;
+  CBU_AARCH64_PRESERVE_ALL Node* remove(Node* node) noexcept;
 
   // Remove and return the leftmost node.
   // This is a common operation so write a separate function to make it fast.
-  Node* try_pop_first() noexcept;
+  CBU_AARCH64_PRESERVE_ALL Node* try_pop_first() noexcept;
 
  public:
   constexpr Rb() noexcept = default;
