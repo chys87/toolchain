@@ -46,7 +46,8 @@ inline char* Copy(char* w, const std::string_view* array, std::size_t cnt) {
 }  // namespace
 
 void str_cat_detail::Append(std::string* dst, const std::string_view* array,
-                            std::size_t cnt, std::size_t total_size) {
+                            std::size_t cnt,
+                            std::size_t total_size) CBU_MEMORY_NOEXCEPT {
 #if 0
   std::size_t old_size = dst->size();
   dst->resize_and_overwrite(
@@ -62,14 +63,14 @@ void str_cat_detail::Append(std::string* dst, const std::string_view* array,
 }
 
 void str_cat_detail::Append(std::string* dst, std::string_view a,
-                            std::string_view b) {
+                            std::string_view b) CBU_MEMORY_NOEXCEPT {
   auto w = extend(dst, a.size() + b.size());
   w = static_cast<char*>(__builtin_mempcpy(w, a.data(), a.size()));
   __builtin_mempcpy(w, b.data(), b.size());
 }
 
 std::string str_cat_detail::Cat(const std::string_view* array, std::size_t cnt,
-                                std::size_t total_size) {
+                                std::size_t total_size) CBU_MEMORY_NOEXCEPT {
   std::string res;
   res.resize_and_overwrite(
       total_size, [array, cnt, total_size](char* w, std::size_t) noexcept {
@@ -79,7 +80,8 @@ std::string str_cat_detail::Cat(const std::string_view* array, std::size_t cnt,
   return res;
 }
 
-std::string str_cat_detail::Cat(std::string_view a, std::string_view b) {
+std::string str_cat_detail::Cat(std::string_view a,
+                                std::string_view b) CBU_MEMORY_NOEXCEPT {
   std::string res;
   std::size_t sz = a.size() + b.size();
   res.resize_and_overwrite(sz, [a, b, sz](char* w, std::size_t) noexcept {

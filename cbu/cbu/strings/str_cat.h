@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,19 +35,22 @@
 #include <tuple>
 #include <type_traits>
 
+#include "cbu/tweak/tweak.h"
+
 // Replacement of absl::StrCat and absl::StrAppend which supports std::string_view
 // in builds where absl::string_view isn't std::string_view
 
 namespace cbu {
 namespace str_cat_detail {
 
-void Append(std::string* dst, std::string_view a, std::string_view b);
+void Append(std::string* dst, std::string_view a,
+            std::string_view b) CBU_MEMORY_NOEXCEPT;
 void Append(std::string* dst, const std::string_view* array, std::size_t cnt,
-            std::size_t total_size);
+            std::size_t total_size) CBU_MEMORY_NOEXCEPT;
 
-std::string Cat(std::string_view a, std::string_view b);
+std::string Cat(std::string_view a, std::string_view b) CBU_MEMORY_NOEXCEPT;
 std::string Cat(const std::string_view* array, std::size_t cnt,
-                std::size_t total_size);
+                std::size_t total_size) CBU_MEMORY_NOEXCEPT;
 
 // This needs to go before SupportedAsStringView, so that the length of
 // const char (&)[N] is determined by strlen, instead of just using N
@@ -120,7 +123,7 @@ constexpr std::string_view Prepare(TempBuffer<T>* buffer, T v) noexcept {
 
 template <std::size_t... Idx, typename Tpl>
 inline void StrAppend(std::string* dst, std::index_sequence<Idx...>,
-                      const Tpl& args) {
+                      const Tpl& args) CBU_MEMORY_NOEXCEPT {
   std::tuple<str_cat_detail::TempBuffer<
       std::remove_cvref_t<std::tuple_element_t<Idx, Tpl>>>...>
       buffers;
@@ -139,7 +142,8 @@ inline void StrAppend(std::string* dst, std::index_sequence<Idx...>,
 }
 
 template <std::size_t... Idx, typename Tpl>
-inline std::string StrCat(std::index_sequence<Idx...>, const Tpl& args) {
+inline std::string StrCat(std::index_sequence<Idx...>,
+                          const Tpl& args) CBU_MEMORY_NOEXCEPT {
   std::tuple<str_cat_detail::TempBuffer<
       std::remove_cvref_t<std::tuple_element_t<Idx, Tpl>>>...>
       buffers;
@@ -160,13 +164,15 @@ inline std::string StrCat(std::index_sequence<Idx...>, const Tpl& args) {
 }  // namespace str_cat_detail
 
 template <str_cat_detail::Supported T>
-inline constexpr void StrAppend(std::string* dst, const T& arg) {
+inline constexpr void StrAppend(std::string* dst,
+                                const T& arg) CBU_MEMORY_NOEXCEPT {
   str_cat_detail::TempBuffer<T> buffer;
   dst->append(str_cat_detail::Prepare(&buffer, arg));
 }
 
 template <str_cat_detail::Supported T, str_cat_detail::Supported U>
-inline constexpr void StrAppend(std::string* dst, const T& arg, const U& argu) {
+inline constexpr void StrAppend(std::string* dst, const T& arg,
+                                const U& argu) CBU_MEMORY_NOEXCEPT {
   str_cat_detail::TempBuffer<T> buffer;
   str_cat_detail::TempBuffer<U> bufferu;
   str_cat_detail::Append(dst, str_cat_detail::Prepare(&buffer, arg),
@@ -175,19 +181,20 @@ inline constexpr void StrAppend(std::string* dst, const T& arg, const U& argu) {
 
 template <str_cat_detail::Supported... T>
   requires(sizeof...(T) > 2)
-inline void StrAppend(std::string* dst, const T&... args) {
+inline void StrAppend(std::string* dst, const T&... args) CBU_MEMORY_NOEXCEPT {
   str_cat_detail::StrAppend(dst, std::make_index_sequence<sizeof...(T)>(),
                             std::tuple<const T&...>{args...});
 }
 
 template <str_cat_detail::Supported T>
-inline constexpr std::string StrCat(const T& arg) {
+inline constexpr std::string StrCat(const T& arg) CBU_MEMORY_NOEXCEPT {
   str_cat_detail::TempBuffer<T> buffer;
   return std::string(str_cat_detail::Prepare(&buffer, arg));
 }
 
-template <str_cat_detail::Supported T,str_cat_detail::Supported U>
-inline constexpr std::string StrCat(const T& arg, const U& argu) {
+template <str_cat_detail::Supported T, str_cat_detail::Supported U>
+inline constexpr std::string StrCat(const T& arg,
+                                    const U& argu) CBU_MEMORY_NOEXCEPT {
   str_cat_detail::TempBuffer<T> buffer;
   str_cat_detail::TempBuffer<U> bufferu;
   return str_cat_detail::Cat(str_cat_detail::Prepare(&buffer, arg),
@@ -196,7 +203,7 @@ inline constexpr std::string StrCat(const T& arg, const U& argu) {
 
 template <str_cat_detail::Supported... T>
   requires(sizeof...(T) > 2)
-inline std::string StrCat(const T&... args) {
+inline std::string StrCat(const T&... args) CBU_MEMORY_NOEXCEPT {
   return str_cat_detail::StrCat(std::make_index_sequence<sizeof...(T)>(),
                                 std::tuple<const T&...>{args...});
 }

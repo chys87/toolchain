@@ -52,7 +52,7 @@ concept HasResizeDefaultInit = requires(std::basic_string<T>* s,
 };
 
 template <typename T>
-T* extend_impl(std::basic_string<T>* buf, std::size_t n) {
+T* extend_impl(std::basic_string<T>* buf, std::size_t n) CBU_MEMORY_NOEXCEPT {
 #if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
   buf->reserve(buf->size() + n);
   T* w = buf->data() + buf->size();
@@ -76,7 +76,7 @@ T* extend_impl(std::basic_string<T>* buf, std::size_t n) {
 }
 
 template <typename T>
-void truncate_unsafe_impl(std::basic_string<T>* buf, std::size_t n) {
+void truncate_unsafe_impl(std::basic_string<T>* buf, std::size_t n) noexcept {
   assert(n <= buf->size());
 #if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
   buf->_M_set_length(n);
@@ -91,7 +91,7 @@ void truncate_unsafe_impl(std::basic_string<T>* buf, std::size_t n) {
 }
 
 template <typename T>
-void truncate_unsafer_impl(std::basic_string<T>* buf, std::size_t n) {
+void truncate_unsafer_impl(std::basic_string<T>* buf, std::size_t n) noexcept {
   assert(n <= buf->size());
   assert((*buf)[n] == '\0');
 #if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
@@ -108,55 +108,55 @@ void truncate_unsafer_impl(std::basic_string<T>* buf, std::size_t n) {
 
 } // namespace
 
-char *extend(std::string* buf, std::size_t n) {
+char *extend(std::string* buf, std::size_t n) CBU_MEMORY_NOEXCEPT {
   return extend_impl(buf, n);
 }
 
-wchar_t *extend(std::wstring* buf, std::size_t n) {
+wchar_t *extend(std::wstring* buf, std::size_t n) CBU_MEMORY_NOEXCEPT {
   return extend_impl(buf, n);
 }
 
-char16_t *extend(std::u16string* buf, std::size_t n) {
+char16_t *extend(std::u16string* buf, std::size_t n) CBU_MEMORY_NOEXCEPT {
   return extend_impl(buf, n);
 }
 
-char32_t *extend(std::u32string* buf, std::size_t n) {
+char32_t *extend(std::u32string* buf, std::size_t n) CBU_MEMORY_NOEXCEPT {
   return extend_impl(buf, n);
 }
 
-char8_t *extend(std::u8string* buf, std::size_t n) {
+char8_t *extend(std::u8string* buf, std::size_t n) CBU_MEMORY_NOEXCEPT {
   return extend_impl(buf, n);
 }
 
-void truncate_unsafe(std::string* buf, std::size_t n) {
+void truncate_unsafe(std::string* buf, std::size_t n) noexcept {
   truncate_unsafe_impl(buf, n);
 }
-void truncate_unsafe(std::wstring* buf, std::size_t n) {
+void truncate_unsafe(std::wstring* buf, std::size_t n) noexcept {
   truncate_unsafe_impl(buf, n);
 }
-void truncate_unsafe(std::u16string* buf, std::size_t n) {
+void truncate_unsafe(std::u16string* buf, std::size_t n) noexcept {
   truncate_unsafe_impl(buf, n);
 }
-void truncate_unsafe(std::u32string* buf, std::size_t n) {
+void truncate_unsafe(std::u32string* buf, std::size_t n) noexcept {
   truncate_unsafe_impl(buf, n);
 }
-void truncate_unsafe(std::u8string* buf, std::size_t n) {
+void truncate_unsafe(std::u8string* buf, std::size_t n) noexcept {
   truncate_unsafe_impl(buf, n);
 }
 
-void truncate_unsafer(std::string* buf, std::size_t n) {
+void truncate_unsafer(std::string* buf, std::size_t n) noexcept {
   truncate_unsafer_impl(buf, n);
 }
-void truncate_unsafer(std::wstring* buf, std::size_t n) {
+void truncate_unsafer(std::wstring* buf, std::size_t n) noexcept {
   truncate_unsafer_impl(buf, n);
 }
-void truncate_unsafer(std::u16string* buf, std::size_t n) {
+void truncate_unsafer(std::u16string* buf, std::size_t n) noexcept {
   truncate_unsafer_impl(buf, n);
 }
-void truncate_unsafer(std::u32string* buf, std::size_t n) {
+void truncate_unsafer(std::u32string* buf, std::size_t n) noexcept {
   truncate_unsafer_impl(buf, n);
 }
-void truncate_unsafer(std::u8string* buf, std::size_t n) {
+void truncate_unsafer(std::u8string* buf, std::size_t n) noexcept {
   truncate_unsafer_impl(buf, n);
 }
 

@@ -36,7 +36,6 @@
 #include <optional>
 
 #include "cbu/common/bit.h"
-#include "cbu/compat/compilers.h"
 #include "cbu/math/common.h"
 #include "cbu/strings/encoding.h"
 #include "cbu/strings/faststr.h"
@@ -199,8 +198,8 @@ char* escape_string(char* w, std::string_view src,
   return escape_string_naive(w, src, options);
 }
 
-void escape_string_append(std::string* dst,
-                          std::string_view src, EscapeStringOptions options) {
+void escape_string_append(std::string* dst, std::string_view src,
+                          EscapeStringOptions options) CBU_MEMORY_NOEXCEPT {
   char* p = extend(
       dst,
       (options.style == EscapeStyle::JSON) ?
@@ -209,7 +208,8 @@ void escape_string_append(std::string* dst,
   truncate_unsafe(dst, p - dst->data());
 }
 
-std::string escape_string(std::string_view src, EscapeStringOptions options) {
+std::string escape_string(std::string_view src,
+                          EscapeStringOptions options) CBU_MEMORY_NOEXCEPT {
   std::string res;
   escape_string_append(&res, src, options);
   return res;

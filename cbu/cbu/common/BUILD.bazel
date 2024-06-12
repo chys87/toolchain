@@ -93,6 +93,7 @@ cc_library(
   hdrs = ['stdhack.h'],
   deps = [
     '//cbu/compat:compat',
+    '//cbu/tweak:tweak',
   ],
   linkstatic=True,
   visibility = ["//visibility:public"],

@@ -31,7 +31,7 @@
 #include <string>
 #include <string_view>
 
-#include "cbu/compat/string.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 
@@ -70,10 +70,12 @@ char* escape_string(char* w, std::string_view src,
                     EscapeStringOptions options) noexcept;
 
 void escape_string_append(std::string* dst, std::string_view src,
-                          EscapeStringOptions options = EscapeStringOptions());
+                          EscapeStringOptions options = EscapeStringOptions())
+    CBU_MEMORY_NOEXCEPT;
 
 std::string escape_string(std::string_view src,
-                          EscapeStringOptions options = EscapeStringOptions());
+                          EscapeStringOptions options = EscapeStringOptions())
+    CBU_MEMORY_NOEXCEPT;
 
 // unescape_string supports both C and JSON styles
 // Unescaping terminates either by encoutering unescaped '\"' or end-of-string

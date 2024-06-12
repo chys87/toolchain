@@ -25,6 +25,22 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cc_library(
+  name = 'tweak',
+  srcs = [],
+  hdrs = [
+    'tweak.h',
+  ],
+  copts = [
+    '-std=gnu++2a',
+    '-Wall',
+    '-Werror',
+    '-fdiagnostics-color=always',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
   name = 'single_threaded',
   srcs = ['single_threaded.cc'],
   hdrs = [],

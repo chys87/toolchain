@@ -30,60 +30,62 @@
 
 #include <string>
 
+#include "cbu/tweak/tweak.h"
+
 // Hacks standard containers to add more functionality
 
 namespace cbu {
 
-char *extend(std::string* buf, std::size_t n);
-wchar_t *extend(std::wstring* buf, std::size_t n);
-char16_t *extend(std::u16string* buf, std::size_t n);
-char32_t *extend(std::u32string* buf, std::size_t n);
+char *extend(std::string* buf, std::size_t n) CBU_MEMORY_NOEXCEPT;
+wchar_t *extend(std::wstring* buf, std::size_t n) CBU_MEMORY_NOEXCEPT;
+char16_t *extend(std::u16string* buf, std::size_t n) CBU_MEMORY_NOEXCEPT;
+char32_t *extend(std::u32string* buf, std::size_t n) CBU_MEMORY_NOEXCEPT;
 #if defined __cpp_char8_t && __cpp_char8_t >= 201811
-char8_t *extend(std::u8string* buf, std::size_t n);
+char8_t *extend(std::u8string* buf, std::size_t n) CBU_MEMORY_NOEXCEPT;
 #endif
 
 // Same as resize, but caller should guarantee n <= buf->size()
-void truncate_unsafe(std::string* buf, std::size_t n);
-void truncate_unsafe(std::wstring* buf, std::size_t n);
-void truncate_unsafe(std::u16string* buf, std::size_t n);
-void truncate_unsafe(std::u32string* buf, std::size_t n);
+void truncate_unsafe(std::string* buf, std::size_t n) noexcept;
+void truncate_unsafe(std::wstring* buf, std::size_t n) noexcept;
+void truncate_unsafe(std::u16string* buf, std::size_t n) noexcept;
+void truncate_unsafe(std::u32string* buf, std::size_t n) noexcept;
 #if defined __cpp_char8_t && __cpp_char8_t >= 201811
-void truncate_unsafe(std::u8string* buf, std::size_t n);
+void truncate_unsafe(std::u8string* buf, std::size_t n) noexcept;
 #endif
 
 // Same as resize, but caller should guarantee n <= buf->size()
 // and (*buf)[n] == '\0'
-void truncate_unsafer(std::string* buf, std::size_t n);
-void truncate_unsafer(std::wstring* buf, std::size_t n);
-void truncate_unsafer(std::u16string* buf, std::size_t n);
-void truncate_unsafer(std::u32string* buf, std::size_t n);
+void truncate_unsafer(std::string* buf, std::size_t n) noexcept;
+void truncate_unsafer(std::wstring* buf, std::size_t n) noexcept;
+void truncate_unsafer(std::u16string* buf, std::size_t n) noexcept;
+void truncate_unsafer(std::u32string* buf, std::size_t n) noexcept;
 #if defined __cpp_char8_t && __cpp_char8_t >= 201811
-void truncate_unsafer(std::u8string* buf, std::size_t n);
+void truncate_unsafer(std::u8string* buf, std::size_t n) noexcept;
 #endif
 
 // Same as resize, but only truncates
-inline void truncate(std::string* buf, std::size_t n) {
+inline void truncate(std::string* buf, std::size_t n) noexcept {
   if (n < buf->size()) {
     truncate_unsafe(buf, n);
   }
 }
-inline void truncate(std::wstring* buf, std::size_t n) {
+inline void truncate(std::wstring* buf, std::size_t n) noexcept {
   if (n < buf->size()) {
     truncate_unsafe(buf, n);
   }
 }
-inline void truncate(std::u16string* buf, std::size_t n) {
+inline void truncate(std::u16string* buf, std::size_t n) noexcept {
   if (n < buf->size()) {
     truncate_unsafe(buf, n);
   }
 }
-inline void truncate(std::u32string* buf, std::size_t n) {
+inline void truncate(std::u32string* buf, std::size_t n) noexcept {
   if (n < buf->size()) {
     truncate_unsafe(buf, n);
   }
 }
 #if defined __cpp_char8_t && __cpp_char8_t >= 201811
-inline void truncate(std::u8string* buf, std::size_t n) {
+inline void truncate(std::u8string* buf, std::size_t n) noexcept {
   if (n < buf->size()) {
     truncate_unsafe(buf, n);
   }
