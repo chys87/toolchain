@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2013-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2013-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -447,7 +447,7 @@ def_fsys_nomem(copy_file_range,copy_file_range,long,6,int,long*,int,long*,unsign
 #define fsys_time time
 #define fsys_gettimeofday gettimeofday
 
-#ifdef ASSUME_RDTSCP
+#if defined __x86_64__ && defined ASSUME_RDTSCP
 fsys_inline int fsys_sched_getcpu(void) {
   unsigned eax, edx, ecx;
   __asm__ __volatile__ ("rdtscp" : "=a"(eax), "=d"(edx), "=c"(ecx));
