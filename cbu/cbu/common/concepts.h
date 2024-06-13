@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,6 +83,9 @@ concept Trivial_type = std::is_trivial_v<T>;
 template <typename T>
 concept Raw_trivial_type =
     Trivial_type<T> and No_cv<T> and not std::is_array_v<T>;
+
+template <typename T>
+concept Raw_trivial_type_or_void = Raw_trivial_type<T> or std::is_void_v<T>;
 
 template <typename T, typename U>
 concept EqualityComparable = requires (T a, U b) {

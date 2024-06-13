@@ -35,6 +35,7 @@
 #include "cbu/alloc/pagesize.h"
 #include "cbu/alloc/private/common.h"
 #include "cbu/common/procutil.h"
+#include "cbu/strings/faststr.h"
 
 namespace cbu {
 namespace alloc {
@@ -77,7 +78,7 @@ void* allocate(size_t size, AllocateOptions options) noexcept {
   } else if (size != 0) {
     ptr = alloc_small(size);
     if (false_no_fail(ptr == nullptr)) return nomem();
-    if (options.zero) ptr = memset(ptr, 0, size);
+    if (options.zero) ptr = memset_no_builtin(ptr, 0, size);
   }
   return ptr;
 }
@@ -108,7 +109,7 @@ void* reallocate(void* ptr, size_t new_size, AllocateOptions options) noexcept {
     }
     // Copy
     if (true_no_fail(nptr)) {
-      nptr = memcpy(nptr, ptr, copy_size);
+      nptr = memcpy_no_builtin(nptr, ptr, copy_size);
       free_small(ptr);
     }
     return nptr;
@@ -118,7 +119,7 @@ void* reallocate(void* ptr, size_t new_size, AllocateOptions options) noexcept {
     if (new_size <= kSmallAllocLimit) {
       void* nptr = alloc_small(new_size);
       if (true_no_fail(nptr)) {
-        nptr = memcpy(nptr, ptr, new_size);
+        nptr = memcpy_no_builtin(nptr, ptr, new_size);
         free_large(ptr);
       }
       return nptr;

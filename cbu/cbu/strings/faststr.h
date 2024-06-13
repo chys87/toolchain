@@ -162,12 +162,12 @@ inline constexpr C* memdrop8(C* s, std::uint64_t v) noexcept {
 
 
 // For C++, define memory operations that return the proper types
-template <Raw_trivial_type T>
+template <Raw_trivial_type_or_void T>
 inline T *Memcpy(T *dst, const void *src, std::size_t n) noexcept {
   return static_cast<T *>(std::memcpy(dst, src, n));
 }
 
-template <Raw_trivial_type T>
+template <Raw_trivial_type_or_void T>
 inline T *Mempcpy(T *dst, const void *src, std::size_t n) noexcept {
 #ifdef __GLIBC__
   return static_cast<T *>(mempcpy(dst, src, n));
@@ -176,12 +176,12 @@ inline T *Mempcpy(T *dst, const void *src, std::size_t n) noexcept {
 #endif
 }
 
-template <Raw_trivial_type T>
+template <Raw_trivial_type_or_void T>
 inline T *Memmove(T *dst, const void *src, std::size_t n) noexcept {
   return static_cast<T *>(std::memmove(dst, src, n));
 }
 
-template <Raw_trivial_type T>
+template <Raw_trivial_type_or_void T>
 inline T *Memset(T *dst, int c, std::size_t n) noexcept {
   return static_cast<T *>(std::memset(dst, c, n));
 }
@@ -197,10 +197,47 @@ inline T *Memrchr(T *dst, int c, std::size_t n) noexcept {
 }
 
 // Nonstandard
-template <Raw_trivial_type T>
+template <Raw_trivial_type_or_void T>
 inline T *Mempset(T *dst, int c, std::size_t n) noexcept {
   return reinterpret_cast<T *>(
       reinterpret_cast<char *>(std::memset(dst, c, n)) + n);
+}
+
+// They call the respective libc functions, ensuring no builtin replacement
+// occurs, and ensure that the code generator actually uses the return value
+// instead of remembering the first parameter.
+namespace faststr_no_builtin_detail {
+
+// Intentionally change the type of the first parameter - only this
+// can prevent clang from thinking it can be replaced by the builtin.
+void* Memset(std::uintptr_t, int, std::size_t) noexcept asm("memset");
+void* Memcpy(std::uintptr_t, const void*, std::size_t) noexcept asm("memcpy");
+#ifdef __GLIBC__
+void* Mempcpy(std::uintptr_t, const void*, std::size_t) noexcept asm("mempcpy");
+#endif
+
+}  // namespace faststr_no_builtin_detail
+
+template <Raw_trivial_type_or_void T>
+inline T* memset_no_builtin(T* p, int c, std::size_t n) noexcept {
+  return static_cast<T*>(
+      faststr_no_builtin_detail::Memset(std::uintptr_t(p), c, n));
+}
+
+template <Raw_trivial_type_or_void T>
+inline T* memcpy_no_builtin(T* d, const void* s, size_t n) noexcept {
+  return static_cast<T*>(
+      faststr_no_builtin_detail::Memcpy(std::uintptr_t(d), s, n));
+}
+
+template <Raw_trivial_type_or_void T>
+inline T* mempcpy_no_builtin(T* d, const void* s, size_t n) noexcept {
+#ifdef __GLIBC__
+  return static_cast<T*>(
+      faststr_no_builtin_detail::Mempcpy(std::uintptr_t(d), s, n));
+#else
+  return reinterpret_cast<T*>(std::uintptr_t(memcpy_no_builtin(d, s, n)) + n);
+#endif
 }
 
 void* memdrop_var64(void* dst, std::uint64_t, std::size_t) noexcept;
