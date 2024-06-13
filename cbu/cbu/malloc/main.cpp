@@ -52,12 +52,11 @@ extern "C" void* cbu_realloc(void* ptr, size_t newsize) noexcept {
 extern "C" void* cbu_reallocarray(void* ptr, size_t m, size_t l) noexcept {
   size_t n;
   if (cbu::mul_overflow(m, l, &n)) return alloc::nomem();
-  return alloc::reallocate(ptr, n);
+  return cbu_realloc(ptr, n);
 }
 
 extern "C" void* cbu_memalign(size_t boundary, size_t n) noexcept {
-  // Check boundary so that it always fits in AllocateOptions::align
-  if (boundary - 1 >= alloc::kPageSize) return nullptr;
+  if (!alloc::is_alignment_valid(boundary)) return nullptr;
   return alloc::allocate(n, alloc::AllocateOptions().with_align(boundary));
 }
 
@@ -75,7 +74,8 @@ extern "C" void* cbu_aligned_alloc(size_t boundary, size_t n) noexcept
 
 extern "C" void* cbu_valloc(size_t n) noexcept {
   // Don't directly call alloc_large, which doesn't like n == 0
-  return cbu_memalign(alloc::kPageSize, n);
+  return alloc::allocate(n,
+                         alloc::AllocateOptions().with_align(alloc::kPageSize));
 }
 
 extern "C" void* cbu_pvalloc(size_t) noexcept

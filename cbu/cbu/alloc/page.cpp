@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -390,8 +390,6 @@ void PageTreeAllocator::remove_by_list(const Description* list) noexcept {
   }
 }
 
-// No additional tag types are given to RawPageAllocator::instance, meaning the
-// "default" allocator.
 #ifndef CBU_NO_BRK
 constinit Arena arena_brk{&RawPageAllocator::instance_brk};
 #endif

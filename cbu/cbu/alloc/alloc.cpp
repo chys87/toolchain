@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,13 +39,33 @@
 namespace cbu {
 namespace alloc {
 
+constexpr bool is_alignment_valid_impl(size_t align) noexcept {
+  // return align && (align <= kPageSize) && ((align & (align - 1)) == 0);
+  return ((align - 1) & (align | ~size_t(kPageSize - 1))) == 0;
+}
+
+static_assert(!is_alignment_valid_impl(0));
+static_assert(is_alignment_valid_impl(1));
+static_assert(is_alignment_valid_impl(2));
+static_assert(!is_alignment_valid_impl(3));
+static_assert(is_alignment_valid_impl(4));
+static_assert(!is_alignment_valid_impl(5));
+static_assert(!is_alignment_valid_impl(kPageSize - 1));
+static_assert(is_alignment_valid_impl(kPageSize));
+static_assert(!is_alignment_valid_impl(kPageSize + 1));
+static_assert(!is_alignment_valid_impl(kPageSize + 2));
+static_assert(!is_alignment_valid_impl(kPageSize * 2));
+static_assert(!is_alignment_valid_impl(kPageSize * 3));
+static_assert(!is_alignment_valid_impl(kPageSize * 4));
+
+bool is_alignment_valid(size_t align) noexcept {
+  return is_alignment_valid_impl(align);
+}
+
 void* allocate(size_t size, AllocateOptions options) noexcept {
-  size_t boundary = options.align;
-  if (boundary) {
-    if (boundary > kPageSize) return nullptr;
-    if (boundary & (boundary - 1)) return nullptr;
+  if (size_t boundary = options.align) {
     size = (size + boundary - 1) & ~(boundary - 1);
-    // Once size is properly adjuted, our allocation design guarantees proper
+    // Once size is properly adjusted, our allocation design guarantees proper
     // alignment.
   }
 
@@ -63,14 +83,11 @@ void* allocate(size_t size, AllocateOptions options) noexcept {
 }
 
 void* reallocate(void* ptr, size_t new_size, AllocateOptions options) noexcept {
-  size_t boundary = options.align;
-  if (boundary) {
-    if (boundary > kPageSize) return nullptr;
-    if (boundary & (boundary - 1)) return nullptr;
+  if (size_t boundary = options.align) {
     new_size = (new_size + boundary - 1) & ~(boundary - 1);
   }
 
-  if (new_size == 0) {
+  if (new_size == 0) [[unlikely]] {
     reclaim(ptr);
     return nullptr;
   } else if (uintptr_t(ptr) % kPageSize) {  // Was small block.
@@ -78,7 +95,7 @@ void* reallocate(void* ptr, size_t new_size, AllocateOptions options) noexcept {
     size_t old_size = category_to_size(old_cat);
     size_t copy_size;
     void* nptr;
-    if (new_size <= category_to_size(kMaxCategory)) {
+    if (new_size <= kSmallAllocLimit) {
       // Small to small.
       unsigned new_cat = size_to_category(new_size);
       if (old_cat == new_cat) return ptr;
@@ -96,7 +113,7 @@ void* reallocate(void* ptr, size_t new_size, AllocateOptions options) noexcept {
     }
     return nptr;
   } else if (ptr == nullptr) {
-    return allocate(new_size, options);
+    return allocate(new_size, options.with_align(0).with_zero(false));
   } else {  // Was large block.
     if (new_size <= kSmallAllocLimit) {
       void* nptr = alloc_small(new_size);

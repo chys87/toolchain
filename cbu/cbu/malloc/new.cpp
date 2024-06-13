@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -61,7 +61,7 @@ extern "C" void* new_throw(size_t n) {
 extern "C" void* new_aligned(size_t n, std::align_val_t alignment) {
   if (n == 0)
     n = 1;
-  if (size_t(alignment) - 1 >= alloc::kPageSize) {
+  if (!alloc::is_alignment_valid(size_t(alignment))) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
     cbu::fatal<"Invalid aligned allocation">();
 #else
@@ -70,21 +70,16 @@ extern "C" void* new_aligned(size_t n, std::align_val_t alignment) {
   }
   void* ptr = alloc::allocate(
       n, alloc::AllocateOptions().with_align(size_t(alignment)));
-  if (ptr == nullptr) {
-#ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-    // Can fail because of invalid alignment
-    cbu::fatal<"Invalid aligned allocation">();
-#else
-    throw std::bad_alloc();
+#ifndef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
+  if (ptr == nullptr) throw std::bad_alloc();
 #endif
-  }
   return ptr;
 }
 
 extern "C" void* new_aligned_nothrow(size_t n, std::align_val_t alignment,
                                      const std::nothrow_t&) noexcept {
   if (n == 0) n = 1;
-  if (size_t(alignment) - 1 >= alloc::kPageSize) return nullptr;
+  if (!alloc::is_alignment_valid(size_t(alignment))) return nullptr;
   return alloc::allocate(
       n, alloc::AllocateOptions().with_align(size_t(alignment)));
 }
@@ -188,7 +183,7 @@ void* new_realloc(void* ptr, size_t n) {
 
 void* new_aligned_realloc(void* ptr, size_t n, size_t alignment) {
   if (n == 0) n = 1;
-  if (size_t(alignment) - 1 >= alloc::kPageSize) {
+  if (!alloc::is_alignment_valid(size_t(alignment))) {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
     cbu::fatal<"Invalid aligned allocation">();
 #else
@@ -197,14 +192,9 @@ void* new_aligned_realloc(void* ptr, size_t n, size_t alignment) {
   }
   ptr = alloc::reallocate(
       ptr, n, alloc::AllocateOptions().with_align(size_t(alignment)));
-  if (ptr == nullptr) {
-#ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
-    // Can fail because of invalid alignment
-    cbu::fatal<"Invalid aligned allocation">();
-#else
-    throw std::bad_alloc();
+#ifndef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
+  if (ptr == nullptr) throw std::bad_alloc();
 #endif
-  }
   return ptr;
 }
 

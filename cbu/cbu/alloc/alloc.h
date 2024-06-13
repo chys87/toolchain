@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,10 +36,14 @@
 namespace cbu {
 namespace alloc {
 
+[[gnu::const]] bool is_alignment_valid(size_t align) noexcept;
+
 struct AllocateOptions {
-  // allocate/reallocte only; Maximum supported alignment is pagesize
+  // allocate/reallocte only; Maximum supported alignment is pagesize.
+  // Caller's responsibility to ensure align is valid, as determined by
+  // is_alignment_valid
   uint16_t align = 0;
-  // Almost all interfaces support this
+  // allocate/allocate_page only; Not supported by reallocate
   bool zero : 1 = false;
   // Allow allocation from brk; This is only supported by allocate_page;
   // Use this only if you will directly unmap the memory rather than call
@@ -54,15 +58,16 @@ struct AllocateOptions {
   }
 
   constexpr AllocateOptions with_align(uint16_t a) noexcept {
-    return with([&](AllocateOptions* o) noexcept { o->align = a; });
+    return with([&](AllocateOptions* o) constexpr noexcept { o->align = a; });
   }
 
   constexpr AllocateOptions with_zero(bool z) noexcept {
-    return with([&](AllocateOptions* o) noexcept { o->zero = z; });
+    return with([&](AllocateOptions* o) constexpr noexcept { o->zero = z; });
   }
 
   constexpr AllocateOptions with_force_mmap(bool m) noexcept {
-    return with([&](AllocateOptions* o) noexcept { o->force_mmap = m; });
+    return with(
+        [&](AllocateOptions* o) constexpr noexcept { o->force_mmap = m; });
   }
 };
 
