@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,34 +41,6 @@ TEST(PairTest, Comparisons) {
   EXPECT_GT(a, c);
 }
 
-TEST(ReversedTest, Container) {
-  std::vector<int> x{1, 2, 3, 4, 5};
-  auto r = reversed(x);
-  EXPECT_EQ(5, *r.begin());
-  EXPECT_EQ(1, *(r.end() - 1));
-}
-
-TEST(ReversedTest, ConstContainer) {
-  const std::vector<int> x{1, 2, 3, 4, 5};
-  auto r = reversed(x);
-  EXPECT_EQ(5, *r.begin());
-  EXPECT_EQ(1, *(r.end() - 1));
-}
-
-TEST(ReversedTest, Array) {
-  int x[] {1, 2, 3, 4, 5};
-  auto r = reversed(x);
-  EXPECT_EQ(5, *r.begin());
-  EXPECT_EQ(1, *(r.end() - 1));
-}
-
-TEST(ReversedTest, ConstArray) {
-  const int x[] {1, 2, 3, 4, 5};
-  auto r = reversed(x);
-  EXPECT_EQ(5, *r.begin());
-  EXPECT_EQ(1, *(r.end() - 1));
-}
-
 TEST(ReversedComparatorTest, Compare) {
   std::less cmp;
   ReversedComparator rcmp{cmp};
@@ -83,61 +55,6 @@ TEST(ReversedComparatorTest, Compare) {
   EXPECT_TRUE(rcmp_copy(2, 1));
   EXPECT_TRUE(rrcmp(1, 2));
   EXPECT_FALSE(rrcmp(2, 1));
-}
-
-TEST(EnumerateTest, StlContainer) {
-  std::vector<std::string> x {"a", "b", "c"};
-  EXPECT_EQ(3, std::size(enumerate(x)));
-  for (auto [idx, v] : enumerate(x)) {
-    v += std::to_string(idx);
-  }
-  EXPECT_EQ("a0", x[0]);
-  EXPECT_EQ("b1", x[1]);
-  EXPECT_EQ("c2", x[2]);
-}
-
-TEST(EnumerateTest, Array) {
-  std::string x[] {"a", "b", "c"};
-  EXPECT_EQ(3, std::size(enumerate(x)));
-  for (auto [idx, v] : enumerate(x)) {
-    v += std::to_string(idx);
-  }
-  EXPECT_EQ("a0", x[0]);
-  EXPECT_EQ("b1", x[1]);
-  EXPECT_EQ("c2", x[2]);
-}
-
-TEST(EnumerateTest, Reversed) {
-  int v[] {1, 2, 3};
-  for (auto [idx, v] : enumerate(reversed(v))) {
-    v += idx;
-  }
-  EXPECT_EQ(3, v[0]);
-  EXPECT_EQ(3, v[1]);
-  EXPECT_EQ(3, v[2]);
-}
-
-TEST(EnumerateTest, Recursive) {
-  int v[] {1, 2, 3};
-  for (auto [idx, v] : enumerate(enumerate(v))) {
-    v.second += v.first + idx;
-  }
-  EXPECT_EQ(1, v[0]);
-  EXPECT_EQ(4, v[1]);
-  EXPECT_EQ(7, v[2]);
-}
-
-TEST(EnumerateTest, ArrowOperator) {
-  constexpr std::string_view x[] {"hello", "world"};
-  auto enumer = enumerate(x);
-  auto it = enumer.begin();
-  EXPECT_EQ(0, it->first);
-  EXPECT_EQ("hello", it->second);
-  ++it;
-  EXPECT_EQ(1, it->first);
-  EXPECT_EQ("world", it->second);
-  ++it;
-  EXPECT_EQ(enumer.end(), it);
 }
 
 } // namespace cbu

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,10 +33,9 @@
 #include <concepts>
 #include <cstdint>
 #include <iterator>
+#include <ranges>
 #include <type_traits>
 #include <utility>
-
-#include "cbu/common/utility.h"
 
 namespace cbu {
 
@@ -237,14 +236,13 @@ class BitIterator {
   T v_;
 };
 
-template <typename T> requires std::is_integral<T>::value
-inline constexpr IteratorRange<BitIterator<std::make_unsigned_t<T>>>
-set_bits(T v) {
+template <std::integral T>
+inline constexpr auto set_bits(T v) noexcept {
   using UT = std::make_unsigned_t<T>;
-  return {BitIterator<UT>(v), BitIterator<UT>(0)};
+  return std::ranges::subrange{BitIterator<UT>(v), BitIterator<UT>(0)};
 }
 
-static_assert(std::size(set_bits(0x123456789abcdef)) ==
+static_assert(std::ranges::distance(set_bits(0x123456789abcdef)) ==
               popcnt(0x123456789abcdef));
 
 template <typename T> requires std::is_integral_v<T>

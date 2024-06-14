@@ -61,7 +61,6 @@ If you use anything else, you have to take care of it yourself.
 * `type_traits.h`: Adds some type traits missing from [`<type_traits>`](https://en.cppreference.com/w/cpp/header/type_traits)
 * `unit_prefix.h`: Handles SI and IEC prefixes (K, M, G, etc)
 * `utility.h`: Adds some generic utilities missing from [`<utility>`](https://en.cppreference.com/w/cpp/header/utility),
-   e.g. POD pair type, `reversed` (like Python's counterpart), `enumerate` (like Python's counterpart)
 
 ### cbu/compat
 

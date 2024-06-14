@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,9 +29,8 @@
 #pragma once
 
 #include <compare>
-#include <cstddef>
-#include <functional>
-#include <iterator>
+#include <ranges>
+#include <utility>
 
 namespace cbu {
 
@@ -50,60 +49,6 @@ struct pair {
 
 template <typename U, typename V>
 pair(U, V) -> pair<U, V>;
-
-// For use with range-based for
-template <typename IT>
-class IteratorRange {
- public:
-  typedef IT iterator;
-  typedef std::reverse_iterator<IT> reverse_iterator;
-  using difference_type = typename std::iterator_traits<IT>::difference_type;
-  using size_type = typename std::make_unsigned<difference_type>::type;
-
-  constexpr IteratorRange(IT lo, IT hi) noexcept : lo_(lo), hi_(hi) {}
-  constexpr IteratorRange(IT lo, size_type n) noexcept
-    : lo_(lo), hi_(std::next(lo, n)) {}
-
-  constexpr IT begin() const noexcept { return lo_; }
-  constexpr IT cbegin() const noexcept { return lo_; }
-  constexpr IT end() const noexcept { return hi_; }
-  constexpr IT cend() const noexcept { return hi_; }
-
-  constexpr reverse_iterator rbegin() const noexcept {
-    return reverse_iterator(hi_);
-  }
-  constexpr reverse_iterator crbegin() const noexcept {
-    return reverse_iterator(hi_);
-  }
-  constexpr reverse_iterator rend() const noexcept {
-    return reverse_iterator(lo_);
-  }
-  constexpr reverse_iterator crend() const noexcept {
-    return reverse_iterator(lo_);
-  }
-
-  constexpr size_type size() const noexcept { return std::distance(lo_, hi_); }
-  [[nodiscard]] constexpr bool empty() const noexcept { return lo_ == hi_; }
-
- private:
-  IT lo_, hi_;
-};
-
-template <typename IT>
-inline constexpr IteratorRange<std::reverse_iterator<IT>> reversed(
-    IT begin, IT end) noexcept {
-  return {std::reverse_iterator<IT>(end), std::reverse_iterator<IT>(begin)};
-}
-
-template <typename Container>
-requires requires(Container &&cont) {
-  std::rbegin(std::forward<Container>(cont));
-  std::rend(std::forward<Container>(cont));
-}
-inline constexpr auto reversed(Container &&container) noexcept {
-  return IteratorRange{std::rbegin(std::forward<Container>(container)),
-                       std::rend(std::forward<Container>(container))};
-}
 
 
 // Reverse a comparator
@@ -136,72 +81,5 @@ struct ArrowOperatorTempObject {
     return std::addressof(value);
   }
 };
-
-// enumerate
-template <typename IT>
-class EnumerateIterator {
- private:
-  using BaseTraits = std::iterator_traits<IT>;
-
- public:
-  using index_type = std::make_unsigned_t<typename BaseTraits::difference_type>;
-  using base_reference = typename BaseTraits::reference;
-
-  using value_type = std::pair<index_type, base_reference>;
-  using difference_type =  typename BaseTraits::difference_type;
-  using pointer = value_type*;
-  using reference = value_type;
-  // TODO: This could potentially also be other categories
-  // (such as input_iterator_tag, bidirection_iterator_tag)
-  using iterator_category = std::forward_iterator_tag;
-
- public:
-  explicit constexpr EnumerateIterator(index_type idx, IT it) noexcept :
-      idx_(idx), it_(it) {}
-
-  constexpr value_type operator*() const noexcept {
-    return {idx_, *it_};
-  }
-
-  constexpr ArrowOperatorTempObject<value_type> operator->() const noexcept {
-    return {**this};
-  }
-
-  constexpr EnumerateIterator& operator ++ () noexcept {
-    ++idx_;
-    ++it_;
-    return *this;
-  }
-  constexpr EnumerateIterator operator ++ (int) noexcept {
-    return EnumerateIterator(idx_++, it_++);
-  }
-
-  constexpr bool operator == (const EnumerateIterator& o) const noexcept {
-    return (it_ == o.it_);
-  }
-  constexpr bool operator != (const EnumerateIterator& o) const noexcept {
-    return (it_ != o.it_);
-  }
-
-  constexpr IT base() const noexcept { return it_; }
-
- private:
-  index_type idx_ {0};
-  IT it_;
-};
-
-template <typename C>
-inline constexpr auto
-enumerate(C& cont) {
-  return IteratorRange{EnumerateIterator(0, std::begin(cont)),
-                       EnumerateIterator(0, std::end(cont))};
-}
-
-template <typename C>
-inline constexpr auto
-enumerate(const C& cont) {
-  return IteratorRange{EnumerateIterator(0, std::begin(cont)),
-                       EnumerateIterator(0, std::end(cont))};
-}
 
 } // namespace cbu
