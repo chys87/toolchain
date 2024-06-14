@@ -73,6 +73,7 @@ cc_library(
   deps = [
     ':concepts',
     '//cbu/compat:compat',
+    '//cbu/tweak:tweak',
   ],
   linkstatic=True,
   visibility = ["//visibility:public"],

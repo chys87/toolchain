@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,7 @@
 #include "cbu/common/byte_size.h"
 #include "cbu/common/type_traits.h"
 #include "cbu/compat/compilers.h"
+#include "cbu/tweak/tweak.h"
 
 namespace cbu {
 
@@ -41,7 +42,7 @@ namespace cbu {
 // These functions only allocates and deallocates raw memory, without invoking
 // constructor or destructor
 template <typename T>
-constexpr T* raw_scalar_new() {
+constexpr T* raw_scalar_new() CBU_MEMORY_NOEXCEPT {
   void* p;
   if constexpr (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
     p = ::operator new(sizeof(T), std::align_val_t(alignof(T)));
@@ -52,7 +53,8 @@ constexpr T* raw_scalar_new() {
 
 template <typename T>
 constexpr T* raw_array_new(
-    ByteSize<T> n, std::align_val_t align = std::align_val_t(alignof(T))) {
+    ByteSize<T> n,
+    std::align_val_t align = std::align_val_t(alignof(T))) CBU_MEMORY_NOEXCEPT {
   void* p;
   if (std::size_t(align) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
     p = ::operator new[](n.bytes(), align);
@@ -145,7 +147,10 @@ constexpr void destroy_backward_and_delete_n(
 // ArrayDeleter, not by delete[]
 template <typename T>
 inline T* new_and_default_init_array(
-    std::size_t n, std::align_val_t align = std::align_val_t(alignof(T))) {
+    std::size_t n,
+    std::align_val_t align = std::align_val_t(
+        alignof(T))) noexcept(kMemoryNoExcept and
+                                  std::is_nothrow_default_constructible_v<T>) {
   T* p = raw_array_new<T>(n, align);
   try {
     std::uninitialized_default_construct_n(p, n);
@@ -158,7 +163,10 @@ inline T* new_and_default_init_array(
 
 template <typename T>
 inline T* new_and_value_init_array(
-    std::size_t n, std::align_val_t align = std::align_val_t(alignof(T))) {
+    std::size_t n,
+    std::align_val_t align = std::align_val_t(
+        alignof(T))) noexcept(kMemoryNoExcept and
+                                  std::is_nothrow_default_constructible_v<T>) {
   T* p = raw_array_new<T>(n);
   try {
     std::uninitialized_value_construct_n(p, n);
@@ -220,60 +228,68 @@ using sized_unique_ptr =
     std::unique_ptr<T, ArrayDeleter<std::remove_extent_t<T>>>;
 
 template <typename T, typename... Args>
-requires (!std::is_array_v<T>)
-inline std::unique_ptr<T> make_unique(Args&&... args) {
+  requires(!std::is_array_v<T>)
+inline std::unique_ptr<T> make_unique(Args&&... args) noexcept(
+    kMemoryNoExcept and std::is_nothrow_constructible_v<T, Args&&...>) {
   return std::make_unique<T>(std::forward<Args>(args)...);
 }
 
 template <typename T>
-requires std::is_unbounded_array_v<T>
-inline sized_unique_ptr<T> make_unique(std::size_t n) {
+  requires std::is_unbounded_array_v<T>
+inline sized_unique_ptr<T> make_unique(std::size_t n) noexcept(
+    kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   using V = std::remove_extent_t<T>;
   return sized_unique_ptr<T>(new_and_value_init_array<V>(n),
                              ArrayDeleter<V>{n});
 }
 
 template <typename T>
-requires (!std::is_array_v<T>)
-inline std::unique_ptr<T> make_unique_for_overwrite() {
+  requires(!std::is_array_v<T>)
+inline std::unique_ptr<T> make_unique_for_overwrite() noexcept(
+    kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   // GCC 9 doesn't have std::make_unique_for_overwrite yet.
   // return std::make_unique_for_overwrite<T>();
   return std::unique_ptr<T>(new T);
 }
 
 template <typename T>
-requires std::is_unbounded_array_v<T>
-inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) {
+  requires std::is_unbounded_array_v<T>
+inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) noexcept(
+    kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   using V = std::remove_extent_t<T>;
   return sized_unique_ptr<T>(new_and_default_init_array<V>(n),
                              ArrayDeleter<V>{n});
 }
 
 template <typename T, typename... Args>
-requires (!std::is_array_v<T>)
-inline std::shared_ptr<T> make_shared(Args&&... args) {
+  requires(!std::is_array_v<T>)
+inline std::shared_ptr<T> make_shared(Args&&... args) noexcept(
+    kMemoryNoExcept and std::is_nothrow_constructible_v<T, Args&&...>) {
   return std::make_shared<T>(std::forward<Args>(args)...);
 }
 
 template <typename T>
-requires std::is_unbounded_array_v<T>
-inline std::shared_ptr<T> make_shared(std::size_t n) {
+  requires std::is_unbounded_array_v<T>
+inline std::shared_ptr<T> make_shared(std::size_t n) noexcept(
+    kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   using V = std::remove_extent_t<T>;
   return std::shared_ptr<T>(new_and_value_init_array<V>(n),
                             ArrayDeleter<V>{n});
 }
 
 template <typename T>
-requires (!std::is_array_v<T>)
-inline std::shared_ptr<T> make_shared_for_overwrite() {
+  requires(!std::is_array_v<T>)
+inline std::shared_ptr<T> make_shared_for_overwrite() noexcept(
+    kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   // GCC 9 doesn't have std::make_shared_for_overwrite yet.
   // return std::make_shared_for_overwrite<T>();
   return std::shared_ptr<T>(new T);
 }
 
 template <typename T>
-requires std::is_unbounded_array_v<T>
-inline std::shared_ptr<T> make_shared_for_overwrite(std::size_t n) {
+  requires std::is_unbounded_array_v<T>
+inline std::shared_ptr<T> make_shared_for_overwrite(std::size_t n) noexcept(
+    kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   using V = std::remove_extent_t<T>;
   return std::shared_ptr<T>(new_and_default_init_array<V>(n),
                             ArrayDeleter<V>{n});
@@ -310,15 +326,20 @@ class OutlinableArray {
   using iterator = T*;
 
   template <std::size_t N>
-  constexpr OutlinableArray(OutlinableArrayBuffer<T, N>* buffer, std::size_t n)
-      : ptr_(new (get_pointer(buffer, n)) T[n]()),
+  constexpr OutlinableArray(
+      OutlinableArrayBuffer<T, N>* buffer,
+      std::size_t n) noexcept(kMemoryNoExcept and
+                                  std::is_nothrow_default_constructible_v<T>)
+      : ptr_(new(get_pointer(buffer, n)) T[n]()),
         size_(n),
         allocated_(n <= N ? 0 : n) {}
 
   template <std::size_t N>
-  constexpr OutlinableArray(OutlinableArrayBuffer<T, N>* buffer, std::size_t n,
-                            ForOverwriteTag)
-      : ptr_(new (get_pointer(buffer, n)) T[n]), allocated_(n <= N ? 0 : n) {}
+  constexpr OutlinableArray(
+      OutlinableArrayBuffer<T, N>* buffer, std::size_t n,
+      ForOverwriteTag) noexcept(kMemoryNoExcept and
+                                    std::is_nothrow_default_constructible_v<T>)
+      : ptr_(new(get_pointer(buffer, n)) T[n]), allocated_(n <= N ? 0 : n) {}
 
   OutlinableArray(const OutlinableArray&) = delete;
   OutlinableArray& operator=(const OutlinableArray&) = delete;
@@ -341,7 +362,7 @@ class OutlinableArray {
  private:
   template <std::size_t N>
   constexpr void* get_pointer(OutlinableArrayBuffer<T, N>* buffer,
-                              std::size_t n) {
+                              std::size_t n) CBU_MEMORY_NOEXCEPT {
     if (n <= N)
       return buffer->buffer;
     else
