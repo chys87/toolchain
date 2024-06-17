@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,9 +28,40 @@
 
 #pragma once
 
+#include <concepts>
+#include <limits>
 #include <type_traits>
 
 namespace cbu {
+
+namespace detail {
+
+template <typename T, auto... args>
+struct SharedConst {
+  static inline constexpr T value{args...};
+};
+
+template <typename T, auto... args>
+struct SharedConst<const T, args...> : SharedConst<T, args...> {};
+
+alignas(8) inline const char shared_const_zero[8]{};
+
+template <typename T>
+  requires(std::is_same_v<std::remove_cvref_t<T>, T> and sizeof(T) <= 8 and
+           (std::is_integral_v<T> or (std::is_floating_point_v<T> and
+                                      std::numeric_limits<T>::is_iec559)))
+struct SharedConst<T> {
+  static inline const T& value = reinterpret_cast<const T&>(shared_const_zero);
+};
+
+template <typename T, auto init_value>
+  requires(std::is_same_v<std::remove_cvref_t<T>, T> and sizeof(T) <= 8 and
+           (std::is_integral_v<T> or (std::is_floating_point_v<T> and
+                                      std::numeric_limits<T>::is_iec559)) and
+           std::is_integral_v<decltype(init_value)> and init_value == 0)
+struct SharedConst<T, init_value> : SharedConst<T> {};
+
+}  // namespace detail
 
 template <typename T, auto... args>
 inline T shared(args...);
@@ -39,10 +70,13 @@ template <typename T, auto... args>
 inline constinit T shared_constinit(args...);
 
 template <typename T, auto... args>
-inline constexpr T shared_const(args...);
+inline constexpr T shared_constexpr(args...);
+
+template <typename T, auto... args>
+inline const T& shared_const = detail::SharedConst<T, args...>::value;
 
 template <auto value>
-inline constexpr auto& as_shared =
+inline const auto& as_shared =
     shared_const<std::remove_cvref_t<decltype(value)>, value>;
 
 } // namespace cbu

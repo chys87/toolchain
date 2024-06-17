@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,9 +55,9 @@ TEST(SharedInstanceTest, ConstInit) {
 }
 
 TEST(SharedInstanceTest, ConstexprTest) {
-  static_assert(shared_const<int> == 0);
+  static_assert(shared_constexpr<int> == 0);
   constexpr const std::pair<int, int>& p =
-      shared_const<std::pair<int, int>, 25, 54>;
+      shared_constexpr<std::pair<int, int>, 25, 54>;
   static_assert(p.first == 25);
   static_assert(p.second == 54);
 }
