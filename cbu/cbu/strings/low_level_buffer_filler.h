@@ -217,6 +217,19 @@ struct FillGetPointer {
 template <Raw_char_type Ch>
 FillGetPointer(Ch**) -> FillGetPointer<Ch>;
 
+template <Raw_char_type Ch, Raw_integral Len>
+struct FillGetLength {
+  const Ch* start;
+  Len* len;
+
+  explicit constexpr FillGetLength(const Ch* start, Len* len) noexcept
+      : start(start), len(len) {}
+  constexpr Ch* operator()(Ch* p) const noexcept {
+    *len = p - start;
+    return p;
+  }
+};
+
 // Low-level buffer filler
 template <Char_type Ch>
 class LowLevelBufferFiller {
