@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,14 +53,14 @@ struct fixed_string {
     return s_[n];
   }
 
-  using iterator = char*;
+  using iterator = const char*;
   using const_iterator = const char*;
   constexpr iterator begin() noexcept { return s_; }
-  constexpr iterator end() noexcept { return s_; }
+  constexpr iterator end() noexcept { return s_ + N; }
   constexpr const_iterator begin() const noexcept { return s_; }
-  constexpr const_iterator end() const noexcept { return s_; }
+  constexpr const_iterator end() const noexcept { return s_ + N; }
   constexpr const_iterator cbegin() const noexcept { return s_; }
-  constexpr const_iterator cend() const noexcept { return s_; }
+  constexpr const_iterator cend() const noexcept { return s_ + N; }
 
   // Has to be public to be used as template argument
   char s_[N + 1];
