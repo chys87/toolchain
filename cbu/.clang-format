@@ -1,6 +1,6 @@
 BasedOnStyle: Google
 DerivePointerAlignment: false
-IndentRequires: true
+IndentRequiresClause: true
 IncludeCategories:
 - Regex:           '^<[^/]*\.h>'
   Priority:        10
