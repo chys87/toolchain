@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@
 #include <string_view>
 
 #include "cbu/common/byteorder.h"
+#include "cbu/common/tags.h"
 #include "cbu/compat/compilers.h"
 #include "cbu/network/ipv4.h"
 #include "cbu/strings/faststr.h"
@@ -66,6 +67,7 @@ class IPv6 {
 
  public:
   constexpr IPv6() noexcept : a_{} {}
+  explicit IPv6(UninitializedTag) noexcept {}
   constexpr IPv6(const in6_addr& addr6) noexcept : a_(addr6) {}
 
   constexpr IPv6(const in_addr& addr4) noexcept : a_{} {
@@ -112,6 +114,7 @@ class IPv6 {
     return {buffer, size_t(ToString(buffer, flags) - buffer)};
   }
 
+  constexpr in6_addr& Get() noexcept { return a_; }
   constexpr const in6_addr& Get() const noexcept { return a_; }
 
   explicit constexpr operator bool() const noexcept {
@@ -207,7 +210,15 @@ class IPv6 {
   // This attempts to support all valid string representations of IPv6,
   // as well as IPv4 addresses (only "a.b.c.d" and no other archic formats;
   // translated to ::ffff:a.b.c.d)
-  static std::optional<IPv6> FromString(std::string_view s) noexcept;
+  static bool FromString(std::string_view s, in6_addr& addr) noexcept;
+  static bool FromString(std::string_view s, IPv6& addr) noexcept {
+    return FromString(s, addr.Get());
+  }
+  static std::optional<IPv6> FromString(std::string_view s) noexcept {
+    std::optional<IPv6> res(std::in_place, kUninitialized);
+    if (!FromString(s, res->a_)) res.reset();
+    return res;
+  }
 
   friend std::ostream& operator<<(std::ostream& os, const IPv6& ip) {
     ip.OutputTo(os);

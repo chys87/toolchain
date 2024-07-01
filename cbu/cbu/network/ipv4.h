@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@
 #include <string_view>
 
 #include "cbu/common/byteorder.h"
+#include "cbu/common/tags.h"
 #include "cbu/compat/compilers.h"
 
 namespace cbu {
@@ -63,6 +64,7 @@ class IPv4 {
 
  public:
   constexpr IPv4() noexcept : v_(0) {}
+  explicit IPv4(UninitializedTag) noexcept {}
   constexpr explicit IPv4(std::uint32_t v,
                           std::endian byte_order = native_endian) noexcept
       : v_(may_bswap(byte_order, native_endian, v)) {}

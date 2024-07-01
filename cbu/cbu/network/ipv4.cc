@@ -72,23 +72,25 @@ struct ParseResult {
   const char* s;
 };
 
-inline ParseResult<std::uint8_t> parse_uint8(const char* s,
-                                             const char* e) noexcept {
+[[gnu::always_inline]] inline ParseResult<std::uint8_t> parse_uint8(
+    const char* s, const char* e) noexcept {
   if (s >= e) {
     return {false};
   }
-  if (*s < '0' || *s > '9') {
+  unsigned int x = std::uint8_t(*s++) - '0';
+  if (x == 0) {
+    // 0 is a special case.  We don't recognize extra leading zeros
+    return {true, 0, s};
+  }
+  if (x >= 10) {
     return {false};
   }
-  if (*s == '0') {
-    // 0 is a special case.  We don't recognize extra leading zeros
-    return {true, 0, s + 1};
-  }
-  unsigned int x = (*s++ - '0');
-  if (s < e && (*s >= '0' && *s <= '9')) {
-    x = x * 10 + std::uint8_t(*s++ - '0');
-    if (s < e && (*s >= '0' && *s <= '9')) {
-      x = x * 10 + std::uint8_t(*s++ - '0');
+  unsigned int t;
+  if (s < e && (t = std::uint8_t(*s) - '0') < 10) {
+    x = x * 10 + t;
+    if (++s < e && (t = std::uint8_t(*s) - '0') < 10) {
+      x = x * 10 + t;
+      ++s;
       if (std::uint8_t(x) != x) return {false};
     }
   }
@@ -97,10 +99,10 @@ inline ParseResult<std::uint8_t> parse_uint8(const char* s,
 
 inline std::optional<unsigned> parse_hex_digit(unsigned char c) {
   static_assert('A' == 65, "This implementation requires ASCII");
-  if (c >= '0' && c <= '9')
-    return c - '0';
-  else if (unsigned C = c | 0x20; C >= 'a' && C <= 'f')
-    return C - 'a' + 10;
+  if (unsigned C = c - '0'; C < 10)
+    return C;
+  else if (unsigned C = (c | 0x20) - 'a'; C < 6)
+    return C + 10;
   else
     return std::nullopt;
 }

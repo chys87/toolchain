@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -125,22 +125,21 @@ inline constexpr StrToNumberPartialResult<T> replace_value(
 }
 
 constexpr bool isdigit(unsigned char c) noexcept {
-  return (c >= '0' && c <= '9');
+  return unsigned(c - '0') < 10;
 }
 
 constexpr bool isxdigit(unsigned char c) noexcept {
-  return isdigit(c) || ((c | 0x20) >= 'a' && (c | 0x20) <= 'f');
+  return isdigit(c) || (unsigned((c | 0x20) - 'a') < 6);
 }
 
 template <int base>
 inline constexpr std::optional<unsigned> parse_one_digit(
     std::uint8_t c) noexcept {
   if constexpr (base <= 10) {
-    if (c >= '0' && c < '0' + base) return c - '0';
+    if (unsigned C = c - '0'; C < base) return C;
   } else {
-    if (isdigit(c)) return c - '0';
-    if ((c | 0x20) >= 'a' && (c | 0x20) < 'a' + (base - 10))
-      return (((c | 0x20) - 'a') + 10);
+    if (unsigned C = c - '0'; C < 10) return C;
+    if (unsigned C = (c | 0x20) - 'a'; C < base - 10) return C + 10;
   }
   return std::nullopt;
 }

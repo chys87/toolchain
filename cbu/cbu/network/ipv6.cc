@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 #  include <arm_neon.h>
 #endif
 
+#include "cbu/common/arch.h"
 #include "cbu/common/bit.h"
 #include "cbu/common/byteorder.h"
 #include "cbu/math/fastdiv.h"
@@ -101,7 +102,7 @@ char* IPv6::Format(char* w, const in6_addr& addr, int flags) noexcept {
 
   int ipv4 = FormatLastTwoFieldsAsIPv4(addr);
 
-  if ((flags & kPreferBareIPv4) == 0 || ipv4 != 1) {
+  if (ipv4 != 1 || (flags & kPreferBareIPv4) == 0) {
 #ifdef __SSE2__
     __m128i v6 =
         _mm_loadu_si128(reinterpret_cast<const __m128i*>(addr.s6_addr));
@@ -236,13 +237,64 @@ struct ParseResult {
 ParseResult<uint16_t> parse_hex_uint16(const char* s, const char* e) noexcept {
   if (s >= e) [[unlikely]]
     return {false};
+#if defined __SSE2__ && defined __BMI2__
+  {
+    size_t l = e - s;
+    uint32_t vchrs;
+    if (l >= 4) {
+      vchrs = cbu::mempick_be<uint32_t>(s);
+    } else if ((uintptr_t(s) & 15) <= 12) {
+      vchrs = cbu::mempick_be<uint32_t>(s) & (-1u << (32 - 8 * l));
+    } else [[unlikely]] {
+      vchrs = cbu::mempick_be<uint32_t>(e - 4) << (32 - 8 * l);
+    }
+    __v16qu chrs = __v16qu(__v4su{vchrs, 0, 0, 0});
+    __v16qu msk10 = __v16qu(in_range_epi8(__m128i(chrs), '0', '9'));
+    __v16qu mskx = __v16qu(in_range_epi8(__m128i(chrs | 0x20), 'a', 'f'));
+    __v16qu vv = ((chrs | 0x20) - '0') + (mskx & ('0' - 'a' + 10));
+    uint32_t msk = __v4su(msk10 | mskx)[0];
+    if ((msk & 0x80000000) == 0) return {false};
+    uint32_t valid_bits =  clz(~msk);
+
+    uint32_t vd = __v4su(vv)[0];
+    uint16_t v = _pext_u32(vd >> (32 - valid_bits), 0x0f0f0f0f);
+
+    return {true, v, s + valid_bits / 8};
+  }
+#elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  {
+    size_t l = e - s;
+    uint32_t vchrs;
+    if (l >= 4) {
+      vchrs = cbu::mempick_le<uint32_t>(s);
+    } else if ((uintptr_t(s) & 15) <= 12) {
+      vchrs = cbu::mempick_le<uint32_t>(s) & ((1u << (l * 8)) - 1);
+    } else [[unlikely]] {
+      vchrs = cbu::mempick_le<uint32_t>(e - 4) >> (32 - 8 * l);
+    }
+    uint8x8_t chrs = uint8x8_t(uint32x2_t{vchrs, vchrs});
+    uint8x8_t msk10 = uint8x8_t(uint8x8_t(chrs - '0') < 10);
+    uint8x8_t mskx = uint8x8_t(uint8x8_t((chrs | 0x20) - 'a') < 6);
+    uint8x8_t vv = ((chrs | 0x20) - '0') + (mskx & ('0' - 'a' + 10));
+    uint32_t msk = uint32x2_t(msk10 | mskx)[0];
+    if ((msk & 0x80) == 0) return {false};
+    uint32_t valid_bits = ctz(~msk);
+
+    uint32_t vd = uint32x2_t(vv)[0];
+    uint16_t v = (((vd & 0xf) << 12) | (vd & 0xf00) | ((vd & 0xf0000) >> 12) |
+                  ((vd & 0xf000000) >> 24)) >>
+                 (16 - valid_bits / 2);
+
+    return {true, v, s + valid_bits / 8};
+  }
+#endif
   unsigned res = 0;
   for (int i = 0; i < 4 && s < e; ++i) {
-    unsigned char c = *s;
-    if (c >= '0' && c <= '9') {
-      res = res * 16 + (c - '0');
-    } else if ((c | 0x20) >= 'a' && (c | 0x20) <= 'f') {
-      res = res * 16 + ((c | 0x20) - 'a' + 10);
+    unsigned c = uint8_t(*s);
+    if (unsigned t = c - '0'; t < 10) {
+      res = res * 16 + t;
+    } else if (unsigned t = (c | 0x20) - 'a'; t < 6) {
+      res = res * 16 + t + 10;
     } else {
       if (i == 0) [[unlikely]]
         return {false};
@@ -255,16 +307,17 @@ ParseResult<uint16_t> parse_hex_uint16(const char* s, const char* e) noexcept {
 
 }  // namespace
 
-std::optional<IPv6> IPv6::FromString(std::string_view s) noexcept {
+bool IPv6::FromString(std::string_view s, in6_addr& addr) noexcept {
   // First check if it's a valid IPv4 address
-  if (std::optional<IPv4> ipv4_opt = IPv4::FromCommonString(s))
-    return IPv6(*ipv4_opt);
+  if (std::optional<IPv4> ipv4_opt = IPv4::FromCommonString(s)) {
+    addr = IPv6(*ipv4_opt).Get();
+    return true;
+  }
 
   // Surrounded by [ ]
   if (s.size() >= 2 && s.starts_with('[') && s.ends_with(']'))
     s = s.substr(1, s.size() - 2);
 
-  in6_addr addr;
   uint16_t* parts = addr.s6_addr16;
   int omit_pos = -1;
   unsigned k = 0;
@@ -276,24 +329,24 @@ std::optional<IPv6> IPv6::FromString(std::string_view s) noexcept {
   if (p < e && *p == ':') {
     ++p;
     if (p >= e || *p != ':') [[unlikely]]
-      return std::nullopt;
+      return false;
     ++p;
     omit_pos = 0;
   }
 
   while (p < e) {
     if (k >= 8) [[unlikely]]
-      return std::nullopt;
+      return false;
     auto [ok, v, endptr] = parse_hex_uint16(p, e);
     if (!ok) [[unlikely]]
-      return std::nullopt;
+      return false;
     // Check for special case: IPv4 mapped IPv6
     if (endptr < e && *endptr == '.') {
       if (k > 6 || (k < 6 && omit_pos < 0)) [[unlikely]]
-        return std::nullopt;
+        return false;
       std::optional<IPv4> ipv4_opt = IPv4::FromCommonString({p, e});
       if (!ipv4_opt) [[unlikely]]
-        return std::nullopt;
+        return false;
       uint32_t ipv4_be = ipv4_opt->value(std::endian::big);
       memcpy(parts + k, &ipv4_be, 4);
       k += 2;
@@ -304,12 +357,12 @@ std::optional<IPv6> IPv6::FromString(std::string_view s) noexcept {
     p = endptr;
     if (p >= e) break;
     if (k >= 8) [[unlikely]]
-      return std::nullopt;
+      return false;
     if (*p++ != ':') [[unlikely]]
-      return std::nullopt;
+      return false;
     if (p < e && *p == ':') {
       if (omit_pos >= 0) [[unlikely]]
-        return std::nullopt;
+        return false;
       ++p;
       omit_pos = k;
     }
@@ -317,7 +370,7 @@ std::optional<IPv6> IPv6::FromString(std::string_view s) noexcept {
 
   if (k != 8) {
     if (omit_pos < 0) [[unlikely]]
-      return std::nullopt;
+      return false;
     unsigned omit_cnt = 8 - k;
     unsigned move_cnt = k - omit_pos;
 #if defined __AVX512BW__ && defined __AVX512VL__
@@ -329,7 +382,7 @@ std::optional<IPv6> IPv6::FromString(std::string_view s) noexcept {
     memset(parts + omit_pos, 0, omit_cnt * sizeof(uint16_t));
 #endif
   }
-  return IPv6(addr);
+  return true;
 }
 
 char* IPv6Port::PortToString(char* buf, uint16_t port) noexcept {
