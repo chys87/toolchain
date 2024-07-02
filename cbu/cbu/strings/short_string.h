@@ -29,6 +29,7 @@
 #pragma once
 
 #include <algorithm>
+#include <compare>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -244,5 +245,29 @@ template <std::size_t N>
   requires(N > 0)
 short_nzstring(const char (&)[N])
 ->short_nzstring<N - 1>;
+
+template <std::size_t M, size_t N>
+constexpr bool operator==(const short_string<M>& a,
+                          const short_string<N>& b) noexcept {
+  return a.string_view() == b.string_view();
+}
+
+template <std::size_t M, size_t N>
+constexpr bool operator<=>(const short_string<M>& a,
+                           const short_string<N>& b) noexcept {
+  return a.string_view() <=> b.string_view();
+}
+
+template <std::size_t M, size_t N>
+constexpr bool operator==(const short_nzstring<M>& a,
+                          const short_nzstring<N>& b) noexcept {
+  return a.string_view() == b.string_view();
+}
+
+template <std::size_t M, size_t N>
+constexpr bool operator<=>(const short_nzstring<M>& a,
+                           const short_nzstring<N>& b) noexcept {
+  return a.string_view() <=> b.string_view();
+}
 
 }  // namespace cbu
