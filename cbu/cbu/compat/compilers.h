@@ -85,3 +85,9 @@
 #define CBU_AARCH64_PRESERVE_MOST
 #define CBU_AARCH64_PRESERVE_NONE
 #endif
+
+#ifdef __clang__
+#define CBU_NAIVE_LOOP _Pragma("clang loop vectorize(disable) unroll(disable)")
+#else
+#define CBU_NAIVE_LOOP
+#endif
