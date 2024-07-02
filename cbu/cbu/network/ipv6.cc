@@ -308,29 +308,27 @@ ParseResult<uint16_t> parse_hex_uint16(const char* s, const char* e) noexcept {
 }  // namespace
 
 bool IPv6::FromString(std::string_view s, in6_addr& addr) noexcept {
-  // First check if it's a valid IPv4 address
-  if (std::optional<IPv4> ipv4_opt = IPv4::FromCommonString(s)) {
-    addr = IPv6(*ipv4_opt).Get();
-    return true;
-  }
+  bool accept_bare_ipv4 = true;
+
+  const char* p = s.data();
+  size_t l = s.size();
 
   // Surrounded by [ ]
-  if (s.size() >= 2 && s.starts_with('[') && s.ends_with(']'))
-    s = s.substr(1, s.size() - 2);
+  if (l >= 2 && p[0] == '[' && p[l - 1] == ']') {
+    ++p;
+    l -= 2;
+    accept_bare_ipv4 = false;
+  }
 
   uint16_t* parts = addr.s6_addr16;
   int omit_pos = -1;
   unsigned k = 0;
 
-  const char* p = s.data();
-  const char* e = p + s.size();
+  const char* e = p + l;
 
   // Special case: starts with '::'
-  if (p < e && *p == ':') {
-    ++p;
-    if (p >= e || *p != ':') [[unlikely]]
-      return false;
-    ++p;
+  if (l >= 2 && memcmp(p, "::", 2) == 0) {
+    p += 2;
     omit_pos = 0;
   }
 
@@ -342,12 +340,20 @@ bool IPv6::FromString(std::string_view s, in6_addr& addr) noexcept {
       return false;
     // Check for special case: IPv4 mapped IPv6
     if (endptr < e && *endptr == '.') {
-      if (k > 6 || (k < 6 && omit_pos < 0)) [[unlikely]]
+      if (k > 6) [[unlikely]] return false;
+      if (k != 6 && omit_pos < 0 && !(accept_bare_ipv4 && k == 0)) [[unlikely]]
         return false;
-      std::optional<IPv4> ipv4_opt = IPv4::FromCommonString({p, e});
+      std::optional<IPv4> ipv4_opt = IPv4::FromCommonStringImpl(p, e);
       if (!ipv4_opt) [[unlikely]]
         return false;
       uint32_t ipv4_be = ipv4_opt->value(std::endian::big);
+      if (accept_bare_ipv4 && k == 0 && omit_pos < 0) {
+        // Special case - bare IPv4 a.b.c.d converted to ::ffff:a.b.c.d
+        memset(parts, 0, 5 * sizeof(uint16_t));
+        parts[5] = 0xffff;
+        memcpy(parts + 6, &ipv4_be, 4);
+        return true;
+      }
       memcpy(parts + k, &ipv4_be, 4);
       k += 2;
       break;
@@ -360,9 +366,9 @@ bool IPv6::FromString(std::string_view s, in6_addr& addr) noexcept {
       return false;
     if (*p++ != ':') [[unlikely]]
       return false;
-    if (p < e && *p == ':') {
-      if (omit_pos >= 0) [[unlikely]]
-        return false;
+    if (p >= e) [[unlikely]]
+      return false;
+    if (omit_pos < 0 && *p == ':') {
       ++p;
       omit_pos = k;
     }
@@ -371,15 +377,20 @@ bool IPv6::FromString(std::string_view s, in6_addr& addr) noexcept {
   if (k != 8) {
     if (omit_pos < 0) [[unlikely]]
       return false;
+#if defined __AVX512BW__ && defined __AVX512VL__
     unsigned omit_cnt = 8 - k;
     unsigned move_cnt = k - omit_pos;
-#if defined __AVX512BW__ && defined __AVX512VL__
     __m128i v = _mm_maskz_loadu_epi16(-1u << (8 - move_cnt), parts - omit_cnt);
     _mm_mask_storeu_epi16(parts, -1u << omit_pos, v);
 #else
-    memmove(parts + 8 - move_cnt, parts + omit_pos,
-            move_cnt * sizeof(uint16_t));
-    memset(parts + omit_pos, 0, omit_cnt * sizeof(uint16_t));
+    // Use volatile to prevent compiler from generating memset/memmove
+    volatile uint16_t* dst = parts + 7;
+    const uint16_t* src = parts + k - 1;
+    CBU_NAIVE_LOOP
+    for (unsigned i = k; i != omit_pos; --i) *dst-- = *src--;
+
+    CBU_NAIVE_LOOP
+    for (unsigned i = k; i != 8; ++i) *dst-- = 0;
 #endif
   }
   return true;

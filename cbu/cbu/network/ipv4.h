@@ -121,7 +121,10 @@ class IPv4 {
 
   // FromCommonString supports only the common "a.b.c.d" format
   CBU_AARCH64_PRESERVE_ALL static std::optional<IPv4> FromCommonString(
-      std::string_view s) noexcept;
+      std::string_view s) noexcept {
+    return FromCommonStringImpl(s.data(), s.data() + s.size());
+  }
+
   // FromString supports all legal formats,
   // e.g. "127.0.0.1" may be represented as any of the following:
   // "127.0.0.1", "127.0.1", "127.1", "2130706433", "0x7f000001", "0x7f.0.0.1",
@@ -168,6 +171,20 @@ class IPv4 {
 
  private:
   void OutputTo(std::ostream& os) const;
+
+  // This is slightly better than std::optional<IPv4> as it uses two registers
+  // instead of one on 64-bit platforms.
+  struct StringToIPv4Result {
+    uintptr_t ok;
+    uint32_t ip;
+    constexpr operator std::optional<IPv4>() const noexcept {
+      return (ok & 1) ? std::optional(IPv4(ip)) : std::nullopt;
+    }
+  };
+  CBU_AARCH64_PRESERVE_ALL static StringToIPv4Result FromCommonStringImpl(
+      const char* p, const char* e) noexcept;
+
+  friend class IPv6;
 
  private:
   std::uint32_t v_;

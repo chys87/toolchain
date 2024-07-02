@@ -222,32 +222,31 @@ short_string<15> IPv4::ToString() const noexcept {
   return res;
 }
 
-std::optional<IPv4> IPv4::FromCommonString(std::string_view s) noexcept {
-  const char* p = s.data();
-  const char* e = p + s.size();
+IPv4::StringToIPv4Result IPv4::FromCommonStringImpl(const char* p,
+                                                    const char* e) noexcept {
   auto [a_ok, a, a_s] = parse_uint8(p, e);
-  if (!a_ok) return std::nullopt;
+  if (!a_ok) return {false};
   p = a_s;
   uint32_t ip = a;
 
-  if (*p++ != '.') return std::nullopt;
+  if (p >= e || *p++ != '.') return {false};
   auto [b_ok, b, b_s] = parse_uint8(p, e);
-  if (!b_ok) return std::nullopt;
+  if (!b_ok) return {false};
   p = b_s;
   ip = ip * 256 + b;
 
-  if (*p++ != '.') return std::nullopt;
+  if (p >= e || *p++ != '.') return {false};
   auto [c_ok, c, c_s] = parse_uint8(p, e);
-  if (!c_ok) return std::nullopt;
+  if (!c_ok) return {false};
   p = c_s;
   ip = ip * 256 + c;
 
-  if (*p++ != '.') return std::nullopt;
+  if (p >= e || *p++ != '.') return {false};
   auto [d_ok, d, d_s] = parse_uint8(p, e);
-  if (!d_ok || d_s != e) return std::nullopt;
+  if (!d_ok || d_s != e) return {false};
   ip = ip * 256 + d;
 
-  return IPv4(ip);
+  return {true, ip};
 }
 
 std::optional<IPv4> IPv4::FromString(std::string_view s) noexcept {

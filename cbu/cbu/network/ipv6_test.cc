@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -131,6 +131,10 @@ TEST(IPv6Test, FromStringTest) {
   test_invalid("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:");
   test_invalid("0ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff");
   test_invalid("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff:abcd");
+  test_invalid("::2::");
+  test_invalid("::abcd:");
+  test_invalid("abcd:");
+  test_invalid("abcd::3::4");
   test_valid("64:ff9b::", "64:ff9b::0.0.0.0");
   test_valid("64:ff9b::1.2.3.4", "64:ff9b::1.2.3.4");
 
