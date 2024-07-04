@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -364,21 +364,20 @@ size_t from_hex(Word *r, const char *s, size_t n) noexcept {
   while (n > 2 * sizeof(Word)) {
     n -= 2 * sizeof(Word);
     if constexpr (sizeof(Word) == 4) {
-      r[i++] = convert_8xdigit(s + n, true).value_or(0);
+      r[i++] = convert_8xdigit<true>(s + n).value_or(0);
     } else if constexpr (sizeof(Word) == 8) {
-      r[i++] = convert_16xdigit(s + n, true).value_or(0);
+      r[i++] = convert_16xdigit<true>(s + n).value_or(0);
     } else {
       Word word = 0;
       const char *p = s + n;
       for (unsigned k = 2 * sizeof(Word); k; --k)
-        word = word * 16 + convert_xdigit(*p++, true).value_or(0);
+        word = word * 16 + convert_xdigit<true>(*p++).value_or(0);
       r[i++] = word;
     }
   }
 
   Word word = 0;
-  for (; n; --n)
-    word = word * 16 + convert_xdigit(*s++, true).value_or(0);
+  for (; n; --n) word = word * 16 + convert_xdigit<true>(*s++).value_or(0);
   r[i++] = word;
   return i;
 }

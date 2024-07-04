@@ -31,6 +31,9 @@
 #if (defined __i386__ || defined __x86_64__) && __has_include(<x86intrin.h>)
 # include <x86intrin.h>
 #endif
+#ifdef __ARM_NEON
+# include <arm_neon.h>
+#endif
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -234,11 +237,23 @@ std::tuple<char, char*, const char*> copy_until_backslash(
       dst += 32;
     } else {
       unsigned off = ctz(_mm256_movemask_epi8(mask));
-#ifdef __clang__
-#pragma clang loop vectorize(disable) unroll(disable)
-#endif
-      for (unsigned i = off; i; --i)
-        *dst++ = *src++;
+      CBU_NAIVE_LOOP
+      for (unsigned i = off; i; --i) *dst++ = *src++;
+      return {*src, dst, src};
+    }
+  }
+#elifdef __ARM_NEON
+  while (src + 16 <= end) {
+    uint8x16_t val = *(const uint8x16_t*)src;
+    uint8x16_t mask = uint8x16_t((val == '\\') || (val == '"'));
+    if (vmaxvq_u8(mask) == 0) {
+      *(uint8x16_t*)dst = val;
+      src += 16;
+      dst += 16;
+    } else {
+      unsigned off = ctz(uint64x1_t(vshrn_n_u16(uint16x8_t(mask), 4))[0]) / 4;
+      CBU_NAIVE_LOOP
+      for (unsigned i = off; i; --i) *dst++ = *src++;
       return {*src, dst, src};
     }
   }
@@ -358,8 +373,7 @@ UnescapeStringResult unescape_string(char* dst, const char* src,
   for (;;) {
     char c;
     std::tie(c, dst, src) = copy_until_backslash(dst, src, end);
-    if (c == '\0')
-      return {UnescapeStringStatus::OK_EOS, dst, src};
+    if (src >= end) return {UnescapeStringStatus::OK_EOS, dst, src};
     if (c == '\"')
       return {UnescapeStringStatus::OK_QUOTE, dst, src};
     // Now c (a.k.a. *src) must be '\\'
