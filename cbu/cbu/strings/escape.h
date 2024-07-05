@@ -37,34 +37,47 @@ namespace cbu {
 
 enum struct EscapeStyle : unsigned {
   C,
-  JSON,
+  JSON,         // '/' is not escaped
+  JSON_STRICT,  // '/' is escaped
 };
 
-struct EscapeStringOptions {
-  EscapeStyle style : 1 = EscapeStyle::C;
+namespace escape_detail {
 
-  constexpr EscapeStringOptions(EscapeStyle style = EscapeStyle::C) noexcept :
-    style(style) {}
+template <EscapeStyle style>
+struct EscapeImpl {
+  static char* raw(char* w, const char* s, std::size_t l) noexcept;
 
-  static const EscapeStringOptions JSON;
-  static const EscapeStringOptions C;
+  static void append(std::string* dst, const char* s, std::size_t l) CBU_MEMORY_NOEXCEPT;
+
+  static std::string escape(const char* s, std::size_t l) CBU_MEMORY_NOEXCEPT {
+    std::string res;
+    append(&res, s, l);
+    return res;
+  }
 };
 
-inline constexpr EscapeStringOptions EscapeStringOptions::JSON =
-    EscapeStringOptions(EscapeStyle::JSON);
-inline constexpr EscapeStringOptions EscapeStringOptions::C =
-    EscapeStringOptions(EscapeStyle::C);
+extern template struct EscapeImpl<EscapeStyle::C>;
+extern template struct EscapeImpl<EscapeStyle::JSON>;
+extern template struct EscapeImpl<EscapeStyle::JSON_STRICT>;
 
-char* escape_string(char* w, std::string_view src,
-                    EscapeStringOptions options) noexcept;
+}  // namespace escape_detail
 
-void escape_string_append(std::string* dst, std::string_view src,
-                          EscapeStringOptions options = EscapeStringOptions())
-    CBU_MEMORY_NOEXCEPT;
+template <EscapeStyle style = EscapeStyle::C>
+char* escape_string(char* w, std::string_view src) noexcept {
+  return escape_detail::EscapeImpl<style>::raw(w, src.data(),
+                                               src.data() + src.size());
+}
 
-std::string escape_string(std::string_view src,
-                          EscapeStringOptions options = EscapeStringOptions())
-    CBU_MEMORY_NOEXCEPT;
+template <EscapeStyle style = EscapeStyle::C>
+void escape_string_append(std::string* dst,
+                          std::string_view src) CBU_MEMORY_NOEXCEPT {
+  return escape_detail::EscapeImpl<style>::append(dst, src.data(), src.size());
+}
+
+template <EscapeStyle style = EscapeStyle::C>
+std::string escape_string(std::string_view src) CBU_MEMORY_NOEXCEPT {
+  return escape_detail::EscapeImpl<style>::escape(src.data(), src.size());
+}
 
 // unescape_string supports both C and JSON styles
 // Unescaping terminates either by encoutering unescaped '\"' or end-of-string

@@ -44,9 +44,11 @@
 #include "cbu/strings/faststr.h"
 
 namespace cbu {
+namespace escape_detail {
 namespace {
 
-inline constexpr char* escape_char(char* w, std::uint8_t c, EscapeStyle style) {
+template <EscapeStyle style>
+inline constexpr char* escape_char(char* w, std::uint8_t c) {
   if (c < 0x20) {
     // '\v' (0x11) is not universally accepted.
     static_assert('\b' == 8);
@@ -58,7 +60,8 @@ inline constexpr char* escape_char(char* w, std::uint8_t c, EscapeStyle style) {
       *w++ = '\\';
       *w++ = "btnvfr"[c - 8];
     } else {
-      if (style == EscapeStyle::JSON) {
+      if constexpr (style == EscapeStyle::JSON ||
+                    style == EscapeStyle::JSON_STRICT) {
         *w++ = '\\';
         *w++ = 'u';
         *w++ = '0';
@@ -77,17 +80,17 @@ inline constexpr char* escape_char(char* w, std::uint8_t c, EscapeStyle style) {
   return w;
 }
 
-inline constexpr bool needs_escaping(std::uint8_t c,
-                                     EscapeStyle style) noexcept {
+template <EscapeStyle style>
+inline constexpr bool needs_escaping(std::uint8_t c) noexcept {
   return (c < 0x20 || c == '\\' || c == '\"' ||
-          (c == '/' && style == EscapeStyle::JSON));
+          (style == EscapeStyle::JSON_STRICT && c == '/'));
 }
 
-constexpr char* escape_string_naive(
-    char* w, std::string_view src, EscapeStringOptions options) {
-  for (char c : src) {
-    if (needs_escaping(c, options.style)) {
-      w = escape_char(w, c, options.style);
+template <EscapeStyle style>
+constexpr char* escape_string_naive(char* w, const char* s, std::size_t n) {
+  for (char c : std::string_view(s, n)) {
+    if (needs_escaping<style>(c)) {
+      w = escape_char<style>(w, c);
     } else {
       *w++ = c;
     }
@@ -96,18 +99,18 @@ constexpr char* escape_string_naive(
 }
 
 #ifdef __AVX2__
-inline __m256i get_encoding_mask(__m256i chars, EscapeStyle style) noexcept {
+template <EscapeStyle style>
+inline __m256i get_encoding_mask(__m256i chars) noexcept {
   __v32qu vq = __v32qu(chars);
   __v32qu mask = __v32qu((vq < 0x20) | (vq == '\\') | (vq == '\"'));
-  if (style == EscapeStyle::JSON) {
+  if constexpr (style == EscapeStyle::JSON_STRICT) {
     mask |= __v32qu(vq == '/');
   }
   return __m256i(mask);
 }
 
-inline char* encode_by_mask(char* w, const char* s,
-                            std::uint32_t bmsk,
-                            EscapeStyle style,
+template <EscapeStyle style>
+inline char* encode_by_mask(char* w, const char* s, std::uint32_t bmsk,
                             std::uint32_t from = 0,
                             std::uint32_t until = 32) noexcept {
   bmsk &= (-1u << from);
@@ -123,7 +126,7 @@ inline char* encode_by_mask(char* w, const char* s,
       *w++ = *s++;
       ++from;
     }
-    w = escape_char(w, *s++, style);
+    w = escape_char<style>(w, *s++);
     ++from;
   }
 #ifdef __clang__
@@ -139,23 +142,21 @@ inline char* encode_by_mask(char* w, const char* s,
 
 } // namespace
 
-char* escape_string(char* w, std::string_view src,
-                    EscapeStringOptions options) noexcept {
+template <EscapeStyle style>
+char* EscapeImpl<style>::raw(char* w, const char* s, std::size_t n) noexcept {
 #if defined __AVX2__ && !defined CBU_ADDRESS_SANITIZER
-  if (src.empty()) {
+  if (n == 0) {
     return w;
   }
 
-  const char* s = src.data();
-  std::size_t n = src.size();
   std::size_t misalign = std::uintptr_t(s) & 31;
   s = (const char*)(std::uintptr_t(s) & -32);
   n += misalign;
   __m256i chars = *(const __m256i*)s;
-  __m256i msk = get_encoding_mask(chars, options.style);
+  __m256i msk = get_encoding_mask<style>(chars);
   std::uint32_t bmsk = _mm256_movemask_epi8(msk);
-  w = encode_by_mask(w, s, bmsk, options.style,
-                     misalign, std::min<std::uint32_t>(32, n));
+  w = encode_by_mask<style>(w, s, bmsk, misalign,
+                            std::min<std::uint32_t>(32, n));
   s += 32;
   if (n <= 32) {
     return w;
@@ -164,12 +165,12 @@ char* escape_string(char* w, std::string_view src,
 
   while (n >= 32) {
     __m256i chars = *(const __m256i*)s;
-    __m256i msk = get_encoding_mask(chars, options.style);
+    __m256i msk = get_encoding_mask<style>(chars);
     if (_mm256_testz_si256(msk, msk)) {
       *(__m256i_u*)w = chars;
       w += 32;
     } else {
-      w = encode_by_mask(w, s, _mm256_movemask_epi8(msk), options.style);
+      w = encode_by_mask<style>(w, s, _mm256_movemask_epi8(msk));
     }
     s += 32;
     n -= 32;
@@ -177,29 +178,31 @@ char* escape_string(char* w, std::string_view src,
 
   if (n) {
     __m256i chars = *(const __m256i*)s;
-    __m256i msk = get_encoding_mask(chars, options.style);
+    __m256i msk = get_encoding_mask<style>(chars);
     std::uint32_t bmsk = _mm256_movemask_epi8(msk);
-    w = encode_by_mask(w, s, bmsk, options.style, 0, n);
+    w = encode_by_mask<style>(w, s, bmsk, 0, n);
   }
   return w;
 #endif // __AVX2__
-  return escape_string_naive(w, src, options);
+  return escape_string_naive<style>(w, s, n);
 }
 
-void escape_string_append(std::string* dst, std::string_view src,
-                          EscapeStringOptions options) CBU_MEMORY_NOEXCEPT {
-  char* p = extend(dst, (options.style == EscapeStyle::JSON) ? 6 * src.size()
-                                                             : 4 * src.size());
-  p = escape_string(p, src, options);
+template <EscapeStyle style>
+void EscapeImpl<style>::append(std::string* dst, const char* s,
+                               std::size_t n) CBU_MEMORY_NOEXCEPT {
+  char* p = extend(
+      dst, (style == EscapeStyle::JSON || style == EscapeStyle::JSON_STRICT)
+               ? 6 * n
+               : 4 * n);
+  p = raw(p, s, n);
   truncate_unsafe(dst, p - dst->data());
 }
 
-std::string escape_string(std::string_view src,
-                          EscapeStringOptions options) CBU_MEMORY_NOEXCEPT {
-  std::string res;
-  escape_string_append(&res, src, options);
-  return res;
-}
+template struct EscapeImpl<EscapeStyle::C>;
+template struct EscapeImpl<EscapeStyle::JSON>;
+template struct EscapeImpl<EscapeStyle::JSON_STRICT>;
+
+}  // namespace escape_detail
 
 namespace {
 
