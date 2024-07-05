@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -85,8 +85,6 @@ inline constexpr bool needs_escaping(std::uint8_t c,
 
 constexpr char* escape_string_naive(
     char* w, std::string_view src, EscapeStringOptions options) {
-  if (options.quotes)
-    *w++ = '"';
   for (char c : src) {
     if (needs_escaping(c, options.style)) {
       w = escape_char(w, c, options.style);
@@ -94,8 +92,6 @@ constexpr char* escape_string_naive(
       *w++ = c;
     }
   }
-  if (options.quotes)
-    *w++ = '"';
   return w;
 }
 
@@ -147,15 +143,8 @@ char* escape_string(char* w, std::string_view src,
                     EscapeStringOptions options) noexcept {
 #if defined __AVX2__ && !defined CBU_ADDRESS_SANITIZER
   if (src.empty()) {
-    if (options.quotes) {
-      *w++ = '"';
-      *w++ = '"';
-    }
     return w;
   }
-
-  if (options.quotes)
-    *w++ = '"';
 
   const char* s = src.data();
   std::size_t n = src.size();
@@ -169,8 +158,6 @@ char* escape_string(char* w, std::string_view src,
                      misalign, std::min<std::uint32_t>(32, n));
   s += 32;
   if (n <= 32) {
-    if (options.quotes)
-      *w++ = '"';
     return w;
   }
   n -= 32;
@@ -194,8 +181,6 @@ char* escape_string(char* w, std::string_view src,
     std::uint32_t bmsk = _mm256_movemask_epi8(msk);
     w = encode_by_mask(w, s, bmsk, options.style, 0, n);
   }
-  if (options.quotes)
-    *w++ = '"';
   return w;
 #endif // __AVX2__
   return escape_string_naive(w, src, options);
@@ -203,10 +188,8 @@ char* escape_string(char* w, std::string_view src,
 
 void escape_string_append(std::string* dst, std::string_view src,
                           EscapeStringOptions options) CBU_MEMORY_NOEXCEPT {
-  char* p = extend(
-      dst,
-      (options.style == EscapeStyle::JSON) ?
-        6 * src.size() + 2 : 4 * src.size() + 2);
+  char* p = extend(dst, (options.style == EscapeStyle::JSON) ? 6 * src.size()
+                                                             : 4 * src.size());
   p = escape_string(p, src, options);
   truncate_unsafe(dst, p - dst->data());
 }

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,6 @@ TEST(EscapeTest, EscapeC) {
   EXPECT_EQ(s, R"(\x01\x02\b\f\\\"Hello world一二三四五六七八九\\/)");
 
   EXPECT_EQ(escape_string(""), "");
-  EXPECT_EQ(escape_string("", EscapeStringOptions::C.with_quotes()), R"("")");
 }
 
 TEST(EscapeTest, EscapeJSON) {
@@ -47,9 +46,8 @@ TEST(EscapeTest, EscapeJSON) {
                        EscapeStringOptions::JSON);
   EXPECT_EQ(s, R"(\u0001\u0002\b\f\\\"Hello world一二三四五六七八九\\\/)");
 
-  EXPECT_EQ(
-      escape_string("\1\2😍", EscapeStringOptions::JSON.with_quotes()),
-      R"("\u0001\u0002😍")");
+  EXPECT_EQ(escape_string("\1\2😍", EscapeStringOptions::JSON),
+            R"(\u0001\u0002😍)");
 }
 
 TEST(EscapeTest, AlignmentTest) {

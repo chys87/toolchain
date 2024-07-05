@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,23 +42,12 @@ enum struct EscapeStyle : unsigned {
 
 struct EscapeStringOptions {
   EscapeStyle style : 1 = EscapeStyle::C;
-  bool quotes : 1 = false;
 
   constexpr EscapeStringOptions(EscapeStyle style = EscapeStyle::C) noexcept :
     style(style) {}
 
   static const EscapeStringOptions JSON;
   static const EscapeStringOptions C;
-
-  constexpr EscapeStringOptions with_quotes(bool w = true) const noexcept {
-    auto res = *this;
-    res.quotes = w;
-    return res;
-  }
-
-  constexpr EscapeStringOptions without_quotes() const noexcept {
-    return with_quotes(false);
-  }
 };
 
 inline constexpr EscapeStringOptions EscapeStringOptions::JSON =
