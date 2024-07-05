@@ -39,6 +39,7 @@
 #include <optional>
 
 #include "cbu/common/bit.h"
+#include "cbu/common/hint.h"
 #include "cbu/math/common.h"
 #include "cbu/strings/encoding.h"
 #include "cbu/strings/faststr.h"
@@ -100,7 +101,8 @@ constexpr char* escape_string_naive(char* w, const char* s, std::size_t n) {
 
 #ifdef __AVX2__
 template <EscapeStyle style>
-inline __m256i get_encoding_mask(__m256i chars) noexcept {
+[[gnu::always_inline]] inline __m256i get_encoding_mask(
+    __m256i chars) noexcept {
   __v32qu vq = __v32qu(chars);
   __v32qu mask = __v32qu((vq < 0x20) | (vq == '\\') | (vq == '\"'));
   if constexpr (style == EscapeStyle::JSON_STRICT) {
@@ -110,18 +112,16 @@ inline __m256i get_encoding_mask(__m256i chars) noexcept {
 }
 
 template <EscapeStyle style>
-inline char* encode_by_mask(char* w, const char* s, std::uint32_t bmsk,
-                            std::uint32_t from = 0,
-                            std::uint32_t until = 32) noexcept {
+[[gnu::always_inline]] inline char* encode_by_mask(
+    char* w, const char* s, std::uint32_t bmsk, std::uint32_t from = 0,
+    std::uint32_t until = 32) noexcept {
   bmsk &= (-1u << from);
   s += from;
   if (until < 32) {
     bmsk = bzhi(bmsk, until);
   }
   for (std::uint32_t offset : set_bits(bmsk)) {
-#ifdef __clang__
-#pragma clang loop vectorize(disable) unroll(disable)
-#endif
+    CBU_NAIVE_LOOP
     while (from < offset) {
       *w++ = *s++;
       ++from;
@@ -129,9 +129,7 @@ inline char* encode_by_mask(char* w, const char* s, std::uint32_t bmsk,
     w = escape_char<style>(w, *s++);
     ++from;
   }
-#ifdef __clang__
-#pragma clang loop vectorize(disable) unroll(disable)
-#endif
+  CBU_NAIVE_LOOP
   while (from < until) {
     *w++ = *s++;
     ++from;
@@ -139,6 +137,48 @@ inline char* encode_by_mask(char* w, const char* s, std::uint32_t bmsk,
   return w;
 }
 #endif // __AVX2__
+
+#ifdef __ARM_NEON
+template <EscapeStyle style>
+[[gnu::always_inline]] inline uint8x16_t get_encoding_mask(
+    uint8x16_t chars) noexcept {
+  uint8x16_t mask = uint8x16_t((chars < 0x20) | (chars == '\\') | (chars == '\"'));
+  if constexpr (style == EscapeStyle::JSON_STRICT) {
+    mask |= uint8x16_t(chars == '/');
+  }
+  return mask;
+}
+
+template <EscapeStyle style>
+[[gnu::always_inline]] inline char* encode_by_mask(
+    char* w, const char* s, std::uint64_t bmsk, std::uint32_t from = 0,
+    std::uint32_t until = 16) noexcept {
+  s += from;
+
+  from *= 4;
+  until *= 4;
+
+  bmsk &= (std::uint64_t(-1) << from);
+  if (until < 16 * 4) {
+    bmsk = bzhi(bmsk, until);
+  }
+  for (uint32_t offset : set_bits(bmsk & 0x1111'1111'1111'1111ull)) {
+    CBU_NAIVE_LOOP
+    while (from < offset) {
+      *w++ = *s++;
+      from += 4;
+    }
+    w = escape_char<style>(w, *s++);
+    from += 4;
+  }
+  CBU_NAIVE_LOOP
+  while (from < until) {
+    *w++ = *s++;
+    from += 4;
+  }
+  return w;
+}
+#endif  // __ARM_NEON
 
 } // namespace
 
@@ -170,7 +210,9 @@ char* EscapeImpl<style>::raw(char* w, const char* s, std::size_t n) noexcept {
       *(__m256i_u*)w = chars;
       w += 32;
     } else {
-      w = encode_by_mask<style>(w, s, _mm256_movemask_epi8(msk));
+      std::uint32_t bmsk = _mm256_movemask_epi8(msk);
+      CBU_HINT_ASSUME(bmsk != 0);
+      w = encode_by_mask<style>(w, s, bmsk);
     }
     s += 32;
     n -= 32;
@@ -184,6 +226,44 @@ char* EscapeImpl<style>::raw(char* w, const char* s, std::size_t n) noexcept {
   }
   return w;
 #endif // __AVX2__
+#if defined __ARM_NEON && !defined CBU_ADDRESS_SANITIZER
+  if (n == 0) return w;
+
+  std::size_t misalign = std::uintptr_t(s) & 15;
+  s = (const char*)(std::uintptr_t(s) & -16);
+  n += misalign;
+  uint8x16_t chars = *(const uint8x16_t*)s;
+  uint8x16_t msk = get_encoding_mask<style>(chars);
+  std::uint64_t bmsk = uint64x1_t(vshrn_n_u16(uint16x8_t(msk), 4))[0];
+  w = encode_by_mask<style>(w, s, bmsk, misalign,
+                            std::min<std::uint32_t>(16, n));
+  s += 16;
+  if (n <= 16) return w;
+  n -= 16;
+
+  while (n >= 16) {
+    uint8x16_t chars = *(const uint8x16_t*)s;
+    uint8x16_t msk = get_encoding_mask<style>(chars);
+    std::uint64_t bmsk = uint64x1_t(vshrn_n_u16(uint16x8_t(msk), 4))[0];
+    if (bmsk == 0) {
+      *(uint8x16_t*)w = chars;
+      w += 16;
+    } else {
+      CBU_HINT_ASSUME((bmsk & 0x1111'1111'1111'1111ull) != 0);
+      w = encode_by_mask<style>(w, s, bmsk);
+    }
+    s += 16;
+    n -= 16;
+  }
+
+  if (n) {
+    uint8x16_t chars = *(const uint8x16_t*)s;
+    uint8x16_t msk = get_encoding_mask<style>(chars);
+    std::uint64_t bmsk = uint64x1_t(vshrn_n_u16(uint16x8_t(msk), 4))[0];
+    w = encode_by_mask<style>(w, s, bmsk, 0, n);
+  }
+  return w;
+#endif // __ARM_NEON
   return escape_string_naive<style>(w, s, n);
 }
 
