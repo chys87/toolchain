@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -617,19 +617,12 @@ size_t char_span_length(const void* buffer, size_t len, char c) noexcept {
 
 #if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   while (i + 16 <= len) {
-#ifdef __clang__
-    // Clang is clever enough to optimize this, generating cmtst if c is 0
+    // Use "!=" instead of "==", so that compiler will generate cmtst if this
+    // function is inlined by LTO and c is 0
     uint8x16_t v = uint8x16_t(vdupq_n_u8(c) !=
                               *reinterpret_cast<const uint8x16_t*>(p + i));
     uint8x8_t cmp = vshrn_n_u16(vreinterpretq_u16_u8(v), 4);
     uint64_t mask = vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
-#else
-    // GCC is more stupid though
-    uint8x16_t v = uint8x16_t(vdupq_n_u8(c) ==
-                              *reinterpret_cast<const uint8x16_t*>(p + i));
-    uint8x8_t cmp = vshrn_n_u16(vreinterpretq_u16_u8(v), 4);
-    uint64_t mask = ~vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
-#endif
     if (mask) return i + ctz(mask) / 4;
     i += 16;
   }
