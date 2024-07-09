@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,8 +46,8 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
 #if defined __BMI2__
       w = memdrop_be<uint16_t>(w, _pdep_u32(u, 0x1f3f) | 0xc080u);
 #else
-      *w++ = (u >> 6) + 0xc0u;
-      *w++ = (u & 0x3fu) + 0x80u;
+      u = (u >> 6) | ((u & 0b111111) << 8) | 0x80c0;
+      w = memdrop_le<uint16_t>(w, u);
 #endif
     }
   } else if (u < 0x10000) {
@@ -57,22 +57,21 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
     } else {
 #if defined __BMI2__
       memdrop_be<uint32_t>(w, _pdep_u32(u, 0x0f3f3f00) | 0xe0808000);
-      w += 3;
 #else
-      *w++ = (u >> 12) + 0xe0u;
-      *w++ = ((u >> 6) & 0x3fu) + 0x80u;
-      *w++ = (u & 0x3fu) + 0x80u;
+      u = (u >> 12) | ((u & 0b111111'000000) << 2) | ((u & 0b111111) << 16) |
+          0x8080e0;
+      memdrop_le<uint32_t>(w, u);
 #endif
+      w += 3;
     }
   } else {
     if (u < 0x110000) {
 #if defined __BMI2__
       w = memdrop_be<uint32_t>(w, _pdep_u32(u, 0x073f3f3f) | 0xf0808080u);
 #else
-      *w++ = (u >> 18) + 0xf0u;
-      *w++ = ((u >> 12) & 0x3fu) + 0x80u;
-      *w++ = ((u >> 6) & 0x3fu) + 0x80u;
-      *w++ = (u & 0x3fu) + 0x80u;
+      u = (u >> 18) | ((u & 0b111111'000000'000000) >> 4) |
+          ((u & 0b111111'000000) << 10) | ((u & 0b111111) << 24) | 0x808080f0u;
+      w = memdrop_le<uint32_t>(w, u);
 #endif
     } else {
       return nullptr;
@@ -89,28 +88,27 @@ char8_t* char32_to_utf8_unsafe(char8_t* w, char32_t u) noexcept {
 #if defined __BMI2__
       w = memdrop_be<uint16_t>(w, _pdep_u32(u, 0x1f3f) | 0xc080u);
 #else
-      *w++ = (u >> 6) + 0xc0u;
-      *w++ = (u & 0x3fu) + 0x80u;
+      u = (u >> 6) | ((u & 0b111111) << 8) | 0x80c0;
+      w = memdrop_le<uint16_t>(w, u);
 #endif
     }
   } else if (u < 0x10000) {
 #if defined __BMI2__
     memdrop_be<uint32_t>(w, _pdep_u32(u, 0x0f3f3f00) | 0xe0808000);
-    w += 3;
 #else
-    *w++ = (u >> 12) + 0xe0u;
-    *w++ = ((u >> 6) & 0x3fu) + 0x80u;
-    *w++ = (u & 0x3fu) + 0x80u;
+    u = (u >> 12) | ((u & 0b111111'000000) << 2) | ((u & 0b111111) << 16) |
+        0x8080e0;
+    memdrop_le<uint32_t>(w, u);
 #endif
+    w += 3;
   } else {
     // Assuming u < 0x110000
 #if defined __BMI2__
     w = memdrop_be<uint32_t>(w, _pdep_u32(u, 0x073f3f3f) | 0xf0808080u);
 #else
-    *w++ = (u >> 18) + 0xf0u;
-    *w++ = ((u >> 12) & 0x3fu) + 0x80u;
-    *w++ = ((u >> 6) & 0x3fu) + 0x80u;
-    *w++ = (u & 0x3fu) + 0x80u;
+    u = (u >> 18) | ((u & 0b111111'000000'000000) >> 4) |
+        ((u & 0b111111'000000) << 10) | ((u & 0b111111) << 24) | 0x808080f0u;
+    w = memdrop_le<uint32_t>(w, u);
 #endif
   }
   return w;
@@ -124,19 +122,19 @@ char8_t* char16_to_utf8_unsafe(char8_t* w, char16_t u) noexcept {
 #if defined __BMI2__
       w = memdrop_be<uint16_t>(w, _pdep_u32(u, 0x1f3f) | 0xc080u);
 #else
-      *w++ = (u >> 6) + 0xc0u;
-      *w++ = (u & 0x3fu) + 0x80u;
+      u = (u >> 6) | ((u & 0b111111) << 8) | 0x80c0;
+      w = memdrop_le<uint16_t>(w, u);
 #endif
     }
   } else {
 #if defined __BMI2__
     memdrop_be<uint32_t>(w, _pdep_u32(u, 0x0f3f3f00) | 0xe0808000);
-    w += 3;
 #else
-    *w++ = (u >> 12) + 0xe0u;
-    *w++ = ((u >> 6) & 0x3fu) + 0x80u;
-    *w++ = (u & 0x3fu) + 0x80u;
+    uint32_t v = (u >> 12) | ((u & 0b111111'000000) << 2) |
+                 ((u & 0b111111) << 16) | 0x8080e0;
+    memdrop_le<uint32_t>(w, v);
 #endif
+    w += 3;
   }
   return w;
 }
