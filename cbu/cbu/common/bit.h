@@ -28,6 +28,10 @@
 
 #pragma once
 
+#if defined __aarch64__
+#include <arm_acle.h>
+#endif
+
 #include <algorithm>
 #include <bit>
 #include <concepts>
@@ -122,16 +126,14 @@ template <std::integral T>
 constexpr std::remove_cvref_t<T> rbit(T x) noexcept {
   using UT = std::make_unsigned_t<std::remove_cvref_t<T>>;
   UT y = x;
-#if defined __ARM_ACLE && __has_builtin(__builtin_arm_rbit) && \
-    __has_builtin(__builtin_arm_rbitll)
-#define CBU_RBIT_IS_FAST
+#if defined __aarch64__
   if !consteval {
     if constexpr (sizeof(UT) < sizeof(unsigned)) {
-      return __builtin_arm_rbit(y) >> (8 * (sizeof(unsigned) - sizeof(UT)));
+      return __rbit(y) >> (8 * (sizeof(unsigned) - sizeof(UT)));
     } else if constexpr (sizeof(UT) == sizeof(unsigned)) {
-      return __builtin_arm_rbit(y);
+      return __rbit(y);
     } else if constexpr (sizeof(UT) == sizeof(unsigned long long)) {
-      return __builtin_arm_rbitll(y);
+      return __rbitll(y);
     }
   }
 #endif
@@ -197,33 +199,19 @@ class BitIterator {
   using reference = unsigned int;
   using iterator_category = std::forward_iterator_tag;
 
-  // aarch64 has fast rbit and no ctz, so it's better to do rbit once,
-  // and use only clz in each iteration.
-#if defined __aarch64__ && defined CBU_RBIT_IS_FAST
-  explicit constexpr BitIterator(T v = 0) noexcept : v_(rbit(v)) {}
-#else
   explicit constexpr BitIterator(T v = 0) noexcept : v_(v) {}
-#endif
   constexpr BitIterator(const BitIterator &) noexcept = default;
   constexpr BitIterator &operator = (const BitIterator &) noexcept = default;
 
-  constexpr unsigned operator * () const noexcept {
-#if defined __aarch64__ && defined CBU_RBIT_IS_FAST
-    return clz(v_);
-#else
+  constexpr unsigned operator*() const noexcept {
     return ctz(std::common_type_t<T, unsigned>(v_));
-#endif
   }
 
-  constexpr BitIterator &operator ++ () {
-#if defined __aarch64__ && defined CBU_RBIT_IS_FAST
-    v_ = v_ & ~(T(1) << (8 * sizeof(T) - 1) >> clz(v_));
-#else
+  constexpr BitIterator& operator++() {
     v_ = blsr(v_);
-#endif
     return *this;
   }
-  constexpr BitIterator operator ++ (int) {
+  constexpr BitIterator operator++(int) {
     BitIterator copy = *this;
     ++*this;
     return copy;
