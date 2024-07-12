@@ -74,7 +74,7 @@ def dump_filter(txt):
     # Remove resolved addresses for ...(%rip) (llvm-objdump only)
     txt = RE_RESOLVED_ABS_ADDR.sub(b'', txt)
     # Remove offsets relative to symbols
-    txt = RE_OFFSET_FROM_SYM.sub(br'<\1+0x....>', txt)
+    txt = RE_OFFSET_FROM_SYM.sub(br'<...+0x...>', txt)
     # ARM specific
     txt = RE_ARM_OFFSET_FROM_REG.sub(br'[\1, #...]', txt)
     txt = RE_ARM_OFFSET_FROM_REG_2.sub(br'\1, \2, #0x...', txt)
