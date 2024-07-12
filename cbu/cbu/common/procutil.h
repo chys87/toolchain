@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,20 +37,17 @@ namespace cbu {
 [[noreturn, gnu::cold]] void fatal_length_prefixed(const char* info) noexcept;
 
 template <cbu::fixed_string msg>
-  requires(msg.size() > 0 && msg[msg.size() - 1] == '\n')
 [[noreturn, gnu::always_inline]] inline void fatal() noexcept {
-  constexpr auto str =
-      LittleEndianFixedString<static_cast<unsigned char>(msg.size())>() + msg;
-  fatal_length_prefixed(as_shared<str>.data());
-}
-
-template <cbu::fixed_string msg>
-  requires(msg.size() == 0 || msg[msg.size() - 1] != '\n')
-[[noreturn, gnu::always_inline]] inline void fatal() noexcept {
-  constexpr auto str =
-      LittleEndianFixedString<static_cast<unsigned char>(msg.size())>() + msg +
-      LittleEndianFixedString<static_cast<unsigned char>('\n')>();
-  fatal_length_prefixed(as_shared<str>.data());
+  if constexpr (msg.size() > 0 && msg[msg.size() - 1] == '\n') {
+    constexpr auto str =
+        LittleEndianFixedString<static_cast<unsigned char>(msg.size())>() + msg;
+    fatal_length_prefixed(as_shared<str>.data());
+  } else {
+    constexpr auto str =
+        LittleEndianFixedString<static_cast<unsigned char>(msg.size() + 1)>() +
+        msg + LittleEndianFixedString<static_cast<unsigned char>('\n')>();
+    fatal_length_prefixed(as_shared<str>.data());
+  }
 }
 
 }  // namespace cbu
