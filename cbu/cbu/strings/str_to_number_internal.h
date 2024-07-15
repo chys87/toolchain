@@ -415,7 +415,7 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
     const std::uint32_t kInf = 'i' | ('n' << 8) | ('f' << 16);
     const std::uint32_t kNaN = 'n' | ('a' << 8) | ('n' << 16);
     if (vl == kInf || vl == kNaN) [[unlikely]] {
-      T val = (vl == kInf) ? INFINITY : NAN;
+      T val = sign((vl == kInf) ? INFINITY : NAN);
       if (vl == kInf && std::uintptr_t(e - s) >= 8 &&
           (pick8(s) | 0x2020202020202020) == pick8("infinity")) {
         s += 8;
@@ -431,7 +431,7 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
           return make_bad_ret();
         }
       }
-      return make_ret(sign(val));
+      return make_ret(val);
     }
   }
 
