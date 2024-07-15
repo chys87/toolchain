@@ -397,15 +397,39 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
 
   // Handle inf and nan
   if (s < e && std::uintptr_t(e - s) >= 3) {
+    auto pick8 = [](const char* s) constexpr noexcept {
+      std::uint64_t r = 0;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+      if consteval {
+        for (int i = 0; i < 8; ++i)
+          r |= std::uint64_t(std::uint8_t(s[i])) << (i * 8);
+        return r;
+      }
+#endif
+      __builtin_memcpy(&r, s, 8);
+      return r;
+    };
+
     std::uint32_t vl = std::uint8_t(s[0]) | (std::uint8_t(s[1]) << 8) |
                        (std::uint8_t(s[2]) << 16) | 0x202020;
     const std::uint32_t kInf = 'i' | ('n' << 8) | ('f' << 16);
     const std::uint32_t kNaN = 'n' | ('a' << 8) | ('n' << 16);
-    if (vl == kInf || vl == kNaN) {
+    if (vl == kInf || vl == kNaN) [[unlikely]] {
       T val = (vl == kInf) ? INFINITY : NAN;
-      s += 3;
-      if constexpr (!partial) {
-        if (s != e) return make_bad_ret();
+      if (vl == kInf && std::uintptr_t(e - s) >= 8 &&
+          (pick8(s) | 0x2020202020202020) == pick8("infinity")) {
+        s += 8;
+      } else {
+        s += 3;
+      }
+      if (s != e) {
+        if constexpr (partial) {
+          if (std::uint8_t(*s - '0') < 10 ||
+              std::uint8_t((*s | 0x20) - 'a') < 26)
+            return make_bad_ret();
+        } else {
+          return make_bad_ret();
+        }
       }
       return make_ret(sign(val));
     }

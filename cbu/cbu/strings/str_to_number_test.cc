@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -198,8 +198,8 @@ TEST(StrToIntegerTest, OverflowTorture) {
     else
       ++x;
   } while (x != 0);
-
 }
+
 TEST(StrToFpTest, Regular) {
   EXPECT_DOUBLE_EQ(str_to_fp<double>("3.14").value_or(NAN), 3.14);
   EXPECT_DOUBLE_EQ(str_to_fp<double>("-3.14").value_or(NAN), -3.14);
@@ -235,6 +235,9 @@ TEST(StrToFpTest, Regular) {
   EXPECT_DOUBLE_EQ(INFINITY, str_to_fp<double>("inf").value_or(NAN));
   EXPECT_DOUBLE_EQ(INFINITY, str_to_fp<double>("Inf").value_or(NAN));
   EXPECT_DOUBLE_EQ(-INFINITY, str_to_fp<double>("-Inf").value_or(NAN));
+  EXPECT_DOUBLE_EQ(INFINITY, str_to_fp<double>("infIniTy").value_or(NAN));
+  EXPECT_DOUBLE_EQ(INFINITY, str_to_fp<double>("Infinity").value_or(NAN));
+  EXPECT_DOUBLE_EQ(-INFINITY, str_to_fp<double>("-INFINITY").value_or(NAN));
   EXPECT_TRUE(isnan(str_to_fp<double>("nan").value_or(0)));
   EXPECT_TRUE(isnan(str_to_fp<double>("-nan").value_or(0)));
 
@@ -371,6 +374,26 @@ TEST(StrToFpTest, CornerCases) {
   }
 }
 
+TEST(StrToFpTest, Partial) {
+  EXPECT_EQ(str_to_fp_partial<float>("1.25 + 2 = 3.25").value_opt.value_or(0),
+            1.25f);
+
+  {
+    auto [vo, e] = str_to_fp_partial<double>("inf is here");
+    ASSERT_DOUBLE_EQ(vo.value_or(0), INFINITY);
+    ASSERT_STREQ(e, " is here");
+  }
+  {
+    auto [vo, e] = str_to_fp_partial<double>("infinity is here");
+    ASSERT_DOUBLE_EQ(vo.value_or(0), INFINITY);
+    ASSERT_STREQ(e, " is here");
+  }
+  {
+    auto [vo, e] = str_to_fp_partial<double>("infinityx is here");
+    ASSERT_FALSE(vo.has_value()) << vo.value_or(NAN);
+  }
+}
+
 TEST(StrToFpTest, Constexpr) {
   constexpr auto a = str_to_fp<float>("3.14159");
   EXPECT_FLOAT_EQ(a.value_or(0), 3.14159f);
@@ -380,6 +403,12 @@ TEST(StrToFpTest, Constexpr) {
   EXPECT_FLOAT_EQ(c.value_or(0), 0xabcdefp+2f);
   constexpr auto d = str_to_fp<double, AutoRadixTag>("0x.abcdefp-1000");
   EXPECT_DOUBLE_EQ(d.value_or(0), 0x.abcdefp-1000);
+  constexpr auto e = str_to_fp<double>("infinity");
+  EXPECT_DOUBLE_EQ(e.value_or(0), INFINITY);
+  constexpr auto f = str_to_fp<double>("inf");
+  EXPECT_DOUBLE_EQ(f.value_or(0), INFINITY);
+  constexpr auto g = str_to_fp<double>("NaN");
+  EXPECT_TRUE(isnan(g.value_or(0)));
 }
 
 }  // namespace cbu
