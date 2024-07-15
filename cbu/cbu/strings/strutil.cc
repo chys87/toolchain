@@ -418,7 +418,17 @@ char *reverse(char *p, char *q) noexcept {
     p += 4;
     q -= 4;
   }
-  std::reverse(p, q);
+  if (p + 4 <= q) {
+    uint16_t a = bswap(mempick2(p));
+    uint16_t b = bswap(mempick2(q - 2));
+    memdrop2(q - 2, a);
+    memdrop2(p, b);
+    p += 2;
+    q -= 2;
+  }
+  if (p < --q) {
+    std::swap(*p, *q);
+  }
   return ret;
 }
 
