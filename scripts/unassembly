@@ -633,6 +633,19 @@ def find_objdump():
     return argv
 
 
+def llvm_cxxfilt(fi):
+    '''Occasionally, clang mangles C++ symbols differently from GCC.
+    So we also feed the output to llvm-cxxfilt.
+    '''
+    path = shutil.which('llvm-cxxfilt')
+    if not path:
+        return fi
+    proc = subprocess.Popen([path], close_fds=True, stdin=fi,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    fi.close()
+    return proc.stdout
+
+
 def main():
     locale.setlocale(locale.LC_ALL, 'C')
 
@@ -661,6 +674,8 @@ def main():
     objdump = subprocess.Popen(cmd, close_fds=True, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
     fi = objdump.stdout
+    if 'llvm-' not in objdump_base:
+        fi = llvm_cxxfilt(fi)
     fi = cppfilter(fi, args)
     fi = long_function_name_filter(fi)
 
