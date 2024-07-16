@@ -368,7 +368,13 @@ class FpSignApply {
         asm ("vxorpd %2, %1, %0" : "=x"(val) : "x"(val), "x"(sign_zero_));
         return val;
       }
+#elifdef __aarch64__
+      if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+        asm ("eor %0.8b, %1.8b, %2.8b" : "=w"(val) : "w"(val), "w"(sign_zero_));
+        return val;
+      }
 #endif
+      return std::copysign(val, sign_zero_);
     }
     if (negative_) val = -val;
     return val;
@@ -378,6 +384,42 @@ class FpSignApply {
   bool negative_;
   T sign_zero_;
 };
+
+inline constexpr std::uint16_t pick2(const char* s) noexcept {
+  std::uint16_t r = 0;
+  if !consteval {
+    __builtin_memcpy(&r, s, 2);
+    return r;
+  }
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  r = std::uint8_t(s[0]) | (std::uint8_t(s[1]) << 8);
+#else
+  r = std::uint8_t(s[1]) | (std::uint8_t(s[0]) << 8);
+#endif
+  return r;
+}
+
+inline constexpr std::uint32_t pick3(const char* s) noexcept {
+  // The result is not big-endian on big-endian platforms. We only attempt to
+  // provide consistent results on the same platform.
+  return pick2(s) | (std::uint32_t(std::uint8_t(s[2])) << 16);
+}
+
+inline constexpr std::uint64_t pick8(const char* s) noexcept {
+  std::uint64_t r = 0;
+  if !consteval {
+    __builtin_memcpy(&r, s, 8);
+    return r;
+  }
+  for (int i = 0; i < 8; ++i) {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    r |= std::uint64_t(std::uint8_t(s[i])) << (i * 8);
+#else
+    r |= std::uint64_t(std::uint8_t(s[i])) << ((7 - i) * 8);
+#endif
+  }
+  return r;
+}
 
 template <std::floating_point T, bool partial, typename Tag>
 constexpr auto str_to_fp(const char* s, const char* e) noexcept {
@@ -397,23 +439,9 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
 
   // Handle inf and nan
   if (s < e && std::uintptr_t(e - s) >= 3) {
-    auto pick8 = [](const char* s) constexpr noexcept {
-      std::uint64_t r = 0;
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-      if consteval {
-        for (int i = 0; i < 8; ++i)
-          r |= std::uint64_t(std::uint8_t(s[i])) << (i * 8);
-        return r;
-      }
-#endif
-      __builtin_memcpy(&r, s, 8);
-      return r;
-    };
-
-    std::uint32_t vl = std::uint8_t(s[0]) | (std::uint8_t(s[1]) << 8) |
-                       (std::uint8_t(s[2]) << 16) | 0x202020;
-    const std::uint32_t kInf = 'i' | ('n' << 8) | ('f' << 16);
-    const std::uint32_t kNaN = 'n' | ('a' << 8) | ('n' << 16);
+    std::uint32_t vl = pick3(s) | 0x20202020;
+    const std::uint32_t kInf = pick3("inf") | 0x20202020;
+    const std::uint32_t kNaN = pick3("nan") | 0x20202020;
     if (vl == kInf || vl == kNaN) [[unlikely]] {
       T val = sign((vl == kInf) ? INFINITY : NAN);
       if (vl == kInf && std::uintptr_t(e - s) >= 8 &&
