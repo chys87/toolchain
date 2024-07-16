@@ -49,43 +49,51 @@ using StrToIntegerPartialResult = StrToNumberPartialResult<T>;
 
 namespace str_to_number_detail {
 
-template <int base_, bool check_overflow_, bool halt_on_overflow_,
-          unsigned long long overflow_threshold_>
-struct IntegerOptionTag {
-  static constexpr int base = base_;
-  static constexpr bool check_overflow = check_overflow_;
-  static constexpr bool halt_on_overflow = halt_on_overflow_;
-  static constexpr unsigned long long overflow_threshold = overflow_threshold_;
+struct IntegerOptions {
+  int base = 10;
+  bool check_overflow = true;
+  bool halt_on_overflow = false;
+  unsigned long long overflow_threshold = ~0ull;
 
   template <int new_base>
     requires(new_base == 0 || (new_base >= 2 && new_base <= 36))
-  auto operator+(RadixTag<new_base>)
-      -> IntegerOptionTag<new_base, check_overflow, halt_on_overflow,
-                          overflow_threshold>;
+  constexpr IntegerOptions operator+(RadixTag<new_base>) const noexcept {
+    auto res = *this;
+    res.base = new_base;
+    return res;
+  }
 
-  auto operator+(IgnoreOverflowTag)
-      -> IntegerOptionTag<base, false, halt_on_overflow, overflow_threshold>;
+  constexpr IntegerOptions operator+(IgnoreOverflowTag) const noexcept {
+    auto res = *this;
+    res.check_overflow = false;
+    return res;
+  }
 
-  auto operator+(HaltScanOnOverflowTag)
-      -> IntegerOptionTag<base, check_overflow, true, overflow_threshold>;
+  constexpr IntegerOptions operator+(HaltScanOnOverflowTag) const noexcept {
+    auto res = *this;
+    res.halt_on_overflow = true;
+    return res;
+  }
 
   template <unsigned long long threshold>
-  auto operator+(OverflowThresholdTag<threshold>)
-      -> IntegerOptionTag<base, check_overflow, halt_on_overflow, threshold>;
+  constexpr IntegerOptions operator+(
+      OverflowThresholdTag<threshold>) const noexcept {
+    auto res = *this;
+    res.overflow_threshold = threshold;
+    return res;
+  }
 };
-
-using IntegerDefaultOptionTag = IntegerOptionTag<10, true, false, ~0ull>;
 
 template <typename... Options>
 concept IntegerValidOptions = requires(Options&&... options) {
-  {(IntegerDefaultOptionTag() + ... + options)};
+  { (IntegerOptions() + ... + options) };
 };
 
 template <typename... Options>
   requires IntegerValidOptions<Options...>
-struct IntegerOptionParser {
-  using Tag = decltype((IntegerDefaultOptionTag() + ... + Options()));
-};
+inline constexpr IntegerOptions parse_integer_options() noexcept {
+  return (IntegerOptions() + ... + Options());
+}
 
 template <typename T, typename... Options>
 concept IntegerSupported =
@@ -241,7 +249,7 @@ inline constexpr std::optional<T> mul_base_add(T x, T digit) noexcept {
   return x;
 }
 
-template <std::integral T, bool partial, typename Tag>
+template <std::integral T, bool partial, IntegerOptions OPT>
 constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   auto make_ret = [&](std::optional<T> v) constexpr noexcept {
     if constexpr (partial)
@@ -261,28 +269,28 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
       if (*s == '-') sign = T(-1);
       ++s;
     }
-    auto abs_ret = str_to_integer<std::make_unsigned_t<T>, partial, Tag>(s, e);
+    auto abs_ret = str_to_integer<std::make_unsigned_t<T>, partial, OPT>(s, e);
     auto abs_opt_val = extract_value(abs_ret);
     if (!abs_opt_val) [[unlikely]]
       return replace_value(abs_ret, std::optional<T>(std::nullopt));
     T real_val = (*abs_opt_val ^ sign) - sign;
-    if constexpr (Tag::overflow_threshold > std::numeric_limits<T>::max()) {
+    if constexpr (OPT.overflow_threshold > std::numeric_limits<T>::max()) {
       // Test overflow after adding sign, whether real_val and sign has the
       // same sign bit.
       if (T(real_val ^ sign) < T(0)) [[unlikely]]
         return replace_value(abs_ret, std::optional<T>(std::nullopt));
     }
     return replace_value(abs_ret, std::optional(real_val));
-  } else if constexpr (Tag::base == 0) {
+  } else if constexpr (OPT.base == 0) {
     // Handle base 0
     if (s + 1 < e && *s == '0') {
       if (s[1] == 'x' || s[1] == 'X')
-        return str_to_integer<T, partial, decltype(Tag() + HexTag())>(s + 2, e);
+        return str_to_integer<T, partial, OPT + HexTag()>(s + 2, e);
       else if ((s[1] == 'o' || s[1] == 'O') || isdigit(s[1]))
-        return str_to_integer<T, partial, decltype(Tag() + OctTag())>(
+        return str_to_integer<T, partial, OPT + OctTag()>(
             s + 1 + (s[1] == 'o' || s[1] == 'O'), e);
     }
-    return str_to_integer<T, partial, decltype(Tag() + DecTag())>(s, e);
+    return str_to_integer<T, partial, OPT + DecTag()>(s, e);
   } else {
     // Now T is unsigned, and base is between 2 and 36
     if (s >= e) [[unlikely]]
@@ -292,7 +300,7 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
     T val = 0;
 
     while (s < e) {
-      auto digit_opt = parse_one_digit<Tag::base>(*s);
+      auto digit_opt = parse_one_digit<OPT.base>(*s);
       if (!digit_opt) {
         if (partial && parsed_any_char) break;
         return make_bad_ret();
@@ -300,20 +308,20 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
       ++s;
       parsed_any_char = true;
 
-      if constexpr (Tag::check_overflow) {
-        auto new_val_opt = mul_base_add<T, Tag::base, Tag::overflow_threshold>(
+      if constexpr (OPT.check_overflow) {
+        auto new_val_opt = mul_base_add<T, OPT.base, OPT.overflow_threshold>(
             val, T(*digit_opt));
         if (!new_val_opt) [[unlikely]] {
-          if constexpr (partial && !Tag::halt_on_overflow) {
+          if constexpr (partial && !OPT.halt_on_overflow) {
             // In partial match, we need to consume all remaining digits, to
             // prevent surprise.
-            while (s < e && parse_one_digit<Tag::base>(*s)) ++s;
+            while (s < e && parse_one_digit<OPT.base>(*s)) ++s;
           }
           return make_bad_ret();
         }
         val = *new_val_opt;
       } else {
-        val = val * Tag::base + *digit_opt;
+        val = val * OPT.base + *digit_opt;
       }
     }
 
@@ -321,27 +329,28 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   }
 };
 
-template <bool supports_hex_ = false>
-struct FpOptionTag {
-  static constexpr bool supports_hex = supports_hex_;
+struct FpOptions {
+  bool supports_hex = false;
 
   template <int new_base>
     requires(new_base == 0 || new_base == 10)
-  auto operator+(RadixTag<new_base>) -> FpOptionTag<new_base == 0>;
+  constexpr FpOptions operator+(RadixTag<new_base>) const noexcept {
+    auto res = *this;
+    res.supports_hex = (new_base == 0);
+    return res;
+  }
 };
-
-using FpDefaultOptionTag = FpOptionTag<>;
 
 template <typename... Options>
 concept FpValidOptions = requires(Options&&... options) {
-  {(FpDefaultOptionTag() + ... + options)};
+  {(FpOptions() + ... + options)};
 };
 
 template <typename... Options>
   requires FpValidOptions<Options...>
-struct FpOptionParser {
-  using Tag = decltype((FpDefaultOptionTag() + ... + Options()));
-};
+inline constexpr FpOptions parse_fp_options() noexcept {
+  return (FpOptions() + ... + Options());
+}
 
 template <typename T, typename... Options>
 concept FpSupported = std::numeric_limits<T>::is_iec559 &&
@@ -421,7 +430,7 @@ inline constexpr std::uint64_t pick8(const char* s) noexcept {
   return r;
 }
 
-template <std::floating_point T, bool partial, typename Tag>
+template <std::floating_point T, bool partial, FpOptions OPT>
 constexpr auto str_to_fp(const char* s, const char* e) noexcept {
   auto make_ret = [&](std::optional<T> v) constexpr noexcept {
     if constexpr (partial)
@@ -470,7 +479,7 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
   constexpr UT kHexMulLimit = (std::numeric_limits<ST>::max() - 15) / 16;
 
   // Handle hex
-  if constexpr (Tag::supports_hex) {
+  if constexpr (OPT.supports_hex) {
     if (s < e && s + 1 < e && *s == '0' && (s[1] == 'x' || s[1] == 'X')) {
       s += 2;
 

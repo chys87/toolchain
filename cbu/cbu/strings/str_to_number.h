@@ -64,13 +64,13 @@ namespace cbu {
 template <std::integral T, typename... Options>
   requires(str_to_number_detail::IntegerSupported<T, Options...>)
 constexpr std::optional<T> str_to_integer(const char* s, const char* e) {
-  using Tag = typename str_to_number_detail::IntegerOptionParser<
+  constexpr auto OPT = str_to_number_detail::parse_integer_options<
       OverflowThresholdTag<str_to_number_detail::OverflowThresholdByType<T>>,
-      Options...>::Tag;
+      Options...>();
   using CT = str_to_number_detail::ConversionType<T>;
-  auto res = str_to_number_detail::str_to_integer<CT, false, Tag>(s, e);
+  auto res = str_to_number_detail::str_to_integer<CT, false, OPT>(s, e);
   // Unsigned case is completely covered by OverflowThreshold
-  if constexpr (Tag::check_overflow && sizeof(T) < sizeof(CT) &&
+  if constexpr (OPT.check_overflow && sizeof(T) < sizeof(CT) &&
                 std::is_signed_v<T>) {
     if (res && T(*res) != CT(*res)) return std::nullopt;
   }
@@ -87,13 +87,13 @@ template <std::integral T, typename... Options>
   requires(str_to_number_detail::IntegerSupported<T, Options...>)
 constexpr auto str_to_integer_partial(const char* s, const char* e) noexcept
     -> StrToNumberPartialResult<T> {
-  using Tag = typename str_to_number_detail::IntegerOptionParser<
+  constexpr auto OPT = str_to_number_detail::parse_integer_options<
       OverflowThresholdTag<str_to_number_detail::OverflowThresholdByType<T>>,
-      Options...>::Tag;
+      Options...>();
   using CT = str_to_number_detail::ConversionType<T>;
-  auto res = str_to_number_detail::str_to_integer<CT, true, Tag>(s, e);
+  auto res = str_to_number_detail::str_to_integer<CT, true, OPT>(s, e);
   // Unsigned case is completely covered by OverflowThreshold
-  if constexpr (Tag::check_overflow && sizeof(T) < sizeof(CT) &&
+  if constexpr (OPT.check_overflow && sizeof(T) < sizeof(CT) &&
                 std::is_signed_v<T>) {
     if (res.first && T(*res.first) != CT(*res.first))
       return {std::nullopt, res.second};
@@ -132,8 +132,7 @@ template <typename T, typename... Options>
   requires(str_to_number_detail::FpSupported<T, Options...>)
 constexpr std::optional<T> str_to_fp(const char* s, const char* e) noexcept {
   return str_to_number_detail::str_to_fp<
-      T, false, typename str_to_number_detail::FpOptionParser<Options...>::Tag>(
-      s, e);
+      T, false, str_to_number_detail::parse_fp_options<Options...>()>(s, e);
 }
 
 template <typename T, typename... Options>
@@ -147,8 +146,7 @@ template <typename T, typename... Options>
 constexpr auto str_to_fp_partial(const char* s, const char* e) noexcept
     -> StrToNumberPartialResult<T> {
   return str_to_number_detail::str_to_fp<
-      T, true, typename str_to_number_detail::FpOptionParser<Options...>::Tag>(
-      s, e);
+      T, true, str_to_number_detail::parse_fp_options<Options...>()>(s, e);
 }
 
 template <typename T, typename... Options>
