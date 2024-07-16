@@ -141,19 +141,25 @@ constexpr bool isxdigit(unsigned char c) noexcept {
 }
 
 template <int base>
+  requires(base <= 10)
 inline constexpr std::optional<unsigned> parse_one_digit(
     std::uint8_t c) noexcept {
-  if constexpr (base <= 10) {
-    if (unsigned C = c - '0'; C < base) return C;
-  } else {
-    if (unsigned C = c - '0'; C < 10) return C;
-    if (unsigned C = (c | 0x20) - 'a'; C < base - 10) return C + 10;
-  }
+  if (unsigned C = c - '0'; C < base) return C;
   return std::nullopt;
 }
 
-template <typename T>
-inline constexpr T powu(T a, unsigned t, T r = T(1)) noexcept {
+template <int base>
+  requires(base > 10)
+inline constexpr std::optional<unsigned> parse_one_digit(
+    std::uint8_t c) noexcept {
+  if (unsigned C = c - '0'; C < 10) return C;
+  if (unsigned C = (c | 0x20) - 'a'; C < base - 10) return C + 10;
+  return std::nullopt;
+}
+
+template <std::floating_point T>
+inline constexpr T powu(T a, unsigned t,
+                        std::type_identity_t<T> r = 1) noexcept {
   while (t) {
     if (t & 1) r *= a;
     t >>= 1;
@@ -163,7 +169,7 @@ inline constexpr T powu(T a, unsigned t, T r = T(1)) noexcept {
 }
 
 // "daz" stands for "denormal as zero"
-template <typename T>
+template <std::floating_point T>
 inline constexpr T pow2_daz(int t) noexcept {
   if constexpr (!std::numeric_limits<T>::is_iec559 || sizeof(T) > 8) {
     return powu(t >= 0 ? T(2) : T(.5), t >= 0 ? t : -t);
@@ -249,7 +255,63 @@ inline constexpr std::optional<T> mul_base_add(T x, T digit) noexcept {
   return x;
 }
 
-template <std::integral T, bool partial, IntegerOptions OPT>
+template <std::unsigned_integral T, bool partial, IntegerOptions OPT>
+  requires(OPT.base != 0)
+constexpr auto str_to_integer(const char* s, const char* e) noexcept {
+  auto make_ret = [&](std::optional<T> v = std::nullopt) constexpr noexcept {
+    if constexpr (partial)
+      return StrToNumberPartialResult<T>{v, s};
+    else
+      return v;
+  };
+
+  if (s >= e) [[unlikely]]
+    return make_ret();
+
+  bool parsed_any_char = false;
+  T val = 0;
+
+  while (s != e) {
+    auto digit_opt = parse_one_digit<OPT.base>(*s);
+    if (!digit_opt) {
+      if (partial && parsed_any_char) break;
+      return make_ret();
+    }
+    ++s;
+    parsed_any_char = true;
+
+    if constexpr (OPT.check_overflow) {
+      auto new_val_opt = mul_base_add<T, OPT.base, OPT.overflow_threshold>(val, T(*digit_opt));
+      if (!new_val_opt) [[unlikely]] {
+        if constexpr (partial && !OPT.halt_on_overflow) {
+          // In partial match, we need to consume all remaining digits, to
+          // prevent surprise.
+          while (s != e && parse_one_digit<OPT.base>(*s)) ++s;
+        }
+        return make_ret();
+      }
+      val = *new_val_opt;
+    } else {
+      val = val * OPT.base + *digit_opt;
+    }
+  }
+
+  return make_ret(val);
+};
+
+template <std::unsigned_integral T, bool partial, IntegerOptions OPT>
+  requires(OPT.base == 0)
+constexpr auto str_to_integer(const char* s, const char* e) noexcept {
+  if (s != e && s + 1 != e && *s == '0') {
+    if (s[1] == 'x' || s[1] == 'X')
+      return str_to_integer<T, partial, OPT + HexTag()>(s + 2, e);
+    else if ((s[1] == 'o' || s[1] == 'O') || isdigit(s[1]))
+      return str_to_integer<T, partial, OPT + OctTag()>(s + 1 + (s[1] == 'o' || s[1] == 'O'), e);
+  }
+  return str_to_integer<T, partial, OPT + DecTag()>(s, e);
+};
+
+template <std::signed_integral T, bool partial, IntegerOptions OPT>
 constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   auto make_ret = [&](std::optional<T> v) constexpr noexcept {
     if constexpr (partial)
@@ -259,75 +321,26 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   };
   auto make_bad_ret = [&] constexpr noexcept { return make_ret(std::nullopt); };
 
-  // Handle negative values
-  if constexpr (std::is_signed_v<T>) {
-    if (s >= e) [[unlikely]]
-      return make_bad_ret();
+  if (s >= e) [[unlikely]]
+    return make_bad_ret();
 
-    T sign = 0;
-    if (*s == '+' || *s == '-') {
-      if (*s == '-') sign = T(-1);
-      ++s;
-    }
-    auto abs_ret = str_to_integer<std::make_unsigned_t<T>, partial, OPT>(s, e);
-    auto abs_opt_val = extract_value(abs_ret);
-    if (!abs_opt_val) [[unlikely]]
-      return replace_value(abs_ret, std::optional<T>(std::nullopt));
-    T real_val = (*abs_opt_val ^ sign) - sign;
-    if constexpr (OPT.check_overflow &&
-                  OPT.overflow_threshold > std::numeric_limits<T>::max()) {
-      // Test overflow after adding sign, whether real_val and sign has the
-      // same sign bit.
-      if (T(real_val ^ sign) < T(0)) [[unlikely]]
-        return replace_value(abs_ret, std::optional<T>(std::nullopt));
-    }
-    return replace_value(abs_ret, std::optional(real_val));
-  } else if constexpr (OPT.base == 0) {
-    // Handle base 0
-    if (s != e && s + 1 != e && *s == '0') {
-      if (s[1] == 'x' || s[1] == 'X')
-        return str_to_integer<T, partial, OPT + HexTag()>(s + 2, e);
-      else if ((s[1] == 'o' || s[1] == 'O') || isdigit(s[1]))
-        return str_to_integer<T, partial, OPT + OctTag()>(
-            s + 1 + (s[1] == 'o' || s[1] == 'O'), e);
-    }
-    return str_to_integer<T, partial, OPT + DecTag()>(s, e);
-  } else {
-    // Now T is unsigned, and base is between 2 and 36
-    if (s >= e) [[unlikely]]
-      return make_bad_ret();
-
-    bool parsed_any_char = false;
-    T val = 0;
-
-    while (s != e) {
-      auto digit_opt = parse_one_digit<OPT.base>(*s);
-      if (!digit_opt) {
-        if (partial && parsed_any_char) break;
-        return make_bad_ret();
-      }
-      ++s;
-      parsed_any_char = true;
-
-      if constexpr (OPT.check_overflow) {
-        auto new_val_opt = mul_base_add<T, OPT.base, OPT.overflow_threshold>(
-            val, T(*digit_opt));
-        if (!new_val_opt) [[unlikely]] {
-          if constexpr (partial && !OPT.halt_on_overflow) {
-            // In partial match, we need to consume all remaining digits, to
-            // prevent surprise.
-            while (s != e && parse_one_digit<OPT.base>(*s)) ++s;
-          }
-          return make_bad_ret();
-        }
-        val = *new_val_opt;
-      } else {
-        val = val * OPT.base + *digit_opt;
-      }
-    }
-
-    return make_ret(val);
+  T sign = 0;
+  if (*s == '+' || *s == '-') {
+    if (*s == '-') sign = T(-1);
+    ++s;
   }
+  auto abs_ret = str_to_integer<std::make_unsigned_t<T>, partial, OPT>(s, e);
+  auto abs_opt_val = extract_value(abs_ret);
+  if (!abs_opt_val) [[unlikely]]
+    return replace_value(abs_ret, std::optional<T>(std::nullopt));
+  T real_val = (*abs_opt_val ^ sign) - sign;
+  if constexpr (OPT.check_overflow && OPT.overflow_threshold > std::numeric_limits<T>::max()) {
+    // Test overflow after adding sign, whether real_val and sign has the
+    // same sign bit.
+    if (T(real_val ^ sign) < T(0)) [[unlikely]]
+      return replace_value(abs_ret, std::optional<T>(std::nullopt));
+  }
+  return replace_value(abs_ret, std::optional(real_val));
 };
 
 struct FpOptions {
