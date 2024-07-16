@@ -46,10 +46,13 @@ TEST(StrToIntegerTest, Regular) {
   EXPECT_EQ((str_to_integer<int32_t, RadixTag<16>>("00391").value_or(0)), 0x391);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("123").value_or(0)), 123);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("0123").value_or(0)), 0123);
+  EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("-0123").value_or(0)), -0123);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("0o123").value_or(0)), 0123);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("0O123").value_or(0)), 0123);
+  EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("-0O123").value_or(0)), -0123);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("0x123").value_or(0)), 0x123);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("0X123").value_or(0)), 0x123);
+  EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("-0X123").value_or(0)), -0x123);
   EXPECT_EQ((str_to_integer<int32_t, AutoRadixTag>("0XAbCdEf").value_or(0)),
             0xabcdef);
   EXPECT_EQ((str_to_integer<int32_t>("-3").value_or(0)), -3);
@@ -344,8 +347,16 @@ TEST(StrToFpTest, CornerCases) {
         {-0.f, -0., "-0x0.0p-12345678"},
         {0.f, 0., "0e19999999"},
         {-0.f, -0., "-0e19999999"},
+        {0.f, 0., "0e1999999999999999999999999999"},
+        {-0.f, -0., "-0e1999999999999999999999999999"},
+        {0.f, 0., "0e-1999999999999999999999999999"},
+        {-0.f, -0., "-0e-1999999999999999999999999999"},
         {0.f, 0., "0x0.0p12345678"},
         {-0.f, -0., "-0x0.0p12345678"},
+        {0.f, 0., "0x0.0p123456789123456789"},
+        {-0.f, -0., "-0x0.0p123456789123456789"},
+        {0.f, 0., "0x0.0p-123456789123456789"},
+        {-0.f, -0., "-0x0.0p-123456789123456789"},
         // very large exponents
         {0.f, 0., "1e-11111111"},
         {-0.f, -0., "-1e-11111111"},
@@ -407,8 +418,12 @@ TEST(StrToFpTest, Constexpr) {
   EXPECT_DOUBLE_EQ(e.value_or(0), INFINITY);
   constexpr auto f = str_to_fp<double>("inf");
   EXPECT_DOUBLE_EQ(f.value_or(0), INFINITY);
-  constexpr auto g = str_to_fp<double>("NaN");
-  EXPECT_TRUE(isnan(g.value_or(0)));
+  constexpr auto g = str_to_fp<double>("-inf");
+  EXPECT_DOUBLE_EQ(g.value_or(0), -INFINITY);
+  constexpr auto h = str_to_fp<double>("NaN");
+  EXPECT_TRUE(isnan(h.value_or(0)));
+  constexpr auto i = str_to_fp<double>("-NaN");
+  EXPECT_TRUE(isnan(i.value_or(0)));
 }
 
 }  // namespace cbu

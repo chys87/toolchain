@@ -274,7 +274,8 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
     if (!abs_opt_val) [[unlikely]]
       return replace_value(abs_ret, std::optional<T>(std::nullopt));
     T real_val = (*abs_opt_val ^ sign) - sign;
-    if constexpr (OPT.overflow_threshold > std::numeric_limits<T>::max()) {
+    if constexpr (OPT.check_overflow &&
+                  OPT.overflow_threshold > std::numeric_limits<T>::max()) {
       // Test overflow after adding sign, whether real_val and sign has the
       // same sign bit.
       if (T(real_val ^ sign) < T(0)) [[unlikely]]
@@ -283,7 +284,7 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
     return replace_value(abs_ret, std::optional(real_val));
   } else if constexpr (OPT.base == 0) {
     // Handle base 0
-    if (s + 1 < e && *s == '0') {
+    if (s != e && s + 1 != e && *s == '0') {
       if (s[1] == 'x' || s[1] == 'X')
         return str_to_integer<T, partial, OPT + HexTag()>(s + 2, e);
       else if ((s[1] == 'o' || s[1] == 'O') || isdigit(s[1]))
@@ -299,7 +300,7 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
     bool parsed_any_char = false;
     T val = 0;
 
-    while (s < e) {
+    while (s != e) {
       auto digit_opt = parse_one_digit<OPT.base>(*s);
       if (!digit_opt) {
         if (partial && parsed_any_char) break;
@@ -315,7 +316,7 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
           if constexpr (partial && !OPT.halt_on_overflow) {
             // In partial match, we need to consume all remaining digits, to
             // prevent surprise.
-            while (s < e && parse_one_digit<OPT.base>(*s)) ++s;
+            while (s != e && parse_one_digit<OPT.base>(*s)) ++s;
           }
           return make_bad_ret();
         }
@@ -367,7 +368,7 @@ class FpSignApply {
     sign_zero_ = negative ? -T(0) : T(0);
     return *this;
   }
-  constexpr T operator()(T val) noexcept {
+  constexpr T operator()(T val) const noexcept {
     if !consteval {
 #ifdef __AVX__
       if constexpr (std::is_same_v<T, float>) {
@@ -388,6 +389,8 @@ class FpSignApply {
     if (negative_) val = -val;
     return val;
   }
+
+  constexpr T operator()() const noexcept { return sign_zero_; }
 
  private:
   bool negative_;
@@ -444,10 +447,10 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
     return make_bad_ret();
 
   FpSignApply<T> sign;
-  if (s < e && (*s == '+' || *s == '-')) sign = (*s++ == '-');
+  if (s != e && (*s == '+' || *s == '-')) sign = (*s++ == '-');
 
   // Handle inf and nan
-  if (s < e && std::uintptr_t(e - s) >= 3) {
+  if (s != e && std::uintptr_t(e - s) >= 3) {
     std::uint32_t vl = pick3(s) | 0x20202020;
     const std::uint32_t kInf = pick3("inf") | 0x20202020;
     const std::uint32_t kNaN = pick3("nan") | 0x20202020;
@@ -480,134 +483,134 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
 
   // Handle hex
   if constexpr (OPT.supports_hex) {
-    if (s < e && s + 1 < e && *s == '0' && (s[1] == 'x' || s[1] == 'X')) {
+    if (s != e && s + 1 != e && *s == '0' && (s[1] == 'x' || s[1] == 'X')) {
       s += 2;
 
       // The next character should either be an xdigit, or a "." followed by an
       // xdigit.
-      if (s < e && isxdigit(*s))
+      if (s != e && isxdigit(*s))
         ;
-      else if (s < e && *s == '.' && (s + 1 < e) && isxdigit(s[1]))
+      else if (s != e && *s == '.' && (s + 1 != e) && isxdigit(s[1]))
         ;
       else
         return make_bad_ret();
 
       UT u = 0;
       std::optional<unsigned> xdigit_opt;
-      while (u <= kHexMulLimit && s < e &&
+      while (u <= kHexMulLimit && s != e &&
              (xdigit_opt = parse_one_digit<16>(*s))) {
         ++s;
         u = u * 16 + *xdigit_opt;
       }
 
       int xpow2 = 0;
-      while (s < e && isxdigit(*s)) {
+      while (s != e && isxdigit(*s)) {
         xpow2 += 4;
         ++s;
       }
 
-      if (s < e && *s == '.') {
+      if (s != e && *s == '.') {
         ++s;
-        while (u <= kHexMulLimit && s < e &&
+        while (u <= kHexMulLimit && s != e &&
                (xdigit_opt = parse_one_digit<16>(*s))) {
           u = u * 16 + *xdigit_opt;
           ++s;
           xpow2 -= 4;
         }
 
-        while (s < e && isxdigit(*s)) ++s;
+        while (s != e && isxdigit(*s)) ++s;
       }
 
       // For hexadecimal floating-point values, the exponential part is
       // mandatory.
-      if (s >= e || (*s != 'p' && *s != 'P')) [[unlikely]]
+      if (s == e || (*s != 'p' && *s != 'P')) [[unlikely]]
         return make_bad_ret();
       ++s;
 
       unsigned exp_sign = 0;
-      if (s < e && (*s == '+' || *s == '-')) exp_sign = (*s++ == '-') ? -1u : 0;
-      if (s >= e || !isdigit(*s)) [[unlikely]]
+      if (s != e && (*s == '+' || *s == '-')) exp_sign = (*s++ == '-') ? -1u : 0;
+      if (s == e || !isdigit(*s)) [[unlikely]]
         return make_bad_ret();
 
       unsigned uexp = (*s++ - '0');
-      while (uexp <= std::numeric_limits<unsigned>::max() / 16 && s < e &&
+      while (uexp <= std::numeric_limits<unsigned>::max() / 16 && s != e &&
              isdigit(*s)) {
         uexp = uexp * 10 + (*s++ - '0');
       }
-      while (s < e && isdigit(*s)) ++s;
+      while (s != e && isdigit(*s)) ++s;
 
       if constexpr (!partial) {
         if (s != e) return make_bad_ret();
       }
 
+      // Check for 0 early. It also avoids 0 * inf = nan
+      if (u == 0) return make_ret(sign());
+
       xpow2 += (uexp ^ exp_sign) - exp_sign;
 
       T res = sign(ST(u));
 
-      // This check is necessary to avoid 0 * inf = nan
-      if (u != 0 && xpow2 != 0) {
-        // Reduce xpow2 to closer to 0 to prevent 2 ** xpow2 from overflow.
-        // We don't need to use a while loop - if we have to do this more than
-        // once, the final result definitely would be 0, even taking into
-        // account of denormal numbers.
-        // Also, we don't need to check for large xpow2 vlaues, because we
-        // multiply the result to an integer - if 2**xpow2 would overflow then
-        // the final result would too.
-        if (xpow2 < std::numeric_limits<T>::min_exponent - 1) {
-          res *= powu(T(.5), -(std::numeric_limits<T>::min_exponent - 1));
-          xpow2 -= std::numeric_limits<T>::min_exponent - 1;
-        }
-
-        res *= pow2_daz<T>(xpow2);
+      // Reduce xpow2 to closer to 0 to prevent 2 ** xpow2 from overflow.
+      // We don't need to use a while loop - if we have to do this more than
+      // once, the final result definitely would be 0, even taking into
+      // account of denormal numbers.
+      // Also, we don't need to check for large xpow2 vlaues, because we
+      // multiply the result to an integer - if 2**xpow2 would overflow then
+      // the final result would too.
+      if (xpow2 < std::numeric_limits<T>::min_exponent - 1) {
+        res *= powu(T(.5), -(std::numeric_limits<T>::min_exponent - 1));
+        xpow2 -= std::numeric_limits<T>::min_exponent - 1;
       }
+
+      res *= pow2_daz<T>(xpow2);
       return make_ret(res);
     }
   }
 
   // Normal path: decimal
   // The next character should either be a digit, or a "." followed by a digit.
-  if (s < e && isdigit(*s))
+  if (s != e && isdigit(*s))
     ;
-  else if (s < e && *s == '.' && (s + 1 < e) && isdigit(s[1]))
+  else if (s != e && *s == '.' && (s + 1 != e) && isdigit(s[1]))
     ;
   else
     return make_bad_ret();
 
   UT u = 0;
 
-  while (u <= kDecMulLimit && s < e && isdigit(*s)) u = u * 10 + (*s++ - '0');
+  while (u <= kDecMulLimit && s != e && isdigit(*s)) u = u * 10 + (*s++ - '0');
 
   int xpow10 = 0;
-  while (s < e && isdigit(*s)) {
+  while (s != e && isdigit(*s)) {
     ++xpow10;
     ++s;
   }
 
-  if (s < e && *s == '.') {
+  if (s != e && *s == '.') {
     ++s;
 
-    while (u <= kDecMulLimit && s < e && isdigit(*s)) {
+    while (u <= kDecMulLimit && s != e && isdigit(*s)) {
       u = u * 10 + (*s++ - '0');
       --xpow10;
     }
 
-    while (s < e && isdigit(*s)) ++s;
+    while (s != e && isdigit(*s)) ++s;
   }
 
-  if (s < e && (*s == 'e' || *s == 'E')) {
+  if (s != e && (*s == 'e' || *s == 'E')) {
     ++s;
 
     unsigned exp_sign = 0;
-    if (s < e && (*s == '+' || *s == '-')) exp_sign = (*s++ == '-') ? -1u : 0;
-    if (s >= e || !isdigit(*s)) [[unlikely]]
+    if (s != e && (*s == '+' || *s == '-')) exp_sign = (*s++ == '-') ? -1u : 0;
+    if (s == e || !isdigit(*s)) [[unlikely]]
       return make_bad_ret();
 
     unsigned uexp = (*s++ - '0');
-    while (uexp <= std::numeric_limits<unsigned>::max() / 16 && s < e &&
+    while (uexp <= std::numeric_limits<unsigned>::max() / 16 && s != e &&
            isdigit(*s)) {
       uexp = uexp * 10 + (*s++ - '0');
     }
-    while (s < e && isdigit(*s)) ++s;
+    while (s != e && isdigit(*s)) ++s;
 
     xpow10 += (uexp ^ exp_sign) - exp_sign;
   }
@@ -615,6 +618,11 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
   if constexpr (!partial) {
     if (s != e) return make_bad_ret();
   }
+
+  // Check for 0 early, so that we don't get performance regressions in inputs
+  // like "0e-1999999999999999999999999999".
+  // It also avoids 0 * inf = nan
+  if (u == 0) return make_ret(sign());
 
   int xpow2 = xpow10;
   int xpow5 = xpow10;
@@ -634,18 +642,15 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
 
   T res = sign(ST(u));
 
-  // This check is necessary to avoid 0 * inf = nan
-  if (u != 0) {
-    res *= pow2_daz<T>(xpow2);
+  res *= pow2_daz<T>(xpow2);
 
-    if (xpow5 != 0) {
-      unsigned xp = (xpow5 >= 0 ? xpow5 : -xpow5);
-      T r = powu(T(5), xp);
-      if (xpow5 >= 0)
-        res *= r;
-      else
-        res /= r;
-    }
+  if (xpow5 != 0) {
+    unsigned xp = (xpow5 >= 0 ? xpow5 : -xpow5);
+    T r = powu(T(5), xp);
+    if (xpow5 >= 0)
+      res *= r;
+    else
+      res /= r;
   }
 
   return make_ret(res);
