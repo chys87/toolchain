@@ -244,12 +244,14 @@ inline constexpr T pow2_ceil(T n, std::type_identity_t<T> size) noexcept {
 }
 
 template <typename T>
-inline constexpr T *pow2_floor(T *p, std::size_t size) noexcept {
+  requires(std::is_void_v<T> || sizeof(T) == 1)
+inline constexpr T* pow2_floor(T* p, std::size_t size) noexcept {
   return reinterpret_cast<T*>(std::uintptr_t(p) & ~std::uintptr_t(size - 1));
 }
 
 template <typename T>
-inline constexpr T *pow2_ceil(T *p, std::size_t size) noexcept {
+  requires(std::is_void_v<T> || sizeof(T) == 1)
+inline constexpr T* pow2_ceil(T* p, std::size_t size) noexcept {
   return pow2_floor(reinterpret_cast<T *>(std::uintptr_t(p) + size - 1), size);
 }
 

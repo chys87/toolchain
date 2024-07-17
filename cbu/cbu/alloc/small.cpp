@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,7 +52,9 @@ struct Run {
 static_assert(sizeof(Block) <= category_to_size(0), "Block too large");
 static_assert(sizeof(Run) <= category_to_size(0), "Run too large");
 
-inline Run* block2run(Block* ptr) { return (Run*)pagesize_floor(ptr); }
+inline Run* block2run(Block* ptr) {
+  return (Run*)pagesize_floor(static_cast<void*>(ptr));
+}
 
 void free_small_list(Block* ptr) {
   while (ptr) {
