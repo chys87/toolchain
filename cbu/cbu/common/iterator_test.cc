@@ -26,36 +26,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/utility.h"
+#include "cbu/common/iterator.h"
 
 #include <gtest/gtest.h>
 
 namespace cbu {
 
-TEST(PairTest, Comparisons) {
-  pair<int, int> a{5, 6};
-  pair<int, int> b{5, 7};
-  pair<int, int> c{4, 7};
-  EXPECT_EQ(a, a);
-  EXPECT_NE(a, b);
-  EXPECT_LT(a, b);
-  EXPECT_GT(a, c);
-}
+static_assert(std::ranges::distance("hello", CStringSentinel()) == 5);
 
-TEST(ReversedComparatorTest, Compare) {
-  std::less cmp;
-  ReversedComparator rcmp{cmp};
-  ReversedComparator<std::remove_reference_t<decltype(cmp)>> rcmp_copy{rcmp};
-  ReversedComparator<std::remove_reference_t<decltype(rcmp)>> rrcmp{rcmp};
-
-  EXPECT_TRUE(cmp(1, 2));
-  EXPECT_FALSE(cmp(2, 1));
-  EXPECT_FALSE(rcmp(1, 2));
-  EXPECT_TRUE(rcmp(2, 1));
-  EXPECT_FALSE(rcmp_copy(1, 2));
-  EXPECT_TRUE(rcmp_copy(2, 1));
-  EXPECT_TRUE(rrcmp(1, 2));
-  EXPECT_FALSE(rrcmp(2, 1));
-}
-
-} // namespace cbu
+}  // namespace cbu

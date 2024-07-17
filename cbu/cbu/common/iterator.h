@@ -1,3 +1,5 @@
+#pragma once
+
 /*
  * cbu - chys's basic utilities
  * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
@@ -26,36 +28,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/common/utility.h"
+#pragma once
 
-#include <gtest/gtest.h>
+#include <iterator>
 
 namespace cbu {
 
-TEST(PairTest, Comparisons) {
-  pair<int, int> a{5, 6};
-  pair<int, int> b{5, 7};
-  pair<int, int> c{4, 7};
-  EXPECT_EQ(a, a);
-  EXPECT_NE(a, b);
-  EXPECT_LT(a, b);
-  EXPECT_GT(a, c);
+// Sentinel for null-terminated strings
+struct CStringSentinel {};
+
+inline constexpr bool operator==(const char* s,
+                                 const CStringSentinel&) noexcept {
+  return *s == '\0';
 }
 
-TEST(ReversedComparatorTest, Compare) {
-  std::less cmp;
-  ReversedComparator rcmp{cmp};
-  ReversedComparator<std::remove_reference_t<decltype(cmp)>> rcmp_copy{rcmp};
-  ReversedComparator<std::remove_reference_t<decltype(rcmp)>> rrcmp{rcmp};
-
-  EXPECT_TRUE(cmp(1, 2));
-  EXPECT_FALSE(cmp(2, 1));
-  EXPECT_FALSE(rcmp(1, 2));
-  EXPECT_TRUE(rcmp(2, 1));
-  EXPECT_FALSE(rcmp_copy(1, 2));
-  EXPECT_TRUE(rcmp_copy(2, 1));
-  EXPECT_TRUE(rrcmp(1, 2));
-  EXPECT_FALSE(rrcmp(2, 1));
+inline constexpr bool operator==(const wchar_t* s,
+                                 const CStringSentinel&) noexcept {
+  return *s == L'\0';
 }
 
-} // namespace cbu
+inline constexpr bool operator==(const char8_t* s,
+                                 const CStringSentinel&) noexcept {
+  return *s == u8'\0';
+}
+
+inline constexpr bool operator==(const char16_t* s,
+                                 const CStringSentinel&) noexcept {
+  return *s == u'\0';
+}
+
+inline constexpr bool operator==(const char32_t* s,
+                                 const CStringSentinel&) noexcept {
+  return *s == U'\0';
+}
+
+static_assert(std::ranges::distance("hello", CStringSentinel()) == 5);
+
+}  // namespace cbu

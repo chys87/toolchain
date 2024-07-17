@@ -29,6 +29,7 @@
 #pragma once
 
 #include <concepts>
+#include <iterator>
 #include <optional>
 #include <string_view>
 
@@ -61,14 +62,16 @@ namespace cbu {
 //   HaltScanOnOverflowTag: Don't bother to continue scanning on overflow
 //                          (str_to_integer_partial mode only, affects returned
 //                           endptr)
-template <std::integral T, typename... Options>
+template <std::integral T, typename... Options,
+          std::sentinel_for<const char*> S>
   requires(str_to_number_detail::IntegerSupported<T, Options...>)
-constexpr std::optional<T> str_to_integer(const char* s, const char* e) {
+constexpr std::optional<T> str_to_integer(const char* s, S e) {
   constexpr auto OPT = str_to_number_detail::parse_integer_options<
       OverflowThresholdTag<str_to_number_detail::OverflowThresholdByType<T>>,
       Options...>();
   using CT = str_to_number_detail::ConversionType<T>;
-  auto res = str_to_number_detail::str_to_integer<CT, false, OPT>(s, e);
+  auto res = str_to_number_detail::str_to_integer<CT, false, OPT>(
+      s, str_to_number_detail::normalize_sentinel_t<S>(e));
   // Unsigned case is completely covered by OverflowThreshold
   if constexpr (OPT.check_overflow && sizeof(T) < sizeof(CT) &&
                 std::is_signed_v<T>) {
@@ -83,15 +86,17 @@ constexpr auto str_to_integer(std::string_view s) noexcept {
   return str_to_integer<T, Options...>(s.data(), s.data() + s.size());
 }
 
-template <std::integral T, typename... Options>
+template <std::integral T, typename... Options,
+          std::sentinel_for<const char*> S>
   requires(str_to_number_detail::IntegerSupported<T, Options...>)
-constexpr auto str_to_integer_partial(const char* s, const char* e) noexcept
+constexpr auto str_to_integer_partial(const char* s, S e) noexcept
     -> StrToNumberPartialResult<T> {
   constexpr auto OPT = str_to_number_detail::parse_integer_options<
       OverflowThresholdTag<str_to_number_detail::OverflowThresholdByType<T>>,
       Options...>();
   using CT = str_to_number_detail::ConversionType<T>;
-  auto res = str_to_number_detail::str_to_integer<CT, true, OPT>(s, e);
+  auto res = str_to_number_detail::str_to_integer<CT, true, OPT>(
+      s, str_to_number_detail::normalize_sentinel_t<S>(e));
   // Unsigned case is completely covered by OverflowThreshold
   if constexpr (OPT.check_overflow && sizeof(T) < sizeof(CT) &&
                 std::is_signed_v<T>) {
@@ -128,11 +133,16 @@ constexpr bool SimpleAtoi(std::string_view s, T* res) noexcept {
 //
 //   DecTag: decimal (default)
 //   AutoRadixTag: auto detect radix ("0x" for hex; otherwise dec)
-template <typename T, typename... Options>
+//   IgnoreInfNaNTag: Reject "inf" and "nan"
+//   FiniteOnlyTag: Like IgnoreInfNaNTag; also rejects inf as a result of
+//                  overflow (such as 1e1000)
+//   NoScientificNotationTag: Reject scientific notation (dec only)
+template <typename T, typename... Options, std::sentinel_for<const char*> S>
   requires(str_to_number_detail::FpSupported<T, Options...>)
-constexpr std::optional<T> str_to_fp(const char* s, const char* e) noexcept {
+constexpr std::optional<T> str_to_fp(const char* s, S e) noexcept {
   return str_to_number_detail::str_to_fp<
-      T, false, str_to_number_detail::parse_fp_options<Options...>()>(s, e);
+      T, false, str_to_number_detail::parse_fp_options<Options...>()>(
+      s, str_to_number_detail::normalize_sentinel_t<S>(e));
 }
 
 template <typename T, typename... Options>
@@ -141,12 +151,13 @@ constexpr auto str_to_fp(std::string_view s) noexcept {
   return str_to_fp<T, Options...>(s.data(), s.data() + s.size());
 }
 
-template <typename T, typename... Options>
+template <typename T, typename... Options, std::sentinel_for<const char*> S>
   requires(str_to_number_detail::FpSupported<T, Options...>)
-constexpr auto str_to_fp_partial(const char* s, const char* e) noexcept
+constexpr auto str_to_fp_partial(const char* s, S e) noexcept
     -> StrToNumberPartialResult<T> {
   return str_to_number_detail::str_to_fp<
-      T, true, str_to_number_detail::parse_fp_options<Options...>()>(s, e);
+      T, true, str_to_number_detail::parse_fp_options<Options...>()>(
+      s, str_to_number_detail::normalize_sentinel_t<S>(e));
 }
 
 template <typename T, typename... Options>

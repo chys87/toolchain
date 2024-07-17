@@ -35,6 +35,7 @@
 #include <gtest/gtest.h>
 
 #include "cbu/common/defer.h"
+#include "cbu/common/iterator.h"
 #include "cbu/strings/str_to_number.h"
 
 namespace cbu {
@@ -60,6 +61,8 @@ TEST(StrToIntegerTest, Regular) {
 
   EXPECT_EQ((str_to_integer<int, RadixTag<36>>("-zz")).value_or(0),
             -(35 * 36 + 35));
+
+  EXPECT_EQ(str_to_integer<int>("-123\000456", CStringSentinel()).value_or(0), -123);
 }
 
 TEST(StrToIntegerTest, InvalidFormat) {
@@ -113,6 +116,10 @@ TEST(StrToIntegerTest, Partial) {
   EXPECT_EQ((str_to_integer_partial<int64_t, AutoRadixTag>("0 = 0"))
                 .value_opt.value_or(-1),
             0);
+
+  EXPECT_EQ(str_to_integer_partial<int>("-123", CStringSentinel())
+                .value_opt.value_or(0),
+            -123);
 }
 
 TEST(StrToIntegerTest, Constexpr) {
@@ -244,6 +251,9 @@ TEST(StrToFpTest, Regular) {
   EXPECT_TRUE(isnan(str_to_fp<double>("nan").value_or(0)));
   EXPECT_TRUE(isnan(str_to_fp<double>("-nan").value_or(0)));
 
+  EXPECT_FLOAT_EQ(str_to_fp<float>("3.14", CStringSentinel()).value_or(NAN),
+                  3.14f);
+
   static const double floats[]{
       -1.e10,  -1.e20,   0.,      5.1e-5,
       2.5e-2,  5.4,      8.13e2,  14839293847889234,
@@ -273,6 +283,20 @@ TEST(StrToFpTest, Regular) {
                     (str_to_fp<float, AutoRadixTag>(buf).value_or(NAN)))
         << buf;
   }
+}
+
+TEST(StrToFpTest, MoreOptionsTest) {
+  // IgnoreInfNaNTag
+  EXPECT_EQ(str_to_fp<double>("inf").value_or(NAN), INFINITY);
+  EXPECT_FALSE((str_to_fp<double, IgnoreInfNaNTag>("inf")));
+  EXPECT_TRUE(str_to_fp<float>("nan"));
+  EXPECT_FALSE((str_to_fp<float, IgnoreInfNaNTag>("nan")));
+
+  // NoScientificNotationTag
+  EXPECT_DOUBLE_EQ(str_to_fp<double>("1e100").value_or(INFINITY), 1e100);
+  EXPECT_DOUBLE_EQ(
+      (str_to_fp<double, NoScientificNotationTag>("1e100").value_or(INFINITY)),
+      INFINITY);
 }
 
 TEST(StrToFpTest, CornerCases) {
@@ -403,6 +427,10 @@ TEST(StrToFpTest, Partial) {
     auto [vo, e] = str_to_fp_partial<double>("infinityx is here");
     ASSERT_FALSE(vo.has_value()) << vo.value_or(NAN);
   }
+  {
+    auto [vo, e] = str_to_fp_partial<float>("3.14", CStringSentinel());
+    ASSERT_FLOAT_EQ(vo.value_or(0), 3.14f);
+  }
 }
 
 TEST(StrToFpTest, Constexpr) {
@@ -424,6 +452,8 @@ TEST(StrToFpTest, Constexpr) {
   EXPECT_TRUE(isnan(h.value_or(0)));
   constexpr auto i = str_to_fp<double>("-NaN");
   EXPECT_TRUE(isnan(i.value_or(0)));
+  constexpr auto j = str_to_fp<double, FiniteOnlyTag>("1e10000");
+  EXPECT_FALSE(j);
 }
 
 }  // namespace cbu

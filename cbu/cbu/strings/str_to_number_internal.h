@@ -28,6 +28,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <type_traits>
@@ -48,6 +49,19 @@ template <typename T>
 using StrToIntegerPartialResult = StrToNumberPartialResult<T>;
 
 namespace str_to_number_detail {
+
+template <std::sentinel_for<const char*> S>
+struct normalize_sentinel_type {
+  using type = S;
+};
+
+template <>
+struct normalize_sentinel_type<char*> {
+  using type = const char*;
+};
+
+template <std::sentinel_for<const char*>S>
+using normalize_sentinel_t = typename normalize_sentinel_type<S>::type;
 
 struct IntegerOptions {
   int base = 10;
@@ -142,16 +156,14 @@ constexpr bool isxdigit(unsigned char c) noexcept {
 
 template <int base>
   requires(base <= 10)
-inline constexpr std::optional<unsigned> parse_one_digit(
-    std::uint8_t c) noexcept {
+inline constexpr std::optional<unsigned> parse_digit(std::uint8_t c) noexcept {
   if (unsigned C = c - '0'; C < base) return C;
   return std::nullopt;
 }
 
 template <int base>
   requires(base > 10)
-inline constexpr std::optional<unsigned> parse_one_digit(
-    std::uint8_t c) noexcept {
+inline constexpr std::optional<unsigned> parse_digit(std::uint8_t c) noexcept {
   if (unsigned C = c - '0'; C < 10) return C;
   if (unsigned C = (c | 0x20) - 'a'; C < base - 10) return C + 10;
   return std::nullopt;
@@ -255,9 +267,25 @@ inline constexpr std::optional<T> mul_base_add(T x, T digit) noexcept {
   return x;
 }
 
-template <std::unsigned_integral T, bool partial, IntegerOptions OPT>
+template <std::size_t N>
+inline constexpr bool distance_at_least(const char* s, const char* e) noexcept {
+  return std::size_t(e - s) >= N;
+}
+
+template <std::size_t N, std::sentinel_for<const char*> S>
+  requires(!std::is_same_v<S, const char*>)
+inline constexpr bool distance_at_least(const char* s, S e) noexcept {
+  for (std::size_t n = N; n; --n) {
+    if (s == e) return false;
+    ++s;
+  }
+  return true;
+}
+
+template <std::unsigned_integral T, bool partial, IntegerOptions OPT,
+          std::sentinel_for<const char*> S>
   requires(OPT.base != 0)
-constexpr auto str_to_integer(const char* s, const char* e) noexcept {
+constexpr auto str_to_integer(const char* s, S e) noexcept {
   auto make_ret = [&](std::optional<T> v = std::nullopt) constexpr noexcept {
     if constexpr (partial)
       return StrToNumberPartialResult<T>{v, s};
@@ -265,14 +293,14 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
       return v;
   };
 
-  if (s >= e) [[unlikely]]
+  if (s == e) [[unlikely]]
     return make_ret();
 
   bool parsed_any_char = false;
   T val = 0;
 
   while (s != e) {
-    auto digit_opt = parse_one_digit<OPT.base>(*s);
+    auto digit_opt = parse_digit<OPT.base>(*s);
     if (!digit_opt) {
       if (partial && parsed_any_char) break;
       return make_ret();
@@ -286,7 +314,7 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
         if constexpr (partial && !OPT.halt_on_overflow) {
           // In partial match, we need to consume all remaining digits, to
           // prevent surprise.
-          while (s != e && parse_one_digit<OPT.base>(*s)) ++s;
+          while (s != e && parse_digit<OPT.base>(*s)) ++s;
         }
         return make_ret();
       }
@@ -299,9 +327,10 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   return make_ret(val);
 };
 
-template <std::unsigned_integral T, bool partial, IntegerOptions OPT>
+template <std::unsigned_integral T, bool partial, IntegerOptions OPT,
+          std::sentinel_for<const char*> S>
   requires(OPT.base == 0)
-constexpr auto str_to_integer(const char* s, const char* e) noexcept {
+constexpr auto str_to_integer(const char* s, S e) noexcept {
   if (s != e && s + 1 != e && *s == '0') {
     if (s[1] == 'x' || s[1] == 'X')
       return str_to_integer<T, partial, OPT + HexTag()>(s + 2, e);
@@ -311,8 +340,9 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   return str_to_integer<T, partial, OPT + DecTag()>(s, e);
 };
 
-template <std::signed_integral T, bool partial, IntegerOptions OPT>
-constexpr auto str_to_integer(const char* s, const char* e) noexcept {
+template <std::signed_integral T, bool partial, IntegerOptions OPT,
+          std::sentinel_for<const char*> S>
+constexpr auto str_to_integer(const char* s, S e) noexcept {
   auto make_ret = [&](std::optional<T> v) constexpr noexcept {
     if constexpr (partial)
       return StrToNumberPartialResult<T>{v, s};
@@ -321,7 +351,7 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
   };
   auto make_bad_ret = [&] constexpr noexcept { return make_ret(std::nullopt); };
 
-  if (s >= e) [[unlikely]]
+  if (s == e) [[unlikely]]
     return make_bad_ret();
 
   T sign = 0;
@@ -345,12 +375,36 @@ constexpr auto str_to_integer(const char* s, const char* e) noexcept {
 
 struct FpOptions {
   bool supports_hex = false;
+  bool parse_inf_nan = true;
+  bool finite_only = false;
+  // scientific only applies to decimal values; for hexadecimal values,
+  // scientific notation is mandatory
+  bool scientific = true;
 
   template <int new_base>
     requires(new_base == 0 || new_base == 10)
   constexpr FpOptions operator+(RadixTag<new_base>) const noexcept {
     auto res = *this;
     res.supports_hex = (new_base == 0);
+    return res;
+  }
+
+  constexpr FpOptions operator+(IgnoreInfNaNTag) const noexcept {
+    auto res = *this;
+    res.parse_inf_nan = false;
+    return res;
+  }
+
+  constexpr FpOptions operator+(FiniteOnlyTag) const noexcept {
+    auto res = *this;
+    res.parse_inf_nan = false;
+    res.finite_only = true;
+    return res;
+  }
+
+  constexpr FpOptions operator+(NoScientificNotationTag) const noexcept {
+    auto res = *this;
+    res.scientific = false;
     return res;
   }
 };
@@ -446,8 +500,9 @@ inline constexpr std::uint64_t pick8(const char* s) noexcept {
   return r;
 }
 
-template <std::floating_point T, bool partial, FpOptions OPT>
-constexpr auto str_to_fp(const char* s, const char* e) noexcept {
+template <std::floating_point T, bool partial, FpOptions OPT,
+          std::sentinel_for<const char*> S>
+constexpr auto str_to_fp(const char* s, S e) noexcept {
   auto make_ret = [&](std::optional<T> v) constexpr noexcept {
     if constexpr (partial)
       return StrToNumberPartialResult<T>{v, s};
@@ -456,35 +511,37 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
   };
   auto make_bad_ret = [&] constexpr noexcept { return make_ret(std::nullopt); };
 
-  if (s >= e) [[unlikely]]
+  if (s == e) [[unlikely]]
     return make_bad_ret();
 
   FpSignApply<T> sign;
   if (s != e && (*s == '+' || *s == '-')) sign = (*s++ == '-');
 
   // Handle inf and nan
-  if (s != e && std::uintptr_t(e - s) >= 3) {
-    std::uint32_t vl = pick3(s) | 0x20202020;
-    const std::uint32_t kInf = pick3("inf") | 0x20202020;
-    const std::uint32_t kNaN = pick3("nan") | 0x20202020;
-    if (vl == kInf || vl == kNaN) [[unlikely]] {
-      T val = sign((vl == kInf) ? INFINITY : NAN);
-      if (vl == kInf && std::uintptr_t(e - s) >= 8 &&
-          (pick8(s) | 0x2020202020202020) == pick8("infinity")) {
-        s += 8;
-      } else {
-        s += 3;
-      }
-      if (s != e) {
-        if constexpr (partial) {
-          if (std::uint8_t(*s - '0') < 10 ||
-              std::uint8_t((*s | 0x20) - 'a') < 26)
-            return make_bad_ret();
+  if constexpr (OPT.parse_inf_nan && !OPT.finite_only) {
+    if (s != e && distance_at_least<3>(s, e)) {
+      std::uint32_t vl = pick3(s) | 0x20202020;
+      const std::uint32_t kInf = pick3("inf") | 0x20202020;
+      const std::uint32_t kNaN = pick3("nan") | 0x20202020;
+      if (vl == kInf || vl == kNaN) [[unlikely]] {
+        T val = sign((vl == kInf) ? INFINITY : NAN);
+        if (vl == kInf && distance_at_least<8>(s, e) &&
+            (pick8(s) | 0x2020202020202020) == pick8("infinity")) {
+          s += 8;
         } else {
-          return make_bad_ret();
+          s += 3;
         }
+        if (s != e) {
+          if constexpr (partial) {
+            if (std::uint8_t(*s - '0') < 10 ||
+                std::uint8_t((*s | 0x20) - 'a') < 26)
+              return make_bad_ret();
+          } else {
+            return make_bad_ret();
+          }
+        }
+        return make_ret(val);
       }
-      return make_ret(val);
     }
   }
 
@@ -511,7 +568,7 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
       UT u = 0;
       std::optional<unsigned> xdigit_opt;
       while (u <= kHexMulLimit && s != e &&
-             (xdigit_opt = parse_one_digit<16>(*s))) {
+             (xdigit_opt = parse_digit<16>(*s))) {
         ++s;
         u = u * 16 + *xdigit_opt;
       }
@@ -525,7 +582,7 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
       if (s != e && *s == '.') {
         ++s;
         while (u <= kHexMulLimit && s != e &&
-               (xdigit_opt = parse_one_digit<16>(*s))) {
+               (xdigit_opt = parse_digit<16>(*s))) {
           u = u * 16 + *xdigit_opt;
           ++s;
           xpow2 -= 4;
@@ -546,7 +603,7 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
         return make_bad_ret();
 
       unsigned uexp = (*s++ - '0');
-      while (uexp <= std::numeric_limits<unsigned>::max() / 16 && s != e &&
+      while (uexp <= std::numeric_limits<unsigned>::max() / 32 && s != e &&
              isdigit(*s)) {
         uexp = uexp * 10 + (*s++ - '0');
       }
@@ -576,6 +633,9 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
       }
 
       res *= pow2_daz<T>(xpow2);
+      if constexpr (OPT.finite_only) {
+        if (!std::isfinite(res)) return make_bad_ret();
+      }
       return make_ret(res);
     }
   }
@@ -610,22 +670,25 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
     while (s != e && isdigit(*s)) ++s;
   }
 
-  if (s != e && (*s == 'e' || *s == 'E')) {
-    ++s;
+  if constexpr (OPT.scientific) {
+    if (s != e && (*s == 'e' || *s == 'E')) {
+      ++s;
 
-    unsigned exp_sign = 0;
-    if (s != e && (*s == '+' || *s == '-')) exp_sign = (*s++ == '-') ? -1u : 0;
-    if (s == e || !isdigit(*s)) [[unlikely]]
-      return make_bad_ret();
+      unsigned exp_sign = 0;
+      if (s != e && (*s == '+' || *s == '-'))
+        exp_sign = (*s++ == '-') ? -1u : 0;
+      if (s == e || !isdigit(*s)) [[unlikely]]
+        return make_bad_ret();
 
-    unsigned uexp = (*s++ - '0');
-    while (uexp <= std::numeric_limits<unsigned>::max() / 16 && s != e &&
-           isdigit(*s)) {
-      uexp = uexp * 10 + (*s++ - '0');
+      unsigned uexp = (*s++ - '0');
+      while (uexp <= std::numeric_limits<unsigned>::max() / 32 && s != e &&
+             isdigit(*s)) {
+        uexp = uexp * 10 + (*s++ - '0');
+      }
+      while (s != e && isdigit(*s)) ++s;
+
+      xpow10 += (uexp ^ exp_sign) - exp_sign;
     }
-    while (s != e && isdigit(*s)) ++s;
-
-    xpow10 += (uexp ^ exp_sign) - exp_sign;
   }
 
   if constexpr (!partial) {
@@ -666,6 +729,9 @@ constexpr auto str_to_fp(const char* s, const char* e) noexcept {
       res /= r;
   }
 
+  if constexpr (OPT.finite_only) {
+    if (!std::isfinite(res)) return make_bad_ret();
+  }
   return make_ret(res);
 }
 

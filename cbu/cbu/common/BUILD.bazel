@@ -61,6 +61,7 @@ cc_library(
     'fifo_list.h',
     'heapq.h',
     'hint.h',
+    'iterator.h',
     'memory.h',
     'once.h',
     'ref_cnt.h',

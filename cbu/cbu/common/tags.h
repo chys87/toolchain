@@ -61,4 +61,8 @@ inline constexpr HaltScanOnOverflowTag kHaltScanOnOverflow;
 template <unsigned long long>
 struct OverflowThresholdTag {};
 
+struct IgnoreInfNaNTag {};
+struct FiniteOnlyTag {};
+struct NoScientificNotationTag {};
+
 }  // namespace cbu
