@@ -310,15 +310,20 @@ static_assert(is_pow2(1));
 static_assert(is_pow2(2));
 static_assert(!is_pow2(3));
 
-template <typename T> requires (!std::is_enum_v<T> && std::is_signed_v<T>)
+template <typename T>
+  requires(!std::is_enum_v<T> && std::is_signed_v<T> && std::is_integral_v<T>)
 inline constexpr std::make_unsigned_t<T> as_unsigned(const T& x) noexcept {
   return x;
 }
 
-template <typename T> requires (!std::is_enum_v<T> && !std::is_signed_v<T>)
-inline constexpr const T& as_unsigned(const T& x) noexcept { return x; }
+template <typename T>
+  requires(!std::is_enum_v<T> && std::is_unsigned_v<T> && std::is_integral_v<T>)
+inline constexpr const T& as_unsigned(const T& x) noexcept {
+  return x;
+}
 
-template <typename T> requires std::is_enum_v<T>
+template <typename T>
+  requires std::is_enum_v<T>
 inline constexpr auto as_unsigned(const T& x) noexcept {
   return static_cast<std::make_unsigned_t<std::underlying_type_t<T>>>(x);
 }
