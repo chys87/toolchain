@@ -4,3 +4,4 @@ build --repo_env=CXX=clang++
 build --repo_env=BAZEL_LINKLIBS=-lc++:-lm
 build --copt=-stdlib=libc++
 build --copt=-Wno-error=unused-command-line-argument
+build --copt=-Wno-vla-cxx-extension
