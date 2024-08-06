@@ -59,6 +59,7 @@ cc_library(
     'compare.h',
     'defer.h',
     'fifo_list.h',
+    'functional.h',
     'heapq.h',
     'hint.h',
     'iterator.h',
