@@ -208,7 +208,7 @@ inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
   } else if constexpr (UB <= D) {
     return v;
   } else {
-#if __has_builtin(__builtin_assume)
+#if defined __clang__ && __has_builtin(__builtin_assume)
     using Type = fastdiv_detail::FastDivType<D, UB>;
     __builtin_assume(v < UB);
     return v % Type(D);
