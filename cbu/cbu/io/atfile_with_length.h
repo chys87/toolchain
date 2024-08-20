@@ -28,39 +28,38 @@
 
 #pragma once
 
-#include <time.h>
-#include <sys/uio.h>
-
-#include <optional>
-#include <string_view>
+#include <fcntl.h>
 
 #include "cbu/io/atfile.h"
+#include "cbu/strings/zstring_view.h"
 
 namespace cbu {
 
-// If anything is wrong, returns 0
-time_t get_file_mtime(AtFile) noexcept;
-time_t get_file_mtime(int) noexcept;
+// AtFile with known length, note that the string must still be null-terminated
+class AtFileWithLength {
+ public:
+  constexpr AtFileWithLength(int fd, cbu::zstring_view name) noexcept
+      : fd_(fd), l_(name.size()), name_(name.c_str()) {}
+  constexpr AtFileWithLength(cbu::zstring_view name) noexcept
+      : fd_(AT_FDCWD), l_(name.size()), name_(name.c_str()) {}
+  constexpr AtFileWithLength(AtFile af) noexcept
+      : fd_(af.fd()),
+        l_(std::string_view(af.name()).size()),
+        name_(af.name()) {}
+  constexpr AtFileWithLength(const AtFileWithLength&) noexcept = default;
+  constexpr AtFileWithLength& operator=(const AtFileWithLength&) noexcept = default;
 
-// If anything is wrong, returns nullopt
-std::optional<time_t> get_file_mtime_opt(AtFile) noexcept;
-std::optional<time_t> get_file_mtime_opt(int) noexcept;
+  explicit constexpr operator bool() const noexcept { return name(); }
+  constexpr operator AtFile() const noexcept { return {fd_, name_}; }
+  constexpr int fd() const noexcept { return fd_; }
+  constexpr const char* name() const noexcept { return name_; }
+  constexpr size_t length() const noexcept { return l_; }
+  constexpr cbu::zstring_view name_view() const noexcept { return {name_, l_}; }
 
-void touch_file(AtFile, time_t) noexcept;
-void touch_file(int, time_t) noexcept;
-void touch_file(AtFile) noexcept;
-void touch_file(int) noexcept;
-
-// If a file doesn't exist, create it.
-bool ensure_file(AtFile, mode_t) noexcept;
-
-// Utility functions for conversion between iovec and string_view
-inline constexpr iovec sv2iov(std::string_view sv) noexcept {
-  return {const_cast<char *>(sv.data()), sv.length()};
-}
-
-inline constexpr std::string_view iov2sv(iovec v) noexcept {
-  return {static_cast<const char *>(v.iov_base), v.iov_len};
-}
+ private:
+  int fd_;
+  unsigned int l_;
+  const char* name_;
+};
 
 }  // namespace cbu

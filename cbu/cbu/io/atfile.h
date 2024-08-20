@@ -28,39 +28,25 @@
 
 #pragma once
 
-#include <time.h>
-#include <sys/uio.h>
-
-#include <optional>
-#include <string_view>
-
-#include "cbu/io/atfile.h"
+#include <fcntl.h>  // for AT_FDCWD
 
 namespace cbu {
 
-// If anything is wrong, returns 0
-time_t get_file_mtime(AtFile) noexcept;
-time_t get_file_mtime(int) noexcept;
+// Wraps an fd (to a directory) and a filename for openat and friends
+class AtFile {
+ public:
+  constexpr AtFile(int f, const char* n) noexcept : fd_(f), name_(n) {}
+  constexpr AtFile(const char* n = nullptr) noexcept : AtFile(AT_FDCWD, n) {}
+  constexpr AtFile(const AtFile&) noexcept = default;
+  constexpr AtFile& operator=(const AtFile&) noexcept = default;
 
-// If anything is wrong, returns nullopt
-std::optional<time_t> get_file_mtime_opt(AtFile) noexcept;
-std::optional<time_t> get_file_mtime_opt(int) noexcept;
+  explicit constexpr operator bool() const noexcept { return name(); }
+  constexpr int fd() const noexcept { return fd_; }
+  constexpr const char* name() const noexcept { return name_; }
 
-void touch_file(AtFile, time_t) noexcept;
-void touch_file(int, time_t) noexcept;
-void touch_file(AtFile) noexcept;
-void touch_file(int) noexcept;
-
-// If a file doesn't exist, create it.
-bool ensure_file(AtFile, mode_t) noexcept;
-
-// Utility functions for conversion between iovec and string_view
-inline constexpr iovec sv2iov(std::string_view sv) noexcept {
-  return {const_cast<char *>(sv.data()), sv.length()};
-}
-
-inline constexpr std::string_view iov2sv(iovec v) noexcept {
-  return {static_cast<const char *>(v.iov_base), v.iov_len};
-}
+ private:
+  int fd_;
+  const char* name_;
+};
 
 }  // namespace cbu
