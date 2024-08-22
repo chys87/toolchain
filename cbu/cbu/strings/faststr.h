@@ -165,13 +165,25 @@ inline constexpr C* memdrop8(C* s, std::uint64_t v) noexcept {
 
 
 // For C++, define memory operations that return the proper types
-template <Raw_trivial_type_or_void T>
-inline T *Memcpy(T *dst, const void *src, std::size_t n) noexcept {
+template <Raw_trivial_type_or_void T, Raw_trivial_type_or_void S>
+inline constexpr T *Memcpy(T *dst, const S *src, std::size_t n) noexcept {
+  if consteval {
+    if constexpr (Raw_char_type<T> && Raw_char_type<S>) {
+      for (std::size_t i = 0; i < n; ++i) dst[i] = src[i];
+      return dst;
+    }
+  }
   return static_cast<T *>(std::memcpy(dst, src, n));
 }
 
-template <Raw_trivial_type_or_void T>
-inline T *Mempcpy(T *dst, const void *src, std::size_t n) noexcept {
+template <Raw_trivial_type_or_void T, Raw_trivial_type_or_void S>
+inline constexpr T *Mempcpy(T *dst, const S *src, std::size_t n) noexcept {
+  if consteval {
+    if constexpr (Raw_char_type<T> && Raw_char_type<S>) {
+      for (; n; --n) *dst++ = *src++;
+      return dst;
+    }
+  }
 #ifdef __GLIBC__
   return static_cast<T *>(mempcpy(dst, src, n));
 #else
@@ -179,29 +191,59 @@ inline T *Mempcpy(T *dst, const void *src, std::size_t n) noexcept {
 #endif
 }
 
-template <Raw_trivial_type_or_void T>
-inline T *Memmove(T *dst, const void *src, std::size_t n) noexcept {
+template <Raw_trivial_type_or_void T, Raw_trivial_type_or_void S>
+inline constexpr T *Memmove(T *dst, const S *src, std::size_t n) noexcept {
+  if consteval {
+    if constexpr (Raw_char_type<T> && Raw_char_type<S>) {
+      char* tmp = new char[n];
+      Memcpy(tmp, src, n);
+      Memcpy(dst, tmp, n);
+      delete[] tmp;
+      return dst;
+    }
+  }
   return static_cast<T *>(std::memmove(dst, src, n));
 }
 
 template <Raw_trivial_type_or_void T>
-inline T *Memset(T *dst, int c, std::size_t n) noexcept {
+inline constexpr T *Memset(T *dst, int c, std::size_t n) noexcept {
+  if consteval {
+    if constexpr (Raw_char_type<T>) {
+      for (std::size_t i = 0; i < n; ++i) dst[i] = T(c);
+      return dst;
+    }
+  }
   return static_cast<T *>(std::memset(dst, c, n));
 }
 
 template <Char_type T>
-inline T *Memchr(T *dst, int c, std::size_t n) noexcept {
+inline constexpr T *Memchr(T *dst, int c, std::size_t n) noexcept {
+  if consteval {
+    for (std::size_t i = 0; i < n; ++i)
+      if (dst[i] == T(c)) return dst + i;
+    return nullptr;
+  }
   return static_cast<T *>(std::memchr(dst, c, n));
 }
 
 template <Char_type T>
-inline T *Memrchr(T *dst, int c, std::size_t n) noexcept {
+inline constexpr T *Memrchr(T *dst, int c, std::size_t n) noexcept {
+  if consteval {
+    for (std::size_t i = n; i; --i)
+      if (dst[i - 1] == T(c)) return dst + i - 1;
+    return nullptr;
+  }
   return static_cast<T *>(compat::memrchr(dst, c, n));
 }
 
 // Nonstandard
 template <Raw_trivial_type_or_void T>
-inline T *Mempset(T *dst, int c, std::size_t n) noexcept {
+inline constexpr T *Mempset(T *dst, int c, std::size_t n) noexcept {
+  if consteval {
+    if constexpr (Raw_char_type<T>) {
+      return Memset(dst, c, n) + n;
+    }
+  }
   return reinterpret_cast<T *>(
       reinterpret_cast<char *>(std::memset(dst, c, n)) + n);
 }
