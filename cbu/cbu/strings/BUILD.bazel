@@ -117,6 +117,18 @@ cc_library(
 )
 
 cc_library(
+  name = 'str_builder',
+  srcs = [],
+  hdrs = ['str_builder.h'],
+  deps = [
+    '//cbu/math:fastdiv',
+    ':common',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
   name = 'misc',
   srcs = [
     'misc.cc',
@@ -141,6 +153,7 @@ cc_test(
     ':str_cat',
     ':common',
     ':low_level_buffer_filler',
+    ':str_builder',
     '@com_google_googletest//:gtest_main',
     '//cbu/debug:gtest_formatters',
   ],

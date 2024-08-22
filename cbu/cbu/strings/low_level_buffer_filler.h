@@ -39,10 +39,13 @@
 
 #include "cbu/common/byteorder.h"
 #include "cbu/common/concepts.h"
+#include "cbu/math/common.h"
 #include "cbu/math/fastdiv.h"
 #include "cbu/strings/faststr.h"
 
 namespace cbu {
+
+// size() functions are for str_builder
 
 template <std::integral T, std::endian Order>
 struct FillByEndian {
@@ -54,6 +57,8 @@ struct FillByEndian {
   constexpr Ch* operator()(Ch* p) const noexcept {
     return memdrop_bswap<Order>(p, value);
   }
+
+  static constexpr std::size_t size() noexcept { return sizeof(T); }
 };
 
 template <std::integral T>
@@ -90,6 +95,20 @@ struct FillDec {
       return p + Options::width;
     } else {
       return conv_flexible_digit(value, p);
+    }
+  }
+
+  constexpr std::size_t size() const noexcept {
+    if constexpr (Options::width > 0) {
+      return Options::width;
+    } else if constexpr (UpperBound <= 10) {
+      return 1;
+    } else if constexpr (UpperBound <= 100) {
+      return (value >= 10) + 1;
+    } else if constexpr (UpperBound <= 1000) {
+      return (value >= 100) + (value >= 10) + 1;
+    } else {
+      return ilog10(value) + 1;
     }
   }
 
@@ -200,6 +219,7 @@ struct FillSkip {
   constexpr Ch* operator()(Ch* p) const noexcept {
     return p + diff;
   }
+  constexpr std::size_t size() const noexcept { return diff; }
 };
 
 template <Raw_char_type Ch>
@@ -212,6 +232,7 @@ struct FillGetPointer {
     *ptr = p;
     return p;
   }
+  static constexpr std::size_t size() noexcept { return 0; }
 };
 
 template <Raw_char_type Ch>
@@ -228,6 +249,7 @@ struct FillGetLength {
     *len = p - start;
     return p;
   }
+  static constexpr std::size_t size() noexcept { return 0; }
 };
 
 // Low-level buffer filler
