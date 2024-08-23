@@ -33,13 +33,11 @@
 #endif
 
 #include <algorithm>
-#include <array>
 #include <bit>
 #include <concepts>
 #include <cstdint>
 #include <iterator>
 #include <ranges>
-#include <tuple>
 #include <type_traits>
 #include <utility>
 
@@ -329,116 +327,5 @@ template <typename T>
 inline constexpr auto as_unsigned(const T& x) noexcept {
   return static_cast<std::make_unsigned_t<std::underlying_type_t<T>>>(x);
 }
-
-namespace bitmask_translate_detail {
-
-constexpr int rshift_bits(std::unsigned_integral auto f,
-                          std::unsigned_integral auto t) {
-  if (f == t || f == 0 || t == 0) {
-    return 0;
-  } else if (f > t) {
-    return std::countr_zero(f / t);
-  } else {
-    return -std::countr_zero(t / f);
-  }
-}
-
-constexpr auto shift(std::unsigned_integral auto v, int rb) {
-  return rb > 0 ? v >> rb : v << -rb;
-}
-
-template <typename T>
-struct normalize {
-  using type = std::make_unsigned_t<T>;
-};
-
-template <typename T>
-  requires std::is_enum_v<T>
-struct normalize<T> {
-  using type = std::make_unsigned_t<std::underlying_type_t<T>>;
-};
-
-template <typename T>
-using normalize_t = typename normalize<T>::type;
-
-template <typename T>
-constexpr normalize_t<T> norm(T v) {
-  return normalize_t<T>(v);
-}
-
-template <typename T>
-concept Type = std::is_integral_v<T> || std::is_enum_v<T>;
-
-template <Type F, Type T = F>
-struct Pair {
-  F f;
-  T t;
-  int rb = rshift_bits(normalize_t<F>(f), normalize_t<T>(t));
-};
-
-template <Pair... pairs>
-using from_type_t = std::common_type_t<normalize_t<decltype(pairs.f)>...>;
-
-template <Pair... pairs>
-using to_type_t = std::common_type_t<normalize_t<decltype(pairs.t)>...>;
-
-template <typename T, Pair pair>
-constexpr std::tuple<Pair<T>> groupify() {
-  return {Pair<T>{norm(pair.f), norm(pair.t), pair.rb}};
-}
-
-template <typename T, Pair a, Pair b, Pair... more>
-constexpr auto groupify() {
-  constexpr auto r = groupify<T, b, more...>();
-
-  constexpr bool has_equal = std::apply(
-      [](auto... groups) { return (... || (groups.rb == a.rb)); }, r);
-
-  if constexpr (has_equal) {
-    return std::apply(
-        [](auto... groups) {
-          return std::tuple{(groups.rb == a.rb
-                                 ? Pair<T>{groups.f | norm(a.f),
-                                           groups.t | norm(a.t), groups.rb}
-                                 : groups)...};
-        },
-        r);
-  } else {
-    return std::apply(
-        [](auto... groups) {
-          return std::tuple{Pair<T>{norm(a.f), norm(a.t), a.rb}, groups...};
-        },
-        r);
-  }
-}
-
-template <Pair... pairs>
-concept Supported = sizeof...(pairs) > 1 && (... && is_pow2(norm(pairs.f))) &&
-                    (... && is_pow2(norm(pairs.t)));
-
-}  // namespace bitmask_translate_detail
-
-template <bitmask_translate_detail::Pair... pairs>
-  requires bitmask_translate_detail::Supported<pairs...>
-constexpr auto bitmask_translate(
-    bitmask_translate_detail::from_type_t<pairs...> input) noexcept {
-  using namespace bitmask_translate_detail;
-  using from_t = from_type_t<pairs...>;
-  using to_t = to_type_t<pairs...>;
-  using T = std::common_type_t<from_t, to_t>;
-
-  constexpr auto groups = groupify<T, pairs...>();
-
-  return std::apply(
-      [input](auto... g) { return (... | to_t(shift(input & g.f, g.rb))); },
-      groups);
-}
-
-static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(1) == 1);
-static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(7) == 11);
-static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(0) == 0);
-static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(4) == 8);
-static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(5) == 9);
-static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(37) == 9);
 
 }  // namespace cbu

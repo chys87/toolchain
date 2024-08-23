@@ -54,6 +54,7 @@ cc_library(
     'bit_cast.h',
     'bit.h',
     'bitmask_ref.h',
+    'bitmask_translate.h',
     'byteorder.h',
     'byte_size.h',
     'compare.h',
