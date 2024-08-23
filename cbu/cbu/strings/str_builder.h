@@ -136,8 +136,8 @@ auto Optional(std::optional<T> bldr) noexcept {
   if constexpr (BaseBuilder<T>) {
     return OptionalImpl{bldr};
   } else {
-    return OptionalImpl{bldr.transform(
-        [](const T& bldr) constexpr noexcept { return Adapt(bldr); })};
+    return OptionalImpl{
+        bldr.transform([](const T& b) constexpr noexcept { return Adapt(b); })};
   }
 }
 
