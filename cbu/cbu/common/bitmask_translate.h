@@ -54,41 +54,40 @@ constexpr auto shift(Raw_unsigned_integral auto v, int rb) noexcept {
 }
 
 template <typename T>
-struct normalize {
-  using type = std::conditional_t<sizeof(T) <= sizeof(unsigned), unsigned,
-                                  std::make_unsigned_t<T>>;
-};
+struct normalize : std::common_type<unsigned, std::make_unsigned_t<T>> {};
 
-template <typename T>
-  requires std::is_enum_v<T>
-struct normalize<T> {
-  using type = std::make_unsigned_t<std::underlying_type_t<T>>;
-};
+template <Raw_enum T>
+struct normalize<T> : normalize<std::underlying_type_t<T>> {};
 
 template <typename T>
 using normalize_t = typename normalize<T>::type;
 
+template <Raw_integral T>
+constexpr normalize_t<T> normalize_value(T v) noexcept {
+  return std::make_unsigned_t<T>(v);
+}
+
+template <Raw_enum T>
+constexpr auto normalize_value(T v) noexcept {
+  return normalize_value(std::to_underlying(v));
+}
+
 template <Raw_unsigned_integral... Types>
-struct common_type {
-  static constexpr auto S = std::max({sizeof(unsigned), sizeof(Types)...});
-  using type =
-      std::conditional_t<S <= sizeof(unsigned), unsigned,
-                         std::conditional_t<S <= sizeof(unsigned long),
-                                            unsigned long, unsigned long long>>;
-};
+struct common_type : std::common_type<unsigned, Types...> {};
 
 template <Raw_unsigned_integral... T>
 using common_type_t = typename common_type<T...>::type;
 
 template <typename T>
-concept Type = std::is_integral_v<T> || std::is_enum_v<T>;
+concept Type = Raw_integral<T> || Raw_enum<T>;
 
 template <Raw_unsigned_integral T>
 struct Pair {
   T f;
   T t;
 
-  constexpr Pair(Type auto f, Type auto t) noexcept : f(f), t(t) {}
+  constexpr Pair(Type auto f, Type auto t) noexcept
+      : f(normalize_value(f)), t(normalize_value(t)) {}
 };
 
 template <Type F, Type T>
@@ -170,7 +169,8 @@ constexpr auto operator|(GroupSet<T, lgroups...> l, GroupSet<T, rgroup> r) {
 template <bitmask_translate_detail::Pair... pairs>
   requires((true && ... && is_pow2(pairs.f)) && ... && is_pow2(pairs.t))
 constexpr auto bitmask_translate(
-    std::common_type_t<decltype(pairs.f)...> input) noexcept {
+    bitmask_translate_detail::common_type_t<decltype(pairs.f)...>
+        input) noexcept {
   if constexpr (sizeof...(pairs) == 0) {
     return 0u;
   } else {
@@ -184,11 +184,13 @@ constexpr auto bitmask_translate(
   }
 }
 
+static_assert(bitmask_translate<>(5) == 0);
 static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(1) == 1);
 static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(7) == 11);
 static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(0) == 0);
 static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(4) == 8);
 static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(5) == 9);
 static_assert(bitmask_translate<{1, 1}, {2, 2}, {4, 8}>(37) == 9);
+static_assert(bitmask_translate<{static_cast<signed char>(0x80), 4}>(0xffff) == 4);
 
 }  // namespace cbu
