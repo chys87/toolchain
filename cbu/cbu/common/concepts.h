@@ -78,6 +78,12 @@ template <typename T>
 concept Raw_char_type = Char_type<T> && No_cv<T> && !std::is_array_v<T>;
 
 template <typename T>
+concept Enum = std::is_enum_v<T>;
+
+template <typename T>
+concept Raw_enum = Enum<T> && No_cv<T>;
+
+template <typename T>
 concept Trivial_type = std::is_trivial_v<T>;
 
 template <typename T>
