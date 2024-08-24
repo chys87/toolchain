@@ -52,6 +52,43 @@ alignas(64) const char arch_linear_bytes64[64] = {
   0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
 };
 
+void* memdrop_var32(void* dst, uint32_t v, size_t n) noexcept {
+#if defined __AVX512VL__ && defined __AVX512BW__
+  _mm_mask_storeu_epi8(dst, (1 << n) - 1, _mm_cvtsi32_si128(v));
+  return static_cast<char*>(dst) + n;
+#endif
+
+  if (std::endian::native == std::endian::little) {
+
+    char *d = static_cast<char *>(dst);
+    char *e = d + n;
+
+    switch (n) {
+      default:
+        __builtin_unreachable();
+      case 4:
+        memdrop4(d, v);
+        break;
+      case 3:
+        memdrop2(d, v);
+        d[2] = uint32_t(v) >> 16;
+        break;
+      case 2:
+        memdrop2(d, v);
+        break;
+      case 1:
+        d[0] = v;
+        break;
+      case 0:
+        break;
+    }
+    return e;
+
+  } else {
+    return compat::mempcpy(dst, &v, n);
+  }
+}
+
 void* memdrop_var64(void* dst, uint64_t v, size_t n) noexcept {
 #if defined __AVX512VL__ && defined __AVX512BW__
   _mm_mask_storeu_epi8(dst, (1 << n) - 1, _mm_cvtsi64_si128(v));

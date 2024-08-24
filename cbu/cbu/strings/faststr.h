@@ -285,9 +285,13 @@ inline T* mempcpy_no_builtin(T* d, const void* s, size_t n) noexcept {
 #endif
 }
 
-void* memdrop_var64(void* dst, std::uint64_t, std::size_t) noexcept;
+CBU_AARCH64_PRESERVE_ALL void* memdrop_var32(void* dst, std::uint32_t,
+                                             std::size_t) noexcept;
+CBU_AARCH64_PRESERVE_ALL void* memdrop_var64(void* dst, std::uint64_t,
+                                             std::size_t) noexcept;
 #if __WORDSIZE >= 64
-void* memdrop_var128(void* dst, unsigned __int128, std::size_t) noexcept;
+CBU_AARCH64_PRESERVE_ALL void* memdrop_var128(void* dst, unsigned __int128,
+                                              std::size_t) noexcept;
 #endif
 #ifdef __SSE2__
 void* memdrop(void* dst, __m128i, std::size_t) noexcept;
