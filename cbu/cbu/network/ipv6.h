@@ -170,6 +170,13 @@ class IPv6 {
   constexpr bool IsIPv4CanonicalLocalhost() const noexcept {
     return *this == IPv6(IPv4::CanonicalLocalhost());
   }
+  constexpr bool IsLocalhost() const noexcept {
+    uint64_t a = mempick<uint64_t>(a_.s6_addr);
+    uint64_t b = mempick<uint64_t>(a_.s6_addr + 8);
+    return a == 0 && (b == bswap_be<uint64_t>(1) ||
+                      (b & bswap_be<uint64_t>(0xffff'ffff'ff00'0000)) ==
+                          bswap_be<uint64_t>(0xffff7f000000));
+  }
 
   friend constexpr bool operator==(const IPv6& a, const IPv6& b) noexcept {
 #ifdef __SSE4_1__

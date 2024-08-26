@@ -149,6 +149,9 @@ TEST(IPv6Test, LocalhostTest) {
   ASSERT_FALSE(IPv6(IPv4(127, 2, 3, 4)).IsIPv4CanonicalLocalhost());
   ASSERT_FALSE(IPv6(IPv4(128, 2, 3, 4)).IsIPv4Localhost());
   ASSERT_FALSE(IPv6(IPv4(128, 2, 3, 4)).IsIPv4CanonicalLocalhost());
+  ASSERT_TRUE(IPv6::Localhost().IsLocalhost());
+  ASSERT_TRUE(IPv6(IPv4(127, 0, 0, 1)).IsLocalhost());
+  ASSERT_FALSE(IPv6(IPv4(126, 0, 0, 1)).IsLocalhost());
 }
 
 }  // namespace
