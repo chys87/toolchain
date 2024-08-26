@@ -83,34 +83,22 @@ struct FillOptions {
 // FillDec converts an unsigned number to a decimal string.
 // The generated code is aggressively unrolled so it can be fairly bloated.
 template <std::uint64_t UpperBound, typename Options = FillOptions<>>
-struct FillDec {
+struct FillDec;
+
+template <std::uint64_t UpperBound, typename Options>
+  requires(Options::width > 0)
+struct FillDec<UpperBound, Options> {
   std::uint64_t value;
 
   constexpr FillDec(std::uint64_t v) noexcept : value(v) {}
 
   template <Raw_char_type Ch>
   constexpr Ch* operator()(Ch* p) const noexcept {
-    if constexpr (Options::width > 0) {
-      conv_fixed_digit<UpperBound, Options::width>(value, p);
-      return p + Options::width;
-    } else {
-      return conv_flexible_digit(value, p);
-    }
+    conv_fixed_digit<UpperBound, Options::width>(value, p);
+    return p + Options::width;
   }
 
-  constexpr std::size_t size() const noexcept {
-    if constexpr (Options::width > 0) {
-      return Options::width;
-    } else if constexpr (UpperBound <= 10) {
-      return 1;
-    } else if constexpr (UpperBound <= 100) {
-      return (value >= 10) + 1;
-    } else if constexpr (UpperBound <= 1000) {
-      return (value >= 100) + (value >= 10) + 1;
-    } else {
-      return ilog10(value) + 1;
-    }
-  }
+  static constexpr std::size_t size() noexcept { return Options::width; }
 
   template <std::uint64_t UB, unsigned W, Raw_char_type Ch>
   static constexpr void conv_fixed_digit(std::uint64_t v, Ch* p) noexcept {
@@ -159,50 +147,76 @@ struct FillDec {
       }
     }
   }
+};
+
+template <std::uint64_t UpperBound, typename Options>
+  requires(Options::width == 0)
+struct FillDec<UpperBound, Options> {
+  std::uint64_t value;
+  std::uint8_t bytes;
+
+  constexpr FillDec(std::uint64_t v) noexcept
+      : value(v), bytes(get_bytes(v)) {}
 
   template <Raw_char_type Ch>
-  static constexpr Ch* conv_flexible_digit(std::uint64_t v, Ch* p) noexcept {
-    Ch* s = p;
+  constexpr Ch* operator()(Ch* p) const noexcept {
+    return conv_flexible_digit(value, bytes, p);
+  }
+
+  constexpr std::size_t size() const noexcept { return bytes; }
+
+  constexpr unsigned get_bytes(std::uint64_t v) const noexcept {
+    if constexpr (0 < UpperBound && UpperBound <= 10) {
+      return 1;
+    } else if constexpr (10 < UpperBound && UpperBound <= 100) {
+      return (v >= 10) + 1;
+    } else if constexpr (100 < UpperBound && UpperBound <= 1000) {
+      return (v >= 100) + (v >= 10) + 1;
+    } else if constexpr (1000 < UpperBound && UpperBound <= 0xffffffff) {
+      return ilog10(std::uint32_t(v)) + 1;
+    } else {
+      return ilog10(v) + 1;
+    }
+  }
+
+  template <Raw_char_type Ch>
+  static constexpr Ch* conv_flexible_digit(std::uint64_t v, unsigned b,
+                                           Ch* p) noexcept {
+    Ch* res = p + b;
+    Ch* w = p + b - 1;
     if constexpr (UpperBound == 0) {
+#ifdef __clang__
+#pragma clang loop vectorize(disable) unroll(disable)
+#endif
       do {
-        *p++ = Ch(v % 10 + '0');
-      } while ((v /= 10) != 0);
-      reverse(s, p);
+        *w-- = Ch(v % 10 + '0');
+        v /= 10;
+      } while (--b);
     } else if constexpr (UpperBound <= 10) {
       *p++ = Ch(v + '0');
     } else if constexpr (UpperBound <= 20) {
-      if (v < 10) {
+      if (b == 1) {
         *p++ = Ch(v + '0');
       } else {
         *p++ = '1';
         *p++ = Ch(v - 10 + '0');
       }
     } else if constexpr (UpperBound <= 100) {
-      if (v < 10) {
+      if (b == 1) {
         *p++ = Ch(v + '0');
       } else {
         p = cbu::memdrop2(p, cbu::mempick2(kDigits99 + 2 * v));
       }
     } else {
-      do {
-        *p++ = Ch(cbu::fastmod<10, UpperBound>(v) + '0');
-      } while ((v = cbu::fastdiv<10, UpperBound>(v)) != 0);
-      reverse(s, p);
-    }
-    return p;
-  }
-
-  template <Raw_char_type Ch>
-  static constexpr void reverse(Ch* p, Ch* q) noexcept {
 #ifdef __clang__
 #pragma clang loop vectorize(disable) unroll(disable)
 #endif
-    while (p < --q) {
-      Ch tmp = *p;
-      *p = *q;
-      *q = tmp;
-      ++p;
+      do {
+        *w-- = Ch(cbu::fastmod<10, UpperBound>(v) + '0');
+        v = cbu::fastdiv<10, UpperBound>(v);
+      } while (--b);
     }
+    return res;
   }
 };
 
