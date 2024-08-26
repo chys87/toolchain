@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,14 +29,13 @@
 #pragma once
 
 #include <algorithm>
-#include <compare>
+#include <bit>
 #include <concepts>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
 #include <utility>
 
-#include "cbu/common/bit_cast.h"
 #include "cbu/common/concepts.h"
 
 namespace cbu {
@@ -106,7 +105,7 @@ void error() __attribute__((__error__("Unreachable code")));
 
 inline std::uint32_t float_to_uint32(float x) {
   if constexpr (sizeof(float) == 4) {
-    return bit_cast<std::uint32_t>(x);
+    return std::bit_cast<std::uint32_t>(x);
   } else {
     fastarith_detail::error();
   }
@@ -114,7 +113,7 @@ inline std::uint32_t float_to_uint32(float x) {
 
 inline float uint32_to_float(std::uint32_t u) {
   if constexpr (sizeof(float) == 4) {
-    return bit_cast<float>(u);
+    return std::bit_cast<float>(u);
   } else {
     fastarith_detail::error();
   }
@@ -122,7 +121,7 @@ inline float uint32_to_float(std::uint32_t u) {
 
 inline std::uint64_t double_to_uint64(double x) {
   if constexpr (sizeof(double) == 8) {
-    return bit_cast<std::uint64_t>(x);
+    return std::bit_cast<std::uint64_t>(x);
   } else {
     fastarith_detail::error();
   }
@@ -130,7 +129,7 @@ inline std::uint64_t double_to_uint64(double x) {
 
 inline double uint64_to_double(std::uint64_t u) {
   if constexpr (sizeof(double) == 8) {
-    return bit_cast<double>(u);
+    return std::bit_cast<double>(u);
   } else {
     fastarith_detail::error();
   }
@@ -145,20 +144,23 @@ constexpr std::uint32_t ipow10_array[10] = {
   1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000
 };
 
-unsigned int ilog10_impl(std::uint32_t) noexcept __attribute__((__const__));
+// Adapted from Hacker's Delight
+constexpr unsigned int ilog10(std::uint32_t x) noexcept {
+  unsigned y = unsigned(9 * (31 - std::countl_zero(x | 1))) >> 5;
+  if (x >= ipow10_array[y + 1ul]) ++y;
+  return y;
+}
 
-inline constexpr unsigned int ilog10(std::uint32_t x) noexcept {
-  if consteval {
-    std::uint64_t p = 10;
-    unsigned int i = 0;
-    while (x >= p) {
-      p *= 10;
-      ++i;
-    }
-    return i;
-  } else {
-    return ilog10_impl(x);
+constexpr unsigned int ilog10(std::uint64_t x) noexcept {
+  if (x >= 1'0000'00000'00000'00000ull) {
+    return 19;
   }
+  unsigned add = 0;
+  if (x >= 1'0000'00000) {
+    x /= 1'0000'00000;
+    add = 9;
+  }
+  return add + ilog10(std::uint32_t(x));
 }
 
 }  // namespace cbu

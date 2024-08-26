@@ -74,36 +74,36 @@ TEST(MapUToFloat, Double) {
 }
 
 TEST(PowLog10, ILog10) {
-  static_assert(ilog10(0) == 0);
-  static_assert(ilog10(2) == 0);
-  static_assert(ilog10(9) == 0);
-  static_assert(ilog10(10) == 1);
+  static_assert(ilog10(0u) == 0);
+  static_assert(ilog10(2u) == 0);
+  static_assert(ilog10(9u) == 0);
+  static_assert(ilog10(10u) == 1);
+  static_assert(ilog10(4294967295u) == 9);
 
-  EXPECT_EQ(0, ilog10(0));
-  EXPECT_EQ(0, ilog10(1));
-  EXPECT_EQ(0, ilog10(2));
-  EXPECT_EQ(0, ilog10(9));
-  EXPECT_EQ(1, ilog10(10));
-  EXPECT_EQ(1, ilog10(99));
-  EXPECT_EQ(2, ilog10(100));
-  EXPECT_EQ(2, ilog10(999));
-  EXPECT_EQ(3, ilog10(1000));
-  EXPECT_EQ(3, ilog10(9999));
-  EXPECT_EQ(4, ilog10(10000));
-  EXPECT_EQ(9, ilog10(4294967295));
+  static_assert(ilog10(uint64_t(0)) == 0);
+  static_assert(ilog10(uint64_t(1)) == 0);
+  static_assert(ilog10(uint64_t(9)) == 0);
+  static_assert(ilog10(uint64_t(10)) == 1);
+  static_assert(ilog10(uint64_t(4294967295)) == 9);
+  static_assert(ilog10(uint64_t(4294967296)) == 9);
+  static_assert(ilog10(uint64_t(0xffff'ffff'ffff'ffff)) == 19);
 
-  EXPECT_EQ(0, ilog10_impl(0));
-  EXPECT_EQ(0, ilog10_impl(1));
-  EXPECT_EQ(0, ilog10_impl(2));
-  EXPECT_EQ(0, ilog10_impl(9));
-  EXPECT_EQ(1, ilog10_impl(10));
-  EXPECT_EQ(1, ilog10_impl(99));
-  EXPECT_EQ(2, ilog10_impl(100));
-  EXPECT_EQ(2, ilog10_impl(999));
-  EXPECT_EQ(3, ilog10_impl(1000));
-  EXPECT_EQ(3, ilog10_impl(9999));
-  EXPECT_EQ(4, ilog10_impl(10000));
-  EXPECT_EQ(9, ilog10_impl(4294967295));
+  unsigned lv = 0;
+  uint64_t v = 1;
+  while (true) {
+    EXPECT_EQ(ilog10(v), lv) << v;
+    if (uint32_t(v) == v) {
+      EXPECT_EQ(ilog10(uint32_t(v)), lv) << v;
+    }
+    if (v % 10 == 9) {
+      ++v;
+      ++lv;
+    } else {
+      uint64_t new_v = v * 10 - 1;
+      if (new_v < v) break;
+      v = new_v;
+    }
+  }
 }
 
 }  // namespace cbu

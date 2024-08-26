@@ -77,16 +77,4 @@ double map_uint64_to_double(uint64_t v) noexcept {
   return map_uint_to_float<double, uint64_t>(v);
 }
 
-// Adapted from Hacker's Delight
-unsigned ilog10_impl(uint32_t x) noexcept {
-  if (x == 0) {
-    return 0;
-  }
-  unsigned y = (unsigned)(9 * bsr(x)) >> 5;
-  if (x >= ipow10_array[y + 1ul]) {
-    ++y;
-  }
-  return y;
-}
-
 }  // namespace cbu
