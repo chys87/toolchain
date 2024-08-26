@@ -52,7 +52,7 @@ struct StatxBaseSpec {
 namespace detail {
 
 template <typename T>
-concept Statx_spec = std::is_base_of_v<StatxBaseSpec, T>;
+concept Statx_spec = std::derived_from<T, StatxBaseSpec>;
 
 template <Statx_spec Spec>
 constexpr auto StatxResultAsTuple(int ret, const struct_statx& stx,
@@ -63,6 +63,13 @@ constexpr auto StatxResultAsTuple(int ret, const struct_statx& stx,
   else
     return std::tuple<RT>(spec(ret, stx));
 }
+
+template <typename T>
+concept Statx_spec_time = requires(T& spec) {
+  requires Statx_spec<T>;
+  requires std::same_as<std::invoke_result_t<T, int, const struct_statx&>,
+                        statx_timestamp>;
+};
 
 }  // namespace detail
 
@@ -99,7 +106,7 @@ using StatxUid = StatxField<STATX_UID, &struct_statx::stx_uid>;
 using StatxGid = StatxField<STATX_GID, &struct_statx::stx_gid>;
 using StatxNLink = StatxField<STATX_NLINK, &struct_statx::stx_nlink>;
 
-template <detail::Statx_spec RealTimeSpec>
+template <detail::Statx_spec_time RealTimeSpec>
 struct StatxCombineTime : RealTimeSpec {
   constexpr StatxCombineTime(RealTimeSpec rts) noexcept : RealTimeSpec(rts) {}
   static constexpr uint64_t operator()(int ret,
@@ -109,7 +116,7 @@ struct StatxCombineTime : RealTimeSpec {
   }
 };
 
-template <detail::Statx_spec RealTimeSpec>
+template <detail::Statx_spec_time RealTimeSpec>
 struct StatxSecond : RealTimeSpec {
   constexpr StatxSecond(RealTimeSpec rts) noexcept : RealTimeSpec(rts) {}
   static constexpr time_t operator()(int ret,
