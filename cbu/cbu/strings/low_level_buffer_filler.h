@@ -126,6 +126,18 @@ struct FillDec<UpperBound, Options> {
           UB == 0 ? std::uint64_t(-1) / 100 + 1 : (UB - 1) / 100 + 1;
       conv_fixed_digit<NextUB, W - 2>(quot, p);
       return;
+    } else if constexpr (W == 2 && UB >= 11 && UB <= 100) {
+      // A common case, accelerate it
+      const char* __restrict dg = kDigits99 + 2 * v;
+      uint32_t chars = mempick2(dg);
+      if (v < 10) {
+        if constexpr (Options::fill > '0')
+          chars += cbu::bswap_le<uint16_t>(Options::fill - '0');
+        else
+          chars -= cbu::bswap_le<uint16_t>('0' - Options::fill);
+      }
+      memdrop2(p, chars);
+      return;
     } else {
       std::uint64_t quot;
       std::uint32_t rem;

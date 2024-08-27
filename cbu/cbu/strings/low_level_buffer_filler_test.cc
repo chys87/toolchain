@@ -116,6 +116,22 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
+    filler << FillDec<88, FillOptions<>::with_width<2>::with_fill<'!'>>(7);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 2);
+    ASSERT_EQ(std::string(buffer, p - buffer), "!7");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<88, FillOptions<>::with_width<2>::with_fill<'!'>>(57);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 2);
+    ASSERT_EQ(std::string(buffer, p - buffer), "57");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
     filler << FillDec<99999, FillOptions<>::with_width<5>>(123);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 5);
