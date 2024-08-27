@@ -79,9 +79,9 @@ inline char* FormatField(char* w, uint16_t v) noexcept {
   memdrop(w, __v4si(chars_v)[0]);
   return w + 4 - skip_bytes;
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  uint32_t skip_bytes = (cbu::clz(uint32_t(v | 1)) - 16) / 4;
-  uint32_t vext =
-      ((v & 0xf) << 24) | ((v & 0xf0) << 12) | (v & 0xf00) | (v >> 12);
+  uint32_t skip_bytes = std::countl_zero(uint16_t(v | 1)) / 4;
+  uint32_t vext = ((v & 0xff) << 16) | (v >> 8);
+  vext = ((vext << 8) | (vext >> 4)) & 0x0f0f0f0fu;
   uint8x8_t chars_v =
       vqtbl1_u8(*(const uint8x16_t*)"0123456789abcdef",
                 vreinterpret_u8_u32(vmov_n_u32(vext >> (skip_bytes * 8))));
