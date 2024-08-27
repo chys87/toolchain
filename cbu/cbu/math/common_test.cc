@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -88,21 +88,31 @@ TEST(PowLog10, ILog10) {
   static_assert(ilog10(uint64_t(4294967296)) == 9);
   static_assert(ilog10(uint64_t(0xffff'ffff'ffff'ffff)) == 19);
 
-  unsigned lv = 0;
-  uint64_t v = 1;
-  while (true) {
+  for (uint64_t v = 1;;) {
+    unsigned lv = std::to_string(v).size() - 1;
     EXPECT_EQ(ilog10(v), lv) << v;
     if (uint32_t(v) == v) {
       EXPECT_EQ(ilog10(uint32_t(v)), lv) << v;
     }
     if (v % 10 == 9) {
       ++v;
-      ++lv;
     } else {
       uint64_t new_v = v * 10 - 1;
       if (new_v < v) break;
       v = new_v;
     }
+  }
+
+  for (uint64_t v = 1; v; ) {
+    unsigned lv = std::to_string(v).size() - 1;
+    EXPECT_EQ(ilog10(v), lv) << v;
+    if (uint32_t(v) == v) {
+      EXPECT_EQ(ilog10(uint32_t(v)), lv) << v;
+    }
+
+    uint64_t new_v = v | (v >> 1);
+    if (new_v == v) ++new_v;
+    v = new_v;
   }
 }
 

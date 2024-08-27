@@ -139,28 +139,48 @@ inline double uint64_to_double(std::uint64_t u) {
 float map_uint32_to_float(std::uint32_t v) noexcept;
 double map_uint64_to_double(std::uint64_t v) noexcept;
 
-
-constexpr std::uint32_t ipow10_array[10] = {
-  1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000
+inline constexpr std::uint32_t ipow10_array[10]{
+    1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
 };
 
 // Adapted from Hacker's Delight
 constexpr unsigned int ilog10(std::uint32_t x) noexcept {
-  unsigned y = unsigned(9 * (31 - std::countl_zero(x | 1))) >> 5;
-  if (x >= ipow10_array[y + 1ul]) ++y;
-  return y;
+  unsigned long y = unsigned(9 * (31 - std::countl_zero(x | 1))) >> 5;
+  if (x >= ipow10_array[y + 1])
+    return y + 1;
+  else
+    return y;
 }
 
+inline constexpr std::uint64_t ipow10_64_array[20]{
+    1,
+    10,
+    100,
+    1000,
+    10000,
+    100000,
+    1000000,
+    100'00000,
+    1000'00000,
+    10000'00000,
+    1'00000'00000ull,
+    10'00000'00000ull,
+    100'00000'00000ull,
+    1000'00000'00000ull,
+    10000'00000'00000ull,
+    1'00000'00000'00000ull,
+    10'00000'00000'00000ull,
+    100'00000'00000'00000ull,
+    1000'00000'00000'00000ull,
+    10000'00000'00000'00000ull,
+};
+
 constexpr unsigned int ilog10(std::uint64_t x) noexcept {
-  if (x >= 1'0000'00000'00000'00000ull) {
-    return 19;
-  }
-  unsigned add = 0;
-  if (x >= 1'0000'00000) {
-    x /= 1'0000'00000;
-    add = 9;
-  }
-  return add + ilog10(std::uint32_t(x));
+  unsigned long y = unsigned(19 * (63 - std::countl_zero(x | 1))) >> 6;
+  if (x >= ipow10_64_array[y + 1])
+    return y + 1;
+  else
+    return y;
 }
 
 }  // namespace cbu
