@@ -95,20 +95,7 @@ inline constexpr T clamp(T v, std::type_identity_t<T> m,
 float map_uint32_to_float(std::uint32_t v) noexcept;
 double map_uint64_to_double(std::uint64_t v) noexcept;
 
-inline constexpr std::uint32_t ipow10_array[10]{
-    1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000,
-};
-
-// Adapted from Hacker's Delight
-constexpr unsigned int ilog10(std::uint32_t x) noexcept {
-  unsigned long y = unsigned(9 * (31 - std::countl_zero(x | 1))) >> 5;
-  if (x >= ipow10_array[y + 1])
-    return y + 1;
-  else
-    return y;
-}
-
-inline constexpr std::uint64_t ipow10_64_array[20]{
+inline constexpr std::uint64_t ipow10_array[20]{
     1,
     10,
     100,
@@ -131,9 +118,18 @@ inline constexpr std::uint64_t ipow10_64_array[20]{
     10000'00000'00000'00000ull,
 };
 
+// Adapted from Hacker's Delight
+constexpr unsigned int ilog10(std::uint32_t x) noexcept {
+  unsigned long y = unsigned(9 * (31 - std::countl_zero(x | 1))) >> 5;
+  if (x >= std::uint32_t(ipow10_array[y + 1]))
+    return y + 1;
+  else
+    return y;
+}
+
 constexpr unsigned int ilog10(std::uint64_t x) noexcept {
   unsigned long y = unsigned(19 * (63 - std::countl_zero(x | 1))) >> 6;
-  if (x >= ipow10_64_array[y + 1])
+  if (x >= ipow10_array[y + 1])
     return y + 1;
   else
     return y;
