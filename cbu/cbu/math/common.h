@@ -29,10 +29,8 @@
 #pragma once
 
 #include <algorithm>
-#include <bit>
 #include <concepts>
 #include <cstdint>
-#include <limits>
 #include <type_traits>
 #include <utility>
 
@@ -90,48 +88,6 @@ inline constexpr T clamp(T v, std::type_identity_t<T> m,
     return r;
   } else {
     return std::min(std::max(v, m), M);
-  }
-}
-
-namespace fastarith_detail {
-
-#if __has_attribute(__error__)
-void error() __attribute__((__error__("Unreachable code")));
-#else
-[[noreturn]] void error();
-#endif
-
-} // namespace fastarith_detail
-
-inline std::uint32_t float_to_uint32(float x) {
-  if constexpr (sizeof(float) == 4) {
-    return std::bit_cast<std::uint32_t>(x);
-  } else {
-    fastarith_detail::error();
-  }
-}
-
-inline float uint32_to_float(std::uint32_t u) {
-  if constexpr (sizeof(float) == 4) {
-    return std::bit_cast<float>(u);
-  } else {
-    fastarith_detail::error();
-  }
-}
-
-inline std::uint64_t double_to_uint64(double x) {
-  if constexpr (sizeof(double) == 8) {
-    return std::bit_cast<std::uint64_t>(x);
-  } else {
-    fastarith_detail::error();
-  }
-}
-
-inline double uint64_to_double(std::uint64_t u) {
-  if constexpr (sizeof(double) == 8) {
-    return std::bit_cast<double>(u);
-  } else {
-    fastarith_detail::error();
   }
 }
 

@@ -31,7 +31,6 @@
 #include <cstring>
 #include <limits>
 
-#include "cbu/math/common.h"
 #include "cbu/math/fastdiv.h"
 
 namespace cbu {
@@ -48,10 +47,10 @@ ScaleUnitPrefix scale_unit_prefix_1000(float value) noexcept {
 
 ScaleUnitPrefix scale_unit_prefix_1024(float value) noexcept {
   if constexpr (std::numeric_limits<float>::is_iec559) {
-    std::uint32_t u = float_to_uint32(value);
+    std::uint32_t u = std::bit_cast<uint32_t>(value);
 
     // Handle 0 and small numbers properly
-    if (u < float_to_uint32(1024.f)) return {value, 0};
+    if (u < std::bit_cast<uint32_t>(1024.f)) return {value, 0};
 
     // Extract exponent
     // The value is known to be positive, so don't bother to clear sign bit
@@ -59,7 +58,7 @@ ScaleUnitPrefix scale_unit_prefix_1024(float value) noexcept {
     unsigned real_exponent = orig_exponent - 127;
     unsigned prefix_idx = cbu::fastdiv<10, 64>(real_exponent);
     u -= prefix_idx * 10 << 23;
-    float res = uint32_to_float(u);
+    float res = std::bit_cast<float>(u);
     return {res, prefix_idx};
   } else {
     // Division by 1024 doesn't generate errors, so this could be further
