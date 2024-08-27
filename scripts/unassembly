@@ -463,6 +463,7 @@ def yield_possible_headers(filename, target):
 
     yield from glob.iglob(f'/usr/include/{target}*/{filename}')
     yield from glob.iglob(f'/usr/{target}*/include/{filename}')
+    yield from glob.iglob(f'/usr/{target}*/usr/include/{filename}')
 
     if os.uname().machine == target:
         yield f'/usr/include/{filename}'
