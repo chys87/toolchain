@@ -320,10 +320,14 @@ inline constexpr T* memdrop(T* dst, IT v, std::size_t n) noexcept {
     return d + n;
   } else {
 #if __WORDSIZE >= 64
-    if (sizeof(IT) > 8)
+    if constexpr (sizeof(IT) > 8)
       return static_cast<T*>(memdrop_var128(d, v, n));
+    else
 #endif
-    return static_cast<T*>(memdrop_var64(d, v, n));
+        if constexpr (sizeof(IT) > 4)
+      return static_cast<T*>(memdrop_var64(d, v, n));
+    else
+      return static_cast<T*>(memdrop_var32(d, v, n));
   }
 }
 
