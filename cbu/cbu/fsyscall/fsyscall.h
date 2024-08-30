@@ -176,6 +176,7 @@ def_fsys(fcntl_ptr,fcntl,int,3,int,int,void *)
 def_fsys(fcntl_cptr,fcntl,int,3,int,int,const void *)
 def_fsys(prctl_ptr,prctl,int,2,int,void *)
 def_fsys(prctl_cptr,prctl,int,2,int,const void *)
+def_fsys_nomem(prctl_int,prctl,int,2,int,int)
 def_fsys_nomem(setpriority,setpriority,int,3,int,int,int)
 // getpriority note: I removed this function.
 // Its C prototype in libc is broken by design.
@@ -516,6 +517,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_fcntl_cptr fcntl
 #define fsys_prctl_ptr prctl
 #define fsys_prctl_cptr prctl
+#define fsys_prctl_int prctl
 #define fsys_setpriority setpriority
 #define fsys_symlink symlink
 #define fsys_link link
