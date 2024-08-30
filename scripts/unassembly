@@ -63,6 +63,8 @@ def get_lines(it, count):
 def cppfilter(fi, args):
     simple_replaces = (  # Don't use a dict. We want orders.
         (b'(anonymous namespace)', b'(a)'),
+        (b'long long', b'llong'),
+        (b'unsigned llong', b'ullong'),
         (b'unsigned int', b'uint'),
         (b'unsigned long', b'ulong'),
         (b'unsigned short', b'ushort'),
@@ -195,6 +197,9 @@ def cppfilter(fi, args):
          br'::\1<\2>'),
         (re.compile(br'(std::\w+)<(' + __type + br'(?:, ' + __type + br')*)>::type'), br'\1_t<\2>'),
         (re.compile(br'(std::\w+)<(' + __type + br'(?:, ' + __type + br')*)>::value'), br'\1_v<\2>'),
+
+        # non-standard suffix, h and uh for short
+        (re.compile(br'\((u?)short\)(\d+)'), br'\2\1h'),
     ]
 
     if not args.stricter_cxx_signature:
@@ -361,6 +366,7 @@ __special_readable_chars = {
     ord('\r'): b'\\r',
     ord('\n'): b'\\n',
     ord('\t'): b'\\t',
+    0o33: b'\\e',
 }
 
 
