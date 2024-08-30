@@ -94,8 +94,14 @@ static char* gen_aarch64(char* w) {
   }
 
   if (has_sve) {
+    // It appears clang actually generates worse code with -msve-vector-bits.
+    // With scalable bits, it only uses SVE in loop vectorization, which is
+    // good.  With fixed width, it even attempts to use SVE when storing 16 or
+    // 32 bits of zeros, resulting in longer code.
+#if 0
     int bytes = fsys_prctl_cptr(PR_SVE_GET_VL, NULL) & PR_SVE_VL_LEN_MASK;
     w += snprintf(w, 64, " -msve-vector-bits=%d", bytes * 8);
+#endif
   }
 
   return w;
