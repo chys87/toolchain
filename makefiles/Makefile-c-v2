@@ -492,7 +492,7 @@ $(AUTO_GENERATED_PYTHON_DEPS): $(BUILDDIR)/%.py.P: $(DIR)/%.py
 $(AUTO_GENERATED_PYTHON): $(BUILDDIR)/%: | $(BUILDDIR)/%.py.P
 
 ifneq "" "$(AUTO_GENERATED_PROTOBUF_SRCS)"
- PROTOC := $(EGM.which protoc)
+ PROTOC ?= $(EGM.which protoc)
 endif
 
 $(AUTO_GENERATED_PROTOBUF_SRCS): private NAME := PROTOC
