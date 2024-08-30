@@ -28,9 +28,13 @@
 
 #pragma once
 
+#include <bit>
 #include <concepts>
+#include <cstdint>
 #include <limits>
 #include <type_traits>
+
+#include "cbu/common/concepts.h"
 
 namespace cbu {
 
@@ -44,22 +48,37 @@ struct SharedConst {
 template <typename T, auto... args>
 struct SharedConst<const T, args...> : SharedConst<T, args...> {};
 
-alignas(8) inline const char shared_const_zero[8]{};
+template <std::integral T, auto... args>
+  requires(sizeof...(args) != 1)
+struct SharedConst<T, args...> : SharedConst<T, T{args...}> {};
 
-template <typename T>
-  requires(std::is_same_v<std::remove_cvref_t<T>, T> and sizeof(T) <= 8 and
-           (std::is_integral_v<T> or (std::is_floating_point_v<T> and
-                                      std::numeric_limits<T>::is_iec559)))
-struct SharedConst<T> {
-  static inline const T& value = reinterpret_cast<const T&>(shared_const_zero);
+template <std::integral T, auto arg>
+  requires(!std::is_same_v<std::remove_cvref_t<T>,
+                           std::remove_cvref_t<decltype(arg)>>)
+struct SharedConst<T, arg> : SharedConst<T, T{arg}> {};
+
+template <Raw_signed_integral T, auto... args>
+struct SharedConst<T, args...> {
+  static inline const T& value = reinterpret_cast<const T&>(
+      SharedConst<std::make_unsigned_t<T>,
+                  std::make_unsigned_t<T>(T(args...))>::value);
 };
 
-template <typename T, auto init_value>
-  requires(std::is_same_v<std::remove_cvref_t<T>, T> and sizeof(T) <= 8 and
-           (std::is_integral_v<T> or (std::is_floating_point_v<T> and
-                                      std::numeric_limits<T>::is_iec559)) and
-           std::is_integral_v<decltype(init_value)> and init_value == 0)
-struct SharedConst<T, init_value> : SharedConst<T> {};
+template <auto init_value>
+  requires(std::is_integral_v<decltype(init_value)> && init_value == 0 &&
+           std::numeric_limits<float>::is_iec559)
+struct SharedConst<float, init_value> {
+  static inline const float& value =
+      reinterpret_cast<const float&>(SharedConst<std::uint32_t, 0>::value);
+};
+
+template <auto init_value>
+  requires(std::is_integral_v<decltype(init_value)> && init_value == 0 &&
+           std::numeric_limits<double>::is_iec559)
+struct SharedConst<double, init_value> {
+  static inline const double& value =
+      reinterpret_cast<const double&>(SharedConst<std::uint64_t, 0>::value);
+};
 
 }  // namespace detail
 
