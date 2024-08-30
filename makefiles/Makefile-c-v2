@@ -68,7 +68,7 @@ AUTO_GENERATED_DEPS := $(AUTO_GENERATED_PYTHON_DEPS) $(AUTO_GENERATED_PROTOBUF_D
 AUTO_GENERATED_SRCS := $(filter %.c %.cc %.cpp %.C %.cxx %.S, $(AUTO_GENERATED))
 AUTO_GENERATED_HEADERS := $(filter %.h %.hpp, $(AUTO_GENERATED))
 
-HANDWRITTEN_HEADERS := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.h $(x)/*.hpp $(x)/*.h++ $(x)/%.hh $(x)/%.H))
+HANDWRITTEN_HEADERS := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.h $(x)/*.hpp $(x)/*.h++ $(x)/*.hh $(x)/*.H))
 HANDWRITTEN_SRCS := $(foreach x, $(SRCDIRS), $(wildcard $(x)/*.c $(x)/*.cc $(x)/*.cpp $(x)/*.C $(x)/*.cxx $(x)/*.S))
 
 gen: $(AUTO_GENERATED)
@@ -309,7 +309,7 @@ ifneq "$(subst clang,,$(CC))" "$(CC)"
  IS_CLANG := 1
 endif
 
-CC_TARGET ?= $(shell $(CC) -dumpmachine)
+CC_TARGET ?= $(EGM.shell $(BUILDDIR)/cc.dumpmachine.txt,3600,$(CC) -dumpmachine)
 ifneq "" "$(findstring x86_64,$(CC_TARGET))"
  IS_X86_64 := 1
 else
@@ -461,7 +461,10 @@ $(CXXDEPS):          private FLAGS    = $(CXXFLAGS)
 EXISTING_DEPS := $(wildcard $(DEPS))
 MISSING_DEPS := $(filter-out $(EXISTING_DEPS),$(DEPS))
 ifneq "$(MISSING_DEPS)" ""
-	ignore_var := $(shell rm -f $(MISSING_DEPS:%.P=%.[os]))
+	to_del_objs := $(wildcard $(MISSING_DEPS:%.P=%.[os]))
+	ifneq "$(to_del_objs)" ""
+		ignore_var := $(shell rm -f $(to_del_objs))
+	endif
 endif
 
 $(OBJS): $$(SRC-$$(basename $$(call strip_src,$$@)))
