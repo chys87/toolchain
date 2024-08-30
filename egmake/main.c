@@ -1,6 +1,6 @@
 /*
 egmake, Enhanced GNU make
-Copyright (C) 2014-2023, chys <admin@CHYS.INFO>
+Copyright (C) 2014-2024, chys <admin@CHYS.INFO>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@ gmk_func_type func_mkdirp;
 gmk_func_type func_pwd;
 gmk_func_type func_readlink;
 gmk_func_type func_relpath;
+gmk_func_type func_shell;
 gmk_func_type func_symlink;
 gmk_func_type func_symlinkrel;
 gmk_func_type func_which;
@@ -47,6 +48,7 @@ int egmake_gmk_setup(void) {
   gmk_add_function("EGM.pwd", &func_pwd, 0, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.readlink", &func_readlink, 1, 1, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.relpath", &func_relpath, 2, 2, GMK_FUNC_DEFAULT);
+  gmk_add_function("EGM.shell", &func_shell, 3, 3, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.symlink", &func_symlink, 2, 2, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.symlinkrel", &func_symlinkrel, 2, 2, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.which", &func_which, 1, 1, GMK_FUNC_DEFAULT);

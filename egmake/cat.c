@@ -50,6 +50,9 @@ char *func_cat(const char *nm, unsigned int argc, char **argv) {
     }
     fsys_close(fd);
   }
+  // Trim trailing newline
+  while (L && (res[L - 1] == '\r' || res[L - 1] == '\n')) --L;
+
   char* ret = gmk_alloc(L + 1);
   copy_replace_cr_ln(ret, res, L);
   ret[L] = '\0';
