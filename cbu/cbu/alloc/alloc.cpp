@@ -76,7 +76,11 @@ void* allocate(size_t size, AllocateOptions options) noexcept {
     ptr = alloc_large(size, options.zero);
     if (false_no_fail(ptr == nullptr)) return nomem();
   } else if (size != 0) {
-    ptr = alloc_small(size);
+    if (__builtin_constant_p(size)) { // For LTO
+      ptr = alloc_small_category(size_to_category(size));
+    } else {
+      ptr = alloc_small(size);
+    }
     if (false_no_fail(ptr == nullptr)) return nomem();
     if (options.zero) ptr = memset_no_builtin(ptr, 0, size);
   }
