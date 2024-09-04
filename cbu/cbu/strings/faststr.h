@@ -184,7 +184,8 @@ inline constexpr T *Mempcpy(T *dst, const S *src, std::size_t n) noexcept {
       return dst;
     }
   }
-#ifdef __GLIBC__
+  // It appears only x86-64 actually has optimized mempcpy
+#if defined __GLIBC__ && defined __x86_64__
   return static_cast<T *>(mempcpy(dst, src, n));
 #else
   return reinterpret_cast<T *>(std::uintptr_t(std::memcpy(dst, src, n)) + n);
@@ -265,19 +266,29 @@ void* Mempcpy(std::uintptr_t, const void*, std::size_t) noexcept asm("mempcpy");
 
 template <Raw_trivial_type_or_void T>
 inline T* memset_no_builtin(T* p, int c, std::size_t n) noexcept {
+  // Special-case mops, unfortunately GCC has no such macro
+#ifdef __ARM_FEATURE_MOPS
+  return Memset(p, c, n);
+#else
   return static_cast<T*>(
       faststr_no_builtin_detail::Memset(std::uintptr_t(p), c, n));
+#endif
 }
 
 template <Raw_trivial_type_or_void T>
 inline T* memcpy_no_builtin(T* d, const void* s, size_t n) noexcept {
+#ifdef __ARM_FEATURE_MOPS
+  return Memcpy(d, s, n);
+#else
   return static_cast<T*>(
       faststr_no_builtin_detail::Memcpy(std::uintptr_t(d), s, n));
+#endif
 }
 
 template <Raw_trivial_type_or_void T>
 inline T* mempcpy_no_builtin(T* d, const void* s, size_t n) noexcept {
-#ifdef __GLIBC__
+  // It appears only x86-64 actually has optimized mempcpy
+#if defined __GLIBC__ && defined __x86_64__
   return static_cast<T*>(
       faststr_no_builtin_detail::Mempcpy(std::uintptr_t(d), s, n));
 #else
