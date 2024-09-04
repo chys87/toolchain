@@ -35,6 +35,7 @@
 
 import argparse
 import os
+import re
 import sys
 
 
@@ -68,13 +69,13 @@ def _check_python_version(args):
 
 
 class _Formatter:
-    __slot__ = '_lines',
+    __slot__ = '_res',
 
     def __init__(self):
-        self._lines = []
+        self._res = ''
 
     def __str__(self):
-        return ''.join(self._lines)
+        return self._res
 
     def add(self, target: str, srcs: list[str]):
         raise NotImplementedError
@@ -84,10 +85,10 @@ class _MakeFormatter(_Formatter):
     __slots__ = ()
 
     def add(self, target: str, srcs: list[str]):
-        self._lines.append(f'{target}: \\\n')
+        self._res += f'{target}:'
         for src in srcs:
-            self._lines.append(f'\t{src} \\\n')
-        self._lines.append('\n')
+            self._res += f' \\\n\t{src}'
+        self._res += '\n\n'
 
 
 class _NinjaDynDepFormatter(_Formatter):
@@ -95,10 +96,10 @@ class _NinjaDynDepFormatter(_Formatter):
 
     def __init__(self):
         super().__init__()
-        self._lines.append('ninja_dyndep_version = 1\n')
+        self._res += 'ninja_dyndep_version = 1\n'
 
     def add(self, target: str, srcs: list[str]):
-        self._lines.append(f'build {target}: dyndep | {" ".join(srcs)}\n')
+        self._res += f'build {target}: dyndep | {" ".join(srcs)}\n'
 
 
 def _print_dependency(args):
@@ -118,12 +119,23 @@ def _print_dependency(args):
 
     files = []
     for mod in finder.modules.values():
-        if mod.__file__:
-            files.append(mod.__file__)
+        # ' ' not in path: Kill "setuptools/script template.py"
+        if (path := mod.__file__) and ' ' not in path:
+            files.append(path)
 
-    # ' ' not in path: Kill "setuptools/script template.py"
-    formatter.add(args.target,
-                  sorted(path for path in files if ' ' not in path))
+    with open(args.filename, 'rb') as f:
+        content = f.read()
+    for extra in re.findall(br'^#\s*pythondep:(.*)$', content, re.MULTILINE):
+        extras = extra.split()
+        for f in extras:
+            if not f:
+                continue
+            f = f.decode()
+            files.append(os.path.normpath(
+                os.path.join(os.path.dirname(args.filename), f)))
+
+    files.sort()
+    formatter.add(args.target, files)
 
     if args.dummy and args.format != 'ninja_dyndep':
         for path in files:
