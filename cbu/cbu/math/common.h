@@ -120,7 +120,12 @@ inline constexpr std::uint64_t ipow10_array[20]{
 
 // Adapted from Hacker's Delight
 constexpr unsigned int ilog10(std::uint32_t x) noexcept {
-  unsigned long y = unsigned(9 * (31 - std::countl_zero(x | 1))) >> 5;
+  if consteval {
+    if (x == 0) return 0;
+  } else {
+    if (!__builtin_constant_p(x == 0) || (x == 0)) x |= 1;
+  }
+  unsigned long y = unsigned(9 * (31 - std::countl_zero(x))) >> 5;
   if (x >= std::uint32_t(ipow10_array[y + 1]))
     return y + 1;
   else
@@ -128,7 +133,14 @@ constexpr unsigned int ilog10(std::uint32_t x) noexcept {
 }
 
 constexpr unsigned int ilog10(std::uint64_t x) noexcept {
-  unsigned long y = unsigned(19 * (63 - std::countl_zero(x | 1))) >> 6;
+  if consteval {
+    if (x == 0) return 0;
+  } else {
+    if (__builtin_constant_p(x <= 0xffffffff) && (x <= 0xffffffff))
+      return ilog10(std::uint32_t(x));
+    if (!__builtin_constant_p(x == 0) || (x == 0)) x |= 1;
+  }
+  unsigned long y = unsigned(19 * (63 - std::countl_zero(x))) >> 6;
   if (x >= ipow10_array[y + 1])
     return y + 1;
   else
