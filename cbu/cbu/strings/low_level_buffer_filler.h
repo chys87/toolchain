@@ -219,14 +219,26 @@ struct FillDec<UpperBound, Options> {
       } else {
         p = cbu::memdrop2(p, cbu::mempick2(kDigits99 + 2 * v));
       }
+    } else if constexpr (UpperBound <= 1000) {
+      if (v >= 10) {
+        std::uint32_t t = cbu::fastmod<100, UpperBound>(v);
+        v = cbu::fastdiv<100, UpperBound>(v);
+        cbu::memdrop2(w - 1, cbu::mempick2(kDigits99 + 2 * t));
+        w -= 2;
+      }
+      if (v < 10 || v >= 100) *w-- = '0' + v;
     } else {
 #ifdef __clang__
 #pragma clang loop vectorize(disable) unroll(disable)
 #endif
-      do {
-        *w-- = Ch(cbu::fastmod<10, UpperBound>(v) + '0');
-        v = cbu::fastdiv<10, UpperBound>(v);
-      } while (--b);
+      while (b >= 2) {
+        b -= 2;
+        std::uint32_t t = cbu::fastmod<100, UpperBound>(v);
+        v = cbu::fastdiv<100, UpperBound>(v);
+        cbu::memdrop2(w - 1, cbu::mempick2(kDigits99 + 2 * t));
+        w -= 2;
+      }
+      if (b) *w-- = '0' + v;
     }
     return res;
   }

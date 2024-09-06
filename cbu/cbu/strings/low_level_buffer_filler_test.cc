@@ -108,6 +108,14 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
+    filler << FillDec<999>(254);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 3);
+    ASSERT_EQ(std::string(buffer, p - buffer), "254");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
     filler << FillDec<99999>(12345);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 5);
