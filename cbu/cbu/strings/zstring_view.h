@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,14 +35,13 @@
 
 namespace cbu {
 
+struct UnsafeTag;
+
 // basic_zstring_view is like string_view, but the user can safely
 // assume a null terminator is present
 template <typename C, typename T = std::char_traits<C>>
 class basic_zstring_view : public std::basic_string_view<C, T> {
  public:
-  struct UnsafeRef {};
-  static constexpr UnsafeRef UNSAFE_REF {};
-
   using Base = std::basic_string_view<C, T>;
 
  public:
@@ -66,7 +65,7 @@ class basic_zstring_view : public std::basic_string_view<C, T> {
       : Base(s.c_str(), s.length()) {}
 
   template <String_view_compat<C> S>
-  constexpr basic_zstring_view(UnsafeRef, const S& s) noexcept : Base(s) {}
+  constexpr basic_zstring_view(const UnsafeTag&, const S& s) noexcept : Base(s) {}
 
   using Base::data;
   using Base::size;
