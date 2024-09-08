@@ -61,7 +61,8 @@ struct View {
   CBU_STR_BUILDER_MIXIN
 };
 
-// Difference with View is that VarLen forcefully generates actual mempcpy call.
+// Difference with View is that VarLen forcefully generates actual mempcpy call
+// unless the compiler knows length is a compile-time constant.
 struct VarLen {
   const char* s;
   std::size_t l;
@@ -69,7 +70,12 @@ struct VarLen {
   constexpr VarLen(std::string_view sv) noexcept : s(sv.data()), l(sv.size()) {}
   constexpr std::size_t size() const noexcept { return l; }
   constexpr char* write(char* w) const noexcept {
-    return cbu::mempcpy_no_builtin(w, s, l);
+    if (__builtin_constant_p(l)) {
+      // It may still be constant propagated
+      return cbu::Mempcpy(w, s, l);
+    } else {
+      return cbu::mempcpy_no_builtin(w, s, l);
+    }
   }
   CBU_STR_BUILDER_MIXIN
 };
