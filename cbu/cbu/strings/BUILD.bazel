@@ -56,7 +56,7 @@ cc_library(
     'str_cat.h',
   ],
   deps = [
-    '//cbu/common:stdhack',
+    '//cbu/common:header_only',
     '//cbu/tweak:tweak',
   ],
   # cbu is a collection of really TINY utilities so you may always want to
@@ -95,7 +95,6 @@ cc_library(
   hdrs = ['faststr.h'],
   deps = [
     '//cbu/common:header_only',
-    '//cbu/common:stdhack',
     '//cbu/compat:compat',
     '//cbu/math:common',
     '//cbu/math:strict_overflow',
