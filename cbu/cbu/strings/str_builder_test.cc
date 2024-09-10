@@ -50,7 +50,8 @@ TEST(StringBuilderTest, BasicTest) {
 TEST(StringBuilderTest, ConstexprTest) {
   constexpr auto str = []() constexpr noexcept {
     constexpr auto builder = Concat("Hello", FillDec(1234567));
-    std::array<char, builder.size()> r;
+    static_assert(builder.max_size() == builder.min_size());
+    std::array<char, builder.max_size()> r;
     builder.write(r.data());
     return r;
   }();

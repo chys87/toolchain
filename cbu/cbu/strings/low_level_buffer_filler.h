@@ -45,7 +45,7 @@
 
 namespace cbu {
 
-// size() functions are for str_builder
+// min_size() max_size() functions are for str_builder
 
 template <std::integral T, std::endian Order>
 struct FillByEndian {
@@ -58,7 +58,8 @@ struct FillByEndian {
     return memdrop_bswap<Order>(p, value);
   }
 
-  static constexpr std::size_t size() noexcept { return sizeof(T); }
+  static constexpr std::size_t min_size() noexcept { return sizeof(T); }
+  static constexpr std::size_t max_size() noexcept { return sizeof(T); }
 };
 
 template <std::integral T>
@@ -98,7 +99,8 @@ struct FillDec<UpperBound, Options> {
     return p + Options::width;
   }
 
-  static constexpr std::size_t size() noexcept { return Options::width; }
+  static constexpr std::size_t min_size() noexcept { return Options::width; }
+  static constexpr std::size_t max_size() noexcept { return Options::width; }
 
   template <std::uint64_t UB, unsigned W, Raw_char_type Ch>
   static constexpr void conv_fixed_digit(std::uint64_t v, Ch* p) noexcept {
@@ -175,7 +177,8 @@ struct FillDec<UpperBound, Options> {
     return conv_flexible_digit(value, bytes, p);
   }
 
-  constexpr std::size_t size() const noexcept { return bytes; }
+  constexpr std::size_t max_size() const noexcept { return bytes; }
+  constexpr std::size_t min_size() const noexcept { return bytes; }
 
   constexpr unsigned get_bytes(std::uint64_t v) const noexcept {
     if constexpr (0 < UpperBound && UpperBound <= 10) {
@@ -257,7 +260,8 @@ struct FillSkip {
   constexpr Ch* operator()(Ch* p) const noexcept {
     return p + diff;
   }
-  constexpr std::size_t size() const noexcept { return diff; }
+  constexpr std::size_t min_size() const noexcept { return diff; }
+  constexpr std::size_t max_size() const noexcept { return diff; }
 };
 
 template <Raw_char_type Ch>
@@ -270,7 +274,8 @@ struct FillGetPointer {
     *ptr = p;
     return p;
   }
-  static constexpr std::size_t size() noexcept { return 0; }
+  static constexpr std::size_t min_size() noexcept { return 0; }
+  static constexpr std::size_t max_size() noexcept { return 0; }
 };
 
 template <Raw_char_type Ch>
@@ -287,7 +292,8 @@ struct FillGetLength {
     *len = p - start;
     return p;
   }
-  static constexpr std::size_t size() noexcept { return 0; }
+  static constexpr std::size_t min_size() noexcept { return 0; }
+  static constexpr std::size_t max_size() noexcept { return 0; }
 };
 
 // Low-level buffer filler

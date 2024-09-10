@@ -37,24 +37,31 @@ namespace cbu::sb {
 
 template <typename Builder>
 concept BaseBuilder = requires(const Builder& bldr) {
-  { bldr.size() } -> std::convertible_to<std::size_t>;
+  { bldr.max_size() } -> std::convertible_to<std::size_t>;
+  { bldr.min_size() } -> std::convertible_to<std::size_t>;
   { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
 };
 
 // We are not using "deducing this" because adding a base class means we have to
 // manually add many constructors
-#define CBU_STR_BUILDER_MIXIN                                      \
-  void append_to(std::string* dst) { write(extend(dst, size())); } \
-  void append_to(std::string& dst) { append_to(&dst); }            \
-  std::string as_string() {                                        \
-    std::string r;                                                 \
-    append_to(&r);                                                 \
-    return r;                                                      \
+#define CBU_STR_BUILDER_MIXIN                           \
+  void append_to(std::string* dst) {                    \
+    std::size_t M = max_size(), m = min_size();         \
+    char* w = extend(dst, M);                           \
+    w = write(w);                                       \
+    if (m != M) truncate_unsafe(dst, w - dst->data());  \
+  }                                                     \
+  void append_to(std::string& dst) { append_to(&dst); } \
+  std::string as_string() {                             \
+    std::string r;                                      \
+    append_to(&r);                                      \
+    return r;                                           \
   }
 
 struct View {
   std::string_view sv;
-  constexpr std::size_t size() const noexcept { return sv.size(); }
+  constexpr std::size_t max_size() const noexcept { return sv.size(); }
+  constexpr std::size_t min_size() const noexcept { return sv.size(); }
   constexpr char* write(char* w) const noexcept {
     return cbu::Mempcpy(w, sv.data(), sv.size());
   }
@@ -68,7 +75,8 @@ struct VarLen {
   std::size_t l;
   constexpr VarLen(const char* s, std::size_t l) noexcept : s(s), l(l) {}
   constexpr VarLen(std::string_view sv) noexcept : s(sv.data()), l(sv.size()) {}
-  constexpr std::size_t size() const noexcept { return l; }
+  constexpr std::size_t max_size() const noexcept { return l; }
+  constexpr std::size_t min_size() const noexcept { return l; }
   constexpr char* write(char* w) const noexcept {
     if (__builtin_constant_p(l)) {
       // It may still be constant propagated
@@ -82,7 +90,8 @@ struct VarLen {
 
 struct Char {
   char c;
-  static constexpr std::size_t size() noexcept { return 1; }
+  static constexpr std::size_t max_size() noexcept { return 1; }
+  static constexpr std::size_t min_size() noexcept { return 1; }
   constexpr char* write(char* w) const noexcept {
     *w++ = c;
     return w;
@@ -94,14 +103,16 @@ struct Char {
 template <typename Builder>
 concept CompatibleLowLevelBufferFiller = requires(const Builder& filler) {
   { filler(std::declval<char*>()) } -> std::convertible_to<char*>;
-  { filler.size() } -> std::convertible_to<std::size_t>;
+  { filler.min_size() } -> std::convertible_to<std::size_t>;
+  { filler.max_size() } -> std::convertible_to<std::size_t>;
 };
 
 template <CompatibleLowLevelBufferFiller Filler>
 struct LowLevelBufferFillerAdapter {
   Filler filler;
 
-  constexpr std::size_t size() const noexcept { return filler.size(); }
+  constexpr std::size_t min_size() const noexcept { return filler.min_size(); }
+  constexpr std::size_t max_size() const noexcept { return filler.max_size(); }
   constexpr char* write(char* w) const noexcept { return filler(w); }
   CBU_STR_BUILDER_MIXIN
 };
@@ -110,8 +121,11 @@ template <BaseBuilder Builder>
 struct OptionalImpl {
   std::optional<Builder> builder;
 
-  constexpr std::size_t size() const noexcept {
-    return builder ? builder->size() : 0;
+  constexpr std::size_t max_size() const noexcept {
+    return builder ? builder->max_size() : 0;
+  }
+  constexpr std::size_t min_size() const noexcept {
+    return builder ? builder->min_size() : 0;
   }
   constexpr char* write(char* w) const noexcept {
     if (builder) w = builder->write(w);
@@ -156,10 +170,17 @@ template <BaseBuilder... Builders>
 struct ConcatImpl {
   std::tuple<Builders...> builders;
 
-  constexpr std::size_t size() const noexcept {
+  constexpr std::size_t max_size() const noexcept {
     return std::apply(
         [](const Builders&... bldrs) constexpr noexcept {
-          return (0zu + ... + bldrs.size());
+          return (0zu + ... + bldrs.max_size());
+        },
+        builders);
+  }
+  constexpr std::size_t min_size() const noexcept {
+    return std::apply(
+        [](const Builders&... bldrs) constexpr noexcept {
+          return (0zu + ... + bldrs.min_size());
         },
         builders);
   }
