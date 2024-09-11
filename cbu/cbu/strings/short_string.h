@@ -270,4 +270,21 @@ constexpr bool operator<=>(const short_nzstring<M>& a,
   return a.string_view() <=> b.string_view();
 }
 
+// for libfmt 10+
+template <std::size_t N>
+constexpr std::string_view format_as(const short_string<N>& s) noexcept {
+  return std::string_view(s);
+}
+
+template <std::size_t N>
+constexpr std::string_view format_as(const short_nzstring<N>& s) noexcept {
+  return std::string_view(s);
+}
+
+template <std::size_t Len, bool HasTerminator>
+constexpr std::string_view format_as(
+    const fixed_length_string<Len, HasTerminator>& s) noexcept {
+  return std::string_view(s);
+}
+
 }  // namespace cbu

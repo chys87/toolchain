@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -140,8 +140,7 @@ class FixByteOrder {
 template <typename T, std::endian byte_order>
 class FixByteOrderRef;
 
-template <typename T, std::endian byte_order>
-requires Bswappable<T>
+template <Bswappable T, std::endian byte_order>
 class FixByteOrderRef<T, byte_order> {
  public:
   explicit constexpr FixByteOrderRef(T* p) noexcept : p_(p) {}
@@ -166,8 +165,7 @@ class FixByteOrderRef<T, byte_order> {
   T* const p_;
 };
 
-template <typename T, std::endian byte_order>
-requires Bswappable<T>
+template <Bswappable T, std::endian byte_order>
 class FixByteOrderRef<const T, byte_order> {
  public:
   explicit constexpr FixByteOrderRef(const T* p) noexcept : p_(p) {}
@@ -201,5 +199,22 @@ template <typename T>
 inline constexpr auto BigEndianRef(T* p) noexcept {
   return FixByteOrderRef<T, std::endian::big>(p);
 }
+
+// For libfmt 10+
+template <Bswappable T, std::endian byte_order>
+constexpr T format_as(const PackedFixByteOrder<T, byte_order>& v) noexcept {
+  return +v;
+}
+
+template <Bswappable T, std::endian byte_order>
+constexpr T format_as(const FixByteOrder<T, byte_order>& v) noexcept {
+  return +v;
+}
+
+template <Bswappable T, std::endian byte_order>
+constexpr T format_as(const FixByteOrderRef<T, byte_order>& v) noexcept {
+  return v.load();
+}
+
 
 }  // namespace cbu
