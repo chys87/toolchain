@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,6 +55,19 @@ template <typename T, typename U>
 void PrintTo(cbu::ByteSize<T, U> size, std::ostream* os) {
   *os << "ByteSize("sv << U(size) << ") /* * "sv << sizeof(T) << " = "sv
       << size.bytes() << " bytes */sv";
+}
+
+struct PrintStringAsHex {
+  std::string_view sv;
+};
+
+inline std::ostream& operator<<(std::ostream& os, PrintStringAsHex sh) {
+  os << sh.sv.size() << '[';
+  for (unsigned char c : sh.sv) {
+    os << "0123456789abcdef"[c >> 4] << "0123456789abcdef"[c & 0xf];
+  }
+  os << ']';
+  return os;
 }
 
 }  // namespace cbu
