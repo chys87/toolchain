@@ -99,12 +99,18 @@ struct Char {
   CBU_STR_BUILDER_MIXIN
 };
 
-// For fillers (low_level_buffer_filler.h) with size()
+// For fillers (low_level_buffer_filler.h) with max_size() and min_size()
 template <typename Builder>
 concept CompatibleLowLevelBufferFiller = requires(const Builder& filler) {
   { filler(std::declval<char*>()) } -> std::convertible_to<char*>;
   { filler.min_size() } -> std::convertible_to<std::size_t>;
   { filler.max_size() } -> std::convertible_to<std::size_t>;
+};
+
+// For types customized str builders
+template <typename Type>
+concept TypeWithCustomizedStrBuilder = requires(const Type& v) {
+  { v.str_builder() } -> BaseBuilder;
 };
 
 template <CompatibleLowLevelBufferFiller Filler>
@@ -114,6 +120,16 @@ struct LowLevelBufferFillerAdapter {
   constexpr std::size_t min_size() const noexcept { return filler.min_size(); }
   constexpr std::size_t max_size() const noexcept { return filler.max_size(); }
   constexpr char* write(char* w) const noexcept { return filler(w); }
+  CBU_STR_BUILDER_MIXIN
+};
+
+template <BaseBuilder Builder>
+struct CustomizedStrBuilderAdapter {
+  Builder builder;
+
+  constexpr std::size_t min_size() const noexcept { return builder.min_size(); }
+  constexpr std::size_t max_size() const noexcept { return builder.max_size(); }
+  constexpr char* write(char* w) const noexcept { return builder.write(w); }
   CBU_STR_BUILDER_MIXIN
 };
 
@@ -140,6 +156,9 @@ constexpr auto Adapt(char c) noexcept { return Char{c}; }
 constexpr auto Adapt(
     const CompatibleLowLevelBufferFiller auto& filler) noexcept {
   return LowLevelBufferFillerAdapter{filler};
+}
+constexpr auto Adapt(const TypeWithCustomizedStrBuilder auto& v) noexcept {
+  return CustomizedStrBuilderAdapter{v.str_builder()};
 }
 template <BaseBuilder Builder>
 constexpr auto Adapt(const std::optional<Builder>& bldr) noexcept {

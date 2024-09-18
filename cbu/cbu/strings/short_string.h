@@ -108,6 +108,22 @@ class short_string {
   // For some third-party type traits
   static constexpr inline bool pass_by_ref(short_string*) { return true; }
 
+  struct StrBuilder {
+    const short_string& s;
+
+    static constexpr len_t max_size() noexcept { return MaxLen; }
+    constexpr len_t min_size() const noexcept { return s.l_; }
+    constexpr char* write(char* w) const noexcept {
+      if consteval {
+        std::copy_n(s.s_, s.l_, w);
+      } else {
+        std::memcpy(w, s.s_, MaxLen);
+      }
+      return w + s.l_;
+    }
+  };
+  constexpr StrBuilder str_builder() const noexcept { return StrBuilder{*this}; }
+
  private:
   char s_[MaxLen + 1];
   len_t l_;
@@ -173,6 +189,22 @@ class fixed_length_string {
     return true;
   }
 
+  struct StrBuilder {
+    const char* s;
+
+    static constexpr std::size_t max_size() noexcept { return Len; }
+    constexpr std::size_t min_size() const noexcept { return Len; }
+    constexpr char* write(char* w) const noexcept {
+      if consteval {
+        std::copy_n(s, Len, w);
+      } else {
+        std::memcpy(w, s, Len);
+      }
+      return w + Len;
+    }
+  };
+  constexpr StrBuilder str_builder() const noexcept { return StrBuilder{s_}; }
+
  private:
   char s_[Len + HasTerminator];
 };
@@ -235,6 +267,22 @@ class short_nzstring {
 
   // For some third-party type traits
   static constexpr inline bool pass_by_ref(short_nzstring*) { return true; }
+
+  struct StrBuilder {
+    const short_nzstring& s;
+
+    static constexpr len_t max_size() noexcept { return MaxLen; }
+    constexpr len_t min_size() const noexcept { return s.l_; }
+    constexpr char* write(char* w) const noexcept {
+      if consteval {
+        std::copy_n(s.s_, s.l_, w);
+      } else {
+        std::memcpy(w, s.s_, MaxLen);
+      }
+      return w + s.l_;
+    }
+  };
+  constexpr StrBuilder str_builder() const noexcept { return StrBuilder{*this}; }
 
  private:
   char s_[MaxLen];
