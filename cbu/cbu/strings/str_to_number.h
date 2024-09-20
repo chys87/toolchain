@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,7 @@ namespace cbu {
 //   DecTag: decimal (default)
 //   AutoRadixTag: auto detect radix ("0" or "0o" for oct; "0x" for hex;
 //                                    otherwise dec)
+//   BinTag: binary
 //   OctTag: octal
 //   HexTag: hexadecimal
 //   RadixTag<radix>: Other radix (between 2 and 36)

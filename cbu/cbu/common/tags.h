@@ -47,6 +47,7 @@ template <int>
 struct RadixTag {};
 
 using AutoRadixTag = RadixTag<0>;
+using BinTag = RadixTag<2>;
 using OctTag = RadixTag<8>;
 using DecTag = RadixTag<10>;
 using HexTag = RadixTag<16>;

@@ -336,6 +336,8 @@ constexpr auto str_to_integer(const char* s, S e) noexcept {
       return str_to_integer<T, partial, OPT + HexTag()>(s + 2, e);
     else if ((s[1] == 'o' || s[1] == 'O') || isdigit(s[1]))
       return str_to_integer<T, partial, OPT + OctTag()>(s + 1 + (s[1] == 'o' || s[1] == 'O'), e);
+    else if ((s[1] == 'b' || s[1] == 'B') || (s[1] == '0' || s[1] == '1'))
+      return str_to_integer<T, partial, OPT + BinTag()>(s + 2, e);
   }
   return str_to_integer<T, partial, OPT + DecTag()>(s, e);
 };
