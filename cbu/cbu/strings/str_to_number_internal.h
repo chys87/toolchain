@@ -119,11 +119,12 @@ using ConversionType = std::conditional_t<
     std::conditional_t<std::is_signed_v<T>, std::int64_t, std::uint64_t>,
     std::conditional_t<std::is_signed_v<T>, std::int32_t, std::uint32_t>>;
 
+// For signed types, we use the corresponding unsigned type and then check for
+// overflow at last.  This generates better code than using the "correct"
+// threshold at first.
 template <typename T>
 constexpr unsigned long long OverflowThresholdByType =
-    std::is_signed_v<T>
-        ? std::make_unsigned_t<T>(std::numeric_limits<T>::max()) + 1
-        : std::numeric_limits<T>::max();
+    std::numeric_limits<std::make_unsigned_t<T>>::max();
 
 template <typename T>
 inline constexpr auto extract_value(std::optional<T> v) noexcept {
