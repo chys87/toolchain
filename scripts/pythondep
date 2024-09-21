@@ -106,10 +106,15 @@ def _print_dependency(args):
     import modulefinder
 
     finder = modulefinder.ModuleFinder()
-    try:
-        finder.run_script(args.filename)
-    except AttributeError:  # No idea why
-        # Try again, it likely works
+    for i in range(5):
+        try:
+            finder.run_script(args.filename)
+        except AttributeError:  # No idea why
+            pass
+        else:
+            break
+    else:
+        # Try again, hopefully it works
         finder.run_script(args.filename)
 
     if args.format == 'ninja_dyndep':
