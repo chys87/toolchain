@@ -189,7 +189,8 @@ class InitGuard {
 #ifdef CBU_SINGLE_THREADED
     return inited(guard_);
 #else
-    return inited(std::atomic_ref(guard_).load(std::memory_order_acquire));
+    return inited(std::atomic_ref(const_cast<std::uint32_t&>(guard_))
+                      .load(std::memory_order_acquire));
 #endif
   }
 
