@@ -36,6 +36,7 @@ cc_library(
     'immutable_string.h',
     'length_prefixed_string_literal.h',
     'short_string.h',
+    'string_collection.h',
     'str_split.h',
     'str_to_number.h',
     'str_to_number_internal.h',

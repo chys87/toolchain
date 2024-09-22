@@ -126,9 +126,11 @@ This one is just a hobby - a crazy one.
 * `fixed_length_compare.h`: Implements fast comparison of buffers with compile-time constant lengths
 * `fixed_string.h`: Provides `fixed_string<N>`, a helper class to allow the use of string literal as template argument (ref [PR0732R2](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0732r2.pdf), part of C++20)
 * `short_string.h`: A class for storing very short strings efficiently
+* `str_builder.h`: Low-level string builder
 * `str_cat.h`: Concatenating and apennding strings
 * `str_split.h`: Splitting a string with small code size, inspired by [`absl::StrSplit`](https://abseil.io/docs/cpp/guides/strings#abslstrsplit-for-splitting-strings)
 * `str_to_number.h`: Conversion from string to number
+* `string_collection.h`: Implements `string_collection`, a compact way to reference string literals
 * `strutil.h`: Various string utilities, higher level than `faststr.h`
 * `zstring_view.h`: Provides `cbu::zstring_view`, a subtype of `std::string_view` that assumes a null terminator is present
 
