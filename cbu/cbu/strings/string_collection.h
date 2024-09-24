@@ -29,7 +29,11 @@
 #pragma once
 
 #include <algorithm>
+#include <concepts>
 #include <cstdint>
+#include <initializer_list>
+#include <numeric>
+#include <ranges>
 #include <string_view>
 #include <type_traits>
 
@@ -48,18 +52,52 @@ using len_t = std::conditional_t<
 template <fixed_string S>
 constexpr auto fixed_string_instance{S};
 
+template <std::unsigned_integral T>
+struct ReduceParams {
+  using type = T;
+
+  // real_value = storage_value * a + b;
+  T a;
+  T b;
+  T smax;  // storage max
+
+  constexpr T rmax() const noexcept { return a * smax + b; }
+
+  constexpr T s2r(T v) const noexcept { return a * v + b; }
+  constexpr T r2s(T v) const noexcept { return (v - b) / a; }
+};
+
+template <std::unsigned_integral T>
+constexpr ReduceParams<T> reduce_integers(const T* values, std::size_t n) noexcept {
+  T min = std::ranges::min(std::ranges::views::counted(values, n));
+  T max = std::ranges::max(std::ranges::views::counted(values, n));
+  if (max == min) {
+    return {0, min, 0};
+  }
+  T g = 0;
+  for (std::size_t i = 0; i < n; ++i) {
+    T r = values[i] - min;
+    g = std::gcd(g, r);
+    if (g == 1) return {1, min, T(max - min)};
+  }
+  return {g, min, T((max - min) / g)};
+}
+
 template <std::size_t N, std::size_t MaxBytes>
 struct PreprocessResult {
   char buffer[MaxBytes];
   len_t<MaxBytes> used_bytes;
   std::string_view refs[N];
   len_t<MaxBytes> offsets[N];
+  ReduceParams<len_t<MaxBytes>> offsets_params;
+  ReduceParams<len_t<MaxBytes>> lens_params;
 };
 
 template <fixed_string... Strings>
 constexpr auto preprocess() noexcept {
   constexpr std::size_t n = sizeof...(Strings);
-  PreprocessResult<n, (... + Strings.size())> res{};
+  constexpr std::size_t MaxBytes = (... + Strings.size());
+  PreprocessResult<n, MaxBytes> res{};
 
   auto& refs = res.refs;
 
@@ -88,7 +126,51 @@ constexpr auto preprocess() noexcept {
   }
 
   res.used_bytes = offset;
+  res.offsets_params = reduce_integers(res.offsets, n);
+
+  len_t<MaxBytes> lens[n]{Strings.size()...};
+  res.lens_params = reduce_integers(lens, n);
   return res;
+}
+
+template <ReduceParams params>
+struct Storage {
+  len_t<params.rmax()> value;
+
+  Storage() noexcept = default;
+  constexpr Storage(len_t<params.rmax()> v) noexcept { set(v); }
+  constexpr void set(len_t<params.rmax()> v) noexcept { value = v; }
+  constexpr auto get() const noexcept { return value; }
+};
+
+template <ReduceParams params>
+  requires(params.smax == 0)
+struct Storage<params> {
+  constexpr Storage(std::size_t) noexcept {}
+  static constexpr void set(std::size_t) noexcept {}
+  static constexpr typename decltype(params)::type get() noexcept {
+    return params.b;
+  }
+};
+
+template <ReduceParams params>
+  requires(params.smax > 0 &&
+           sizeof(len_t<params.smax>) < sizeof(len_t<params.rmax()>))
+struct Storage<params> {
+  len_t<params.smax> svalue;
+
+  Storage() noexcept = default;
+  constexpr Storage(len_t<params.rmax()> v) noexcept { set(v); }
+  constexpr void set(len_t<params.rmax()> v) noexcept {
+    svalue = params.r2s(v);
+  }
+  constexpr len_t<params.rmax()> get() const noexcept {
+    return params.s2r(svalue);
+  }
+};
+
+constexpr unsigned required_bits(std::uint64_t value) noexcept {
+  return 64 - std::countl_zero(value);
 }
 
 }  // namespace string_collection_detail
@@ -98,6 +180,8 @@ template <fixed_string... Strings>
 struct string_collection {
   static constexpr auto preprocessed =
       string_collection_detail::preprocess<Strings...>();
+  static constexpr auto offsets_params = preprocessed.offsets_params;
+  static constexpr auto lens_params = preprocessed.lens_params;
 
   using offset_type =
       string_collection_detail::len_t<std::ranges::max(preprocessed.offsets)>;
@@ -110,18 +194,46 @@ struct string_collection {
 
   static constexpr const string_collection& instance() noexcept;
 
-  struct ref_t {
-    offset_type offset;
-    len_type len;
+  struct ref_regular_t {
+    [[no_unique_address]] string_collection_detail::Storage<offsets_params>
+        offset;
+    [[no_unique_address]] string_collection_detail::Storage<lens_params> len;
 
-    constexpr std::string_view view() const noexcept { return {data(), len}; }
+    constexpr std::string_view view() const noexcept { return {data(), len.get()}; }
     constexpr operator std::string_view() const noexcept { return view(); }
-
     constexpr const char* data() const noexcept {
-      return instance().s_ + offset;
+      return instance().s_ + offset.get();
     }
-    constexpr len_type size() const noexcept { return len; }
+    constexpr len_type size() const noexcept { return len.get(); }
   };
+
+  struct ref_packed_t {
+    static constexpr unsigned kOffsetBits =
+        string_collection_detail::required_bits(offsets_params.smax);
+    static constexpr unsigned kLenBits =
+        string_collection_detail::required_bits(lens_params.smax);
+    using type =
+        string_collection_detail::len_t<(1zu << (kOffsetBits + kLenBits)) - 1>;
+    type svalue;
+
+    ref_packed_t() noexcept = default;
+    constexpr ref_packed_t(offset_type offset, offset_type len) noexcept
+        : svalue(offsets_params.r2s(offset) |
+                 (type(lens_params.r2s(len)) << kOffsetBits)) {}
+    constexpr std::string_view view() const noexcept { return {data(), size()}; }
+    constexpr operator std::string_view() const noexcept { return view(); }
+    constexpr const char* data() const noexcept {
+      return instance().s_ +
+             offsets_params.s2r(svalue & ((offset_type(1) << kOffsetBits) - 1));
+    }
+    constexpr len_type size() const noexcept {
+      return lens_params.s2r(svalue >> kOffsetBits);
+    }
+  };
+
+  using ref_t =
+      std::conditional_t<(sizeof(ref_packed_t) < sizeof(ref_regular_t)),
+                         ref_packed_t, ref_regular_t>;
 
   template <fixed_string Needle>
     requires(... || (std::string_view(Needle) == std::string_view(Strings)))
@@ -131,7 +243,7 @@ struct string_collection {
         return {offset_type(preprocessed.offsets[i]), len_type(Needle.size())};
       }
     }
-    return {};
+    return {0, 0};
   }
 
   template <fixed_string Needle>

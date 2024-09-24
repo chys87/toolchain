@@ -28,6 +28,8 @@
 
 #include "cbu/strings/string_collection.h"
 
+#include <type_traits>
+
 namespace cbu {
 namespace {
 
@@ -44,6 +46,15 @@ static_assert(S::ref<"xyz"> == "xyz"sv);
 static_assert(S::ref<"a">.data() == S::ref<"abc">.data());
 static_assert(S::ref<"ab">.data() == S::ref<"abc">.data());
 static_assert(S::ref<"bc">.data() == S::ref<"abc">.data() + 1);
+
+// Equal length (doesn't actually store length)
+using S1 = string_collection<"hello", "world", "fucku">;
+static_assert(sizeof(S1::ref_t) == 1);
+static_assert(std::is_same_v<S1::ref_t, S1::ref_regular_t>);
+
+// Packed storage
+static_assert(sizeof(S::ref_t) == 1);
+static_assert(std::is_same_v<S::ref_t, S::ref_packed_t>);
 
 }  // namespace
 }  // namespace cbu
