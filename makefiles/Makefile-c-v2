@@ -278,7 +278,7 @@ define define_data_file
 all: $(BUILDDIR)/$(1)
 $(BUILDDIR)/$(1): private NAME := DATA
 $(BUILDDIR)/$(1): $(DIR)/$(2) $(3:%=$(DIR)/%)
-	+$$(Q)$(DIR)/$(2) > $$@
+	+$$(Q)$(DIR)/$(2) DIR='$(DIR)' > $$@
 install-data: install-$(1)
 .PHONY: install-$(1)
 install-$(1): $(INSTDIR)/$(1)
