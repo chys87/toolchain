@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,11 @@
 
 namespace cbu {
 
-#if __has_builtin(__builtin_assume)
+// [[clang::assume]] and clang's [[assume]] aren't compatible with C++23
+// [[assume]], but [[gnu::assume]] is.
+#if __has_cpp_attribute(gnu::assume)
+#  define CBU_HINT_ASSUME(expr) [[gnu::assume(expr)]]
+#elif __has_builtin(__builtin_assume)
 #  define CBU_HINT_ASSUME(expr) __builtin_assume(expr)
 #elif __has_builtin(__builtin_unreachable)
 #  define CBU_HINT_ASSUME(expr)             \

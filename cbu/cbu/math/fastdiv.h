@@ -32,6 +32,7 @@
 #include <limits>
 #include <utility>
 
+#include "cbu/common/hint.h"
 #include "cbu/math/double_integer.h"
 
 namespace cbu {
@@ -178,6 +179,7 @@ inline constexpr Type fastdiv(Type v) noexcept {
 template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
+  CBU_HINT_ASSUME(v < UB);
   using Type = fastdiv_detail::FastDivType<D, UB>;
   if constexpr (UB <= D) {
     return 0;
@@ -190,31 +192,23 @@ inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
   } else if constexpr (UB == 4294967296) {
     return std::uint32_t(v) / D;
   } else {
-#if defined __clang__ && __has_builtin(__builtin_assume)
-    __builtin_assume(v < UB);
-    return v / Type(D);
-#else
     return fastdiv_detail::fastdiv<Type, static_cast<Type>(D),
                                    static_cast<Type>(UB)>(v);
-#endif
   }
 }
 
 template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
+  CBU_HINT_ASSUME(v < UB);
   if constexpr (UB <= 1 || D == 1) {
     return 0;
   } else if constexpr (UB <= D) {
     return v;
   } else {
-#if defined __clang__ && __has_builtin(__builtin_assume)
-    using Type = fastdiv_detail::FastDivType<D, UB>;
-    __builtin_assume(v < UB);
-    return v % Type(D);
-#else
-    return v - D * fastdiv<D, UB>(v);
-#endif
+    auto r = v - D * fastdiv<D, UB>(v);
+    CBU_HINT_ASSUME(r < D);
+    return r;
   }
 }
 
@@ -222,6 +216,7 @@ template <std::uint64_t D, std::uint64_t UB>
 inline constexpr std::pair<fastdiv_detail::FastDivType<D, UB>,
                            fastdiv_detail::FastDivType<D, UB>>
 fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
+  CBU_HINT_ASSUME(v < UB);
   using Type = fastdiv_detail::FastDivType<D, UB>;
   if constexpr (UB <= 1) {
     return {0, 0};
@@ -230,13 +225,10 @@ fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
   } else if constexpr (UB <= D) {
     return {0, Type(v)};
   } else {
-#if defined __clang__ && __has_builtin(__builtin_assume)
-    __builtin_assume(v < UB);
-    return {v / Type(D), v % Type(D)};
-#else
     Type quo = fastdiv<D, UB>(v);
-    return {quo, v - quo * D};
-#endif
+    Type rem = v - quo * D;
+    CBU_HINT_ASSUME(rem < D);
+    return {quo, rem};
   }
 }
 
