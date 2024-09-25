@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include <sys/syscall.h>  // IWYU pragma: export
 #include <sys/types.h>
 
 #if (!defined __GNUC__ || __GNUC__ < 4) && !defined __clang__
@@ -81,7 +82,6 @@ struct fsys_linux_dirent64 {
 #include <fcntl.h>
 #include <signal.h>
 #include <time.h>
-#include <sys/syscall.h>
 
 #ifdef __x86_64__
 # include "fsyscall-macros-x86-64.h"
@@ -475,7 +475,6 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define FSYSCALL_USE 0
 
 #include <unistd.h>
-#include <sys/syscall.h>
 
 #define fsys_generic(sysno,rettype,argc,...) \
   ((rettype)syscall(sysno,##__VA_ARGS__))

@@ -33,7 +33,6 @@
 #include <new>
 
 #include "cbu/alloc/alloc.h"
-#include "cbu/alloc/pagesize.h"
 #include "cbu/common/procutil.h"
 #include "cbu/malloc/visibility.h"
 

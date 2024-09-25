@@ -42,9 +42,9 @@
 #include <string_view>
 
 #include "cbu/common/byteorder.h"
-#include "cbu/common/tags.h"
+#include "cbu/common/tags.h"  // IWYU pragma: export
 #include "cbu/compat/compilers.h"
-#include "cbu/network/ipv4.h"
+#include "cbu/network/ipv4.h"  // IWYU pragma: export
 #include "cbu/strings/faststr.h"
 
 namespace cbu {

@@ -39,7 +39,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "cbu/common/tags.h"
+#include "cbu/common/tags.h"  // IWYU pragma: export
 #include "cbu/strings/zstring_view.h"
 
 namespace cbu {

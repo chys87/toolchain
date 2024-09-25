@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include <string_view>
+#include <string_view>  // IWYU pragma: export
 
 #include "cbu/common/concepts.h"
 #include "cbu/strings/strutil.h"
