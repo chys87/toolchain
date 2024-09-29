@@ -26,6 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include <optional>
 #include <string_view>
 
@@ -40,6 +42,11 @@ concept BaseBuilder = requires(const Builder& bldr) {
   { bldr.max_size() } -> std::convertible_to<std::size_t>;
   { bldr.min_size() } -> std::convertible_to<std::size_t>;
   { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
+};
+
+template <typename Builder>
+concept HasStaticMaxSize = requires() {
+  requires(sizeof(char[Builder::static_max_size()]) <= 0xffffffff);
 };
 
 // We are not using "deducing this" because adding a base class means we have to
@@ -58,8 +65,14 @@ concept BaseBuilder = requires(const Builder& bldr) {
     return r;                                           \
   }
 
+template <std::size_t MaxLen = std::size_t(-1)>
 struct View {
   std::string_view sv;
+  static constexpr std::size_t static_max_size() noexcept
+    requires(MaxLen < 0xffffffff)
+  {
+    return MaxLen;
+  }
   constexpr std::size_t max_size() const noexcept { return sv.size(); }
   constexpr std::size_t min_size() const noexcept { return sv.size(); }
   constexpr char* write(char* w) const noexcept {
@@ -68,13 +81,31 @@ struct View {
   CBU_STR_BUILDER_MIXIN
 };
 
+template <std::size_t L>
+struct ConstLengthView {
+  const char* s;
+  static constexpr std::size_t static_max_size() noexcept { return L; }
+  static constexpr std::size_t max_size() noexcept { return L; }
+  static constexpr std::size_t min_size() noexcept { return L; }
+  constexpr char* write(char* w) const noexcept {
+    return cbu::Mempcpy(w, s, L);
+  }
+  CBU_STR_BUILDER_MIXIN
+};
+
 // Difference with View is that VarLen forcefully generates actual mempcpy call
 // unless the compiler knows length is a compile-time constant.
+template <std::size_t MaxLen = std::size_t(-1)>
 struct VarLen {
   const char* s;
   std::size_t l;
   constexpr VarLen(const char* s, std::size_t l) noexcept : s(s), l(l) {}
   constexpr VarLen(std::string_view sv) noexcept : s(sv.data()), l(sv.size()) {}
+  static constexpr std::size_t static_max_size() noexcept
+    requires(MaxLen < 0xffffffff)
+  {
+    return MaxLen;
+  }
   constexpr std::size_t max_size() const noexcept { return l; }
   constexpr std::size_t min_size() const noexcept { return l; }
   constexpr char* write(char* w) const noexcept {
@@ -90,6 +121,7 @@ struct VarLen {
 
 struct Char {
   char c;
+  static constexpr std::size_t static_max_size() noexcept { return 1; }
   static constexpr std::size_t max_size() noexcept { return 1; }
   static constexpr std::size_t min_size() noexcept { return 1; }
   constexpr char* write(char* w) const noexcept {
@@ -119,6 +151,11 @@ struct LowLevelBufferFillerAdapter {
 
   constexpr std::size_t min_size() const noexcept { return filler.min_size(); }
   constexpr std::size_t max_size() const noexcept { return filler.max_size(); }
+  static constexpr std::size_t static_max_size() noexcept
+    requires HasStaticMaxSize<Filler>
+  {
+    return Filler::static_max_size();
+  }
   constexpr char* write(char* w) const noexcept { return filler(w); }
   CBU_STR_BUILDER_MIXIN
 };
@@ -129,6 +166,11 @@ struct CustomizedStrBuilderAdapter {
 
   constexpr std::size_t min_size() const noexcept { return builder.min_size(); }
   constexpr std::size_t max_size() const noexcept { return builder.max_size(); }
+  static constexpr std::size_t static_max_size() noexcept
+    requires HasStaticMaxSize<Builder>
+  {
+    return Builder::static_max_size();
+  }
   constexpr char* write(char* w) const noexcept { return builder.write(w); }
   CBU_STR_BUILDER_MIXIN
 };
@@ -137,6 +179,11 @@ template <BaseBuilder Builder>
 struct OptionalImpl {
   std::optional<Builder> builder;
 
+  static constexpr std::size_t static_max_size() noexcept
+    requires HasStaticMaxSize<Builder>
+  {
+    return Builder::static_max_size();
+  }
   constexpr std::size_t max_size() const noexcept {
     return builder ? builder->max_size() : 0;
   }
@@ -151,6 +198,10 @@ struct OptionalImpl {
 };
 
 constexpr auto Adapt(const BaseBuilder auto& bldr) noexcept { return bldr; }
+template <std::size_t N>
+constexpr auto Adapt(const char (&s)[N]) noexcept {
+  return ConstLengthView<N - 1>{s};
+}
 constexpr auto Adapt(std::string_view sv) noexcept { return View{sv}; }
 constexpr auto Adapt(char c) noexcept { return Char{c}; }
 constexpr auto Adapt(
@@ -189,6 +240,11 @@ template <BaseBuilder... Builders>
 struct ConcatImpl {
   std::tuple<Builders...> builders;
 
+  static constexpr std::size_t static_max_size() noexcept
+    requires(true && ... && HasStaticMaxSize<Builders>)
+  {
+    return (0zu + ... + Builders::static_max_size());
+  }
   constexpr std::size_t max_size() const noexcept {
     return std::apply(
         [](const Builders&... bldrs) constexpr noexcept {
