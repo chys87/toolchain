@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2023-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,28 +33,30 @@
 #  include <x86intrin.h>
 #endif
 
+#include <bit>
+#include <concepts>
 #include <cstdint>
 
 namespace cbu {
 
-constexpr char* ToHex(char* dst, std::uint8_t x) noexcept {
+constexpr char* ByteToHex(char* dst, std::uint8_t x) noexcept {
   *dst++ = "0123456789abcdef"[x >> 4];
   *dst++ = "0123456789abcdef"[x & 15];
   return dst;
 }
 
 constexpr char* LittleEndian16ToHex(char* dst, std::uint16_t x) noexcept {
-  dst = ToHex(dst, std::uint8_t(x));
-  dst = ToHex(dst, std::uint8_t(x >> 8));
+  dst = ByteToHex(dst, std::uint8_t(x));
+  dst = ByteToHex(dst, std::uint8_t(x >> 8));
   return dst;
 }
 
 constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
 #if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   if !consteval {
-    uint8x8_t vx = vget_low_u8(vreinterpretq_u8_u16(
-        (vmovl_u8(vreinterpret_u8_u32(vcreate_u32(x & 0x0f0f0f0f))) << 8) |
-        (vmovl_u8(vreinterpret_u8_u32(vcreate_u32(x & 0xf0f0f0f0))) >> 4)));
+    auto a = uint8x8_t(uint32x2_t{x >> 4, 0});
+    auto b = uint8x8_t(uint32x2_t{x, 0});
+    auto vx = vzip1_u8(a, b);
     *(uint8x8_t*)dst =
         vqtbl1_u8(*(const uint8x16_t*)"0123456789abcdef", vx & 0xf);
     return dst + 8;
@@ -69,7 +71,7 @@ constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
   }
 #endif
   for (int i = 0; i < 4; ++i) {
-    dst = ToHex(dst, std::uint8_t(x));
+    dst = ByteToHex(dst, std::uint8_t(x));
     x >>= 8;
   }
   return dst;
@@ -78,11 +80,9 @@ constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
 constexpr char* LittleEndian64ToHex(char* dst, std::uint64_t x) noexcept {
 #if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   if !consteval {
-    uint8x16_t vx = vreinterpretq_u8_u16(
-        (vmovl_u8(vreinterpret_u8_u64(vcreate_u64(x & 0x0f0f0f0f0f0f0f0f)))
-         << 8) |
-        (vmovl_u8(vreinterpret_u8_u64(vcreate_u64(x & 0xf0f0f0f0f0f0f0f0))) >>
-         4));
+    auto a = uint8x16_t(uint64x2_t{x >> 4, 0});
+    auto b = uint8x16_t(uint64x2_t{x, 0});
+    auto vx = vzip1q_u8(a, b);
     *(uint8x16_t*)dst =
         vqtbl1q_u8(*(const uint8x16_t*)"0123456789abcdef", vx & 0xf);
     return dst + 16;
@@ -98,8 +98,27 @@ constexpr char* LittleEndian64ToHex(char* dst, std::uint64_t x) noexcept {
 #endif
 
   for (int i = 0; i < 8; ++i) {
-    dst = ToHex(dst, std::uint8_t(x));
+    dst = ByteToHex(dst, std::uint8_t(x));
     x >>= 8;
+  }
+  return dst;
+}
+
+constexpr char* ToHex(char* dst, std::unsigned_integral auto x) noexcept {
+  if !consteval {
+    if constexpr (sizeof(x) == 8) {
+      return LittleEndian64ToHex(dst, std::byteswap(x));
+    } else if constexpr (sizeof(x) == 4) {
+      return LittleEndian32ToHex(dst, std::byteswap(x));
+    } else if constexpr (sizeof(x) == 2) {
+      return LittleEndian16ToHex(dst, std::byteswap(x));
+    } else if constexpr (sizeof(x) == 1) {
+      return ByteToHex(dst, x);
+    }
+  }
+
+  for (std::size_t i = 0; i < 2 * sizeof(x); ++i) {
+    *dst++ = "0123456789abcdef"[(x >> ((2 * sizeof(x) - i - 1) * 4)) & 15];
   }
   return dst;
 }

@@ -42,6 +42,7 @@
 #include "cbu/math/common.h"
 #include "cbu/math/fastdiv.h"
 #include "cbu/strings/faststr.h"
+#include "cbu/strings/hex.h"
 
 namespace cbu {
 
@@ -258,6 +259,22 @@ struct FillDec<UpperBound, Options> {
 template <typename T>
 FillDec(T) -> FillDec<
     (sizeof(T) >= 8 ? 0 : std::make_unsigned_t<T>(-1) + std::uint64_t(1))>;
+
+// Write a string in hexadecimal form.  Currently only supports full width
+template <Raw_unsigned_integral T>
+struct FillHex {
+  T value;
+
+  static constexpr std::size_t static_max_size() noexcept {
+    return 2 * sizeof(T);
+  }
+  static constexpr std::size_t max_size() noexcept { return 2 * sizeof(T); }
+  static constexpr std::size_t min_size() noexcept { return 2 * sizeof(T); }
+  constexpr char* operator()(char* w) const noexcept { return ToHex(w, value); }
+};
+
+template <Raw_unsigned_integral T>
+FillHex(T) -> FillHex<T>;
 
 template <std::ptrdiff_t diff>
 struct FillSkipImpl {

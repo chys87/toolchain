@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2023-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,14 +40,23 @@ using std::operator""sv;
 TEST(HexTest, ToHexTest) {
   char buf[32];
 
-  ToHex(buf, 0xab);
+  ToHex(buf, uint8_t(0xab));
   ASSERT_EQ(std::string_view(buf, 2), "ab"sv);
+
+  LittleEndian16ToHex(buf, 0xabcd);
+  ASSERT_EQ(std::string_view(buf, 4), "cdab"sv);
+  ToHex(buf, uint16_t(0xabcd));
+  ASSERT_EQ(std::string_view(buf, 4), "abcd"sv);
 
   LittleEndian32ToHex(buf, 0x90abcdef);
   ASSERT_EQ(std::string_view(buf, 8), "efcdab90"sv);
+  ToHex(buf, 0x90abcdefu);
+  ASSERT_EQ(std::string_view(buf, 8), "90abcdef"sv);
 
   LittleEndian64ToHex(buf, 0x1234567890abcdef);
   ASSERT_EQ(std::string_view(buf, 16), "efcdab9078563412"sv);
+  ToHex(buf, uint64_t(0x1234567890abcdef));
+  ASSERT_EQ(std::string_view(buf, 16), "1234567890abcdef"sv);
 }
 
 }  // namespace

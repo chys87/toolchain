@@ -173,5 +173,36 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   }
 }
 
+TEST(LowLevelBufferFillerTest, FillHex) {
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillHex(uint8_t(0x54));
+    ASSERT_EQ(filler.pointer() - buffer, 2);
+    ASSERT_STREQ(buffer, "54");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillHex(uint16_t(0x2554));
+    ASSERT_EQ(filler.pointer() - buffer, 4);
+    ASSERT_STREQ(buffer, "2554");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillHex(uint32_t(0xab25cd54));
+    ASSERT_EQ(filler.pointer() - buffer, 8);
+    ASSERT_STREQ(buffer, "ab25cd54");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillHex(uint64_t(0xab25cd540123));
+    ASSERT_EQ(filler.pointer() - buffer, 16);
+    ASSERT_STREQ(buffer, "0000ab25cd540123");
+  }
+}
+
 } // namespace
 } // namespace cbu
