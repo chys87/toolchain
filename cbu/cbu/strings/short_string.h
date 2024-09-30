@@ -111,6 +111,7 @@ class short_string {
   struct StrBuilder {
     const short_string& s;
 
+    static constexpr len_t static_max_size() noexcept { return MaxLen; }
     static constexpr len_t max_size() noexcept { return MaxLen; }
     constexpr len_t min_size() const noexcept { return s.l_; }
     constexpr char* write(char* w) const noexcept {
@@ -192,6 +193,7 @@ class fixed_length_string {
   struct StrBuilder {
     const char* s;
 
+    static constexpr std::size_t static_max_size() noexcept { return Len; }
     static constexpr std::size_t max_size() noexcept { return Len; }
     constexpr std::size_t min_size() const noexcept { return Len; }
     constexpr char* write(char* w) const noexcept {
@@ -271,6 +273,7 @@ class short_nzstring {
   struct StrBuilder {
     const short_nzstring& s;
 
+    static constexpr len_t static_max_size() noexcept { return MaxLen; }
     static constexpr len_t max_size() noexcept { return MaxLen; }
     constexpr len_t min_size() const noexcept { return s.l_; }
     constexpr char* write(char* w) const noexcept {
