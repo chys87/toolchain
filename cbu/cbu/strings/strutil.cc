@@ -462,7 +462,6 @@ size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl,
     }
   }
 
-  if (false)
 #elif defined __AVX2__ && defined __BMI__
   if (maxl >= 32) {
     __m256i ones = _mm256_set1_epi8(-1);
@@ -491,16 +490,78 @@ size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl,
     } else {
       k = ctz(~_mm256_movemask_epi8(vc));
     }
-  } else
-#endif
-  {
-    while (k < maxl / 8 * 8 &&
+  } else {
+    while (k != maxl / 8 * 8 &&
            mempick<uint64_t>(a + k) == mempick<uint64_t>(b + k))
       k += 8;
-    while ((k < maxl) && a[k] == b[k]) ++k;
+    while ((k != maxl) && a[k] == b[k]) ++k;
   }
 
-  if (utf8 && (k < maxl)) {
+#else
+  // Clang can turn the main loop below into NEON, so we don't write a separate
+  // case for NEON.  (Though NEON doesn't help much when we do 16 bytes a time)
+  if (maxl >= 16) {
+    bool found = false;
+    for (k = 0; k != maxl / 16 * 16; k += 16) {
+      uint64_t vaa = mempick_le<uint64_t>(a + k);
+      uint64_t vab = mempick_le<uint64_t>(a + k + 8);
+      uint64_t vba = mempick_le<uint64_t>(b + k);
+      uint64_t vbb = mempick_le<uint64_t>(b + k + 8);
+      uint64_t vca = vaa ^ vba;
+      uint64_t vcb = vab ^ vbb;
+      if ((vca | vcb) != 0) {
+        if (vca != 0) {
+          k += std::countr_zero(vca) / 8;
+        } else {
+          k += 8 + std::countr_zero(vcb) / 8;
+        }
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      uint64_t va = mempick_le<uint64_t>(a + maxl - 16);
+      uint64_t vb = mempick_le<uint64_t>(b + maxl - 16);
+      if (va != vb) {
+        k = maxl - 16 + std::countr_zero(va ^ vb) / 8;
+      } else {
+        uint64_t va = mempick_le<uint64_t>(a + maxl - 8);
+        uint64_t vb = mempick_le<uint64_t>(b + maxl - 8);
+        k = maxl - 8 + std::countr_zero(va ^ vb) / 8;
+      }
+    }
+  } else if (maxl >= 8) {
+    uint64_t va = mempick_le<uint64_t>(a);
+    uint64_t vb = mempick_le<uint64_t>(b);
+    if (va != vb) {
+      k = std::countr_zero(va ^ vb) / 8;
+    } else {
+      va = mempick_le<uint64_t>(a + maxl - 8);
+      vb = mempick_le<uint64_t>(b + maxl - 8);
+      k = maxl - 8 + std::countr_zero(va ^ vb) / 8;
+    }
+  } else {
+    auto load = [maxl](const char* p) {
+      uint64_t v = 0;
+#ifdef CBU_ADDRESS_SANITIZER
+      for (size_t i = 0; i < maxl; ++i) v |= uint64_t(uint8_t(p[i])) << (8 * i);
+#else
+      if ((uintptr_t(p) & 15) <= 8)
+        v = mempick_le<uint64_t>(p);
+      else
+        v = mempick_le<uint64_t>(p + maxl - 8) >> (64 - maxl * 8);
+#endif
+      return v;
+    };
+    uint64_t va = load(a);
+    uint64_t vb = load(b);
+    k = std::countr_zero(va ^ vb) / 8;
+    if (k > maxl) k = maxl;
+  }
+#endif
+
+  if (utf8 && (k != maxl)) {
     while (k && utf8_byte_type(a[k]) == cbu::Utf8ByteType::TRAILING) --k;
   }
 
@@ -625,21 +686,47 @@ size_t char_span_length(const void* buffer, size_t len, char c) noexcept {
   }
 #endif
 
-#if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  // The default implementation is good enough for aarch64.
+  // NEON code which processed 16 bytes a time is not necessarily better.
+  uint64_t ref_u64 = uint8_t(c) * 0x01010101'01010101ull;
   while (i + 16 <= len) {
-    // Use "!=" instead of "==", so that compiler will generate cmtst if this
-    // function is inlined by LTO and c is 0
-    uint8x16_t v = uint8x16_t(vdupq_n_u8(c) !=
-                              *reinterpret_cast<const uint8x16_t*>(p + i));
-    uint8x8_t cmp = vshrn_n_u16(vreinterpretq_u16_u8(v), 4);
-    uint64_t mask = vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
-    if (mask) return i + ctz(mask) / 4;
+    uint64_t va = mempick_le<uint64_t>(p + i) ^ ref_u64;
+    uint64_t vb = mempick_le<uint64_t>(p + i + 8) ^ ref_u64;
+    if ((va | vb) != 0) {
+      i += va ? 0 : 8;
+      va = va ? va : vb;
+      return i + std::countr_zero(va) / 8u;
+    }
     i += 16;
   }
-#endif
 
-  while (i < len && p[i] == c) ++i;
-  return i;
+  if (len >= 16) {
+    uint64_t va = mempick_le<uint64_t>(p + len - 16) ^ ref_u64;
+    uint64_t vb = mempick_le<uint64_t>(p + len - 8) ^ ref_u64;
+    i = va ? len - 16 : len - 8;
+    va = va ? va : vb;
+    return i + std::countr_zero(va) / 8u;
+  } else if (len >= 8) {
+    uint64_t va = mempick_le<uint64_t>(p) ^ ref_u64;
+    uint64_t vb = mempick_le<uint64_t>(p + len - 8) ^ ref_u64;
+    i = va ? 0 : len - 8;
+    va = va ? va : vb;
+    return i + std::countr_zero(va) / 8u;
+  } else {
+    uint64_t v = 0;
+#ifdef CBU_ADDRESS_SANITIZER
+    for (size_t i = 0; i < len; ++i) v |= uint64_t(uint8_t(p[i])) << (8 * i);
+#else
+    if ((uintptr_t(p) & 15) <= 8)
+      v = mempick_le<uint64_t>(p);
+    else
+      v = mempick_le<uint64_t>(p + len - 8) >> (64 - len * 8);
+#endif
+    v ^= ref_u64;
+    i = std::countr_zero(v) / 8u;
+    if (i > len) i = len;
+    return i;
+  }
 }
 
 }  // namespace cbu
