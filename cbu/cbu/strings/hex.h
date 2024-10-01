@@ -67,7 +67,7 @@ constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
         _mm_unpacklo_epi8(_mm_cvtsi32_si128(x >> 4), _mm_cvtsi32_si128(x));
     *(uint64_t*)dst = _mm_cvtsi128_si64(_mm_shuffle_epi8(
         *(const __m128i_u*)"0123456789abcdef", vx & _mm_set1_epi8(0x0f)));
-    return dst + 16;
+    return dst + 8;
   }
 #endif
   for (int i = 0; i < 4; ++i) {
