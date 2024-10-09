@@ -192,8 +192,10 @@ inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
   } else if constexpr (UB == 4294967296) {
     return std::uint32_t(v) / D;
   } else {
-    return fastdiv_detail::fastdiv<Type, static_cast<Type>(D),
-                                   static_cast<Type>(UB)>(v);
+    Type r = fastdiv_detail::fastdiv<Type, static_cast<Type>(D),
+                                     static_cast<Type>(UB)>(v);
+    CBU_HINT_ASSUME(r <= (UB - 1) / D);
+    return r;
   }
 }
 
