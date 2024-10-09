@@ -157,9 +157,9 @@ template <ReduceParams params>
   requires(params.smax > 0 &&
            sizeof(len_t<params.smax>) < sizeof(len_t<params.rmax()>))
 struct Storage<params> {
-  len_t<params.smax> svalue;
+  len_t<params.smax> svalue = 0;
 
-  Storage() noexcept = default;
+  constexpr Storage() noexcept = default;
   constexpr Storage(len_t<params.rmax()> v) noexcept { set(v); }
   constexpr void set(len_t<params.rmax()> v) noexcept {
     svalue = params.r2s(v);
@@ -214,9 +214,9 @@ struct string_collection {
         string_collection_detail::required_bits(lens_params.smax);
     using type =
         string_collection_detail::len_t<(1zu << (kOffsetBits + kLenBits)) - 1>;
-    type svalue;
+    type svalue = 0;
 
-    ref_packed_t() noexcept = default;
+    constexpr ref_packed_t() noexcept = default;
     constexpr ref_packed_t(offset_type offset, offset_type len) noexcept
         : svalue(offsets_params.r2s(offset) |
                  (type(lens_params.r2s(len)) << kOffsetBits)) {}
