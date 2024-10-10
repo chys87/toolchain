@@ -96,6 +96,7 @@ struct UnescapeStringResult {
   const char* src_ptr;
 };
 
+// dst and src may alias
 UnescapeStringResult unescape_string(char* dst, const char* src,
                                      const char* end) noexcept;
 

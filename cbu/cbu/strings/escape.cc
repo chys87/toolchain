@@ -40,9 +40,10 @@
 
 #include "cbu/common/bit.h"
 #include "cbu/common/hint.h"
+#include "cbu/common/stdhack.h"
 #include "cbu/math/common.h"
 #include "cbu/strings/encoding.h"
-#include "cbu/strings/faststr.h"
+#include "cbu/strings/hex.h"
 
 namespace cbu {
 namespace escape_detail {
@@ -315,47 +316,56 @@ std::tuple<char, char*, const char*> copy_until_backslash(
   while (src + 16 <= end) {
     uint8x16_t val = *(const uint8x16_t*)src;
     uint8x16_t mask = uint8x16_t((val == '\\') || (val == '"'));
-    if (vmaxvq_u8(mask) == 0) {
+    uint64_t mask4 = uint64_t(uint64x1_t(vshrn_n_u16(uint16x8_t(mask), 4)));
+    if (mask4 == 0) {
       *(uint8x16_t*)dst = val;
       src += 16;
       dst += 16;
     } else {
-      unsigned off = ctz(uint64x1_t(vshrn_n_u16(uint16x8_t(mask), 4))[0]) / 4;
-      CBU_NAIVE_LOOP
-      for (unsigned i = off; i; --i) *dst++ = *src++;
+      unsigned off4 = std::countr_zero(mask4);
+      if (dst != src) {
+        CBU_NAIVE_LOOP
+        for (unsigned i = off4; i; i -= 4) *dst++ = *src++;
+      } else {
+        dst += off4 / 4;
+        src += off4 / 4;
+      }
       return {*src, dst, src};
     }
   }
 #endif
-  while (src < end && *src != '\\' && *src != '\"') {
+  while (src != end && *src != '\\' && *src != '\"') {
     *dst++ = *src++;
   }
-  if (src >= end) {
+  if (src == end) {
     return {'\0', dst, src};
   } else {
     return {*src, dst, src};
   }
 }
 
-inline consteval std::array<char, 128> make_unescape_fast_map() noexcept {
-  std::array<char, 128> res{};
-  res['\\'] = '\\';
-  res['\"'] = '\"';
-  res['\''] = '\'';
-  res['/'] = '/';  // For JSON
-  res['a'] = '\a';
-  res['b'] = '\b';
-  res['e'] = '\x1f';
-  res['f'] = '\f';
-  res['n'] = '\n';
-  res['r'] = '\r';
-  res['t'] = '\t';
-  res['v'] = '\v';
+constexpr unsigned kMinUnescapeChar = std::min({'\\', '\"', '\'', '/', 'a'});
+constexpr unsigned kMaxUnescapeChar = std::max({'\\', '\"', '\'', '/', 'v'});
+constexpr unsigned kUnescapeMapSize = kMaxUnescapeChar - kMinUnescapeChar + 1;
+
+inline consteval std::array<char, kUnescapeMapSize> make_unescape_fast_map() noexcept {
+  std::array<char, kUnescapeMapSize> res{};
+  res['\\' - kMinUnescapeChar] = '\\';
+  res['\"' - kMinUnescapeChar] = '\"';
+  res['\'' - kMinUnescapeChar] = '\'';
+  res['/' - kMinUnescapeChar] = '/';  // For JSON
+  res['a' - kMinUnescapeChar] = '\a';
+  res['b' - kMinUnescapeChar] = '\b';
+  res['e' - kMinUnescapeChar] = '\x1f';
+  res['f' - kMinUnescapeChar] = '\f';
+  res['n' - kMinUnescapeChar] = '\n';
+  res['r' - kMinUnescapeChar] = '\r';
+  res['t' - kMinUnescapeChar] = '\t';
+  res['v' - kMinUnescapeChar] = '\v';
   return res;
 }
 
-inline constexpr std::array<char, 128> UNESCAPE_FAST_MAP =
-    make_unescape_fast_map();
+inline constexpr auto UNESCAPE_FAST_MAP = make_unescape_fast_map();
 
 UnescapeStringResult parse_escape_sequence(
     char* dst, const char* src, const char* end) noexcept {
@@ -363,7 +373,8 @@ UnescapeStringResult parse_escape_sequence(
   if (src >= end) return {UnescapeStringStatus::INVALID_ESCAPE, dst, start_src};
   std::uint8_t c = *src++;
   char replacement = 0;
-  if (c < 0x80) replacement = UNESCAPE_FAST_MAP[c];
+  if (c >= kMinUnescapeChar && c <= kMaxUnescapeChar)
+    replacement = UNESCAPE_FAST_MAP[c - kMinUnescapeChar];
   if (replacement != 0) {
     *dst++ = replacement;
     return {UnescapeStringStatus::OK_QUOTE, dst, src};
@@ -442,7 +453,7 @@ UnescapeStringResult unescape_string(char* dst, const char* src,
   for (;;) {
     char c;
     std::tie(c, dst, src) = copy_until_backslash(dst, src, end);
-    if (src >= end) return {UnescapeStringStatus::OK_EOS, dst, src};
+    if (src == end) return {UnescapeStringStatus::OK_EOS, dst, src};
     if (c == '\"')
       return {UnescapeStringStatus::OK_QUOTE, dst, src};
     // Now c (a.k.a. *src) must be '\\'

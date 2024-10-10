@@ -43,6 +43,7 @@
 #include "cbu/math/fastdiv.h"
 #include "cbu/math/strict_overflow.h"
 #include "cbu/strings/faststr.h"
+#include "cbu/strings/hex.h"
 #include "cbu/strings/strutil.h"
 
 namespace cbu {
@@ -364,20 +365,20 @@ size_t from_hex(Word *r, const char *s, size_t n) noexcept {
   while (n > 2 * sizeof(Word)) {
     n -= 2 * sizeof(Word);
     if constexpr (sizeof(Word) == 4) {
-      r[i++] = convert_8xdigit<true>(s + n).value_or(0);
+      r[i++] = convert_8xdigit<true>(s + n);
     } else if constexpr (sizeof(Word) == 8) {
-      r[i++] = convert_16xdigit<true>(s + n).value_or(0);
+      r[i++] = convert_16xdigit<true>(s + n);
     } else {
       Word word = 0;
       const char *p = s + n;
       for (unsigned k = 2 * sizeof(Word); k; --k)
-        word = word * 16 + convert_xdigit<true>(*p++).value_or(0);
+        word = word * 16 + convert_xdigit<true>(*p++);
       r[i++] = word;
     }
   }
 
   Word word = 0;
-  for (; n; --n) word = word * 16 + convert_xdigit<true>(*s++).value_or(0);
+  for (; n; --n) word = word * 16 + convert_xdigit<true>(*s++);
   r[i++] = word;
   return i;
 }
