@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <gtest/gtest.h>
 #include "cbu/common/arch.h"
+
+#include <sys/mman.h>
+
+#include <gtest/gtest.h>
 
 namespace cbu {
 namespace {
@@ -64,6 +67,109 @@ TEST(ArchTest, x86_in_range_epi8_const) {
   v = in_range_epi8(v, 125, 126);
   EXPECT_EQ(0, v[0]);
 }
+
+TEST(ArchTest, load_unaligned_si256) {
+  char* data = (char*)mmap(NULL, 4096 * 2, PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  ASSERT_NE(MAP_FAILED, data);
+  int rc = mprotect(data + 4096, 4096, PROT_NONE);
+  ASSERT_EQ(0, rc);
+
+  for (unsigned i = 0; i < 4096; ++i) data[i] = i;
+
+  for (unsigned offset = 0; offset < 4096; ++offset) {
+    for (unsigned bytes = 1; bytes <= 32 && offset + bytes <= 4096; ++bytes) {
+      __m256i v = load_unaligned_si256(data + offset, bytes);
+      char buf[32];
+      _mm256_storeu_si256((__m256i*)buf, v);
+
+      for (unsigned k = 0; k < bytes; ++k) ASSERT_EQ(char(offset + k), buf[k]);
+    }
+  }
+}
+
+TEST(ArchTest, byte_mask) {
+  EXPECT_EQ('\xff', ((__v16qi)_mm_lobyte_mask(5))[4]);
+  EXPECT_EQ('\x00', ((__v16qi)_mm_lobyte_mask(5))[5]);
+
+  EXPECT_EQ('\x00', ((__v16qi)_mm_lobyte_negmask(5))[4]);
+  EXPECT_EQ('\xff', ((__v16qi)_mm_lobyte_negmask(5))[5]);
+
+  EXPECT_EQ('\xff', ((__v32qi)_mm256_lobyte_mask(25))[24]);
+  EXPECT_EQ('\x00', ((__v32qi)_mm256_lobyte_mask(25))[25]);
+
+  EXPECT_EQ('\x00', ((__v32qi)_mm256_lobyte_negmask(25))[24]);
+  EXPECT_EQ('\xff', ((__v32qi)_mm256_lobyte_negmask(25))[25]);
+
+  EXPECT_EQ(-1, ((__v8hi)_mm_lobyte_mask<2>(3))[2]);
+  EXPECT_EQ(00, ((__v8hi)_mm_lobyte_mask<2>(3))[3]);
+  EXPECT_EQ(-1, ((__v4si)_mm_lobyte_mask<4>(3))[2]);
+  EXPECT_EQ(00, ((__v4si)_mm_lobyte_mask<4>(3))[3]);
+
+  EXPECT_TRUE(isnan(_mm_lofloat_mask(3)[2]));
+  EXPECT_EQ(0, _mm_lofloat_mask(3)[3]);
+
+  EXPECT_EQ(0, _mm_lofloat_negmask(3)[2]);
+  EXPECT_TRUE(isnan(_mm_lofloat_negmask(3)[3]));
+
+  EXPECT_TRUE(isnan(_mm256_lofloat_mask(5)[4]));
+  EXPECT_EQ(0, _mm256_lofloat_mask(5)[5]);
+
+  EXPECT_EQ(0, _mm256_lofloat_negmask(5)[4]);
+  EXPECT_TRUE(isnan(_mm256_lofloat_negmask(5)[5]));
+}
+
+TEST(ArchTest, load_unaligned_si128_str) {
+  char* data = (char*)mmap(NULL, 4096 * 2, PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  ASSERT_NE(MAP_FAILED, data);
+
+  for (unsigned i = 0; i < 8192; ++i) data[i] = 'a' + (i % 16);
+  data[8191] = '\0';
+
+  for (unsigned i = 0; i < 4096 + 16; ++i) {
+    __m128i v = load_unaligned_si128_str(&data[i]);
+    char buf[16];
+    _mm_storeu_si128((__m128i*)buf, v);
+    for (unsigned j = 0; j < 16; ++j)
+      ASSERT_EQ(char('a' + ((i + j) % 16)), buf[j]);
+  }
+
+  int rc = mprotect(data + 4096, 4096, PROT_NONE);
+  ASSERT_EQ(0, rc);
+
+  data[4095] = '\0';
+
+  for (unsigned i = 4080; i < 4096; ++i) {
+    __m128i v = load_unaligned_si128_str(&data[i]);
+    char buf[16];
+    _mm_storeu_si128((__m128i*)buf, v);
+    for (unsigned j = i; j < 4095; ++j)
+      ASSERT_EQ(char('a' + (j % 16)), buf[j - i]);
+    ASSERT_EQ(0, buf[4095 - i]);
+  }
+}
+
+TEST(ArchTest, load_unaligned_si128) {
+  char* data = (char*)mmap(NULL, 4096 * 2, PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  ASSERT_NE(MAP_FAILED, data);
+  int rc = mprotect(data + 4096, 4096, PROT_NONE);
+  ASSERT_EQ(0, rc);
+
+  for (unsigned i = 0; i < 4096; ++i) data[i] = i;
+
+  for (unsigned offset = 0; offset < 4096; ++offset) {
+    for (unsigned bytes = 1; bytes <= 16 && offset + bytes <= 4096; ++bytes) {
+      __m128i v = load_unaligned_si128(data + offset, bytes);
+      char buf[16];
+      _mm_storeu_si128((__m128i*)buf, v);
+
+      for (unsigned k = 0; k < bytes; ++k) ASSERT_EQ(char(offset + k), buf[k]);
+    }
+  }
+}
+
 #endif
 
 }  // namespace
