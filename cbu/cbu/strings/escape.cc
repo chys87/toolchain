@@ -51,22 +51,25 @@ namespace {
 template <EscapeStyle style>
 inline constexpr char* escape_char(char* w, std::uint8_t c) {
   if (c < 0x20) {
-    // '\v' (0x11) is not universally accepted.
+    static_assert('\a' == 7);
     static_assert('\b' == 8);
     static_assert('\t' == 9);
     static_assert('\n' == 10);
+    static_assert('\v' == 11);
     static_assert('\f' == 12);
     static_assert('\r' == 13);
-    if (c >= 8 && c <= 13 && c != 11) {
-      *w++ = '\\';
-      *w++ = "btnvfr"[c - 8];
+    // JSON doesn't support '\a' or '\v'
+    if (style == EscapeStyle::C && unsigned(c - 7) <= 6) {
+      memcpy(w, &R"(\a\b\t\n\v\f\r)"[unsigned(c - 7) * 2], 2);
+      w += 2;
+    } else if (style != EscapeStyle::C && c != 11 && unsigned(c - 8) <= 5) {
+      memcpy(w, &R"(\b\t\n\v\f\r)"[unsigned(c - 8) * 2], 2);
+      w += 2;
     } else {
       if constexpr (style == EscapeStyle::JSON ||
                     style == EscapeStyle::JSON_STRICT) {
-        *w++ = '\\';
-        *w++ = 'u';
-        *w++ = '0';
-        *w++ = '0';
+        memcpy(w, "\\u00", 4);
+        w += 4;
       } else {
         *w++ = '\\';
         *w++ = 'x';
@@ -164,7 +167,7 @@ template <EscapeStyle style>
   }
   for (uint32_t offset : set_bits(bmsk & 0x1111'1111'1111'1111ull)) {
     CBU_NAIVE_LOOP
-    while (from < offset) {
+    while (from != offset) {
       *w++ = *s++;
       from += 4;
     }
@@ -172,7 +175,7 @@ template <EscapeStyle style>
     from += 4;
   }
   CBU_NAIVE_LOOP
-  while (from < until) {
+  while (from != until) {
     *w++ = *s++;
     from += 4;
   }
