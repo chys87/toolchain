@@ -45,12 +45,19 @@ constexpr bool is_alignment_valid_impl(size_t align) noexcept {
   return ((align - 1) & (align | ~size_t(kPageSize - 1))) == 0;
 }
 
+constexpr bool is_alignment_valid_posix_impl(size_t align) noexcept {
+  // Equivalent to align >= sizeof(void*) and is_alignment_valid(align)
+  // posix_memalign requires align >= sizeof(void*)
+  return ((align - sizeof(void*)) & (align | ~size_t(kPageSize - sizeof(void*)))) == 0;
+}
+
 static_assert(!is_alignment_valid_impl(0));
 static_assert(is_alignment_valid_impl(1));
 static_assert(is_alignment_valid_impl(2));
 static_assert(!is_alignment_valid_impl(3));
 static_assert(is_alignment_valid_impl(4));
 static_assert(!is_alignment_valid_impl(5));
+static_assert(is_alignment_valid_impl(16));
 static_assert(!is_alignment_valid_impl(kPageSize - 1));
 static_assert(is_alignment_valid_impl(kPageSize));
 static_assert(!is_alignment_valid_impl(kPageSize + 1));
@@ -59,8 +66,28 @@ static_assert(!is_alignment_valid_impl(kPageSize * 2));
 static_assert(!is_alignment_valid_impl(kPageSize * 3));
 static_assert(!is_alignment_valid_impl(kPageSize * 4));
 
+static_assert(!is_alignment_valid_posix_impl(0));
+static_assert(!is_alignment_valid_posix_impl(1));
+static_assert(!is_alignment_valid_posix_impl(2));
+static_assert(!is_alignment_valid_posix_impl(3));
+static_assert(is_alignment_valid_posix_impl(4) == (sizeof(void*) <= 4));
+static_assert(!is_alignment_valid_posix_impl(5));
+static_assert(is_alignment_valid_posix_impl(16));
+static_assert(!is_alignment_valid_posix_impl(kPageSize - 1));
+static_assert(is_alignment_valid_posix_impl(kPageSize));
+static_assert(!is_alignment_valid_posix_impl(kPageSize + 1));
+static_assert(!is_alignment_valid_posix_impl(kPageSize + 2));
+static_assert(!is_alignment_valid_posix_impl(kPageSize * 2));
+static_assert(!is_alignment_valid_posix_impl(kPageSize * 3));
+static_assert(!is_alignment_valid_posix_impl(kPageSize * 4));
+
+
 bool is_alignment_valid(size_t align) noexcept {
   return is_alignment_valid_impl(align);
+}
+
+bool is_alignment_valid_posix(size_t align) noexcept {
+  return is_alignment_valid_posix_impl(align);
 }
 
 void* allocate(size_t size, AllocateOptions options) noexcept {

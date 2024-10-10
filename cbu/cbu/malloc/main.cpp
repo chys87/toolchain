@@ -90,11 +90,9 @@ extern "C" void cbu_cfree(void* ) noexcept __attribute__((alias("cbu_free")));
 
 extern "C" int cbu_posix_memalign(void** pret, size_t boundary,
                                   size_t n) noexcept {
-  if (boundary & (boundary - 1))
+  if (!alloc::is_alignment_valid_posix(boundary)) [[unlikely]]
     return EINVAL;
-  if (boundary < sizeof(void*))  // POSIX so requires
-    return EINVAL;
-  void* ptr = cbu_memalign(boundary, n);
+  void* ptr = alloc::allocate(n, alloc::AllocateOptions().with_align(boundary));
   *pret = ptr;
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
   return 0;

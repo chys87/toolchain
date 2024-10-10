@@ -37,6 +37,7 @@ namespace cbu {
 namespace alloc {
 
 [[gnu::const]] bool is_alignment_valid(size_t align) noexcept;
+[[gnu::const]] bool is_alignment_valid_posix(size_t align) noexcept;
 
 struct AllocateOptions {
   // allocate/reallocte only; Maximum supported alignment is pagesize.
