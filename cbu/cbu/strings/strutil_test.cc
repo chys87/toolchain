@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -70,6 +70,16 @@ TEST(StrUtilTest, Memcnt) {
                            "1234567890123456789012345678999")),
                        '9'));
 #undef REPEAT8
+  char buf[1024];
+  for (int i = 0; i < 1024; ++i) {
+    buf[i] = i % 8;
+  }
+  for (size_t offset = 0; offset < 32; ++offset) {
+    for (size_t end = 1024 - 32; end < 1024; ++end) {
+      size_t zeros = (end + 7) / 8 - (offset + 7) / 8;
+      ASSERT_EQ(memcnt(buf + offset, '\0', end - offset), zeros);
+    }
+  }
 }
 
 TEST(StrUtilTest, Reverse) {

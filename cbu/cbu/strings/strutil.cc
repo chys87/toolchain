@@ -197,43 +197,48 @@ size_t memcnt(const char *s, char c, size_t n) noexcept {
       vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(
                         vreinterpretq_u16_u8(uint8x16_t(ref == *p++)), 4)),
                     0);
+  mask &= 0x1111'1111'1111'1111ull;
   mask >>= misalign * 4;
 
-  size_t l = n + misalign - 16;
-  if (ssize_t(l) <= 0) {
+  size_t l = n + misalign;
+  if (l <= 16) {
     mask &= (1ull << 4 << ((n - 1) * 4)) - 1;
-    return uint32_t(std::popcount(mask)) / 4;
+    return uint32_t(std::popcount(mask));
   }
+  l -= 16;
 
-  r = uint32_t(std::popcount(mask)) / 4;
+  r = uint32_t(std::popcount(mask));
 
-  while (!sub_overflow(l, 128, &l)) {
-    uint8x16_t a = uint8x16_t(ref == *p++);
-    uint8x16_t b = uint8x16_t(ref == *p++);
-    uint8x16_t c = uint8x16_t(ref == *p++);
-    uint8x16_t d = uint8x16_t(ref == *p++);
-    uint8x16_t e = uint8x16_t(ref == *p++);
-    uint8x16_t f = uint8x16_t(ref == *p++);
-    uint8x16_t g = uint8x16_t(ref == *p++);
-    uint8x16_t h = uint8x16_t(ref == *p++);
+  while (l >= 128) {
+    l -= 128;
+    uint8x16x4_t x = vld1q_u8_x4((const uint8_t*)p);
+    uint8x16x4_t y = vld1q_u8_x4((const uint8_t*)p + 64);
+    uint8x16_t a = uint8x16_t(ref == x.val[0]);
+    uint8x16_t b = uint8x16_t(ref == x.val[1]);
+    uint8x16_t c = uint8x16_t(ref == x.val[2]);
+    uint8x16_t d = uint8x16_t(ref == x.val[3]);
+    uint8x16_t e = uint8x16_t(ref == y.val[0]);
+    uint8x16_t f = uint8x16_t(ref == y.val[1]);
+    uint8x16_t g = uint8x16_t(ref == y.val[2]);
+    uint8x16_t h = uint8x16_t(ref == y.val[3]);
     uint8x16_t sum = a + b + c + d + e + f + g + h;
     r -= int8_t(vaddvq_u8(sum));
+    p += 8;
   }
 
-  l &= 127;
-  while (!sub_overflow(l, 16, &l)) {
+  while (l >= 16) {
+    l -= 16;
     uint8x16_t a = uint8x16_t(ref == *p++);
     uint8_t cnt = -vaddvq_u8(a);
     r += cnt;
   }
 
-  unsigned tail = unsigned(l) & 15;
-  if (tail) {
+  if (l) {
     uint64_t mask =
         vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(
                           vreinterpretq_u16_u8(uint8x16_t(ref == *p++)), 4)),
                       0);
-    r += std::uint32_t(std::popcount(bzhi(mask, tail * 4))) / 4;
+    r += std::uint32_t(std::popcount(bzhi(mask, l* 4))) / 4;
   }
 #else
   const char *e = s + n;
