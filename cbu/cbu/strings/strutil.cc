@@ -56,34 +56,6 @@ using std::intptr_t;
 using std::size_t;
 using ssize_t = std::make_signed_t<size_t>;
 
-std::size_t vscnprintf(char *buf, std::size_t bufsiz, const char *format,
-                       std::va_list ap) noexcept {
-  // Be careful we should be able to handle bufsiz == 0
-  ssize_t len = std::vsnprintf(buf, bufsiz, format, ap);
-  if (len >= ssize_t(bufsiz)) {
-    len = bufsiz - 1;
-  }
-  if (len < 0) {
-    len = 0;
-  }
-  return len;
-}
-
-std::size_t scnprintf(char *buf, std::size_t bufsiz,
-                      const char *format, ...) noexcept {
-  std::size_t r;
-  std::va_list ap;
-  va_start(ap, format);
-  r = vscnprintf(buf, bufsiz, format, ap);
-  va_end(ap);
-  return r;
-}
-
-char *strdup_new(const char *s) {
-  std::size_t l = std::strlen(s) + 1;
-  return static_cast<char *>(std::memcpy(new char[l], s, l));
-}
-
 std::size_t strcnt(const char *s, char c) noexcept {
   if (c == 0) {
     return 0;

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,6 @@
 
 #include <algorithm>
 #include <concepts>
-#include <cstdarg>
 #include <cstddef>
 #include <cstring>
 #include <cwchar>
@@ -55,17 +54,6 @@ struct CharTraitsType<T, C> {
 };
 
 }  // namespace strutil_detail
-
-// Always return the number of characters actually filled.
-// Function name taken from Linux kernel.
-std::size_t vscnprintf(char *, std::size_t, const char *, std::va_list) noexcept
-  __attribute__((__format__(__printf__, 3, 0)));
-
-std::size_t scnprintf(char *, std::size_t, const char *, ...) noexcept
-  __attribute__((__format__(__printf__, 3, 4)));
-
-char *strdup_new(const char *)
-  __attribute__((__malloc__, __nonnull__(1)));
 
 std::size_t strcnt(const char *, char) noexcept
   __attribute__((__nonnull__(1), __pure__));

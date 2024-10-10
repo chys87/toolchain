@@ -39,14 +39,6 @@ namespace cbu {
 
 using namespace std::literals;
 
-TEST(StrUtilTest, Scnprintf) {
-  char buf[16];
-
-  EXPECT_EQ(0, scnprintf(buf, 0, "%s", "abcdefghijklmnopqrstuvwxyz"));
-  EXPECT_EQ(0, scnprintf(buf, 1, "%s", "abcdefghijklmnopqrstuvwxyz"));
-  EXPECT_EQ(1, scnprintf(buf, 2, "%s", "abcdefghijklmnopqrstuvwxyz"));
-}
-
 TEST(StrUtilTest, Strcnt) {
   EXPECT_EQ(0, strcnt("abcabc", '\0'));
   EXPECT_EQ(2, strcnt("abcabc", 'a'));
