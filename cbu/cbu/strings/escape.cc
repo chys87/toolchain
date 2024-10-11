@@ -295,8 +295,15 @@ inline constexpr std::tuple<UnescapeStringStatus, char*, const char*> tuplize(
   return {result.status, result.dst_ptr, result.src_ptr};
 }
 
-std::tuple<char, char*, const char*> copy_until_backslash(
-    char* dst, const char* src, const char* end) noexcept {
+struct CopyUntilBackslashResult {
+  bool eos;
+  char next_char;
+  char* dst;
+  const char* src;
+};
+
+CopyUntilBackslashResult copy_until_backslash(char* dst, const char* src,
+                                              const char* end) noexcept {
 #ifdef __AVX2__
   while (src + 32 <= end) {
     __v32qu val = __v32qu(*(const __m256i_u*)src);
@@ -309,7 +316,7 @@ std::tuple<char, char*, const char*> copy_until_backslash(
       unsigned off = ctz(_mm256_movemask_epi8(mask));
       CBU_NAIVE_LOOP
       for (unsigned i = off; i; --i) *dst++ = *src++;
-      return {*src, dst, src};
+      return {false, *src, dst, src};
     }
   }
 #elifdef __ARM_NEON
@@ -330,7 +337,7 @@ std::tuple<char, char*, const char*> copy_until_backslash(
         dst += off4 / 4;
         src += off4 / 4;
       }
-      return {*src, dst, src};
+      return {false, *src, dst, src};
     }
   }
 #endif
@@ -338,9 +345,9 @@ std::tuple<char, char*, const char*> copy_until_backslash(
     *dst++ = *src++;
   }
   if (src == end) {
-    return {'\0', dst, src};
+    return {true, '\0', dst, src};
   } else {
-    return {*src, dst, src};
+    return {false, *src, dst, src};
   }
 }
 
@@ -451,9 +458,10 @@ UnescapeStringResult parse_escape_sequence(
 UnescapeStringResult unescape_string(char* dst, const char* src,
                                      const char* end) noexcept {
   for (;;) {
-    char c;
-    std::tie(c, dst, src) = copy_until_backslash(dst, src, end);
-    if (src == end) return {UnescapeStringStatus::OK_EOS, dst, src};
+    auto [eos, c, new_dst, new_src] = copy_until_backslash(dst, src, end);
+    dst = new_dst;
+    src = new_src;
+    if (eos) return {UnescapeStringStatus::OK_EOS, dst, src};
     if (c == '\"')
       return {UnescapeStringStatus::OK_QUOTE, dst, src};
     // Now c (a.k.a. *src) must be '\\'
