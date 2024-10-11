@@ -476,8 +476,13 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 
 #include <unistd.h>
 
-#define fsys_generic(sysno,rettype,argc,...) \
-  ((rettype)syscall(sysno,##__VA_ARGS__))
+// Write it this way instead of a bare expressino to suppress warning about
+// unused expression result
+#define fsys_generic(sysno, rettype, argc, ...)                        \
+  ({                                                                   \
+    rettype fsys_generic_ret = (rettype)syscall(sysno, ##__VA_ARGS__); \
+    fsys_generic_ret;                                                  \
+  })
 #define fsys_generic_nomem fsys_generic
 
 #define fsys_errno(r,err) (errno==err)
@@ -555,7 +560,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_getdents64(...) syscall(__NR_getdents64,__VA_ARGS__)
 #define fsys_fork fork
 #define fsys_vfork vfork
-//#define fsys_clone2(a,b) // Undefined because it's not always safe to use
+// #define fsys_clone2(a,b) // Undefined because it's not always safe to use
 #define fsys_getpid getpid
 #if defined __GLIBC_PREREQ && __GLIBC_PREREQ(2, 30)
 # define fsys_gettid gettid
