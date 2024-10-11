@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,6 @@
 #include "cbu/alloc/private/common.h"
 #include "cbu/alloc/private/permanent.h"
 #include "cbu/common/bit.h"
-#include "cbu/compat/atomic_ref.h"
 
 namespace cbu {
 namespace alloc {

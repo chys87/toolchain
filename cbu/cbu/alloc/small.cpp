@@ -36,7 +36,6 @@
 #include "cbu/alloc/private/common.h"
 #include "cbu/alloc/private/tc.h"
 #include "cbu/common/byte_size.h"
-#include "cbu/compat/atomic_ref.h"
 #include "cbu/sys/low_level_mutex.h"
 
 namespace cbu {

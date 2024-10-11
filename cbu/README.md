@@ -4,7 +4,7 @@ This is my C++ utilities.
 
 ## Pre-requisites:
 
-- [g++](https://gcc.gnu.org/) 12 or later, or [clang++](https://clang.llvm.org/) 16 or later
+- [g++](https://gcc.gnu.org/) 14 or later, or [clang++](https://clang.llvm.org/) 19 or later
 - [Bazel](https://bazel.build/).  Other make tools may also be used if you prefer; you can also just link or copy the files
 
 I try to write portable code (except functionalities that are by design Linux-only, such as `coroutine` and `malloc`), but I have
