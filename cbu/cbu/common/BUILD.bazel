@@ -50,7 +50,6 @@ cc_library(
   srcs = [],
   hdrs = [
     'arch.h',
-    'bit_cast.h',
     'bit.h',
     'bitmask_ref.h',
     'bitmask_translate.h',
