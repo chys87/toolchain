@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,8 +42,7 @@
 
 namespace cbu {
 
-template <typename C>
-requires Std_string_char<C>
+template <Std_string_char C>
 class ImmutableBasicString {
  public:
   using size_type = std::size_t;

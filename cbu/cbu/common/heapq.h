@@ -129,7 +129,7 @@ concept Heapq_vector = requires(Vec &vec, std::size_t n) {
   { vec.size() } -> std::convertible_to<std::size_t>;
   { vec.clear() };
   { vec.resize(n) };
-  { vec[n] } -> std::convertible_to<typename Vec::value_type &>;
+  { vec[n] } -> std::same_as<typename Vec::value_type &>;
 };
 
 namespace heapq_detail {
@@ -137,9 +137,11 @@ namespace heapq_detail {
 // Some of my own implementation provides shrink_to or truncate_to for shrinking
 template <Heapq_vector Heap, typename Size>
 inline constexpr void shrink_to(Heap& heap, Size n) {
-  if constexpr (requires(Heap & heap, Size n) { {heap.shrink_to(n)}; }) {
+  if constexpr (requires(Heap& heap, Size n) {
+                  { heap.shrink_to(n) };
+                }) {
     heap.shrink_to(n);
-  } else if constexpr (requires(Heap & heap, Size n) {
+  } else if constexpr (requires(Heap& heap, Size n) {
                          {heap.truncate_to(n)};
                        }) {
     heap.truncate_to(n);

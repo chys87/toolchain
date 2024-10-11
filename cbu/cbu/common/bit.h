@@ -163,31 +163,32 @@ constexpr unsigned popcnt(T x) noexcept {
 
 // Clear lowest set bit
 // Same as Intel BMI's BLSR instruction
-template <typename T> requires std::is_integral<T>::value
-inline constexpr T blsr(T x) noexcept { return (x & (x - 1)); }
+template <std::integral T>
+constexpr T blsr(T x) noexcept {
+  return (x & (x - 1));
+}
 
 // Isolate lowest set bit
 // Same as Intel BMI's BLSI instruction
-template <typename T> requires std::is_integral<T>::value
-inline constexpr T blsi(T x) noexcept { return (x & -x); }
+template <std::integral T>
+constexpr T blsi(T x) noexcept {
+  return (x & -x);
+}
 
-template <typename T> requires std::is_integral_v<T>
+template <std::integral T>
 inline constexpr T bzhi(T x, unsigned k) noexcept {
 #if defined __BMI2__
   if !consteval {
     if constexpr (sizeof(T) <= 4)
       return __builtin_ia32_bzhi_si(std::make_unsigned_t<T>(x), k);
-# if defined __x86_64__
-    if constexpr (sizeof(T) == 8)
-      return __builtin_ia32_bzhi_di(x, k);
-# endif
+#if defined __x86_64__
+    if constexpr (sizeof(T) == 8) return __builtin_ia32_bzhi_di(x, k);
+#endif
   }
 #endif
-  if (k >= 8 * sizeof(T))
-    return x;
+  if (k >= 8 * sizeof(T)) return x;
   return x & ((T(1) << k) - 1);
 }
-
 
 // An iterator to iterate over set bits
 template <std::unsigned_integral T>
@@ -233,12 +234,12 @@ inline constexpr auto set_bits(T v) noexcept {
 static_assert(std::ranges::distance(set_bits(0x123456789abcdef)) ==
               popcnt(0x123456789abcdef));
 
-template <typename T> requires std::is_integral_v<T>
+template <std::integral T>
 inline constexpr T pow2_floor(T n, std::type_identity_t<T> size) noexcept {
   return (n & ~(size - 1));
 }
 
-template <typename T> requires std::is_integral_v<T>
+template <std::integral T>
 inline constexpr T pow2_ceil(T n, std::type_identity_t<T> size) noexcept {
   return pow2_floor(n + size - 1, size);
 }
@@ -255,13 +256,13 @@ inline constexpr T* pow2_ceil(T* p, std::size_t size) noexcept {
   return pow2_floor(reinterpret_cast<T *>(std::uintptr_t(p) + size - 1), size);
 }
 
-template <typename T> requires std::is_integral_v<T>
+template <std::integral T>
 inline constexpr std::make_unsigned_t<T> MAX_POW2 =
     std::make_unsigned_t<T>(1) << (8 * sizeof(T) - 1);
 
 // Ceiling to the nearest power of 2
 // Undefined for n > MAX_POW2<T>
-template <typename T> requires std::is_integral_v<T>
+template <std::integral T>
 inline constexpr T pow2_ceil(T n) noexcept {
   if (n == 0) return 1;
   using UT = std::conditional_t<(sizeof(T) < sizeof(unsigned)), unsigned,
@@ -271,7 +272,7 @@ inline constexpr T pow2_ceil(T n) noexcept {
 
 // Flooring to the nearest power of 2
 // Undefined for n == 0
-template <typename T> requires std::is_integral_v<T>
+template <std::integral T>
 inline constexpr T pow2_floor(T n) noexcept {
   using UT = std::conditional_t<(sizeof(T) < sizeof(unsigned)), unsigned, T>;
   return MAX_POW2<UT> >> clz(UT(n));

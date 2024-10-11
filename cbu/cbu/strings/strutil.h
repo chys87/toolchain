@@ -48,7 +48,7 @@ struct CharTraitsType {
 };
 
 template <typename T, typename C>
-requires requires() { typename T::traits_type; }
+  requires requires() { typename T::traits_type; }
 struct CharTraitsType<T, C> {
   using type = typename T::traits_type;
 };
@@ -80,15 +80,19 @@ inline constexpr const char *c_str(const char *s) noexcept {
   return s;
 }
 
-template<typename T>
-requires requires(T s) { {s.c_str()} -> std::convertible_to<const char *>; }
-inline constexpr const char *c_str(const T &s) noexcept(noexcept(s.c_str())) {
+template <typename T>
+  requires requires(const T& s) {
+    { s.c_str() } -> std::convertible_to<const char*>;
+  }
+inline constexpr const char* c_str(const T& s) noexcept(noexcept(s.c_str())) {
   return s.c_str();
 }
 
-template<typename T>
-requires requires(T s) { {s->c_str()} -> std::convertible_to<const char *>; }
-inline constexpr const char *c_str(const T &s) noexcept(noexcept(s->c_str())) {
+template <typename T>
+  requires requires(T s) {
+    { s->c_str() } -> std::convertible_to<const char*>;
+  }
+inline constexpr const char* c_str(const T& s) noexcept(noexcept(s->c_str())) {
   return s->c_str();
 }
 
@@ -126,11 +130,11 @@ inline constexpr std::basic_string_view<C> any_to_string_view(
 };
 
 template <typename T>
-requires requires(const T& obj) {
-  { std::data(obj) } -> Pointer;
-  requires Std_string_char<std::remove_cvref_t<decltype(*obj.data())>>;
-  { std::size(obj) } -> std::convertible_to<std::size_t>;
-}
+  requires requires(const T& obj) {
+    { std::data(obj) } -> Pointer;
+    requires Std_string_char<std::remove_cvref_t<decltype(*obj.data())>>;
+    { std::size(obj) } -> std::convertible_to<std::size_t>;
+  }
 inline constexpr auto any_to_string_view(const T& obj) noexcept {
   using C = std::remove_cvref_t<decltype(*obj.data())>;
   using Traits = typename strutil_detail::CharTraitsType<T, C>::type;

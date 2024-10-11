@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,10 +40,9 @@ namespace {
 float scale(float a, int n) { return std::scalbnf(a, n); }
 double scale(double a, int n) { return std::scalbn(a, n); }
 
-template <typename F, typename U>
-requires (std::is_floating_point<F>::value &&
-          std::numeric_limits<F>::radix == 2 &&
-          std::numeric_limits<U>::digits > std::numeric_limits<F>::digits)
+template <std::floating_point F, std::unsigned_integral U>
+  requires(std::numeric_limits<F>::radix == 2 &&
+           std::numeric_limits<U>::digits > std::numeric_limits<F>::digits)
 inline F map_uint_to_float(U u) noexcept {
   constexpr int MANTISSA_BITS = std::numeric_limits<F>::digits;
   constexpr int UBITS = std::numeric_limits<U>::digits;

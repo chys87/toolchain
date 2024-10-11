@@ -67,8 +67,9 @@ constexpr auto StatxResultAsTuple(int ret, const struct_statx& stx,
 template <typename T>
 concept Statx_spec_time = requires(T& spec) {
   requires Statx_spec<T>;
-  requires std::same_as<std::invoke_result_t<T, int, const struct_statx&>,
-                        statx_timestamp>;
+  {
+    spec(1, std::declval<const struct_statx&>())
+  } -> std::same_as<statx_timestamp>;
 };
 
 }  // namespace detail
