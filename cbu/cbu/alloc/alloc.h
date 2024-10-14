@@ -100,10 +100,6 @@ Page* allocate_page(size_t bytes, AllocateOptions options = {}) noexcept;
 void reclaim_page(Page* page, size_t bytes,
                   AllocateOptions options = {}) noexcept;
 
-// Misc functions, intended for use by wrappers (e.g. cbu/malloc) to provide
-// consistent error messages.
-[[noreturn]] void memory_corrupt() noexcept;
-
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
 [[noreturn, gnu::cold, gnu::noinline]]
 #else

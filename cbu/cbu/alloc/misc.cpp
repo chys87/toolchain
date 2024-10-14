@@ -34,10 +34,6 @@
 namespace cbu {
 namespace alloc {
 
-void memory_corrupt() noexcept {
-  fatal<"Memory corrupt\n">();
-}
-
 std::nullptr_t nomem() noexcept {
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
   fatal<"Insufficient memory\n">();

@@ -36,6 +36,7 @@
 #include "cbu/alloc/private/common.h"
 #include "cbu/alloc/private/tc.h"
 #include "cbu/common/byte_size.h"
+#include "cbu/common/procutil.h"
 #include "cbu/sys/low_level_mutex.h"
 
 namespace cbu {
@@ -71,7 +72,8 @@ void free_small_list(Block* ptr) {
 #endif
         ;
     if (remain <= 0) {
-      if (remain < 0) memory_corrupt();
+      if (remain < 0)
+        fatal<"Memory corrupt: run->allocated < 0 at free_small_list">();
       reclaim_page((Page*)run, kPageSize);
     }
   }
@@ -110,9 +112,12 @@ void free_small_with_cache(SmallCache* cache, void* ptr) {
   Block* p = static_cast<Block*>(ptr);
 
   unsigned cat = block2run(p)->cat;
-  if (cat > kMaxCategory) memory_corrupt();
+  if (cat > kMaxCategory)
+    fatal<"Memory corrupt: category invalid at free_small_with_cache">();
 
-  if (uintptr_t(p) & (category_to_size(cat) - 1)) memory_corrupt();
+  if (uintptr_t(p) & (category_to_size(cat) - 1))
+    fatal<
+        "Memory corrupt: pointer alignment invalid at free_small_with_cache">();
 
   ThreadCategory* catp = &cache->category[cat];
   p->count = 1;
@@ -159,7 +164,8 @@ void free_small(void* ptr) noexcept {
 }
 
 void free_small(void* ptr, size_t size) noexcept {
-  if (size > small_allocated_size(ptr)) memory_corrupt();
+  if (size > small_allocated_size(ptr))
+    fatal<"Memory corrupt: size invalid at free_small">();
   return free_small(ptr);
 }
 
