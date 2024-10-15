@@ -37,6 +37,8 @@
 # include <arm_neon.h>
 #endif
 
+#include "cbu/compat/compilers.h"
+
 namespace cbu {
 
 #ifdef __SSE2__
@@ -187,6 +189,10 @@ inline __m128i _mm_rshift_byte_epi8(__m128i value, size_t bytes) noexcept {
 inline __m128i load_unaligned_si128(const char* s, size_t length) noexcept {
 #if defined __AVX512VL__ && defined __AVX512BW__
   return _mm_maskz_loadu_epi8((1u << length) - 1, s);
+#elifdef CBU_ADDRESS_SANITIZER
+  alignas(16) char buffer[16] = {};
+  __builtin_memcpy(buffer, s, length);
+  return *(const __m128i*)buffer;
 #else
   using uintptr_t = unsigned long;
   static_assert(sizeof(uintptr_t) == sizeof(void*), "");
@@ -215,6 +221,11 @@ inline __m128i loadz_unaligned_si128(const char* s, size_t length) noexcept {
 }
 
 inline __m128i load_unaligned_si128_str(const char* s) noexcept {
+#ifdef CBU_ADDRESS_SANITIZER
+  alignas(16) char buffer[16] = {};
+  __builtin_strncpy(buffer, s, 16);
+  return *(const __m128i*)buffer;
+#else
   using uintptr_t = unsigned long;
   unsigned page_offset = uintptr_t(s) % 4096;
   if (page_offset > 4080) {
@@ -226,6 +237,7 @@ inline __m128i load_unaligned_si128_str(const char* s) noexcept {
   }
 
   return *(const __m128i_u*)s;
+#endif
 }
 
 #endif
@@ -293,6 +305,11 @@ inline uint8x16_t neon_rshift_u8(uint8x16_t value, size_t bytes) noexcept {
 
 inline uint8x16_t neon_load_unaligned_u8(const char* s,
                                          size_t length) noexcept {
+#ifdef CBU_ADDRESS_SANITIZER
+  alignas(16) char buffer[16] = {};
+  __builtin_memcpy(buffer, s, length);
+  return *(const uint8x16_t*)buffer;
+#else
   using uintptr_t = unsigned long;
   static_assert(sizeof(uintptr_t) == sizeof(void*), "");
 
@@ -307,6 +324,7 @@ inline uint8x16_t neon_load_unaligned_u8(const char* s,
   } else {
     return *(const uint8x16_t*)s;
   }
+#endif
 }
 #endif
 
@@ -320,6 +338,10 @@ inline __m256i load_unaligned_si256(const char* s, size_t length) noexcept {
   // If there's a simple way to for SHLX instead of SHL, we can use 32-bit
   // instead of 64-bit mask.
   return _mm256_maskz_loadu_epi8((1ull << length) - 1, s);
+#elifdef CBU_ADDRESS_SANITIZER
+  alignas(32) char buffer[32] = {};
+  __builtin_memcpy(buffer, s, length);
+  return *(const __m256i*)buffer;
 #else
   using uintptr_t = unsigned long;
   static_assert(sizeof(uintptr_t) == sizeof(void*), "");
