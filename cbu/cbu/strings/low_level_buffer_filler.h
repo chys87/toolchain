@@ -46,7 +46,7 @@
 
 namespace cbu {
 
-// min_size(), max_size(), static_max_size() functions are for str_builder
+// min_size(), max_size(), static_max_size(), static_min_size() functions are for str_builder
 
 template <std::integral T, std::endian Order>
 struct FillByEndian {
@@ -61,6 +61,7 @@ struct FillByEndian {
 
   static constexpr std::size_t min_size() noexcept { return sizeof(T); }
   static constexpr std::size_t max_size() noexcept { return sizeof(T); }
+  static constexpr std::size_t static_min_size() noexcept { return sizeof(T); }
   static constexpr std::size_t static_max_size() noexcept { return sizeof(T); }
 };
 
@@ -103,6 +104,9 @@ struct FillDec<UpperBound, Options> {
 
   static constexpr std::size_t min_size() noexcept { return Options::width; }
   static constexpr std::size_t max_size() noexcept { return Options::width; }
+  static constexpr std::size_t static_min_size() noexcept {
+    return Options::width;
+  }
   static constexpr std::size_t static_max_size() noexcept {
     return Options::width;
   }
@@ -182,6 +186,7 @@ struct FillDec<UpperBound, Options> {
     return conv_flexible_digit(value, bytes, p);
   }
 
+  static constexpr std::size_t static_min_size() noexcept { return 1; }
   static constexpr std::size_t static_max_size() noexcept {
     // This is correct for UpperBound == 0 as well
     return ilog10(std::uint64_t(UpperBound - 1)) + 1;
@@ -265,6 +270,9 @@ template <Raw_unsigned_integral T>
 struct FillHex {
   T value;
 
+  static constexpr std::size_t static_min_size() noexcept {
+    return 2 * sizeof(T);
+  }
   static constexpr std::size_t static_max_size() noexcept {
     return 2 * sizeof(T);
   }
@@ -284,6 +292,7 @@ struct FillSkipImpl {
   }
   static constexpr std::size_t min_size() noexcept { return diff; }
   static constexpr std::size_t max_size() noexcept { return diff; }
+  static constexpr std::size_t static_min_size() noexcept { return diff; }
   static constexpr std::size_t static_max_size() noexcept { return diff; }
 };
 
@@ -302,6 +311,7 @@ struct FillGetPointer {
   }
   static constexpr std::size_t min_size() noexcept { return 0; }
   static constexpr std::size_t max_size() noexcept { return 0; }
+  static constexpr std::size_t static_min_size() noexcept { return 0; }
   static constexpr std::size_t static_max_size() noexcept { return 0; }
 };
 
@@ -321,6 +331,7 @@ struct FillGetLength {
   }
   static constexpr std::size_t min_size() noexcept { return 0; }
   static constexpr std::size_t max_size() noexcept { return 0; }
+  static constexpr std::size_t static_min_size() noexcept { return 0; }
   static constexpr std::size_t static_max_size() noexcept { return 0; }
 };
 
