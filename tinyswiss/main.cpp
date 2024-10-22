@@ -6,7 +6,7 @@ int gxx_latest_main(size_t, char **, char **);
 int j_main(size_t argc, char **argv, char **);
 int mvln_main(size_t argc, char **argv, char **);
 int python3_latest_main(size_t, char **, char **);
-int python_latest_main(size_t, char **, char **);
+int python3_latest_config_main(size_t, char **, char **);
 int running_browser_main(size_t, char **, char **);
 
 namespace {
@@ -25,7 +25,7 @@ constexpr Dispatch dispatch[] = {
   {STR_LEN("j"), j_main},
   {STR_LEN("mvln"), mvln_main},
   {STR_LEN("python3-latest"), python3_latest_main},
-  {STR_LEN("python-latest"), python_latest_main},
+  {STR_LEN("python3-latest-config"), python3_latest_config_main},
   {STR_LEN("running-browser"), running_browser_main},
 };
 
