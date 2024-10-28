@@ -182,11 +182,11 @@ struct string_collection {
       string_collection_detail::preprocess<Strings...>();
   static constexpr auto offsets_params = preprocessed.offsets_params;
   static constexpr auto lens_params = preprocessed.lens_params;
+  static constexpr std::size_t kMaxLen = std::ranges::max({Strings.size()...});
 
   using offset_type =
       string_collection_detail::len_t<std::ranges::max(preprocessed.offsets)>;
-  using len_type =
-      string_collection_detail::len_t<std::ranges::max({Strings.size()...})>;
+  using len_type = string_collection_detail::len_t<kMaxLen>;
 
   constexpr string_collection() noexcept {
     std::copy_n(preprocessed.buffer, preprocessed.used_bytes, s_);
@@ -195,6 +195,8 @@ struct string_collection {
   static constexpr const string_collection& instance() noexcept;
 
   struct ref_regular_t {
+    static constexpr std::size_t kMaxLen = string_collection::kMaxLen;
+
     [[no_unique_address]] string_collection_detail::Storage<offsets_params>
         offset;
     [[no_unique_address]] string_collection_detail::Storage<lens_params> len;
@@ -208,6 +210,7 @@ struct string_collection {
   };
 
   struct ref_packed_t {
+    static constexpr std::size_t kMaxLen = string_collection::kMaxLen;
     static constexpr unsigned kOffsetBits =
         string_collection_detail::required_bits(offsets_params.smax);
     static constexpr unsigned kLenBits =
