@@ -246,10 +246,10 @@ else
 $(BUILDDIR)/$(1).n.out: private CLINKER = $(CXX)
 endif
 $(BUILDDIR)/$(1).n.out: private NAME := LD
-$(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(4:%=$(BUILDDIR)/lib%.a)
+$(BUILDDIR)/$(1).n.out: $(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) $(4:%=$(BUILDDIR)/lib%.a) $$(DEPS-$(1):%=$(BUILDDIR)/lib%.a)
 	+$$(Q)$$(CLINKER) $$(LDFLAGS) $$(FLAGS-$(1)) -o $$@ \
 		$(sort $$(SRCS-$(1):%=$(BUILDDIR)/%.o)) \
-		$(4:%=$(BUILDDIR)/lib%.a) \
+		$(4:%=$(BUILDDIR)/lib%.a) $$(DEPS-$(1):%=$(BUILDDIR)/lib%.a) \
 		$(LIBS) $$(LIBS-$(1))
 endef
 
