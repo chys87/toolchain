@@ -47,42 +47,21 @@ struct Magic {
 };
 
 
-// Find max K, such that for all k, 0 <= k < K, k / D == k * M >> N
+// Verify that for all k, 0 <= k < UB, k / D == k * M >> N
 template <typename Type>
-inline constexpr Type get_k(Type D, Type M, Type N) noexcept {
-  Type lo = 0; // Satisfies
-  Type hi = std::numeric_limits<Type>::max(); // Dissatisfies
-  do {
-    while (hi - lo > 1) {
-      Type mid = lo + (hi - lo) / 2;
-      if (mid / D == mid * M >> N) {
-        lo = mid;
-      } else {
-        hi = mid;
-      }
-    }
-    Type CM = (D < 65536) ? 65536 : D;
-    Type K = (lo / CM > D) ? (lo - CM * D) : 0;
-    for (;;) {
-      // We know (K/D == (K*M)>>N).
-      // Find the next one that may differ.
-      Type Ja = K - K % D + D;
-      Type U = (K * M + (Type(1) << N)) & ~((Type(1) << N) - 1);
-      Type Jb = (U + M - 1) / M;
-      if ((Ja < K) || (Jb < K)) // Overflow
-        break;
-      if (Ja != Jb) {
-        Type newhi = (Ja < Jb) ? Ja : Jb;
-        if (newhi != hi) {
-          hi = newhi;
-          lo = 0;
-        }
-        break;
-      }
-      K = Ja;
-    }
-  } while (hi - lo > 1);
-  return hi;
+inline constexpr bool verify_magic(Type D, Type UB, Type M, Type N) noexcept {
+  if (UB == 0) return false;
+  Type t = UB - 1;
+  if (t / D != t * M >> N) return false;
+  t = t / D * D;
+  if (t / D != t * M >> N) return false;
+  if (t == 0) return true;
+  if ((t - 1) / D != (t - 1) * M >> N) return false;
+  if ((t - D) / D != (t - D) * M >> N) return false;
+  t -= D;
+  if (t == 0) return true;
+  if ((t - 1) / D != (t - 1) * M >> N) return false;
+  return true;
 }
 
 template <typename Type>
@@ -98,11 +77,7 @@ inline constexpr Magic<Type> magic_base(Type D, Type UB) noexcept {
     }
     if ((D - 1) * M < (Type(1) << N) &&
         (Type(1) << N) <= DoubleUnsigned<Type>(D) * M) {
-      // Do a short circuit.  Remove this and it will still work
-      // (though compiler's constexpr evaluator will more likely explode)
-      if (UB > 0 && ((UB - 1) * M >> N) != (UB - 1) / D) continue;
-      unsigned K = get_k<Type>(D, M, N);
-      if (K >= UB) {
+      if (verify_magic<Type>(D, UB, M, N)) {
         return {0, M, N};
       }
     }
