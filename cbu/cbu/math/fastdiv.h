@@ -33,7 +33,6 @@
 #include <utility>
 
 #include "cbu/common/hint.h"
-#include "cbu/math/double_integer.h"
 
 namespace cbu {
 namespace fastdiv_detail {
@@ -71,15 +70,12 @@ inline constexpr Magic<Type> magic_base(Type D, Type UB) noexcept {
     // (D-1) / D == ((D - 1) * M) >> N == 0
     // D / D == (D * M) >> N == 1
     // Type M = (DoubleOf<Type>(Type(1) << N) + D - 1) / D;
-    Type M = ((Type(1) << N) - 1) / D + 1;  // This won't use DoubleInteger
+    Type M = ((Type(1) << N) - 1) / D + 1;  // This won't overflow Type
     if (M % 2 == 0) {
       continue;
     }
-    if ((D - 1) * M < (Type(1) << N) &&
-        (Type(1) << N) <= DoubleUnsigned<Type>(D) * M) {
-      if (verify_magic<Type>(D, UB, M, N)) {
-        return {0, M, N};
-      }
+    if (verify_magic<Type>(D, UB, M, N)) {
+      return {0, M, N};
     }
   }
   return {};

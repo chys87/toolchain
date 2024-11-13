@@ -107,7 +107,7 @@ cc_library(
   srcs = [],
   hdrs = ['fastdiv.h'],
   deps = [
-    '//cbu/math:double_integer',
+    '//cbu/common:header_only',
   ],
   linkstatic=True,
   visibility = ["//visibility:public"],
