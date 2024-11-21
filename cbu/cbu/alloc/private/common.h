@@ -55,8 +55,9 @@ inline constexpr bool never_fails() { return false; }
 constexpr unsigned kMaxCategory = 6;
 constexpr unsigned kNumCategories = kMaxCategory + 1;
 
-inline constexpr size_t category_to_size(unsigned n) { return (16u << n); }
-inline unsigned size_to_category(size_t m) {
+constexpr size_t category_to_size(unsigned n) noexcept { return (16u << n); }
+
+constexpr unsigned size_to_category(size_t m) noexcept {
   assert(m != 0);
   assert(m <= category_to_size(kMaxCategory));
   unsigned n = (m - 1) | 15;
@@ -64,10 +65,11 @@ inline unsigned size_to_category(size_t m) {
   return (cat - 3);
 }
 
-inline constexpr size_t divide_by_category_size(size_t m, unsigned n) {
+constexpr size_t divide_by_category_size(size_t m, unsigned n) noexcept {
   return (m >> (4 + n));
 }
-inline constexpr size_t multiply_by_category_size(size_t m, unsigned n) {
+
+constexpr size_t multiply_by_category_size(size_t m, unsigned n) noexcept {
   return (m << (4 + n));
 }
 
@@ -76,12 +78,12 @@ static_assert(kPageSize == category_to_size(kMaxCategory) * 4,
 constexpr size_t kSmallAllocLimit = kPageSize / 4;
 
 template <typename T>
-inline constexpr T pagesize_floor(T size) {
+inline constexpr T pagesize_floor(T size) noexcept {
   return pow2_floor(size, kPageSize);
 }
 
 template <typename T>
-inline constexpr T pagesize_ceil(T size) {
+inline constexpr T pagesize_ceil(T size) noexcept {
   return pow2_ceil(size, kPageSize);
 }
 
@@ -159,7 +161,7 @@ inline constinit RawPageAllocator RawPageAllocator::instance_mmap_no_thp{false,
                                                                          false};
 
 template <typename T>
-T load_acquire(T* ptr) {
+T load_acquire(T* ptr) noexcept {
 #ifdef CBU_SINGLE_THREADED
   return *ptr;
 #else
@@ -168,7 +170,7 @@ T load_acquire(T* ptr) {
 }
 
 template <typename T>
-void store_release(T* ptr, std::type_identity_t<T> value) {
+void store_release(T* ptr, std::type_identity_t<T> value) noexcept {
 #ifdef CBU_SINGLE_THREADED
   *ptr = value;
 #else
