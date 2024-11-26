@@ -108,6 +108,27 @@ struct ConstLengthView {
   CBU_STR_BUILDER_MIXIN
 };
 
+// Difference with View is that we always copy MaxSize bytes for better code
+// generation
+template <std::size_t MaxSize, std::size_t MinSize = 0>
+struct FromBuffer {
+  const char* s;
+  std::size_t l;
+  constexpr FromBuffer(const char* s, std::size_t l) noexcept : s(s), l(l) {}
+  static constexpr std::size_t static_max_size() noexcept { return MaxSize; }
+  static constexpr std::size_t static_min_size() noexcept { return MinSize; }
+  constexpr std::size_t max_size() const noexcept { return l; }
+  constexpr std::size_t min_size() const noexcept { return l; }
+  constexpr char* write(char* w) const noexcept {
+    Memcpy(w, s, MaxSize);
+    return w + l;
+  }
+  CBU_STR_BUILDER_MIXIN
+};
+
+template <std::size_t MaxSize>
+FromBuffer(const char (&)[MaxSize], std::size_t) -> FromBuffer<MaxSize>;
+
 // Difference with View is that VarLen forcefully generates actual mempcpy call
 // unless the compiler knows length is a compile-time constant.
 template <std::size_t MaxLen = std::size_t(-1), std::size_t MinLen = 0>
