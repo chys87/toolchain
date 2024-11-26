@@ -228,6 +228,8 @@ constexpr auto Adapt(const char (&s)[N]) noexcept {
 }
 constexpr auto Adapt(std::string_view sv) noexcept { return View{sv}; }
 constexpr auto Adapt(char c) noexcept { return Char{c}; }
+constexpr auto Adapt(char8_t c) noexcept { return Char{char(c)}; }
+constexpr auto Adapt(std::integral auto) noexcept = delete;
 constexpr auto Adapt(
     const CompatibleLowLevelBufferFiller auto& filler) noexcept {
   return LowLevelBufferFillerAdapter{filler};
