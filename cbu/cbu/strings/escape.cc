@@ -196,11 +196,13 @@ char* EscapeImpl<style>::raw(char* w, const char* s, std::size_t n) noexcept {
   std::size_t misalign = std::uintptr_t(s) & 31;
   s = (const char*)(std::uintptr_t(s) & -32);
   n += misalign;
-  __m256i chars = *(const __m256i*)s;
-  __m256i msk = get_encoding_mask<style>(chars);
-  std::uint32_t bmsk = _mm256_movemask_epi8(msk);
-  w = encode_by_mask<style>(w, s, bmsk, misalign,
-                            std::min<std::uint32_t>(32, n));
+  {
+    __m256i chars = *(const __m256i*)s;
+    __m256i msk = get_encoding_mask<style>(chars);
+    std::uint32_t bmsk = _mm256_movemask_epi8(msk);
+    w = encode_by_mask<style>(w, s, bmsk, misalign,
+                              std::min<std::uint32_t>(32, n));
+  }
   s += 32;
   if (n <= 32) {
     return w;
