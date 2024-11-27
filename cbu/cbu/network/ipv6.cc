@@ -293,9 +293,10 @@ ParseResult<uint16_t> parse_hex_uint16(const char* s, const char* e) noexcept {
   unsigned res = 0;
   for (int i = 0; i < 4 && s < e; ++i) {
     unsigned c = uint8_t(*s);
-    if (unsigned t = c - '0'; t < 10) {
+    unsigned t;
+    if ((t = c - '0') < 10) {
       res = res * 16 + t;
-    } else if (unsigned t = (c | 0x20) - 'a'; t < 6) {
+    } else if ((t = (c | 0x20) - 'a') < 6) {
       res = res * 16 + t + 10;
     } else {
       if (i == 0) [[unlikely]]

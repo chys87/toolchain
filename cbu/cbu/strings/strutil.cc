@@ -185,15 +185,15 @@ size_t memcnt(const char *s, char c, size_t n) noexcept {
     l -= 128;
     uint8x16x4_t x = vld1q_u8_x4((const uint8_t*)p);
     uint8x16x4_t y = vld1q_u8_x4((const uint8_t*)p + 64);
-    uint8x16_t a = uint8x16_t(ref == x.val[0]);
-    uint8x16_t b = uint8x16_t(ref == x.val[1]);
-    uint8x16_t c = uint8x16_t(ref == x.val[2]);
-    uint8x16_t d = uint8x16_t(ref == x.val[3]);
-    uint8x16_t e = uint8x16_t(ref == y.val[0]);
-    uint8x16_t f = uint8x16_t(ref == y.val[1]);
-    uint8x16_t g = uint8x16_t(ref == y.val[2]);
-    uint8x16_t h = uint8x16_t(ref == y.val[3]);
-    uint8x16_t sum = a + b + c + d + e + f + g + h;
+    uint8x16_t va = uint8x16_t(ref == x.val[0]);
+    uint8x16_t vb = uint8x16_t(ref == x.val[1]);
+    uint8x16_t vc = uint8x16_t(ref == x.val[2]);
+    uint8x16_t vd = uint8x16_t(ref == x.val[3]);
+    uint8x16_t ve = uint8x16_t(ref == y.val[0]);
+    uint8x16_t vf = uint8x16_t(ref == y.val[1]);
+    uint8x16_t vg = uint8x16_t(ref == y.val[2]);
+    uint8x16_t vh = uint8x16_t(ref == y.val[3]);
+    uint8x16_t sum = va + vb + vc + vd + ve + vf + vg + vh;
     r -= int8_t(vaddvq_u8(sum));
     p += 8;
   }
@@ -206,10 +206,9 @@ size_t memcnt(const char *s, char c, size_t n) noexcept {
   }
 
   if (l) {
-    uint64_t mask =
-        vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(
-                          vreinterpretq_u16_u8(uint8x16_t(ref == *p++)), 4)),
-                      0);
+    mask = vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(
+                             vreinterpretq_u16_u8(uint8x16_t(ref == *p++)), 4)),
+                         0);
     r += std::uint32_t(std::popcount(bzhi(mask, l* 4))) / 4;
   }
 #else
@@ -503,8 +502,8 @@ size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl,
       if (va != vb) {
         k = maxl - 16 + std::countr_zero(va ^ vb) / 8;
       } else {
-        uint64_t va = mempick_le<uint64_t>(a + maxl - 8);
-        uint64_t vb = mempick_le<uint64_t>(b + maxl - 8);
+        va = mempick_le<uint64_t>(a + maxl - 8);
+        vb = mempick_le<uint64_t>(b + maxl - 8);
         k = maxl - 8 + std::countr_zero(va ^ vb) / 8;
       }
     }

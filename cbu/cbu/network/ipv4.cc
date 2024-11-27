@@ -100,12 +100,9 @@ struct ParseResult {
 
 inline std::optional<unsigned> parse_hex_digit(unsigned char c) {
   static_assert('A' == 65, "This implementation requires ASCII");
-  if (unsigned C = c - '0'; C < 10)
-    return C;
-  else if (unsigned C = (c | 0x20) - 'a'; C < 6)
-    return C + 10;
-  else
-    return std::nullopt;
+  if (unsigned C = c - '0'; C < 10) return C;
+  if (unsigned C = (c | 0x20) - 'a'; C < 6) return C + 10;
+  return std::nullopt;
 }
 
 ParseResult<std::uint32_t> parse_any_uint32(const char* s,

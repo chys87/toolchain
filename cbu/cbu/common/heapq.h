@@ -137,12 +137,12 @@ namespace heapq_detail {
 // Some of my own implementation provides shrink_to or truncate_to for shrinking
 template <Heapq_vector Heap, typename Size>
 inline constexpr void shrink_to(Heap& heap, Size n) {
-  if constexpr (requires(Heap& heap, Size n) {
+  if constexpr (requires() {
                   { heap.shrink_to(n) };
                 }) {
     heap.shrink_to(n);
-  } else if constexpr (requires(Heap& heap, Size n) {
-                         {heap.truncate_to(n)};
+  } else if constexpr (requires() {
+                         { heap.truncate_to(n) };
                        }) {
     heap.truncate_to(n);
   } else {

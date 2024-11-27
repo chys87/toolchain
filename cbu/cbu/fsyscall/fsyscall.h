@@ -485,10 +485,10 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
   })
 #define fsys_generic_nomem fsys_generic
 
-#define fsys_errno(r,err) (errno==err)
-#define fsys_errno_val(r) errno
-#define fsys_errno_val_long(r) ((long)errno)
-#define fsys_errno_val_long_long(r) ((long long)errno)
+#define fsys_errno(r,err) (errno==(err))
+#define fsys_errno_val(r) ((void)(r),errno)
+#define fsys_errno_val_long(r) ((void)(r),(long)errno)
+#define fsys_errno_val_long_long(r) ((void)(r),(long long)errno)
 #define fsys_failure(r) ((long)(r) < 0)
 #define fsys_mmap_failed(r)	((r) == MAP_FAILED)
 
