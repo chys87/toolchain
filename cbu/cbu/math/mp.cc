@@ -474,20 +474,22 @@ char *to_oct(char *r, const Word *s, size_t n) noexcept {
       __builtin_unreachable();
   }
 
-  unsigned tail_oct_digits = bsr(v) / 3 + 1;
+  {
+    unsigned tail_oct_digits = bsr(v) / 3 + 1;
 
 #if defined __x86_64__ && defined __BMI2__
-  uint64_t bv = _pdep_u64(v, 0x0707070707070707) + 0x3030303030303030;
-  bv = bswap(bv) >> (64 - tail_oct_digits * 8);
-  r = memdrop(r, bv, tail_oct_digits);
+    uint64_t bv = _pdep_u64(v, 0x0707070707070707) + 0x3030303030303030;
+    bv = bswap(bv) >> (64 - tail_oct_digits * 8);
+    r = memdrop(r, bv, tail_oct_digits);
 #else
-  unsigned bits = tail_oct_digits * 3;
-  while (bits) {
-    bits -= 3;
-    *r++ = (v >> bits) + '0';
-    v = bzhi(v, bits);
-  }
+    unsigned bits = tail_oct_digits * 3;
+    while (bits) {
+      bits -= 3;
+      *r++ = (v >> bits) + '0';
+      v = bzhi(v, bits);
+    }
 #endif
+  }
 
   while (pb > b) {
     pb -= 3;
