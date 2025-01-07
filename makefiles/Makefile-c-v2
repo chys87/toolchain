@@ -279,6 +279,7 @@ all: $(BUILDDIR)/$(1)
 $(BUILDDIR)/$(1): private NAME := DATA
 $(BUILDDIR)/$(1): $(DIR)/$(2) $(3:%=$(DIR)/%)
 	+$$(Q)$(DIR)/$(2) DIR='$(DIR)' > $$@
+data: $(BUILDDIR)/$(1)
 install-data: install-$(1)
 .PHONY: install-$(1)
 install-$(1): $(INSTDIR)/$(1)
@@ -291,7 +292,7 @@ ifneq "$(AUTO_GENERATED_HEADERS)" ""
 $(OBJS) $(DEPS): | $(AUTO_GENERATED_HEADERS)
 endif
 
-.PHONY:	all install install-bin install-data size bincmp purge clean clobber un compare ut gen
+.PHONY:	all install install-bin data install-data size bincmp purge clean clobber un compare ut gen
 .DEFAULT_GOAL := all
 
 all: ut
