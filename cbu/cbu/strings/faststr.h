@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -254,12 +254,10 @@ inline constexpr T *Mempset(T *dst, int c, std::size_t n) noexcept {
 // instead of remembering the first parameter.
 namespace faststr_no_builtin_detail {
 
-// Intentionally change the type of the first parameter - only this
-// can prevent clang from thinking it can be replaced by the builtin.
-void* Memset(std::uintptr_t, int, std::size_t) noexcept asm("memset");
-void* Memcpy(std::uintptr_t, const void*, std::size_t) noexcept asm("memcpy");
-#ifdef __GLIBC__
-void* Mempcpy(std::uintptr_t, const void*, std::size_t) noexcept asm("mempcpy");
+void* Memset(void*, int, std::size_t) noexcept;
+void* Memcpy(void*, const void*, std::size_t) noexcept;
+#if defined __GLIBC__ && defined __USE_GNU
+void* Mempcpy(void*, const void*, std::size_t) noexcept;
 #endif
 
 }  // namespace faststr_no_builtin_detail
@@ -270,8 +268,7 @@ inline T* memset_no_builtin(T* p, int c, std::size_t n) noexcept {
 #ifdef __ARM_FEATURE_MOPS
   return Memset(p, c, n);
 #else
-  return static_cast<T*>(
-      faststr_no_builtin_detail::Memset(std::uintptr_t(p), c, n));
+  return static_cast<T*>(faststr_no_builtin_detail::Memset(p, c, n));
 #endif
 }
 
@@ -280,8 +277,7 @@ inline T* memcpy_no_builtin(T* d, const void* s, size_t n) noexcept {
 #ifdef __ARM_FEATURE_MOPS
   return Memcpy(d, s, n);
 #else
-  return static_cast<T*>(
-      faststr_no_builtin_detail::Memcpy(std::uintptr_t(d), s, n));
+  return static_cast<T*>(faststr_no_builtin_detail::Memcpy(d, s, n));
 #endif
 }
 
@@ -289,8 +285,7 @@ template <Raw_trivial_type_or_void T>
 inline T* mempcpy_no_builtin(T* d, const void* s, size_t n) noexcept {
   // It appears only x86-64 actually has optimized mempcpy
 #if defined __GLIBC__ && defined __x86_64__
-  return static_cast<T*>(
-      faststr_no_builtin_detail::Mempcpy(std::uintptr_t(d), s, n));
+  return static_cast<T*>(faststr_no_builtin_detail::Mempcpy(d, s, n));
 #else
   return reinterpret_cast<T*>(std::uintptr_t(memcpy_no_builtin(d, s, n)) + n);
 #endif

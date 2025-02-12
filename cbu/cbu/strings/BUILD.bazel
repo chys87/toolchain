@@ -92,7 +92,7 @@ cc_library(
 
 cc_library(
   name = 'faststr',
-  srcs = ['faststr.cc'],
+  srcs = ['faststr.cc', 'faststr-wrap.cc'],
   hdrs = ['faststr.h'],
   deps = [
     '//cbu/common:header_only',
