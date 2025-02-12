@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2013-2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2013-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@
 #if !defined __cplusplus
 # error "fsys-aux supports only C++."
 #endif
-#if __cplusplus < 201703L
-# error "C++17 is required."
+#if __cplusplus < 202002L
+# error "C++20 is required."
 #endif
 
 #include <cstddef>
@@ -44,32 +44,17 @@
 namespace fsys_aux {
 inline namespace fsys_aux_readdir {
 
-struct ReadDirNoSkipDots;
-struct ReadDirClose;
-template <size_t BufSize> struct ReadDirBufSize;
+struct ReadDirOpt {
+  bool close = false;
+  bool skip_dots = true;     // Skip "." and ".."
+  bool skip_hidden = false;  // Skip all files starting with "."
+  bool early_use_reclen = false;
+  size_t buf_size = 4096;
+};
 
 namespace readdir_detail {
 
 using DirEnt = fsys_linux_dirent64;
-
-template <typename...> struct Opt;
-template <> struct Opt<> {
-  enum : bool { close = false, skip_dots = true };
-  enum : size_t { buf_size = 4096 };
-};
-
-template <typename... Args>
-struct Opt<ReadDirNoSkipDots, Args...> : Opt<Args...> {
-  enum : bool { skip_dots = false};
-};
-template <typename... Args>
-struct Opt<ReadDirClose, Args...> : Opt<Args...> {
-  enum : bool { close = true };
-};
-template <size_t BufSize, typename... Args>
-struct Opt<ReadDirBufSize<BufSize>, Args...> : Opt<Args...> {
-  enum : size_t { buf_size = BufSize };
-};
 
 template <typename Callback>
 using RawResultOf = std::decay_t<std::invoke_result_t<Callback, DirEnt *>>;
@@ -105,27 +90,37 @@ template <> struct DeferClose<true> {
 
 
 // Inline is important for optimizing the callback, mostly likely a lambda
-template <typename... Options, typename Callback>
-__attribute__((__always_inline__))
+template <ReadDirOpt Opt = {}, typename Callback>
+[[gnu::always_inline]]
 inline auto readdir(int fd, const Callback &callback,
                     const readdir_detail::ret_t<Callback> &default_value = {}) {
-  using Opt = readdir_detail::Opt<Options...>;
   using readdir_detail::DirEnt;
 
-  readdir_detail::DeferClose<Opt::close> close_obj {fd};
-  alignas(DirEnt) char buf[Opt::buf_size];
+  readdir_detail::DeferClose<Opt.close> close_obj {fd};
+  alignas(DirEnt) char buf[Opt.buf_size];
   ssize_t l;
   while ((l = fsys_getdents64(fd, buf, sizeof(buf))) > 0) {
     char *ptr = buf;
     char *ptrend = buf + l;
     do {
       DirEnt *ent = reinterpret_cast<DirEnt *>(ptr);
-      if (!Opt::skip_dots || !ent->skip_dot()) {
+      if constexpr (Opt.early_use_reclen) {
+        ptr += ent->d_reclen;
+      }
+      bool skipped = false;
+      if constexpr (Opt.skip_hidden) {
+        skipped = (ent->d_name[0] == '.');
+      } else if constexpr (Opt.skip_dots) {
+        skipped = ent->skip_dot();
+      }
+      if (!skipped) {
         auto res = readdir_detail::call(callback, ent);
         if (res != default_value)
           return res;
       }
-      ptr += ent->d_reclen;
+      if constexpr (!Opt.early_use_reclen) {
+        ptr += ent->d_reclen;
+      }
     } while (ptr < ptrend);
   }
   return default_value;
