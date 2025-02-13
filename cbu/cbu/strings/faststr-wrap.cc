@@ -28,6 +28,7 @@
 
 #include <cstring>
 
+#include "cbu/compat/compilers.h"
 #include "cbu/strings/faststr.h"
 
 // This file is separate so that the build system may disable LTO for it.
@@ -35,15 +36,18 @@
 namespace cbu {
 namespace faststr_no_builtin_detail {
 
+CBU_NO_BUILTIN
 void* Memset(void* p, int c, std::size_t n) noexcept {
   return std::memset(p, c, n);
 }
 
+CBU_NO_BUILTIN
 void* Memcpy(void* d, const void* s, std::size_t n) noexcept {
   return std::memcpy(d, s, n);
 }
 
 #if defined __GLIBC__ && defined __USE_GNU
+CBU_NO_BUILTIN
 void* Mempcpy(void* d, const void* s, std::size_t n) noexcept {
   return mempcpy(d, s, n);
 }

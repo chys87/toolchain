@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -90,4 +90,10 @@
 #define CBU_NAIVE_LOOP _Pragma("clang loop vectorize(disable) unroll(disable)")
 #else
 #define CBU_NAIVE_LOOP
+#endif
+
+#ifdef __clang__
+#define CBU_NO_BUILTIN __attribute__((no_builtin))
+#else
+#define CBU_NO_BUILTIN __attribute__((optimize("-fno-builtin")))
 #endif
