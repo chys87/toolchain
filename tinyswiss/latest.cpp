@@ -52,8 +52,8 @@ int latest(std::string_view prefix, std::string_view suffix, size_t argc,
       }
     }
 
-    fsys_aux::readdir<fsys_aux::ReadDirNoSkipDots,
-                      fsys_aux::ReadDirBufSize<65536>>(fddir, [&](DirEnt *ent) {
+    fsys_aux::readdir<fsys_aux::ReadDirOpt{
+        .skip_dots = false, .buf_size = 65536}>(fddir, [&](DirEnt *ent) {
       if (ent->d_type != DT_UNKNOWN && ent->d_type != DT_LNK &&
           ent->d_type != DT_REG)
         return;
