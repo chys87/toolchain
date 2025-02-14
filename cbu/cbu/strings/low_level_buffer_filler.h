@@ -39,6 +39,7 @@
 
 #include "cbu/common/byteorder.h"
 #include "cbu/common/concepts.h"
+#include "cbu/compat/compilers.h"
 #include "cbu/math/common.h"
 #include "cbu/math/fastdiv.h"
 #include "cbu/strings/faststr.h"
@@ -75,6 +76,7 @@ using FillNativeEndian = FillByEndian<T, std::endian::native>;
 struct FillOptions {
   unsigned width = 0;
   char fill = '0';
+  bool optimize_size = false;
 };
 
 // FillDec converts an unsigned number to a decimal string.
@@ -162,7 +164,7 @@ struct FillDec<UpperBound, Options> {
 };
 
 template <std::uint64_t UpperBound, FillOptions Options>
-  requires(Options.width == 0)
+  requires(Options.width == 0 && !Options.optimize_size)
 struct FillDec<UpperBound, Options> {
   std::uint64_t value;
   std::uint8_t bytes;
@@ -203,9 +205,7 @@ struct FillDec<UpperBound, Options> {
     Ch* res = p + b;
     Ch* w = p + b - 1;
     if constexpr (UpperBound == 0) {
-#ifdef __clang__
-#pragma clang loop vectorize(disable) unroll(disable)
-#endif
+      CBU_NAIVE_LOOP
       do {
         *w-- = Ch(v % 10 + '0');
         v /= 10;
@@ -234,9 +234,7 @@ struct FillDec<UpperBound, Options> {
       }
       if (b & 1) *w-- = '0' + v;
     } else {
-#ifdef __clang__
-#pragma clang loop vectorize(disable) unroll(disable)
-#endif
+      CBU_NAIVE_LOOP
       while (b >= 2) {
         b -= 2;
         std::uint32_t t = cbu::fastmod<100, UpperBound>(v);
@@ -247,6 +245,82 @@ struct FillDec<UpperBound, Options> {
       if (b) *w-- = '0' + v;
     }
     return res;
+  }
+};
+
+template <std::uint64_t UpperBound, FillOptions Options>
+  requires(Options.width == 0 && Options.optimize_size)
+struct FillDec<UpperBound, Options> {
+  using V = std::conditional_t<(UpperBound == 0 || UpperBound > 0x1'0000'0000),
+                               std::uint64_t, std::uint32_t>;
+  V value;
+
+  constexpr FillDec(std::uint64_t v) noexcept : value(v) {}
+
+  template <Raw_char_type Ch>
+  constexpr Ch* operator()(Ch* p) const noexcept {
+    return conv_flexible_digit(value, p);
+  }
+
+  static constexpr std::size_t static_min_size() noexcept { return 1; }
+  static constexpr std::size_t static_max_size() noexcept {
+    // This is correct for UpperBound == 0 as well
+    return ilog10(std::uint64_t(UpperBound - 1)) + 1;
+  }
+  constexpr std::size_t max_size() const noexcept { return static_max_size(); }
+  constexpr std::size_t min_size() const noexcept { return 1; }
+
+  template <Raw_char_type Ch>
+  static constexpr Ch* conv_flexible_digit(V v, Ch* p) noexcept {
+    constexpr std::uint64_t UB =
+        UpperBound > std::numeric_limits<V>::max() ? 0 : UpperBound;
+    if constexpr (UB > 0 && UB <= 10) {
+      *p++ = v + '0';
+      return p;
+    } else if constexpr (UB > 10 && UB <= 20) {
+      if (v < 10) {
+        *p++ = Ch(v + '0');
+      } else {
+        *p++ = '1';
+        *p++ = Ch(v - 10 + '0');
+      }
+      return p;
+    } else if constexpr (UB > 20 && UB <= 100) {
+      if (v < 10) {
+        *p++ = Ch(v + '0');
+      } else {
+        p = cbu::memdrop2(p, cbu::mempick2(kDigits99 + 2 * v));
+      }
+      return p;
+    } else {
+      Ch* w = p;
+      if constexpr (UB == 0) {
+        CBU_NAIVE_LOOP
+        do {
+          *w++ = Ch(v % 10 + '0');
+          v /= 10;
+        } while (v);
+      } else {
+        CBU_NAIVE_LOOP
+        do {
+          *w++ = Ch(fastmod<10, UB>(v) + '0');
+          v = fastdiv<10, UB>(v);
+        } while (v);
+      }
+
+      if (UB == 0 || UB > 1000) {
+        Ch* q = w - 1;
+        CBU_NAIVE_LOOP
+        while (q > p) {
+          std::swap(*p, *q);
+          ++p;
+          --q;
+        }
+      } else {
+        std::swap(*p, *(w - 1));
+      }
+      return w;
+    }
   }
 };
 

@@ -171,6 +171,57 @@ TEST(LowLevelBufferFillerTest, FillDec) {
     ASSERT_EQ(p - buffer, 2);
     ASSERT_EQ(std::string(buffer, p - buffer), "17");
   }
+  // optimize_size
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<10, FillOptions{.optimize_size = true}>(5);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 1);
+    ASSERT_EQ(std::string(buffer, p - buffer), "5");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<20, FillOptions{.optimize_size = true}>(15);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 2);
+    ASSERT_EQ(std::string(buffer, p - buffer), "15");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<100, FillOptions{.optimize_size = true}>(85);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 2);
+    ASSERT_EQ(std::string(buffer, p - buffer), "85");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<1000, FillOptions{.optimize_size = true}>(254);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 3);
+    ASSERT_EQ(std::string(buffer, p - buffer), "254");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<0x1'0000'0000, FillOptions{.optimize_size = true}>(
+        4294967295);
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 10);
+    ASSERT_EQ(std::string(buffer, p - buffer), "4294967295");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillDec<0, FillOptions{.optimize_size = true}>(
+        UINT64_C(18446744073709551615));
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 20);
+    ASSERT_EQ(std::string(buffer, p - buffer), "18446744073709551615");
+  }
 }
 
 TEST(LowLevelBufferFillerTest, FillHex) {

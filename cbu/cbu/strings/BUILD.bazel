@@ -1,5 +1,5 @@
 # cbu - chys's basic utilities
-# Copyright (c) 2023-2024, chys <admin@CHYS.INFO>
+# Copyright (c) 2023-2025, chys <admin@CHYS.INFO>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -110,6 +110,7 @@ cc_library(
   hdrs = ['low_level_buffer_filler.h'],
   deps = [
     '//cbu/math:fastdiv',
+    '//cbu/compat:compat',
     ':common',
   ],
   linkstatic=True,
