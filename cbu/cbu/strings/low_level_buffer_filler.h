@@ -87,13 +87,17 @@ struct FillDec;
 template <std::uint64_t UpperBound, FillOptions Options>
   requires(Options.width > 0)
 struct FillDec<UpperBound, Options> {
-  std::uint64_t value;
+  using V = std::conditional_t<(UpperBound == 0 || UpperBound > 0x1'0000'0000),
+                               std::uint64_t, std::uint32_t>;
+  V value;
 
   constexpr FillDec(std::uint64_t v) noexcept : value(v) {}
 
   template <Raw_char_type Ch>
   constexpr Ch* operator()(Ch* p) const noexcept {
-    conv_fixed_digit<UpperBound, Options.width>(value, p);
+    constexpr V UB =
+        UpperBound > std::numeric_limits<V>::max() ? 0 : UpperBound;
+    conv_fixed_digit<UB, Options.width>(value, p);
     return p + Options.width;
   }
 
@@ -102,8 +106,8 @@ struct FillDec<UpperBound, Options> {
   static constexpr std::size_t static_min_size() noexcept { return Options.width; }
   static constexpr std::size_t static_max_size() noexcept { return Options.width; }
 
-  template <std::uint64_t UB, unsigned W, Raw_char_type Ch>
-  static constexpr void conv_fixed_digit(std::uint64_t v, Ch* p) noexcept {
+  template <V UB, unsigned W, Raw_char_type Ch>
+  static constexpr void conv_fixed_digit(V v, Ch* p) noexcept {
     if constexpr (Options.fill != '0' && W < Options.width) {
       if (v == 0) {
         for (unsigned k = W; k; --k) p[k - 1] = Options.fill;
@@ -112,8 +116,8 @@ struct FillDec<UpperBound, Options> {
     }
 
     if constexpr (W >= 2 && Options.fill == '0' && UB >= 11) {
-      std::uint64_t quot;
-      std::uint64_t rem;
+      V quot;
+      V rem;
       if constexpr (UB == 0) {
         quot = v / 100;
         rem = v % 100;
@@ -124,8 +128,8 @@ struct FillDec<UpperBound, Options> {
       const char* __restrict dg = kDigits99 + 2 * rem;
       memdrop2(p + W - 2, mempick2(dg));
 
-      constexpr std::uint64_t NextUB =
-          UB == 0 ? std::uint64_t(-1) / 100 + 1 : (UB - 1) / 100 + 1;
+      constexpr V NextUB = UB == 0 ? std::numeric_limits<V>::max() / 100 + 1
+                                   : (UB - 1) / 100 + 1;
       conv_fixed_digit<NextUB, W - 2>(quot, p);
       return;
     } else if constexpr (W == 2 && UB >= 11 && UB <= 100) {
@@ -141,8 +145,8 @@ struct FillDec<UpperBound, Options> {
       memdrop2(p, chars);
       return;
     } else {
-      std::uint64_t quot;
-      std::uint32_t rem;
+      V quot;
+      V rem;
       if constexpr (UB == 0) {
         quot = v / 10;
         rem = v % 10;
@@ -155,8 +159,8 @@ struct FillDec<UpperBound, Options> {
         if constexpr (W == 1) p[0] = Ch(rem + '0');
       } else {
         p[W - 1] = Ch(rem + '0');
-        constexpr std::uint64_t NextUB =
-            UB == 0 ? std::uint64_t(-1) / 10 + 1 : (UB - 1) / 10 + 1;
+        constexpr V NextUB = UB == 0 ? std::numeric_limits<V>::max() / 10 + 1
+                                     : (UB - 1) / 10 + 1;
         conv_fixed_digit<NextUB, W - 1>(quot, p);
       }
     }
@@ -166,11 +170,13 @@ struct FillDec<UpperBound, Options> {
 template <std::uint64_t UpperBound, FillOptions Options>
   requires(Options.width == 0 && !Options.optimize_size)
 struct FillDec<UpperBound, Options> {
-  std::uint64_t value;
+  using V = std::conditional_t<(UpperBound == 0 || UpperBound > 0x1'0000'0000),
+                               std::uint64_t, std::uint32_t>;
+
+  V value;
   std::uint8_t bytes;
 
-  constexpr FillDec(std::uint64_t v) noexcept
-      : value(v), bytes(get_bytes(v)) {}
+  constexpr FillDec(std::uint64_t v) noexcept : value(v), bytes(get_bytes(v)) {}
 
   template <Raw_char_type Ch>
   constexpr Ch* operator()(Ch* p) const noexcept {
@@ -185,14 +191,14 @@ struct FillDec<UpperBound, Options> {
   constexpr std::size_t max_size() const noexcept { return bytes; }
   constexpr std::size_t min_size() const noexcept { return bytes; }
 
-  static constexpr unsigned get_bytes(std::uint64_t v) noexcept {
+  static constexpr unsigned get_bytes(V v) noexcept {
     if constexpr (0 < UpperBound && UpperBound <= 10) {
       return 1;
     } else if constexpr (10 < UpperBound && UpperBound <= 100) {
       return (v >= 10) + 1;
     } else if constexpr (100 < UpperBound && UpperBound <= 1000) {
       return (v >= 100) + (v >= 10) + 1;
-    } else if constexpr (1000 < UpperBound && UpperBound <= 0xffffffff) {
+    } else if constexpr (1000 < UpperBound && UpperBound <= 0x1'0000'0000) {
       return ilog10(std::uint32_t(v)) + 1;
     } else {
       return ilog10(v) + 1;
@@ -200,35 +206,36 @@ struct FillDec<UpperBound, Options> {
   }
 
   template <Raw_char_type Ch>
-  static constexpr Ch* conv_flexible_digit(std::uint64_t v, unsigned b,
-                                           Ch* p) noexcept {
+  static constexpr Ch* conv_flexible_digit(V v, unsigned b, Ch* p) noexcept {
+    constexpr V UB =
+        UpperBound > std::numeric_limits<V>::max() ? 0 : UpperBound;
     Ch* res = p + b;
     Ch* w = p + b - 1;
-    if constexpr (UpperBound == 0) {
+    if constexpr (UB == 0) {
       CBU_NAIVE_LOOP
       do {
         *w-- = Ch(v % 10 + '0');
         v /= 10;
       } while (--b);
-    } else if constexpr (UpperBound <= 10) {
+    } else if constexpr (UB <= 10) {
       *p++ = Ch(v + '0');
-    } else if constexpr (UpperBound <= 20) {
+    } else if constexpr (UB <= 20) {
       if (b == 1) {
         *p++ = Ch(v + '0');
       } else {
         *p++ = '1';
         *p++ = Ch(v - 10 + '0');
       }
-    } else if constexpr (UpperBound <= 100) {
+    } else if constexpr (UB <= 100) {
       if (b == 1) {
         *p++ = Ch(v + '0');
       } else {
         p = cbu::memdrop2(p, cbu::mempick2(kDigits99 + 2 * v));
       }
-    } else if constexpr (UpperBound <= 1000) {
+    } else if constexpr (UB <= 1000) {
       if (b >= 2) {
-        std::uint32_t t = cbu::fastmod<100, UpperBound>(v);
-        v = cbu::fastdiv<100, UpperBound>(v);
+        std::uint32_t t = cbu::fastmod<100, UB>(v);
+        v = cbu::fastdiv<100, UB>(v);
         cbu::memdrop2(w - 1, cbu::mempick2(kDigits99 + 2 * t));
         w -= 2;
       }
@@ -237,8 +244,8 @@ struct FillDec<UpperBound, Options> {
       CBU_NAIVE_LOOP
       while (b >= 2) {
         b -= 2;
-        std::uint32_t t = cbu::fastmod<100, UpperBound>(v);
-        v = cbu::fastdiv<100, UpperBound>(v);
+        std::uint32_t t = cbu::fastmod<100, UB>(v);
+        v = cbu::fastdiv<100, UB>(v);
         cbu::memdrop2(w - 1, cbu::mempick2(kDigits99 + 2 * t));
         w -= 2;
       }
