@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -72,25 +72,18 @@ using FillBigEndian = FillByEndian<T, std::endian::big>;
 template <std::integral T>
 using FillNativeEndian = FillByEndian<T, std::endian::native>;
 
-template <unsigned Width = 0, char Fill = '0'>
 struct FillOptions {
-  static inline constexpr unsigned width = Width;
-  static inline constexpr char fill = Fill;
-
-  template <unsigned NewWidth>
-  using with_width = FillOptions<NewWidth, Fill>;
-
-  template <char NewFill>
-  using with_fill = FillOptions<Width, NewFill>;
+  unsigned width = 0;
+  char fill = '0';
 };
 
 // FillDec converts an unsigned number to a decimal string.
 // The generated code is aggressively unrolled so it can be fairly bloated.
-template <std::uint64_t UpperBound, typename Options = FillOptions<>>
+template <std::uint64_t UpperBound, FillOptions Options = FillOptions{}>
 struct FillDec;
 
-template <std::uint64_t UpperBound, typename Options>
-  requires(Options::width > 0)
+template <std::uint64_t UpperBound, FillOptions Options>
+  requires(Options.width > 0)
 struct FillDec<UpperBound, Options> {
   std::uint64_t value;
 
@@ -98,29 +91,25 @@ struct FillDec<UpperBound, Options> {
 
   template <Raw_char_type Ch>
   constexpr Ch* operator()(Ch* p) const noexcept {
-    conv_fixed_digit<UpperBound, Options::width>(value, p);
-    return p + Options::width;
+    conv_fixed_digit<UpperBound, Options.width>(value, p);
+    return p + Options.width;
   }
 
-  static constexpr std::size_t min_size() noexcept { return Options::width; }
-  static constexpr std::size_t max_size() noexcept { return Options::width; }
-  static constexpr std::size_t static_min_size() noexcept {
-    return Options::width;
-  }
-  static constexpr std::size_t static_max_size() noexcept {
-    return Options::width;
-  }
+  static constexpr std::size_t min_size() noexcept { return Options.width; }
+  static constexpr std::size_t max_size() noexcept { return Options.width; }
+  static constexpr std::size_t static_min_size() noexcept { return Options.width; }
+  static constexpr std::size_t static_max_size() noexcept { return Options.width; }
 
   template <std::uint64_t UB, unsigned W, Raw_char_type Ch>
   static constexpr void conv_fixed_digit(std::uint64_t v, Ch* p) noexcept {
-    if constexpr (Options::fill != '0' && W < Options::width) {
+    if constexpr (Options.fill != '0' && W < Options.width) {
       if (v == 0) {
-        for (unsigned k = W; k; --k) p[k - 1] = Options::fill;
+        for (unsigned k = W; k; --k) p[k - 1] = Options.fill;
         return;
       }
     }
 
-    if constexpr (W >= 2 && Options::fill == '0' && UB >= 11) {
+    if constexpr (W >= 2 && Options.fill == '0' && UB >= 11) {
       std::uint64_t quot;
       std::uint64_t rem;
       if constexpr (UB == 0) {
@@ -142,10 +131,10 @@ struct FillDec<UpperBound, Options> {
       const char* __restrict dg = kDigits99 + 2 * v;
       uint32_t chars = mempick2(dg);
       if (v < 10) {
-        if constexpr (Options::fill > '0')
-          chars += cbu::bswap_le<uint16_t>(Options::fill - '0');
+        if constexpr (Options.fill > '0')
+          chars += cbu::bswap_le<uint16_t>(Options.fill - '0');
         else
-          chars -= cbu::bswap_le<uint16_t>('0' - Options::fill);
+          chars -= cbu::bswap_le<uint16_t>('0' - Options.fill);
       }
       memdrop2(p, chars);
       return;
@@ -172,8 +161,8 @@ struct FillDec<UpperBound, Options> {
   }
 };
 
-template <std::uint64_t UpperBound, typename Options>
-  requires(Options::width == 0)
+template <std::uint64_t UpperBound, FillOptions Options>
+  requires(Options.width == 0)
 struct FillDec<UpperBound, Options> {
   std::uint64_t value;
   std::uint8_t bytes;
@@ -194,7 +183,7 @@ struct FillDec<UpperBound, Options> {
   constexpr std::size_t max_size() const noexcept { return bytes; }
   constexpr std::size_t min_size() const noexcept { return bytes; }
 
-  constexpr unsigned get_bytes(std::uint64_t v) const noexcept {
+  static constexpr unsigned get_bytes(std::uint64_t v) noexcept {
     if constexpr (0 < UpperBound && UpperBound <= 10) {
       return 1;
     } else if constexpr (10 < UpperBound && UpperBound <= 100) {

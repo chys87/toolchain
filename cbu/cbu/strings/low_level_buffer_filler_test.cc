@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -124,7 +124,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
-    filler << FillDec<88, FillOptions<>::with_width<2>::with_fill<'!'>>(7);
+    filler << FillDec<88, FillOptions{.width = 2, .fill = '!'}>(7);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 2);
     ASSERT_EQ(std::string(buffer, p - buffer), "!7");
@@ -132,7 +132,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
-    filler << FillDec<88, FillOptions<>::with_width<2>::with_fill<'!'>>(57);
+    filler << FillDec<88, FillOptions{.width = 2, .fill = '!'}>(57);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 2);
     ASSERT_EQ(std::string(buffer, p - buffer), "57");
@@ -140,7 +140,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
-    filler << FillDec<99999, FillOptions<>::with_width<5>>(123);
+    filler << FillDec<99999, FillOptions{.width = 5}>(123);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 5);
     ASSERT_EQ(std::string(buffer, p - buffer), "00123");
@@ -148,7 +148,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
-    filler << FillDec<99999, FillOptions<>::with_width<5>::with_fill<'@'>>(123);
+    filler << FillDec<99999, FillOptions{.width = 5, .fill = '@'}>(123);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 5);
     ASSERT_EQ(std::string(buffer, p - buffer), "@@123");
@@ -157,7 +157,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
-    filler << FillDec<130, FillOptions<2>>(132);
+    filler << FillDec<130, FillOptions{.width = 2}>(132);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 2);
     ASSERT_EQ(std::string(buffer, p - buffer), "32");
@@ -166,7 +166,7 @@ TEST(LowLevelBufferFillerTest, FillDec) {
   {
     char buffer[64] = {};
     LowLevelBufferFiller filler{buffer};
-    filler << FillDec<100, FillOptions<2>>(17);
+    filler << FillDec<100, FillOptions{.width = 2}>(17);
     char* p = filler.pointer();
     ASSERT_EQ(p - buffer, 2);
     ASSERT_EQ(std::string(buffer, p - buffer), "17");

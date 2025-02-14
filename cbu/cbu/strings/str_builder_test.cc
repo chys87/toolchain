@@ -41,10 +41,9 @@ TEST(StringBuilderTest, BasicTest) {
   ASSERT_EQ(Concat("abc", "def", Optional(true, "a"), Optional(false, "b"))
                 .as_string(),
             "abcdefa");
-  ASSERT_EQ(
-      Concat(FillDec(25), FillDec<10000, FillOptions<>::with_width<3>>(54))
-          .as_string(),
-      "25054");
+  ASSERT_EQ(Concat(FillDec(25), FillDec<10000, FillOptions{.width = 3}>(54))
+                .as_string(),
+            "25054");
 }
 
 TEST(StringBuilderTest, ConstexprTest) {
