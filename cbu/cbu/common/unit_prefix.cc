@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 #include <cstring>
 #include <limits>
 
+#include "cbu/common/bit.h"
 #include "cbu/math/fastdiv.h"
 
 namespace cbu {
@@ -71,6 +72,34 @@ ScaleUnitPrefix scale_unit_prefix_1024(float value) noexcept {
       ++prefix_idx;
     }
     return {value / scale, prefix_idx};
+  }
+}
+
+ScaleUnitPrefix scale_unit_prefix_1024_u32(std::uint32_t value) noexcept {
+  if constexpr (std::numeric_limits<float>::is_iec559) {
+    if (value == 0) return {};
+    unsigned lz = std::countl_zero(value);
+    unsigned bits = 31 - lz;
+    unsigned prefix_idx = fastdiv<10, 32>(bits);
+    std::uint32_t u = value << lz << 1 >> 9;
+    u += ((bits - prefix_idx * 10) + 127) << 23;
+    return {std::bit_cast<float>(u), prefix_idx};
+  } else {
+    return scale_unit_prefix_1024(float(value));
+  }
+}
+
+ScaleUnitPrefix scale_unit_prefix_1024_u64(std::uint64_t value) noexcept {
+  if constexpr (std::numeric_limits<float>::is_iec559) {
+    if (value == 0) return {};
+    unsigned lz = std::countl_zero(value);
+    unsigned bits = 63 - lz;
+    unsigned prefix_idx = fastdiv<10, 64>(bits);
+    std::uint32_t u = value << lz << 1 >> 41;
+    u += ((bits - prefix_idx * 10) + 127) << 23;
+    return {std::bit_cast<float>(u), prefix_idx};
+  } else {
+    return scale_unit_prefix_1024(float(value));
   }
 }
 

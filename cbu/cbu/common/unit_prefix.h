@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -77,7 +78,7 @@ constexpr SplitUnitPrefix split_unit_prefix_1000(std::uint64_t value) noexcept {
 
 constexpr SplitUnitPrefix split_unit_prefix_1024(std::uint64_t value) noexcept {
   if (value < 1024) return {static_cast<unsigned>(value), 0, 0};
-  // a / 10 == a * 13 >> 7 for all a < 69. avoid including fastarith.h
+  // a / 10 == a * 13 >> 7 for all a < 69. avoid including fastdiv.h
   unsigned prefix_idx = (bsr(value) * 13) >> 7;
   return {static_cast<unsigned>(value >> (10 * prefix_idx)),
           static_cast<unsigned>(value >> (10 * prefix_idx - 10)) & 1023,
@@ -95,5 +96,19 @@ struct ScaleUnitPrefix {
 // We don't detect out-of-range values for sake of performance.
 [[gnu::const]] ScaleUnitPrefix scale_unit_prefix_1000(float value) noexcept;
 [[gnu::const]] ScaleUnitPrefix scale_unit_prefix_1024(float value) noexcept;
+
+[[gnu::const]] ScaleUnitPrefix scale_unit_prefix_1024_u32(
+    std::uint32_t value) noexcept;
+[[gnu::const]] ScaleUnitPrefix scale_unit_prefix_1024_u64(
+    std::uint64_t value) noexcept;
+
+template <std::unsigned_integral T>
+ScaleUnitPrefix scale_unit_prefix_1024(T value) noexcept {
+  if constexpr (sizeof(T) > sizeof(std::uint32_t)) {
+    return scale_unit_prefix_1024_u64(value);
+  } else {
+    return scale_unit_prefix_1024_u32(value);
+  }
+}
 
 }  // namespace cbu
