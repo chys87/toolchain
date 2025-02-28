@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,8 +39,12 @@ namespace cbu::sb {
 
 template <typename Builder>
 concept BaseBuilder = requires(const Builder& bldr) {
+  // max_size(), min_size() should return size() or, if it's expensive to
+  // determine the actual size in advance, return an interval
   { bldr.max_size() } -> std::convertible_to<std::size_t>;
   { bldr.min_size() } -> std::convertible_to<std::size_t>;
+  // size()
+  { bldr.size() } -> std::convertible_to<std::size_t>;
   { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
 };
 
@@ -89,6 +93,7 @@ struct View {
   }
   constexpr std::size_t max_size() const noexcept { return sv.size(); }
   constexpr std::size_t min_size() const noexcept { return sv.size(); }
+  constexpr std::size_t size() const noexcept { return sv.size(); }
   constexpr char* write(char* w) const noexcept {
     return cbu::Mempcpy(w, sv.data(), sv.size());
   }
@@ -102,6 +107,7 @@ struct ConstLengthView {
   static constexpr std::size_t static_max_size() noexcept { return L; }
   static constexpr std::size_t max_size() noexcept { return L; }
   static constexpr std::size_t min_size() noexcept { return L; }
+  static constexpr std::size_t size() noexcept { return L; }
   constexpr char* write(char* w) const noexcept {
     return cbu::Mempcpy(w, s, L);
   }
@@ -119,6 +125,7 @@ struct FromBuffer {
   static constexpr std::size_t static_min_size() noexcept { return MinSize; }
   constexpr std::size_t max_size() const noexcept { return l; }
   constexpr std::size_t min_size() const noexcept { return l; }
+  constexpr std::size_t size() const noexcept { return l; }
   constexpr char* write(char* w) const noexcept {
     Memcpy(w, s, MaxSize);
     return w + l;
@@ -145,6 +152,7 @@ struct VarLen {
   }
   constexpr std::size_t max_size() const noexcept { return l; }
   constexpr std::size_t min_size() const noexcept { return l; }
+  constexpr std::size_t size() const noexcept { return l; }
   constexpr char* write(char* w) const noexcept {
     if (__builtin_constant_p(l)) {
       // It may still be constant propagated
@@ -162,6 +170,7 @@ struct Char {
   static constexpr std::size_t static_max_size() noexcept { return 1; }
   static constexpr std::size_t max_size() noexcept { return 1; }
   static constexpr std::size_t min_size() noexcept { return 1; }
+  static constexpr std::size_t size() noexcept { return 1; }
   constexpr char* write(char* w) const noexcept {
     *w++ = c;
     return w;
@@ -169,12 +178,14 @@ struct Char {
   CBU_STR_BUILDER_MIXIN
 };
 
-// For fillers (low_level_buffer_filler.h) with max_size() and min_size()
+// For fillers (low_level_buffer_filler.h) with max_size(), min_size() and
+// size()
 template <typename Builder>
 concept CompatibleLowLevelBufferFiller = requires(const Builder& filler) {
   { filler(std::declval<char*>()) } -> std::convertible_to<char*>;
   { filler.min_size() } -> std::convertible_to<std::size_t>;
   { filler.max_size() } -> std::convertible_to<std::size_t>;
+  { filler.size() } -> std::convertible_to<std::size_t>;
 };
 
 // For types customized str builders
@@ -189,6 +200,7 @@ struct LowLevelBufferFillerAdapter {
 
   constexpr std::size_t min_size() const noexcept { return filler.min_size(); }
   constexpr std::size_t max_size() const noexcept { return filler.max_size(); }
+  constexpr std::size_t size() const noexcept { return filler.size(); }
   static constexpr std::size_t static_min_size() noexcept {
     return get_static_min_size<Filler>();
   }
@@ -207,6 +219,7 @@ struct CustomizedStrBuilderAdapter {
 
   constexpr std::size_t min_size() const noexcept { return builder.min_size(); }
   constexpr std::size_t max_size() const noexcept { return builder.max_size(); }
+  constexpr std::size_t size() const noexcept { return builder.size(); }
   static constexpr std::size_t static_min_size() noexcept {
     return get_static_min_size<Builder>();
   }
@@ -234,6 +247,9 @@ struct OptionalImpl {
   }
   constexpr std::size_t min_size() const noexcept {
     return builder ? builder->min_size() : 0;
+  }
+  constexpr std::size_t size() const noexcept {
+    return builder ? builder->size() : 0;
   }
   constexpr char* write(char* w) const noexcept {
     if (builder) w = builder->write(w);
@@ -306,6 +322,13 @@ struct ConcatImpl {
     return std::apply(
         [](const Builders&... bldrs) constexpr noexcept {
           return (0zu + ... + bldrs.min_size());
+        },
+        builders);
+  }
+  constexpr std::size_t size() const noexcept {
+    return std::apply(
+        [](const Builders&... bldrs) constexpr noexcept {
+          return (0zu + ... + bldrs.size());
         },
         builders);
   }

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -114,6 +114,7 @@ class short_string {
     static constexpr len_t static_max_size() noexcept { return MaxLen; }
     static constexpr len_t max_size() noexcept { return MaxLen; }
     constexpr len_t min_size() const noexcept { return s.l_; }
+    constexpr len_t size() const noexcept { return s.l_; }
     constexpr char* write(char* w) const noexcept {
       if consteval {
         std::copy_n(s.s_, s.l_, w);
@@ -196,6 +197,7 @@ class fixed_length_string {
     static constexpr std::size_t static_max_size() noexcept { return Len; }
     static constexpr std::size_t max_size() noexcept { return Len; }
     constexpr std::size_t min_size() const noexcept { return Len; }
+    constexpr std::size_t size() const noexcept { return Len; }
     constexpr char* write(char* w) const noexcept {
       if consteval {
         std::copy_n(s, Len, w);
@@ -276,6 +278,7 @@ class short_nzstring {
     static constexpr len_t static_max_size() noexcept { return MaxLen; }
     static constexpr len_t max_size() noexcept { return MaxLen; }
     constexpr len_t min_size() const noexcept { return s.l_; }
+    constexpr len_t size() const noexcept { return s.l_; }
     constexpr char* write(char* w) const noexcept {
       if consteval {
         std::copy_n(s.s_, s.l_, w);

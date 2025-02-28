@@ -47,7 +47,8 @@
 
 namespace cbu {
 
-// min_size(), max_size(), static_max_size(), static_min_size() functions are for str_builder
+// min_size(), max_size(), size(), static_max_size(), static_min_size()
+// functions are for str_builder
 
 template <std::integral T, std::endian Order>
 struct FillByEndian {
@@ -62,6 +63,7 @@ struct FillByEndian {
 
   static constexpr std::size_t min_size() noexcept { return sizeof(T); }
   static constexpr std::size_t max_size() noexcept { return sizeof(T); }
+  static constexpr std::size_t size() noexcept { return sizeof(T); }
   static constexpr std::size_t static_min_size() noexcept { return sizeof(T); }
   static constexpr std::size_t static_max_size() noexcept { return sizeof(T); }
 };
@@ -103,6 +105,7 @@ struct FillDec<UpperBound, Options> {
 
   static constexpr std::size_t min_size() noexcept { return Options.width; }
   static constexpr std::size_t max_size() noexcept { return Options.width; }
+  static constexpr std::size_t size() noexcept { return Options.width; }
   static constexpr std::size_t static_min_size() noexcept { return Options.width; }
   static constexpr std::size_t static_max_size() noexcept { return Options.width; }
 
@@ -190,6 +193,7 @@ struct FillDec<UpperBound, Options> {
   }
   constexpr std::size_t max_size() const noexcept { return bytes; }
   constexpr std::size_t min_size() const noexcept { return bytes; }
+  constexpr std::size_t size() const noexcept { return bytes; }
 
   static constexpr unsigned get_bytes(V v) noexcept {
     if constexpr (0 < UpperBound && UpperBound <= 10) {
@@ -276,6 +280,7 @@ struct FillDec<UpperBound, Options> {
   }
   constexpr std::size_t max_size() const noexcept { return static_max_size(); }
   constexpr std::size_t min_size() const noexcept { return 1; }
+  constexpr std::size_t size() const noexcept { return ilog10(value) + 1; }
 
   template <Raw_char_type Ch>
   static constexpr Ch* conv_flexible_digit(V v, Ch* p) noexcept {
@@ -348,6 +353,7 @@ struct FillHex {
   }
   static constexpr std::size_t max_size() noexcept { return 2 * sizeof(T); }
   static constexpr std::size_t min_size() noexcept { return 2 * sizeof(T); }
+  static constexpr std::size_t size() noexcept { return 2 * sizeof(T); }
   constexpr char* operator()(char* w) const noexcept { return ToHex(w, value); }
 };
 
@@ -362,6 +368,7 @@ struct FillSkipImpl {
   }
   static constexpr std::size_t min_size() noexcept { return diff; }
   static constexpr std::size_t max_size() noexcept { return diff; }
+  static constexpr std::size_t size() noexcept { return diff; }
   static constexpr std::size_t static_min_size() noexcept { return diff; }
   static constexpr std::size_t static_max_size() noexcept { return diff; }
 };
@@ -381,6 +388,7 @@ struct FillGetPointer {
   }
   static constexpr std::size_t min_size() noexcept { return 0; }
   static constexpr std::size_t max_size() noexcept { return 0; }
+  static constexpr std::size_t size() noexcept { return 0; }
   static constexpr std::size_t static_min_size() noexcept { return 0; }
   static constexpr std::size_t static_max_size() noexcept { return 0; }
 };
@@ -401,6 +409,7 @@ struct FillGetLength {
   }
   static constexpr std::size_t min_size() noexcept { return 0; }
   static constexpr std::size_t max_size() noexcept { return 0; }
+  static constexpr std::size_t size() noexcept { return 0; }
   static constexpr std::size_t static_min_size() noexcept { return 0; }
   static constexpr std::size_t static_max_size() noexcept { return 0; }
 };
