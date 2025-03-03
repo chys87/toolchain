@@ -38,14 +38,25 @@
 namespace cbu::sb {
 
 template <typename Builder>
+concept HasSize = requires(const Builder& bldr) {
+  // Add size() only if it's cheap to derive the actual size, and that
+  // the actual writing never uses additional space
+  { bldr.size() } -> std::convertible_to<std::size_t>;
+};
+
+template <typename Builder>
+concept HasFinalSize = requires(const Builder& bldr) {
+  // final_size() means the actual result size, but additional bytes
+  // (up to max_size()) may be written during write()
+  { bldr.final_size() } -> std::convertible_to<std::size_t>;
+};
+
+template <typename Builder>
 concept BaseBuilder = requires(const Builder& bldr) {
-  // max_size(), min_size() should return size() or, if it's expensive to
-  // determine the actual size in advance, return an interval
   { bldr.max_size() } -> std::convertible_to<std::size_t>;
   { bldr.min_size() } -> std::convertible_to<std::size_t>;
-  // size()
-  { bldr.size() } -> std::convertible_to<std::size_t>;
   { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
+  requires HasSize<Builder> or HasFinalSize<Builder>;
 };
 
 template <typename Builder>
@@ -64,6 +75,15 @@ constexpr std::size_t get_static_min_size() noexcept {
     return Builder::static_min_size();
   else
     return 0;
+}
+
+template <BaseBuilder Builder>
+constexpr std::size_t get_final_size(const Builder& bldr) noexcept {
+  if constexpr (HasFinalSize<Builder>) {
+    return bldr.final_size();
+  } else {
+    return bldr.size();
+  }
 }
 
 // We are not using "deducing this" because adding a base class means we have to
@@ -219,7 +239,16 @@ struct CustomizedStrBuilderAdapter {
 
   constexpr std::size_t min_size() const noexcept { return builder.min_size(); }
   constexpr std::size_t max_size() const noexcept { return builder.max_size(); }
-  constexpr std::size_t size() const noexcept { return builder.size(); }
+  constexpr std::size_t size() const noexcept
+    requires HasSize<Builder>
+  {
+    return builder.size();
+  }
+  constexpr std::size_t final_size() const noexcept
+    requires HasFinalSize<Builder>
+  {
+    return builder.final_size();
+  }
   static constexpr std::size_t static_min_size() noexcept {
     return get_static_min_size<Builder>();
   }
@@ -325,10 +354,19 @@ struct ConcatImpl {
         },
         builders);
   }
-  constexpr std::size_t size() const noexcept {
+  constexpr std::size_t size() const noexcept
+    requires((true && ... && HasSize<Builders>))
+  {
     return std::apply(
         [](const Builders&... bldrs) constexpr noexcept {
           return (0zu + ... + bldrs.size());
+        },
+        builders);
+  }
+  constexpr std::size_t final_size() const noexcept {
+    return std::apply(
+        [](const Builders&... bldrs) constexpr noexcept {
+          return (0zu + ... + get_final_size(bldrs));
         },
         builders);
   }
