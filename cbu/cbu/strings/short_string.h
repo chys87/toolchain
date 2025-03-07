@@ -49,6 +49,12 @@ using strlen_t = std::conditional_t<(MaxLen < 65536),
     std::conditional_t<(MaxLen < 256), std::uint8_t, std::uint16_t>,
     size_t>;
 
+template <typename Builder, std::size_t MaxLen = 0x7fff'ffff>
+concept BuilderForShortString = requires(const Builder& bldr) {
+  requires(sizeof(char[Builder::static_max_size()]) <= MaxLen);
+  { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
+};
+
 // This class is good for storage for very short strings.
 template <std::size_t MaxLen>
 class short_string {
@@ -72,6 +78,16 @@ class short_string {
       std::fill_n(s_, MaxLen + 1, 0);
     }
     assign(src);
+  }
+
+  template <BuilderForShortString<MaxLen> Builder>
+  constexpr explicit short_string(const Builder& builder) noexcept {
+    if consteval {
+      std::fill_n(s_, MaxLen + 1, 0);
+    }
+    char* w = builder.write(s_);
+    *w = '\0';
+    l_ = w - s_;
   }
 
   constexpr char (&buffer() noexcept)[MaxLen + 1] { return s_; }
@@ -131,8 +147,12 @@ class short_string {
   len_t l_;
 };
 
-template <std::size_t N> requires (N > 0)
+template <std::size_t N>
+  requires(N > 0)
 short_string(const char (&)[N]) -> short_string<N - 1>;
+
+template <BuilderForShortString<> Builder>
+short_string(const Builder&) -> short_string<Builder::static_max_size()>;
 
 // This class is like short_string, but the length is fixed
 template <std::size_t Len, bool HasTerminator = false>
@@ -241,6 +261,14 @@ class short_nzstring {
     assign(src);
   }
 
+  template <BuilderForShortString<MaxLen> Builder>
+  constexpr explicit short_nzstring(const Builder& builder) noexcept {
+    if consteval {
+      std::fill_n(s_, MaxLen + 1, 0);
+    }
+    l_ = builder.write(s_) - s_;
+  }
+
   constexpr char (&buffer() noexcept)[MaxLen] { return s_; }
   constexpr void set_length(len_t l) { l_ = l; }
 
@@ -299,6 +327,9 @@ template <std::size_t N>
   requires(N > 0)
 short_nzstring(const char (&)[N])
 ->short_nzstring<N - 1>;
+
+template <BuilderForShortString<> Builder>
+short_nzstring(const Builder&) -> short_nzstring<Builder::static_max_size()>;
 
 template <std::size_t M, size_t N>
 constexpr bool operator==(const short_string<M>& a,
