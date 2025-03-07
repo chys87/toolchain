@@ -145,7 +145,7 @@ struct FromBuffer {
   static constexpr std::size_t static_min_size() noexcept { return MinSize; }
   constexpr std::size_t max_size() const noexcept { return l; }
   constexpr std::size_t min_size() const noexcept { return l; }
-  constexpr std::size_t size() const noexcept { return l; }
+  constexpr std::size_t final_size() const noexcept { return l; }
   constexpr char* write(char* w) const noexcept {
     Memcpy(w, s, MaxSize);
     return w + l;
