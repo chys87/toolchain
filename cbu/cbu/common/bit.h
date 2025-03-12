@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -264,10 +264,18 @@ inline constexpr std::make_unsigned_t<T> MAX_POW2 =
 // Undefined for n > MAX_POW2<T>
 template <std::integral T>
 inline constexpr T pow2_ceil(T n) noexcept {
-  if (n == 0) return 1;
   using UT = std::conditional_t<(sizeof(T) < sizeof(unsigned)), unsigned,
                                 std::make_unsigned_t<T>>;
-  return (MAX_POW2<UT> >> (std::countl_zero(UT(n - 1)) - 1));
+  return MAX_POW2<UT> >>
+         ((std::countl_zero(UT(n) - 1) - 1) & (8 * sizeof(UT) - 1));
+}
+
+// Same, but caller guarantees that n is not zero
+template <std::integral T>
+inline constexpr T pow2_ceil_nonzero(T n) noexcept {
+  using UT = std::conditional_t<(sizeof(T) < sizeof(unsigned)), unsigned,
+                                std::make_unsigned_t<T>>;
+  return MAX_POW2<UT> >> (std::countl_zero(UT(n) - 1) - 1);
 }
 
 // Flooring to the nearest power of 2
@@ -295,6 +303,16 @@ static_assert(pow2_ceil(8) == 8);
 static_assert(pow2_ceil(9) == 16);
 static_assert(pow2_ceil(uint32_t(0x80000000)) == 0x80000000);
 static_assert(pow2_ceil(uint16_t(9)) == 16);
+
+static_assert(pow2_ceil_nonzero(1) == 1);
+static_assert(pow2_ceil_nonzero(2) == 2);
+static_assert(pow2_ceil_nonzero(3) == 4);
+static_assert(pow2_ceil_nonzero(4) == 4);
+static_assert(pow2_ceil_nonzero(5) == 8);
+static_assert(pow2_ceil_nonzero(8) == 8);
+static_assert(pow2_ceil_nonzero(9) == 16);
+static_assert(pow2_ceil_nonzero(uint32_t(0x80000000)) == 0x80000000);
+static_assert(pow2_ceil_nonzero(uint16_t(9)) == 16);
 
 static_assert(pow2_floor(1) == 1);
 static_assert(pow2_floor(2) == 2);
