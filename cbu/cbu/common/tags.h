@@ -65,5 +65,6 @@ struct OverflowThresholdTag {};
 struct IgnoreInfNaNTag {};
 struct FiniteOnlyTag {};
 struct NoScientificNotationTag {};
+struct UnsignedTag {};
 
 }  // namespace cbu

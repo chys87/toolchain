@@ -383,6 +383,8 @@ struct FpOptions {
   // scientific only applies to decimal values; for hexadecimal values,
   // scientific notation is mandatory
   bool scientific = true;
+  // Parse leading '+' and '-'
+  bool signed_ = true;
 
   template <int new_base>
     requires(new_base == 0 || new_base == 10)
@@ -408,6 +410,12 @@ struct FpOptions {
   constexpr FpOptions operator+(NoScientificNotationTag) const noexcept {
     auto res = *this;
     res.scientific = false;
+    return res;
+  }
+
+  constexpr FpOptions operator+(UnsignedTag) const noexcept {
+    auto res = *this;
+    res.signed_ = false;
     return res;
   }
 };
@@ -440,6 +448,7 @@ class FpSignApply {
   }
   constexpr T operator()(T val) const noexcept {
     if !consteval {
+      if (__builtin_constant_p(negative_)) return negative_ ? -val : val;
 #ifdef __AVX__
       if constexpr (std::is_same_v<T, float>) {
         asm ("vxorps %2, %1, %0" : "=x"(val) : "x"(val), "x"(sign_zero_));
@@ -518,7 +527,9 @@ constexpr auto str_to_fp(const char* s, S e) noexcept {
     return make_bad_ret();
 
   FpSignApply<T> sign;
-  if (s != e && (*s == '+' || *s == '-')) sign = (*s++ == '-');
+  if constexpr (OPT.signed_) {
+    if (s != e && (*s == '+' || *s == '-')) sign = (*s++ == '-');
+  }
 
   // Handle inf and nan
   if constexpr (OPT.parse_inf_nan && !OPT.finite_only) {

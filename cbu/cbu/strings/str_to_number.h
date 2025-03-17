@@ -138,6 +138,7 @@ constexpr bool SimpleAtoi(std::string_view s, T* res) noexcept {
 //   FiniteOnlyTag: Like IgnoreInfNaNTag; also rejects inf as a result of
 //                  overflow (such as 1e1000)
 //   NoScientificNotationTag: Reject scientific notation (dec only)
+//   NoSignTag: Don't parse leading '+' or '-'; result is never negative
 template <typename T, typename... Options, std::sentinel_for<const char*> S>
   requires(str_to_number_detail::FpSupported<T, Options...>)
 constexpr std::optional<T> str_to_fp(const char* s, S e) noexcept {
