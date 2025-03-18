@@ -56,7 +56,6 @@ concept BaseBuilder = requires(const Builder& bldr) {
   { bldr.max_size() } -> std::convertible_to<std::size_t>;
   { bldr.min_size() } -> std::convertible_to<std::size_t>;
   { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
-  requires HasSize<Builder> or HasFinalSize<Builder>;
 };
 
 template <typename Builder>
@@ -205,7 +204,6 @@ concept CompatibleLowLevelBufferFiller = requires(const Builder& filler) {
   { filler(std::declval<char*>()) } -> std::convertible_to<char*>;
   { filler.min_size() } -> std::convertible_to<std::size_t>;
   { filler.max_size() } -> std::convertible_to<std::size_t>;
-  { filler.size() } -> std::convertible_to<std::size_t>;
 };
 
 // For types customized str builders
@@ -220,7 +218,11 @@ struct LowLevelBufferFillerAdapter {
 
   constexpr std::size_t min_size() const noexcept { return filler.min_size(); }
   constexpr std::size_t max_size() const noexcept { return filler.max_size(); }
-  constexpr std::size_t size() const noexcept { return filler.size(); }
+  constexpr std::size_t size() const noexcept
+    requires HasSize<Filler>
+  {
+    return filler.size();
+  }
   static constexpr std::size_t static_min_size() noexcept {
     return get_static_min_size<Filler>();
   }
@@ -363,7 +365,9 @@ struct ConcatImpl {
         },
         builders);
   }
-  constexpr std::size_t final_size() const noexcept {
+  constexpr std::size_t final_size() const noexcept
+    requires((true && ... && (HasSize<Builders> || HasFinalSize<Builders>)))
+  {
     return std::apply(
         [](const Builders&... bldrs) constexpr noexcept {
           return (0zu + ... + get_final_size(bldrs));

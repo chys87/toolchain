@@ -37,6 +37,7 @@ cc_library(
     'length_prefixed_string_literal.h',
     'short_string.h',
     'string_collection.h',
+    'str_array.h',
     'str_split.h',
     'str_to_number.h',
     'str_to_number_internal.h',
