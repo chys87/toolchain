@@ -130,7 +130,6 @@ class short_string {
     static constexpr len_t static_max_size() noexcept { return MaxLen; }
     static constexpr len_t max_size() noexcept { return MaxLen; }
     constexpr len_t min_size() const noexcept { return s.l_; }
-    constexpr len_t final_size() const noexcept { return s.l_; }
     constexpr char* write(char* w) const noexcept {
       if consteval {
         std::copy_n(s.s_, s.l_, w);
@@ -306,7 +305,6 @@ class short_nzstring {
     static constexpr len_t static_max_size() noexcept { return MaxLen; }
     static constexpr len_t max_size() noexcept { return MaxLen; }
     constexpr len_t min_size() const noexcept { return s.l_; }
-    constexpr len_t final_size() const noexcept { return s.l_; }
     constexpr char* write(char* w) const noexcept {
       if consteval {
         std::copy_n(s.s_, s.l_, w);

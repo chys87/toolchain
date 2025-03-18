@@ -45,13 +45,6 @@ concept HasSize = requires(const Builder& bldr) {
 };
 
 template <typename Builder>
-concept HasFinalSize = requires(const Builder& bldr) {
-  // final_size() means the actual result size, but additional bytes
-  // (up to max_size()) may be written during write()
-  { bldr.final_size() } -> std::convertible_to<std::size_t>;
-};
-
-template <typename Builder>
 concept BaseBuilder = requires(const Builder& bldr) {
   { bldr.max_size() } -> std::convertible_to<std::size_t>;
   { bldr.min_size() } -> std::convertible_to<std::size_t>;
@@ -74,15 +67,6 @@ constexpr std::size_t get_static_min_size() noexcept {
     return Builder::static_min_size();
   else
     return 0;
-}
-
-template <BaseBuilder Builder>
-constexpr std::size_t get_final_size(const Builder& bldr) noexcept {
-  if constexpr (HasFinalSize<Builder>) {
-    return bldr.final_size();
-  } else {
-    return bldr.size();
-  }
 }
 
 // We are not using "deducing this" because adding a base class means we have to
@@ -144,7 +128,6 @@ struct FromBuffer {
   static constexpr std::size_t static_min_size() noexcept { return MinSize; }
   constexpr std::size_t max_size() const noexcept { return l; }
   constexpr std::size_t min_size() const noexcept { return l; }
-  constexpr std::size_t final_size() const noexcept { return l; }
   constexpr char* write(char* w) const noexcept {
     Memcpy(w, s, MaxSize);
     return w + l;
@@ -245,11 +228,6 @@ struct CustomizedStrBuilderAdapter {
     requires HasSize<Builder>
   {
     return builder.size();
-  }
-  constexpr std::size_t final_size() const noexcept
-    requires HasFinalSize<Builder>
-  {
-    return builder.final_size();
   }
   static constexpr std::size_t static_min_size() noexcept {
     return get_static_min_size<Builder>();
@@ -362,15 +340,6 @@ struct ConcatImpl {
     return std::apply(
         [](const Builders&... bldrs) constexpr noexcept {
           return (0zu + ... + bldrs.size());
-        },
-        builders);
-  }
-  constexpr std::size_t final_size() const noexcept
-    requires((true && ... && (HasSize<Builders> || HasFinalSize<Builders>)))
-  {
-    return std::apply(
-        [](const Builders&... bldrs) constexpr noexcept {
-          return (0zu + ... + get_final_size(bldrs));
         },
         builders);
   }
