@@ -45,10 +45,13 @@ concept HasSize = requires(const Builder& bldr) {
 };
 
 template <typename Builder>
-concept BaseBuilder = requires(const Builder& bldr) {
+concept HasMaxSize = requires(const Builder& bldr) {
   { bldr.max_size() } -> std::convertible_to<std::size_t>;
+};
+
+template <typename Builder>
+concept HasMinSize = requires(const Builder& bldr) {
   { bldr.min_size() } -> std::convertible_to<std::size_t>;
-  { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
 };
 
 template <typename Builder>
@@ -62,6 +65,12 @@ concept HasStaticMinSize = requires() {
 };
 
 template <typename Builder>
+concept BaseBuilder = requires(const Builder& bldr) {
+  requires (HasMaxSize<Builder> || HasSize<Builder>);
+  { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
+};
+
+template <typename Builder>
 constexpr std::size_t get_static_min_size() noexcept {
   if constexpr (HasStaticMinSize<Builder>)
     return Builder::static_min_size();
@@ -69,20 +78,42 @@ constexpr std::size_t get_static_min_size() noexcept {
     return 0;
 }
 
+template <typename Builder>
+constexpr std::size_t get_min_size(const Builder& builder) noexcept {
+  if constexpr (HasMinSize<Builder>)
+    return builder.min_size();
+  else if constexpr (HasSize<Builder>)
+    return builder.size();
+  else if constexpr (HasStaticMinSize<Builder>)
+    return Builder::static_min_size();
+  else
+    return 0;
+}
+
+template <typename Builder>
+constexpr std::size_t get_max_size(const Builder& builder) noexcept {
+  if constexpr (HasMaxSize<Builder>)
+    return builder.max_size();
+  else if constexpr (HasStaticMaxSize<Builder>)
+    return Builder::static_max_size();
+  else
+    return builder.size();
+}
+
 // We are not using "deducing this" because adding a base class means we have to
 // manually add many constructors
-#define CBU_STR_BUILDER_MIXIN                           \
-  void append_to(std::string* dst) {                    \
-    std::size_t M = max_size(), m = min_size();         \
-    char* w = extend(dst, M);                           \
-    w = write(w);                                       \
-    if (m != M) truncate_unsafe(dst, w - dst->data());  \
-  }                                                     \
-  void append_to(std::string& dst) { append_to(&dst); } \
-  std::string as_string() {                             \
-    std::string r;                                      \
-    append_to(&r);                                      \
-    return r;                                           \
+#define CBU_STR_BUILDER_MIXIN                                     \
+  void append_to(std::string* dst) {                              \
+    std::size_t M = get_max_size(*this), m = get_min_size(*this); \
+    char* w = extend(dst, M);                                     \
+    w = write(w);                                                 \
+    if (m != M) truncate_unsafe(dst, w - dst->data());            \
+  }                                                               \
+  void append_to(std::string& dst) { append_to(&dst); }           \
+  std::string as_string() {                                       \
+    std::string r;                                                \
+    append_to(&r);                                                \
+    return r;                                                     \
   }
 
 template <std::size_t MaxLen = std::size_t(-1), std::size_t MinLen = 0>
@@ -222,8 +253,12 @@ template <BaseBuilder Builder>
 struct CustomizedStrBuilderAdapter {
   Builder builder;
 
-  constexpr std::size_t min_size() const noexcept { return builder.min_size(); }
-  constexpr std::size_t max_size() const noexcept { return builder.max_size(); }
+  constexpr std::size_t min_size() const noexcept {
+    return get_min_size(builder);
+  }
+  constexpr std::size_t max_size() const noexcept {
+    return get_max_size(builder);
+  }
   constexpr std::size_t size() const noexcept
     requires HasSize<Builder>
   {
@@ -273,6 +308,11 @@ constexpr auto Adapt(const char (&s)[N]) noexcept {
   return ConstLengthView<N - 1>{s};
 }
 constexpr auto Adapt(std::string_view sv) noexcept { return View{sv}; }
+template <typename T>
+  requires(String_view_compat<T> && !TypeWithCustomizedStrBuilder<T>)
+constexpr auto Adapt(const T& sv) noexcept {
+  return View{std::string_view(sv)};
+}
 constexpr auto Adapt(char c) noexcept { return Char{c}; }
 constexpr auto Adapt(char8_t c) noexcept { return Char{char(c)}; }
 constexpr auto Adapt(std::integral auto) noexcept = delete;
@@ -323,14 +363,14 @@ struct ConcatImpl {
   constexpr std::size_t max_size() const noexcept {
     return std::apply(
         [](const Builders&... bldrs) constexpr noexcept {
-          return (0zu + ... + bldrs.max_size());
+          return (0zu + ... + get_max_size(bldrs));
         },
         builders);
   }
   constexpr std::size_t min_size() const noexcept {
     return std::apply(
         [](const Builders&... bldrs) constexpr noexcept {
-          return (0zu + ... + bldrs.min_size());
+          return (0zu + ... + get_min_size(bldrs));
         },
         builders);
   }
