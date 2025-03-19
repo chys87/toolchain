@@ -57,7 +57,16 @@ unsigned get_load_limit(unsigned nprocs) {
 
 int j_main(size_t argc, char **argv, char **envp) {
 
-  fsys_setpriority(PRIO_PROCESS, 0, 10);
+  int r = fsys_generic_nomem(__NR_getpriority, int, 2, PRIO_PROCESS, 0);
+  if (r >= 0) {
+    int real_nice = 20 - r;
+    if (real_nice < 19) {
+      int target_nice = real_nice + 10;
+      if (target_nice > 19) target_nice = 19;
+      if (target_nice != real_nice)
+        fsys_setpriority(PRIO_PROCESS, 0, target_nice);
+    }
+  }
 
   int fd_null = fsys_open2("/dev/null", O_RDONLY | O_CLOEXEC);
   if (fd_null >= 0)
