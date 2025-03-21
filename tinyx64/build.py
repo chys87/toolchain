@@ -25,11 +25,12 @@ argv0 = {argv0}
 NINJA_TEMPLATE = r'''
 {name}cc = {cc}
 {name}cxx = {cxx}
+{name}ar = {ar}
 {name}cppflags = -I{tinyx64_dir} -D _GNU_SOURCE -D NDEBUG -D __STDC_LIMIT_MACROS -D __STDC_CONSTANT_MACROS -D __STDC_FORMAT_MACROS -D __NO_MATH_INLINES -U _FORTIFY_SOURCE
 {name}commonflags = -O2 -march=native -fomit-frame-pointer -fno-PIE -fno-PIC -Wall -flto -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables {arch_flags}
 {name}cflags = -std=gnu2x
 {name}cxxflags = -fno-rtti -std=gnu++2a
-{name}ldflags = -nostdlib -static -fuse-linker-plugin
+{name}ldflags = -nostdlib -nostdlib++ -static -fuse-linker-plugin
 {name}libs = -lgcc
 {name}builddir = {builddir}
 {name}instdir = {instdir}
@@ -41,6 +42,9 @@ rule {name}cc
 rule {name}cxx
   command = ${name}cxx -c -MD -MF $out.d ${name}cppflags ${name}commonflags ${name}cxxflags -o $out $in
   depfile = $out.d
+
+rule {name}package
+  command = ${name}ar crs $out $in
 
 rule {name}ld
   command = ! test -f $out || mv -f $out $out.bak; ${name}cxx ${name}commonflags ${name}cxxflags ${name}ldflags -o $out $in ${name}libs
@@ -59,9 +63,9 @@ rule {name}un
   command = {tinyx64_dir}/../scripts/unassembly ${name}builddir/{name}.n.out
   pool = console
 rule {name}clean
-  command = rm -rfv ${name}builddir/{name}.n.out ${name}builddir/{name}.out {objs}
+  command = rm -rfv ${name}builddir/{name}.n.out ${name}builddir/{name}.out {main_objs} {lib_objs}
 
-build ${name}builddir/{name}.n.out: {name}ld {objs}
+build ${name}builddir/{name}.n.out: {name}ld {main_objs} ${name}builddir/lib{name}.a
 build ${name}builddir/{name}.out: {name}strip ${name}builddir/{name}.n.out
 default ${name}builddir/{name}.out
 
@@ -80,6 +84,8 @@ build un: phony un-{name}
 
 build clean-{name}: {name}clean
 build clean: phony clean-{name}
+
+build ${name}builddir/lib{name}.a: {name}package {lib_objs}
 
 {rules}
 '''
@@ -105,7 +111,18 @@ def find_compilers():
         if cc and cxx:
             return cc, cxx
 
-    raise sys.exit('Failed to find an appropriate C++ compiler')
+    sys.exit('Failed to find an appropriate C++ compiler')
+
+
+def find_ar(cc: str, cxx: str) -> str:
+    if 'clang' in cc and 'clang' in cxx:
+        if ar := find_executable('llvm-ar'):
+            return ar
+    ar = find_executable('ar')
+    if ar:
+        return ar
+
+    sys.exit('Failed to find an appropriate C++ compiler')
 
 
 def get_compiler_arch(cc):
@@ -131,10 +148,11 @@ class Binary:
 
 
 class BuildFile:
-    __slots__ = 'binaries', 'cc', 'cxx', 'arch'
+    __slots__ = 'ar', 'binaries', 'cc', 'cxx', 'arch'
 
     def __init__(self, filename):
         self.cc, self.cxx = find_compilers()
+        self.ar = find_ar(self.cc, self.cxx)
         self.binaries = []
 
         try:
@@ -148,6 +166,7 @@ class BuildFile:
             '__builtin__': {},
             'CC': self.cc,
             'CXX': self.cxx,
+            'AR': self.ar,
         }
         try:
             exec(build_content, build_globals)
@@ -158,6 +177,7 @@ class BuildFile:
             sys.exit(f'No target is specified in {filename}')
         self.cc = build_globals['CC']
         self.cxx = build_globals['CXX']
+        self.ar = build_globals['AR']
         self.arch = get_compiler_arch(self.cc)
 
     def __callback_binary(self, *, name, srcs):
@@ -181,19 +201,23 @@ class BuildFile:
                          binary.build_hash(cc=self.cc, cxx=self.cxx))
 
             # obj: src
-            objs = {}
+            lib_objs = {}
+            main_objs = {}
 
             for src in binary.srcs:
-                objs[f'${name}builddir/{src}.o'] = os.path.join('..', src)
+                lib_objs[f'${name}builddir/{src}.o'] = os.path.join('..', src)
 
             for suffix in ('*.c', '*.S', '*.cpp'):
                 for src in glob.glob(os.path.join(tinyx64_dir, 'lib', suffix)):
                     relsrc = os.path.relpath(src, tinyx64_dir)
-                    objs[f'${name}builddir/__tinyx64/{relsrc}.o'] = src
+                    if src.endswith('/start.S'):
+                        main_objs[f'${name}builddir/__tinyx64/{relsrc}.o'] = src
+                    else:
+                        lib_objs[f'${name}builddir/__tinyx64/{relsrc}.o'] = src
 
             extra_deps = f'$argv0 ${name}builddir/__hash'
             rules = ''
-            for obj, src in sorted(objs.items()):
+            for obj, src in sorted(main_objs.items()) + sorted(lib_objs.items()):
                 if src.endswith(('.c', '.S')):
                     rules += f'build {obj}: {name}cc {src} | {extra_deps}\n'
                 else:
@@ -201,9 +225,11 @@ class BuildFile:
 
             ninja_content += NINJA_TEMPLATE.format(
                 tinyx64_dir=tinyx64_dir, instdir=instdir,
-                name=binary.name, cc=self.cc, cxx=self.cxx, builddir=builddir,
+                name=binary.name, cc=self.cc, cxx=self.cxx,
+                ar=self.ar, builddir=builddir,
                 arch_flags=get_arch_flags(self.arch),
-                objs=' '.join(sorted(objs)), rules=rules)
+                main_objs=' '.join(sorted(main_objs)),
+                lib_objs=' '.join(sorted(lib_objs)), rules=rules)
 
         return ninja_content
 
