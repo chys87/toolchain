@@ -34,7 +34,7 @@ cc_library(
     'fixed_string.h',
     'hex.h',
     'immutable_string.h',
-    'length_prefixed_string_literal.h',
+    'length_prefixed_string.h',
     'short_string.h',
     'string_collection.h',
     'str_array.h',
