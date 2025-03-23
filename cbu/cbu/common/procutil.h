@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,18 +36,28 @@ namespace cbu {
 // Print a message and abort
 [[noreturn, gnu::cold]] void fatal_length_prefixed(const char* info) noexcept;
 
-template <cbu::fixed_string msg>
-[[noreturn, gnu::always_inline]] inline void fatal() noexcept {
+namespace procutil_detail {
+
+template <cbu::fixed_nzstring msg>
+constexpr auto with_newline() noexcept {
   if constexpr (msg.size() > 0 && msg[msg.size() - 1] == '\n') {
-    constexpr auto str =
-        LittleEndianFixedString<static_cast<unsigned char>(msg.size())>() + msg;
-    fatal_length_prefixed(as_shared<str>.data());
+    return msg;
   } else {
-    constexpr auto str =
-        LittleEndianFixedString<static_cast<unsigned char>(msg.size() + 1)>() +
-        msg + LittleEndianFixedString<static_cast<unsigned char>('\n')>();
-    fatal_length_prefixed(as_shared<str>.data());
+    return msg + fixed_nzstring<1>{{'\n'}};
   }
+}
+
+}  // namespace procutil_detail
+
+template <cbu::fixed_nzstring msg>
+  requires(procutil_detail::with_newline<msg>().size() <= 255)
+[[noreturn, gnu::always_inline]] inline void fatal() noexcept {
+  constexpr auto msg_with_nl = procutil_detail::with_newline<msg>();
+  constexpr auto str =
+      fixed_nzstring<1>{
+          {char(static_cast<unsigned char>(msg_with_nl.size()))}} +
+      msg_with_nl;
+  fatal_length_prefixed(as_shared<str>.data());
 }
 
 }  // namespace cbu
