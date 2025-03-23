@@ -38,9 +38,11 @@ cc_library(
     'short_string.h',
     'string_collection.h',
     'str_array.h',
+    'strcomm.h',
     'str_split.h',
     'str_to_number.h',
     'str_to_number_internal.h',
+    'zstring_view.h',
   ],
   deps = [
     '//cbu/common:header_only',
@@ -78,7 +80,6 @@ cc_library(
     'encoding.h',
     'escape.h',
     'strutil.h',
-    'zstring_view.h',
   ],
   deps = [
     ':header_only',

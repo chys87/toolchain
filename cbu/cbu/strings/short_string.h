@@ -153,88 +153,6 @@ short_string(const char (&)[N]) -> short_string<N - 1>;
 template <BuilderForShortString<> Builder>
 short_string(const Builder&) -> short_string<Builder::static_max_size()>;
 
-// This class is like short_string, but the length is fixed
-template <std::size_t Len, bool HasTerminator = false>
-class fixed_length_string {
- public:
-  explicit fixed_length_string(UninitializedTag) noexcept {}
-
-  constexpr fixed_length_string() noexcept : s_{} {}
-
-  consteval fixed_length_string(const char (&s)[Len + 1]) noexcept : s_{} {
-    assign(s);
-  }
-
-  constexpr fixed_length_string(std::span<const char, Len> s) noexcept : s_{} {
-    assign(s);
-  }
-
-  constexpr fixed_length_string(UnsafeTag, std::string_view src) noexcept
-      : s_{} {
-    assign_unsafe(src);
-  }
-
-  constexpr char* data() noexcept { return s_; }
-  constexpr const char* data() const noexcept { return s_; }
-  constexpr const char* c_str() const noexcept requires HasTerminator {
-    return s_;
-  }
-  static constexpr size_t length() noexcept { return Len; }
-  static constexpr size_t size() noexcept { return Len; }
-  constexpr char* begin() noexcept { return s_; }
-  constexpr char* end() noexcept { return s_ + Len; }
-  constexpr const char* begin() const noexcept { return s_; }
-  constexpr const char* end() const noexcept { return s_ + Len; }
-  constexpr const char* cbegin() const noexcept { return s_; }
-  constexpr const char* cend() const noexcept { return s_ + Len; }
-  constexpr operator std::string_view() const noexcept { return {s_, Len}; }
-  constexpr operator zstring_view() const noexcept requires HasTerminator {
-    return {s_, Len};
-  }
-
-  constexpr void assign(std::span<const char, Len> src) noexcept {
-    assign_unsafe(std::string_view(src.data(), src.size()));
-  }
-  constexpr void assign(const char (&s)[Len+1]) noexcept {
-    assign_unsafe({s, Len});
-  }
-
-  constexpr void assign_unsafe(std::string_view src) noexcept {
-    std::size_t copy_len = std::min(Len, src.size());
-    std::copy_n(src.data(), copy_len, s_);
-    std::fill_n(s_ + copy_len, sizeof(s_) - copy_len, 0);
-  }
-
-  // For some third-party type traits
-  static constexpr inline bool pass_by_ref(fixed_length_string*) {
-    return true;
-  }
-
-  struct StrBuilder {
-    const char* s;
-
-    static constexpr std::size_t static_max_size() noexcept { return Len; }
-    static constexpr std::size_t max_size() noexcept { return Len; }
-    constexpr std::size_t min_size() const noexcept { return Len; }
-    constexpr std::size_t size() const noexcept { return Len; }
-    constexpr char* write(char* w) const noexcept {
-      if consteval {
-        std::copy_n(s, Len, w);
-      } else {
-        std::memcpy(w, s, Len);
-      }
-      return w + Len;
-    }
-  };
-  constexpr StrBuilder str_builder() const noexcept { return StrBuilder{s_}; }
-
- private:
-  char s_[Len + HasTerminator];
-};
-
-template <std::size_t N>
-fixed_length_string(const char (&)[N]) -> fixed_length_string<N - 1>;
-
 // This class is like short_string, but no null terminator is guaranteed
 template <std::size_t MaxLen>
 class short_nzstring {
@@ -361,12 +279,6 @@ constexpr std::string_view format_as(const short_string<N>& s) noexcept {
 
 template <std::size_t N>
 constexpr std::string_view format_as(const short_nzstring<N>& s) noexcept {
-  return std::string_view(s);
-}
-
-template <std::size_t Len, bool HasTerminator>
-constexpr std::string_view format_as(
-    const fixed_length_string<Len, HasTerminator>& s) noexcept {
   return std::string_view(s);
 }
 

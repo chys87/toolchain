@@ -1,5 +1,5 @@
 # cbu - chys's basic utilities
-# Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
+# Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,6 @@ cc_library(
     'tweak.h',
   ],
   copts = [
-    '-std=gnu++2a',
     '-Wall',
     '-Werror',
     '-fdiagnostics-color=always',
@@ -49,7 +48,6 @@ cc_library(
     '//cbu/common:procutil',
   ],
   copts = [
-    '-std=gnu++2a',
     '-Wall',
     '-Werror',
     '-fdiagnostics-color=always',
@@ -66,7 +64,6 @@ cc_library(
   deps = [
   ],
   copts = [
-    '-std=gnu++2a',
     '-Wall',
     '-Werror',
     '-fdiagnostics-color=always',

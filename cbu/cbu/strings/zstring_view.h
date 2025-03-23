@@ -28,10 +28,11 @@
 
 #pragma once
 
+#include <algorithm>
 #include <string_view>  // IWYU pragma: export
 
 #include "cbu/common/concepts.h"
-#include "cbu/strings/strutil.h"
+#include "cbu/strings/strcomm.h"
 
 namespace cbu {
 
