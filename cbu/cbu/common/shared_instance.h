@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,13 +83,13 @@ struct SharedConst<double, init_value> {
 }  // namespace detail
 
 template <typename T, auto... args>
-inline T shared(args...);
+inline T shared = T(args...);
 
 template <typename T, auto... args>
-inline constinit T shared_constinit(args...);
+inline constinit T shared_constinit = T(args...);
 
 template <typename T, auto... args>
-inline constexpr T shared_constexpr(args...);
+inline constexpr T shared_constexpr = T(args...);
 
 template <typename T, auto... args>
 inline const T& shared_const = detail::SharedConst<T, args...>::value;
