@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -218,9 +218,6 @@ using u32zstring_view = basic_zstring_view<char32_t>;
 
 // Test constexpr comparisons
 static_assert("abc"_sv > "123"_sv);
-// As of GCC 10, there's a bug that fails the following assertion.
-// (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99181)
-// TODO: Uncomment it when it's fixed.
-// static_assert("\xff"_sv > "aaa"_sv);
+static_assert("\xff"_sv > "aaa"_sv);
 
 } // namespace cbu
