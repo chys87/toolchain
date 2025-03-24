@@ -254,7 +254,7 @@ constexpr bool operator==(const short_string<M>& a,
 }
 
 template <std::size_t M, size_t N>
-constexpr bool operator<=>(const short_string<M>& a,
+constexpr auto operator<=>(const short_string<M>& a,
                            const short_string<N>& b) noexcept {
   return a.string_view() <=> b.string_view();
 }
@@ -266,7 +266,7 @@ constexpr bool operator==(const short_nzstring<M>& a,
 }
 
 template <std::size_t M, size_t N>
-constexpr bool operator<=>(const short_nzstring<M>& a,
+constexpr auto operator<=>(const short_nzstring<M>& a,
                            const short_nzstring<N>& b) noexcept {
   return a.string_view() <=> b.string_view();
 }
