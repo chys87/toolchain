@@ -52,7 +52,7 @@ using strlen_t = std::conditional_t<(MaxLen < 65536),
 template <typename Builder, std::size_t MaxLen = 0x7fff'ffff>
 concept BuilderForShortString = requires(const Builder& bldr) {
   requires(sizeof(char[Builder::static_max_size()]) <= MaxLen);
-  { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
+  { bldr.write(std::declval<char*>()) } -> std::same_as<char*>;
 };
 
 // This class is good for storage for very short strings.

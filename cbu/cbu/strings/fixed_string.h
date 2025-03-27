@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -113,7 +113,7 @@ class basic_fixed_string {
     const char* s;
 
     static constexpr std::size_t static_max_size() noexcept { return Len; }
-    static constexpr std::size_t max_size() noexcept { return Len; }
+    static constexpr std::size_t static_min_size() noexcept { return Len; }
     constexpr std::size_t min_size() const noexcept { return Len; }
     constexpr std::size_t size() const noexcept { return Len; }
     constexpr char* write(char* w) const noexcept {

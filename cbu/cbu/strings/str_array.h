@@ -32,6 +32,7 @@
 #include <utility>
 
 #include "cbu/common/concepts.h"
+#include "cbu/strings/str_builder.h"
 #include "cbu/strings/zstring_view.h"
 
 // str_array is a simple string array, with fixed length determined at runtime
@@ -57,7 +58,8 @@ class base_str_array {
   template <typename Builder>
     requires requires(const Builder& builder, char* p) {
       { builder.write(p) } noexcept -> std::same_as<char*>;
-      { builder.size() } noexcept -> std::convertible_to<std::size_t>;
+      requires sb::HasSize<Builder>;
+      requires !sb::HasMaxSize<Builder>;
     }
   explicit base_str_array(const Builder& builder)
       : base_str_array(builder.size()) {
@@ -72,7 +74,8 @@ class base_str_array {
   template <typename Builder>
     requires requires(const Builder& builder, char* p) {
       { builder(p) } noexcept -> std::same_as<char*>;
-      { builder.size() } noexcept -> std::convertible_to<std::size_t>;
+      requires sb::HasSize<Builder>;
+      requires !sb::HasMaxSize<Builder>;
     }
   explicit base_str_array(const Builder& builder)
       : base_str_array(builder.size()) {

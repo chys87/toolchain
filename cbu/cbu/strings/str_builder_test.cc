@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,13 +44,16 @@ TEST(StringBuilderTest, BasicTest) {
   ASSERT_EQ(Concat(FillDec(25), FillDec<10000, FillOptions{.width = 3}>(54))
                 .as_string(),
             "25054");
+  ASSERT_EQ(Conditional(true, 'a', 'b').as_string(), "a");
+  ASSERT_EQ(Conditional(false, 'a', 'b').as_string(), "b");
+  ASSERT_EQ(Conditional(true, 'a', "bbb").as_string(), "a");
+  ASSERT_EQ(Conditional(false, 'a', "bbb").as_string(), "bbb");
 }
 
 TEST(StringBuilderTest, ConstexprTest) {
   constexpr auto str = []() constexpr noexcept {
     constexpr auto builder = Concat("Hello", FillDec(1234567));
-    static_assert(builder.max_size() == builder.min_size());
-    std::array<char, builder.max_size()> r;
+    std::array<char, builder.size()> r;
     builder.write(r.data());
     return r;
   }();
