@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,64 +28,43 @@
 
 #pragma once
 
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
 #include "cbu/common/concepts.h"
-#include "cbu/math/super_integer.h"
 
 namespace cbu {
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
 inline constexpr bool mul_overflow(A a, B b, C* c) noexcept {
-  if consteval {
-    SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
-    bool overflow = si.mul_overflow(b);
-    return !si.cast(c) || overflow;
-  } else {
-    return __builtin_mul_overflow(a, b, c);
-  }
+  return __builtin_mul_overflow(a, b, c);
 }
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
 inline constexpr bool add_overflow(A a, B b, C* c) noexcept {
-  if consteval {
-    SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
-    bool overflow = si.add_overflow(b);
-    return !si.cast(c) || overflow;
-  } else {
-    return __builtin_add_overflow(a, b, c);
-  }
+  return __builtin_add_overflow(a, b, c);
 }
 
 template <typename T, typename U>
   requires std::is_convertible_v<T*, U*>
 inline bool add_overflow(T* a, std::size_t b, U** c) noexcept {
   std::uintptr_t res;
-  if (__builtin_add_overflow(std::uintptr_t(a), b, &res)) {
-    return true;
-  } else {
-    *c = reinterpret_cast<U*>(res);
-    return false;
-  }
+  bool r = __builtin_add_overflow(reinterpret_cast<std::uintptr_t>(a), b, &res);
+  *c = reinterpret_cast<U*>(res);
+  return r;
 }
 
 template <Raw_integral A, Raw_integral B, Raw_integral C>
 inline constexpr bool sub_overflow(A a, B b, C* c) noexcept {
-  if consteval {
-    SuperInteger<std::make_unsigned_t<std::common_type_t<A, B>>> si(a);
-    bool overflow = si.sub_overflow(b);
-    return !si.cast(c) || overflow;
-  } else {
-    return __builtin_sub_overflow(a, b, c);
-  }
+  return __builtin_sub_overflow(a, b, c);
 }
 
 template <Raw_integral A>
 inline constexpr A addc(A x, A y, A carryin, A* carryout) noexcept {
   if !consteval {
     if constexpr (std::is_unsigned_v<A>) {
-      // Currently Clang has these addc builtins
+      // Current GCC and Clang both have these addc builtins
 #define CBU_ADDC(Type, Builtin)              \
   if constexpr (sizeof(A) == sizeof(Type)) { \
     Type o;                                  \
@@ -119,8 +98,8 @@ inline constexpr A addc(A x, A y, A carryin, A* carryout) noexcept {
   return res;
 }
 
-template <std::integral U, std::integral V>
-inline bool sub_overflow(U* a, V b) noexcept {
+template <Raw_integral U, Raw_integral V>
+inline constexpr bool sub_overflow(U* a, V b) noexcept {
   return sub_overflow(*a, b, a);
 }
 

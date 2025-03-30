@@ -79,7 +79,6 @@ cc_library(
   srcs = [],
   hdrs = ['strict_overflow.h'],
   deps = [
-    ':super_integer',
     '//cbu/common:concepts',
   ],
   linkstatic=True,
