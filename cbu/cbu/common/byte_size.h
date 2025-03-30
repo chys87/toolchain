@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -102,12 +102,20 @@ class ByteSize {
   }
 
   template <typename V, typename W>
+    requires(sizeof(T) >= sizeof(V) && sizeof(T) % sizeof(V) == 0)
   constexpr ByteSize(const ByteSize<V, W>& other) noexcept
-      : bytes_(sizeof(T) >= sizeof(V) && sizeof(T) % sizeof(V) == 0
-                   ? other.bytes() * (sizeof(T) / sizeof(V))
-               : sizeof(T) < sizeof(V) && sizeof(V) % sizeof(T) == 0
-                   ? other.bytes() / (sizeof(V) / sizeof(T))
-                   : other.bytes() / sizeof(V) * sizeof(T)) {}
+      : bytes_(other.bytes() * (sizeof(T) / sizeof(V))) {}
+
+  template <typename V, typename W>
+    requires(sizeof(T) < sizeof(V) && sizeof(V) % sizeof(T) == 0)
+  constexpr ByteSize(const ByteSize<V, W>& other) noexcept
+      : bytes_(other.bytes() / (sizeof(V) / sizeof(T))) {}
+
+  template <typename V, typename W>
+    requires(!(sizeof(T) >= sizeof(V) && sizeof(T) % sizeof(V) == 0) &&
+             !(sizeof(T) < sizeof(V) && sizeof(V) % sizeof(T) == 0))
+  constexpr ByteSize(const ByteSize<V, W>& other) noexcept
+      : bytes_(other.bytes() / sizeof(V) * sizeof(T)) {}
 
   constexpr ByteSize& operator=(const ByteSize& other) noexcept = default;
 
@@ -245,7 +253,8 @@ template <typename T, typename TU, std::integral U>
 constexpr ByteSize<T, TU> operator/(const ByteSize<T, TU>& a, U b) noexcept {
   if constexpr ((sizeof(T) & (sizeof(T) - 1)) == 0)
     return ByteSize<T, TU>::from_bytes((a.bytes() / b) & ~(sizeof(T) - 1));
-  return ByteSize<T, TU>::from_bytes(a.bytes() / sizeof(T) / b * sizeof(T));
+  else
+    return ByteSize<T, TU>::from_bytes(a.bytes() / sizeof(T) / b * sizeof(T));
 }
 
 template <typename T, typename TU, std::integral U>
