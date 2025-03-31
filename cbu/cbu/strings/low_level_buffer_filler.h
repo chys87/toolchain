@@ -57,7 +57,7 @@ struct FillByEndian {
   constexpr FillByEndian(T v) noexcept: value(v) {}
 
   template <Raw_char_type Ch>
-  constexpr Ch* operator()(Ch* p) const noexcept {
+  constexpr Ch* write(Ch* p) const noexcept {
     return memdrop_bswap<Order>(p, value);
   }
 
@@ -95,7 +95,7 @@ struct FillDec<UpperBound, Options> {
   constexpr FillDec(std::uint64_t v) noexcept : value(v) {}
 
   template <Raw_char_type Ch>
-  constexpr Ch* operator()(Ch* p) const noexcept {
+  constexpr Ch* write(Ch* p) const noexcept {
     constexpr V UB =
         UpperBound > std::numeric_limits<V>::max() ? 0 : UpperBound;
     conv_fixed_digit<UB, Options.width>(value, p);
@@ -180,7 +180,7 @@ struct FillDec<UpperBound, Options> {
   constexpr FillDec(std::uint64_t v) noexcept : value(v), bytes(get_bytes(v)) {}
 
   template <Raw_char_type Ch>
-  constexpr Ch* operator()(Ch* p) const noexcept {
+  constexpr Ch* write(Ch* p) const noexcept {
     return conv_flexible_digit(value, bytes, p);
   }
 
@@ -266,7 +266,7 @@ struct FillDec<UpperBound, Options> {
   constexpr FillDec(std::uint64_t v) noexcept : value(v) {}
 
   template <Raw_char_type Ch>
-  constexpr Ch* operator()(Ch* p) const noexcept {
+  constexpr Ch* write(Ch* p) const noexcept {
     return conv_flexible_digit(value, p);
   }
 
@@ -349,7 +349,7 @@ struct FillHex {
   }
   static constexpr std::size_t min_size() noexcept { return 2 * sizeof(T); }
   static constexpr std::size_t size() noexcept { return 2 * sizeof(T); }
-  constexpr char* operator()(char* w) const noexcept { return ToHex(w, value); }
+  constexpr char* write(char* w) const noexcept { return ToHex(w, value); }
 };
 
 template <Raw_unsigned_integral T>
@@ -358,7 +358,7 @@ FillHex(T) -> FillHex<T>;
 template <std::ptrdiff_t diff>
 struct FillSkipImpl {
   template <typename Ch>
-  constexpr Ch* operator()(Ch* p) const noexcept {
+  constexpr Ch* write(Ch* p) const noexcept {
     return p + diff;
   }
   static constexpr std::size_t min_size() noexcept { return diff; }
@@ -376,7 +376,7 @@ struct FillGetPointer {
 
   explicit constexpr FillGetPointer(Ch** p) noexcept : ptr(p) {}
 
-  constexpr Ch* operator()(Ch* p) const noexcept {
+  constexpr Ch* write(Ch* p) const noexcept {
     *ptr = p;
     return p;
   }
@@ -396,7 +396,7 @@ struct FillGetLength {
 
   explicit constexpr FillGetLength(const Ch* start, Len* len) noexcept
       : start(start), len(len) {}
-  constexpr Ch* operator()(Ch* p) const noexcept {
+  constexpr Ch* write(Ch* p) const noexcept {
     *len = p - start;
     return p;
   }
@@ -442,11 +442,11 @@ class LowLevelBufferFiller {
   }
 
   template <typename T>
-  requires requires(T&& v) {
-    { std::forward<T>(v)(std::declval<Ch*>()) } -> std::convertible_to<Ch*>;
-  }
-  constexpr LowLevelBufferFiller& operator<<(T&& v) noexcept {
-    p_ = std::forward<T>(v)(p_);
+    requires requires(T v) {
+      { v.write(std::declval<Ch*>()) } -> std::convertible_to<Ch*>;
+    }
+  constexpr LowLevelBufferFiller& operator<<(T v) noexcept {
+    p_ = v.write(p_);
     return *this;
   }
 

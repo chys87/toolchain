@@ -257,74 +257,10 @@ struct Char {
   CBU_STR_BUILDER_MIXIN
 };
 
-// For fillers (low_level_buffer_filler.h) with max_size(), min_size() and
-// size()
-template <typename Builder>
-concept CompatibleLowLevelBufferFiller = requires(const Builder& filler) {
-  { filler(std::declval<char*>()) } -> std::convertible_to<char*>;
-  requires HasMinSize<Builder>;
-};
-
 // For types customized str builders
 template <typename Type>
 concept TypeWithCustomizedStrBuilder = requires(const Type& v) {
   { v.str_builder() } -> BaseBuilder;
-};
-
-template <CompatibleLowLevelBufferFiller Filler>
-struct LowLevelBufferFillerAdapter {
-  Filler filler;
-
-  constexpr std::size_t min_size() const noexcept { return filler.min_size(); }
-  constexpr std::size_t max_size() const noexcept
-    requires HasMaxSize<Filler>
-  {
-    return filler.max_size();
-  }
-  constexpr std::size_t size() const noexcept
-    requires HasSize<Filler>
-  {
-    return filler.size();
-  }
-  static constexpr std::size_t static_min_size() noexcept {
-    return get_static_min_size<Filler>();
-  }
-  static constexpr std::size_t static_max_size() noexcept
-    requires HasStaticMaxSize<Filler>
-  {
-    return Filler::static_max_size();
-  }
-  constexpr char* write(char* w) const noexcept { return filler(w); }
-  CBU_STR_BUILDER_MIXIN
-};
-
-template <BaseBuilder Builder>
-struct CustomizedStrBuilderAdapter {
-  Builder builder;
-
-  constexpr std::size_t min_size() const noexcept {
-    return get_min_size(builder);
-  }
-  constexpr std::size_t max_size() const noexcept
-    requires HasMaxSize<Builder>
-  {
-    return get_max_size(builder);
-  }
-  constexpr std::size_t size() const noexcept
-    requires HasSize<Builder>
-  {
-    return builder.size();
-  }
-  static constexpr std::size_t static_min_size() noexcept {
-    return get_static_min_size<Builder>();
-  }
-  static constexpr std::size_t static_max_size() noexcept
-    requires HasStaticMaxSize<Builder>
-  {
-    return Builder::static_max_size();
-  }
-  constexpr char* write(char* w) const noexcept { return builder.write(w); }
-  CBU_STR_BUILDER_MIXIN
 };
 
 template <BaseBuilder Builder>
@@ -414,12 +350,8 @@ constexpr auto Adapt(const T& sv) noexcept {
 constexpr auto Adapt(char c) noexcept { return Char{c}; }
 constexpr auto Adapt(char8_t c) noexcept { return Char{char(c)}; }
 constexpr auto Adapt(std::integral auto) noexcept = delete;
-constexpr auto Adapt(
-    const CompatibleLowLevelBufferFiller auto& filler) noexcept {
-  return LowLevelBufferFillerAdapter{filler};
-}
 constexpr auto Adapt(const TypeWithCustomizedStrBuilder auto& v) noexcept {
-  return CustomizedStrBuilderAdapter{v.str_builder()};
+  return v.str_builder();
 }
 template <BaseBuilder Builder>
 constexpr auto Adapt(const std::optional<Builder>& bldr) noexcept {
