@@ -78,7 +78,7 @@ struct length_prefixed_string::StrBuilder {
   length_prefixed_string s;
 
   static constexpr unsigned char static_max_size() noexcept { return 255; }
-  constexpr unsigned char max_size() noexcept { return s.size(); }
+  constexpr unsigned char size() const noexcept { return s.size(); }
   constexpr unsigned char min_size() const noexcept { return s.size(); }
   constexpr char* write(char* w) const noexcept {
     std::size_t l = s.size();
