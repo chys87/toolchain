@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -174,12 +174,13 @@ template <std::uint64_t D, std::uint64_t UB>
 inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
     fastdiv_detail::FastDivType<D, UB> v) noexcept {
   CBU_HINT_ASSUME(v < UB);
+  using Type = fastdiv_detail::FastDivType<D, UB>;
   if constexpr (UB <= 1 || D == 1) {
     return 0;
   } else if constexpr (UB <= D) {
     return v;
   } else {
-    auto r = v - D * fastdiv<D, UB>(v);
+    auto r = v - Type(D) * fastdiv<D, UB>(v);
     CBU_HINT_ASSUME(r < D);
     return r;
   }
@@ -199,7 +200,7 @@ fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
     return {0, Type(v)};
   } else {
     Type quo = fastdiv<D, UB>(v);
-    Type rem = v - quo * D;
+    Type rem = v - quo * Type(D);
     CBU_HINT_ASSUME(rem < D);
     return {quo, rem};
   }
