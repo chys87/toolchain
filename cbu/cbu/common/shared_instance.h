@@ -42,7 +42,8 @@ namespace detail {
 
 template <typename T, auto... args>
 struct SharedConst {
-  static inline constexpr T value{args...};
+  // Use explicit alignas to stop GCC from increasing alignment of array types
+  alignas(T) static inline constexpr T value{args...};
 };
 
 template <typename T, auto... args>
