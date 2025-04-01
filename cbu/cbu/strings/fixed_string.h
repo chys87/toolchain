@@ -109,6 +109,12 @@ class basic_fixed_string {
     return basic_fixed_string<Len, false>(std::span(s_, Len));
   }
 
+  template <std::size_t Offset, std::size_t SubLen = Len - Offset>
+  constexpr basic_fixed_string<std::min(SubLen, Len - Offset), true> substr()
+      const noexcept {
+    return {UnsafeTag(), std::string_view(s_ + Offset, std::min(SubLen, Len - Offset))};
+  }
+
   struct StrBuilder {
     const char* s;
 
