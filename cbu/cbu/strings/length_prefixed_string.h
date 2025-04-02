@@ -70,6 +70,12 @@ struct length_prefixed_string {
     return static_cast<unsigned char>(*p);
   }
 
+  // The caller should know what they are doing by knowing that there is
+  // at least one following string
+  constexpr length_prefixed_string next() const noexcept {
+    return from(p + static_cast<unsigned char>(*p) + 1);
+  }
+
   struct StrBuilder;
   constexpr auto str_builder() const noexcept;
 };
@@ -95,17 +101,18 @@ constexpr auto length_prefixed_string::str_builder() const noexcept {
   return StrBuilder{*this};
 }
 
-template <std::size_t N, bool HasTerminator>
-  requires(N <= 255)
-constexpr cbu::fixed_nzstring<N + 1> add_length_prefix(
-    const cbu::basic_fixed_string<N, HasTerminator>& s) noexcept {
-  return fixed_nzstring<1>{{char(static_cast<unsigned char>(N))}} + s;
+template <std::size_t... Ns, bool... Zs>
+  requires((sizeof...(Ns) > 0) && ... && (Ns <= 255))
+constexpr cbu::fixed_nzstring<((Ns + 1) + ...)> add_length_prefix(
+    const cbu::basic_fixed_string<Ns, Zs>&... s) noexcept {
+  return ((fixed_nzstring<1>{{char(static_cast<unsigned char>(Ns))}} + s) +
+          ...);
 }
 
-template <fixed_nzstring s>
-  requires(s.size() <= 255)
+template <fixed_nzstring... ss>
+  requires((sizeof...(ss) > 0) && ... && (ss.size() <= 255))
 inline constexpr length_prefixed_string lp =
-    length_prefixed_string::from(as_shared<add_length_prefix(s)>.data());
+    length_prefixed_string::from(as_shared<add_length_prefix(ss...)>.data());
 
 // for libfmt 10+
 constexpr inline std::string_view format_as(
