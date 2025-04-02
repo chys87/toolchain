@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -70,32 +70,6 @@ inline constexpr const char* c_str(const T& s) noexcept(noexcept(s->c_str())) {
   return s->c_str();
 }
 
-// Equivalent to, but faster than libstdc++ version of, a.compare(b)
-inline constexpr int compare_string_view(std::string_view a,
-                                         std::string_view b) noexcept {
-  if consteval {
-    return (a < b) ? -1 : (a == b) ? 0 : 1;
-  } else {
-    size_t l = a.size() < b.size() ? a.size() : b.size();
-    int rc = __builtin_memcmp(a.data(), b.data(), l);
-    if (rc == 0)
-      rc = (a.size() < b.size()) ? -1 : (a.size() == b.size()) ? 0 : 1;
-    return rc;
-  }
-}
-
-// Returns (a < b), implemented in an optimized way (compared to libstdc++)
-inline constexpr int string_view_lt(std::string_view a,
-                                    std::string_view b) noexcept {
-  if consteval {
-    return (a < b);
-  } else {
-    size_t l = a.size() < b.size() ? a.size() : b.size();
-    int rc = __builtin_memcmp(a.data(), b.data(), l);
-    return (a.size() < b.size()) ? (rc <= 0) : (rc < 0);
-  }
-}
-
 // Convert anything to a string_view, useful in templates.
 template <Std_string_char C>
 inline constexpr std::basic_string_view<C> any_to_string_view(
@@ -120,13 +94,72 @@ concept Any_to_string_view_compat = requires(const T& a) {
   { any_to_string_view(a) };
 };
 
+template <typename T, typename U>
+concept Any_to_string_view_compat_2 =
+    Any_to_string_view_compat<T> && Any_to_string_view_compat<U> &&
+    requires(const T& a, const U& b) {
+      requires std::is_same_v<decltype(any_to_string_view(a)),
+                              decltype(any_to_string_view(b))>;
+    };
+
+// Equivalent to, but faster than libstdc++ version of, a.compare(b)
+template <typename T, typename U>
+  requires Any_to_string_view_compat_2<T, U>
+constexpr int compare_string_view(const T& va, const U& vb) noexcept {
+  auto a = any_to_string_view(va);
+  auto b = any_to_string_view(vb);
+  if consteval {
+    return (a < b) ? -1 : (a == b) ? 0 : 1;
+  } else {
+    size_t l = a.size() < b.size() ? a.size() : b.size();
+    int rc;
+    using Traits = typename decltype(a)::traits_type;
+    if constexpr (std::is_same_v<Traits, std::char_traits<char>> ||
+                  std::is_same_v<Traits, std::char_traits<char8_t>>) {
+      rc = std::memcmp(a.data(), b.data(), l);
+    } else if constexpr (std::is_same_v<Traits, std::char_traits<wchar_t>>) {
+      rc = std::wmemcmp(a.data(), b.data(), l);
+    } else {
+      rc = Traits::compare(a.data(), b.data(), l);
+    }
+    if (rc == 0)
+      rc = (a.size() < b.size()) ? -1 : (a.size() == b.size()) ? 0 : 1;
+    return rc;
+  }
+}
+
+// Returns (a < b), implemented in an optimized way (compared to libstdc++)
+template <typename T, typename U>
+  requires Any_to_string_view_compat_2<T, U>
+constexpr int string_view_lt(const T& va, const U& vb) noexcept {
+  auto a = any_to_string_view(va);
+  auto b = any_to_string_view(vb);
+  if consteval {
+    return (a < b);
+  } else {
+    size_t l = a.size() < b.size() ? a.size() : b.size();
+    using Traits = typename decltype(a)::traits_type;
+    int rc;
+    if consteval {
+      rc = Traits::compare(a.data(), b.data(), l);
+    } else {
+      if constexpr (std::is_same_v<Traits, std::char_traits<char>> ||
+                    std::is_same_v<Traits, std::char_traits<char8_t>>) {
+        rc = std::memcmp(a.data(), b.data(), l);
+      } else if constexpr (std::is_same_v<Traits, std::char_traits<wchar_t>>) {
+        rc = std::wmemcmp(a.data(), b.data(), l);
+      } else {
+        rc = Traits::compare(a.data(), b.data(), l);
+      }
+    }
+    return (a.size() < b.size()) ? (rc <= 0) : (rc < 0);
+  }
+}
+
 // First compare by length, then by string content
 // Suitable for use in map and set
-template <Any_to_string_view_compat T, Any_to_string_view_compat U>
-  requires requires(const T& a, const U& b) {
-    requires std::is_same_v<decltype(any_to_string_view(a)),
-                            decltype(any_to_string_view(b))>;
-  }
+template <typename T, typename U>
+  requires Any_to_string_view_compat_2<T, U>
 inline constexpr int strcmp_length_first(const T& a, const U& b) noexcept {
   auto sv_a = any_to_string_view(a);
   auto sv_b = any_to_string_view(b);
@@ -152,7 +185,8 @@ inline constexpr int strcmp_length_first(const T& a, const U& b) noexcept {
 struct StrLess {
   using is_transparent = void;
 
-  template <Any_to_string_view_compat T, Any_to_string_view_compat U>
+  template <typename T, typename U>
+    requires Any_to_string_view_compat_2<T, U>
   static constexpr int operator()(const T& a, const U& b) noexcept {
     return string_view_lt(a, b);
   }
@@ -161,7 +195,8 @@ struct StrLess {
 struct StrGreater {
   using is_transparent = void;
 
-  template <Any_to_string_view_compat T, Any_to_string_view_compat U>
+  template <typename T, typename U>
+    requires Any_to_string_view_compat_2<T, U>
   static constexpr int operator()(const T& a, const U& b) noexcept {
     return string_view_lt(b, a);
   }
@@ -171,8 +206,8 @@ struct StrCmpLengthFirst {
   using is_transparent = void;
 
   template <typename T, typename U>
-  CBU_STATIC_CALL constexpr int operator()(const T& a, const U& b)
-      CBU_STATIC_CALL_CONST noexcept {
+    requires Any_to_string_view_compat_2<T, U>
+  static constexpr int operator()(const T& a, const U& b) noexcept {
     return strcmp_length_first(a, b);
   }
 };
@@ -181,8 +216,8 @@ struct StrLessLengthFirst {
   using is_transparent = void;
 
   template <typename T, typename U>
-  CBU_STATIC_CALL constexpr bool operator()(const T& a, const U& b)
-      CBU_STATIC_CALL_CONST noexcept {
+    requires Any_to_string_view_compat_2<T, U>
+  static constexpr bool operator()(const T& a, const U& b) noexcept {
     return strcmp_length_first(a, b) < 0;
   }
 };
@@ -191,8 +226,8 @@ struct StrGreaterLengthFirst {
   using is_transparent = void;
 
   template <typename T, typename U>
-  CBU_STATIC_CALL constexpr bool operator()(const T& a, const U& b)
-      CBU_STATIC_CALL_CONST noexcept {
+    requires Any_to_string_view_compat_2<T, U>
+  static constexpr bool operator()(const T& a, const U& b) noexcept {
     return strcmp_length_first(a, b) > 0;
   }
 };
