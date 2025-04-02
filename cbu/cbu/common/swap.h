@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -58,9 +58,11 @@ inline constexpr void swap_impl(T &a, U &b) noexcept(noexcept(swap(a, b))) {
   if !consteval {
     if constexpr (std::is_same_v<T, U> && cbu::bitwise_movable_v<T>) {
       char tmp[sizeof(T)];
-      __builtin_memcpy(tmp, std::addressof(a), sizeof(T));
-      __builtin_memcpy(std::addressof(a), std::addressof(b), sizeof(T));
-      __builtin_memcpy(std::addressof(b), tmp, sizeof(T));
+      __builtin_memcpy(tmp, static_cast<const void*>(std::addressof(a)),
+                       sizeof(T));
+      __builtin_memcpy(static_cast<void*>(std::addressof(a)),
+                       static_cast<const void*>(std::addressof(b)), sizeof(T));
+      __builtin_memcpy(static_cast<void*>(std::addressof(b)), tmp, sizeof(T));
       return;
     }
   }
