@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -212,10 +212,9 @@ char* IPv4::ToString(char* p) const noexcept {
   return p;
 }
 
-short_string<15> IPv4::ToString() const noexcept {
-  short_string<15> res(kUninitialized);  // The max length of an IPv4 is 15
+short_nzstring<15> IPv4::ToString() const noexcept {
+  short_nzstring<15> res(kUninitialized);  // The max length of an IPv4 is 15
   char* w = ToString(res.buffer());
-  *w = '\0';
   res.set_length(w - res.buffer());
   return res;
 }

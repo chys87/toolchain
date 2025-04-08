@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,8 @@
 
 namespace cbu {
 
-template <std::size_t> class short_string;
+template <std::size_t, bool>
+class basic_short_string;
 
 inline constexpr std::endian network_endian = std::endian::big;
 inline constexpr std::endian native_endian = std::endian::native;
@@ -93,7 +94,7 @@ class IPv4 {
   }
 
   CBU_AARCH64_PRESERVE_ALL char* ToString(char* buffer) const noexcept;
-  CBU_AARCH64_PRESERVE_ALL short_string<kMaxStringLen> ToString()
+  CBU_AARCH64_PRESERVE_ALL basic_short_string<kMaxStringLen, false> ToString()
       const noexcept;
   CBU_AARCH64_PRESERVE_ALL std::string_view ToStringView(
       char (&buffer)[kMaxStringLen]) const noexcept {

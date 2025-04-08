@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -212,16 +212,15 @@ char* IPv6::Format(char* w, const in6_addr& addr, int flags) noexcept {
   return w;
 }
 
-short_string<IPv6::kMaxStringLen> IPv6::Format(const in6_addr& addr6,
-                                               int flags) noexcept {
-  short_string<kMaxStringLen> res(kUninitialized);
+short_nzstring<IPv6::kMaxStringLen> IPv6::Format(const in6_addr& addr6,
+                                                 int flags) noexcept {
+  short_nzstring<kMaxStringLen> res(kUninitialized);
   char* w = Format(res.buffer(), addr6, flags);
-  *w = '\0';
   res.set_length(w - res.buffer());
   return res;
 }
 
-short_string<IPv6::kMaxStringLen> IPv6::ToString(int flags) const noexcept {
+short_nzstring<IPv6::kMaxStringLen> IPv6::ToString(int flags) const noexcept {
   return Format(a_, flags);
 }
 
@@ -436,11 +435,10 @@ char* IPv6Port::ToString(char* buf, int flags) const noexcept {
   return buf;
 }
 
-short_string<IPv6Port::kMaxStringLen> IPv6Port::ToString(
+short_nzstring<IPv6Port::kMaxStringLen> IPv6Port::ToString(
     int flags) const noexcept {
-  short_string<kMaxStringLen> res(kUninitialized);
+  short_nzstring<kMaxStringLen> res(kUninitialized);
   char* w = ToString(res.buffer(), flags);
-  *w = '\0';
   res.set_length(w - res.buffer());
   return res;
 }

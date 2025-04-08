@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,8 +49,8 @@
 
 namespace cbu {
 
-template <size_t>
-class short_string;
+template <std::size_t, bool>
+class basic_short_string;
 
 class IPv6 {
  public:
@@ -62,8 +62,8 @@ class IPv6 {
   static inline constexpr int kPreferBareIPv4 = 1;
 
   static char* Format(char* buf, const in6_addr& addr6, int flags = 0) noexcept;
-  static short_string<kMaxStringLen> Format(const in6_addr& addr6,
-                                            int flags = 0) noexcept;
+  static basic_short_string<kMaxStringLen, false> Format(
+      const in6_addr& addr6, int flags = 0) noexcept;
 
  public:
   constexpr IPv6() noexcept : a_{} {}
@@ -108,7 +108,8 @@ class IPv6 {
   char* ToString(char* buf, int flags = 0) const noexcept {
     return Format(buf, a_, flags);
   }
-  short_string<kMaxStringLen> ToString(int flags = 0) const noexcept;
+  basic_short_string<kMaxStringLen, false> ToString(
+      int flags = 0) const noexcept;
   std::string_view ToStringView(char (&buffer)[kMaxStringLen],
                                 int flags = 0) const noexcept {
     return {buffer, size_t(ToString(buffer, flags) - buffer)};
@@ -312,7 +313,8 @@ struct IPv6Port {
   static char* PortToString(char* buf, uint16_t port) noexcept;
 
   char* ToString(char* buf, int flags = 0) const noexcept;
-  short_string<kMaxStringLen> ToString(int flags = 0) const noexcept;
+  basic_short_string<kMaxStringLen, false> ToString(
+      int flags = 0) const noexcept;
   std::string_view ToStringView(char (&buffer)[kMaxStringLen],
                                 int flags = 0) const noexcept {
     return {buffer, ToString(buffer, flags)};

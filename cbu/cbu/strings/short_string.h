@@ -45,9 +45,9 @@
 namespace cbu {
 
 template <std::size_t MaxLen>
-using strlen_t = std::conditional_t<(MaxLen < 65536),
-    std::conditional_t<(MaxLen < 256), std::uint8_t, std::uint16_t>,
-    size_t>;
+using strlen_t = std::conditional_t<
+    (MaxLen < 65536),
+    std::conditional_t<(MaxLen < 256), std::uint8_t, std::uint16_t>, size_t>;
 
 template <typename Builder, std::size_t MaxLen = 0x7fff'ffff>
 concept BuilderForShortString = requires(const Builder& bldr) {
@@ -55,140 +55,50 @@ concept BuilderForShortString = requires(const Builder& bldr) {
   { bldr.write(std::declval<char*>()) } -> std::same_as<char*>;
 };
 
-// This class is good for storage for very short strings.
-template <std::size_t MaxLen>
-class short_string {
+template <std::size_t MaxLen, bool Z>
+class basic_short_string {
  public:
   using len_t = strlen_t<MaxLen>;
 
-  explicit short_string(UninitializedTag) noexcept {}
+  explicit basic_short_string(UninitializedTag) noexcept {}
 
-  constexpr short_string() noexcept : s_{}, l_{0} {}
+  constexpr basic_short_string() noexcept : s_{}, l_{0} {}
 
   template <std::size_t LenP1>
-  consteval short_string(const char (&src)[LenP1]) noexcept
-      : short_string(std::string_view(src, LenP1 - 1)) {
+  consteval basic_short_string(const char (&src)[LenP1]) noexcept
+      : basic_short_string(std::string_view(src, LenP1 - 1)) {
     // Use a static assertion rather than a concept, to prevent
     // longer strings from matching the following std::string_view overload.
     static_assert(LenP1 <= MaxLen + 1);
   }
 
-  constexpr short_string(std::string_view src) noexcept {
+  constexpr basic_short_string(std::string_view src) noexcept {
     if consteval {
-      std::fill_n(s_, MaxLen + 1, 0);
+      std::fill_n(s_, sizeof(s_), 0);
     }
     assign(src);
   }
 
   template <BuilderForShortString<MaxLen> Builder>
-  constexpr explicit short_string(const Builder& builder) noexcept {
+  constexpr explicit basic_short_string(const Builder& builder) noexcept {
     if consteval {
-      std::fill_n(s_, MaxLen + 1, 0);
+      std::fill_n(s_, sizeof(s_), 0);
     }
     char* w = builder.write(s_);
-    *w = '\0';
+    if constexpr (Z) {
+      *w = '\0';
+    }
     l_ = w - s_;
   }
 
-  constexpr char (&buffer() noexcept)[MaxLen + 1] { return s_; }
+  constexpr char (&buffer() noexcept)[MaxLen + Z] { return s_; }
   constexpr void set_length(len_t l) { l_ = l; }
 
-  constexpr const char* c_str() const noexcept { return s_; }
-  constexpr const char* data() const noexcept { return s_; }
-  constexpr char operator[](std::size_t n) const noexcept { return s_[n]; }
-  constexpr len_t length() const noexcept { return l_; }
-  constexpr len_t size() const noexcept { return l_; }
-  constexpr const char* begin() const noexcept { return s_; }
-  constexpr const char* end() const noexcept { return s_ + l_; }
-  constexpr const char* cbegin() const noexcept { return s_; }
-  constexpr const char* cend() const noexcept { return s_ + l_; }
-  constexpr operator zstring_view() const noexcept { return {s_, l_}; }
-
-  constexpr zstring_view string_view() const noexcept { return {s_, l_}; }
-  std::string string() const { return std::string(s_, l_); }
-
-  static constexpr len_t capacity() noexcept { return MaxLen; }
-
-  constexpr void assign(std::string_view rhs) noexcept {
-    if consteval {
-      auto copy_end = std::copy_n(rhs.data(), rhs.length(), s_);
-      *copy_end = '\0';
-    } else {
-      // memcpy is fine, but copy_n uses memmove
-      std::memcpy(s_, rhs.data(), rhs.length());
-      s_[rhs.length()] = '\0';
-    }
-    l_ = rhs.length();
+  constexpr const char* c_str() const noexcept
+    requires Z
+  {
+    return s_;
   }
-
-  // For some third-party type traits
-  static constexpr inline bool pass_by_ref(short_string*) { return true; }
-
-  struct StrBuilder {
-    const short_string& s;
-
-    static constexpr len_t static_max_size() noexcept { return MaxLen; }
-    static constexpr len_t max_size() noexcept { return MaxLen; }
-    constexpr len_t min_size() const noexcept { return s.l_; }
-    constexpr char* write(char* w) const noexcept {
-      if consteval {
-        std::copy_n(s.s_, s.l_, w);
-      } else {
-        std::memcpy(w, s.s_, MaxLen);
-      }
-      return w + s.l_;
-    }
-  };
-  constexpr StrBuilder str_builder() const noexcept { return StrBuilder{*this}; }
-
- private:
-  char s_[MaxLen + 1];
-  len_t l_;
-};
-
-template <std::size_t N>
-  requires(N > 0)
-short_string(const char (&)[N]) -> short_string<N - 1>;
-
-template <BuilderForShortString<> Builder>
-short_string(const Builder&) -> short_string<Builder::static_max_size()>;
-
-// This class is like short_string, but no null terminator is guaranteed
-template <std::size_t MaxLen>
-class short_nzstring {
- public:
-  using len_t = strlen_t<MaxLen>;
-
-  explicit short_nzstring(UninitializedTag) noexcept {}
-
-  constexpr short_nzstring() noexcept : s_{}, l_{0} {}
-
-  template <std::size_t LenP1>
-  consteval short_nzstring(const char (&src)[LenP1]) noexcept
-      : short_nzstring(std::string_view(src, LenP1 - 1)) {
-    // Use a static assertion rather than a concept, to prevent
-    // longer strings from matching the following std::string_view overload.
-    static_assert(LenP1 <= MaxLen + 1);
-  }
-
-  constexpr short_nzstring(std::string_view src) noexcept {
-    if consteval {
-      std::fill_n(s_, std::size(s_), 0);
-    }
-    assign(src);
-  }
-
-  template <BuilderForShortString<MaxLen> Builder>
-  constexpr explicit short_nzstring(const Builder& builder) noexcept {
-    if consteval {
-      std::fill_n(s_, MaxLen + 1, 0);
-    }
-    l_ = builder.write(s_) - s_;
-  }
-
-  constexpr char (&buffer() noexcept)[MaxLen] { return s_; }
-  constexpr void set_length(len_t l) { l_ = l; }
-
   constexpr const char* data() const noexcept { return s_; }
   constexpr char operator[](std::size_t n) const noexcept { return s_[n]; }
   constexpr len_t length() const noexcept { return l_; }
@@ -198,27 +108,39 @@ class short_nzstring {
   constexpr const char* cbegin() const noexcept { return s_; }
   constexpr const char* cend() const noexcept { return s_ + l_; }
   constexpr operator std::string_view() const noexcept { return {s_, l_}; }
+  constexpr operator zstring_view() const noexcept
+    requires Z
+  {
+    return {s_, l_};
+  }
 
-  constexpr std::string_view string_view() const noexcept { return {s_, l_}; }
+  constexpr std::conditional_t<Z, zstring_view, std::string_view> string_view()
+      const noexcept {
+    return {s_, l_};
+  }
   std::string string() const { return std::string(s_, l_); }
 
   static constexpr len_t capacity() noexcept { return MaxLen; }
 
   constexpr void assign(std::string_view rhs) noexcept {
     if consteval {
-      std::copy_n(rhs.data(), rhs.length(), s_);
+      [[maybe_unused]] auto copy_end =
+          std::copy_n(rhs.data(), rhs.length(), s_);
+      if constexpr (Z) {
+        *copy_end = '\0';
+      }
     } else {
       // memcpy is fine, but copy_n uses memmove
       std::memcpy(s_, rhs.data(), rhs.length());
+      if constexpr (Z) {
+        s_[rhs.length()] = '\0';
+      }
     }
     l_ = rhs.length();
   }
 
-  // For some third-party type traits
-  static constexpr inline bool pass_by_ref(short_nzstring*) { return true; }
-
   struct StrBuilder {
-    const short_nzstring& s;
+    const basic_short_string& s;
 
     static constexpr len_t static_max_size() noexcept { return MaxLen; }
     static constexpr len_t max_size() noexcept { return MaxLen; }
@@ -235,50 +157,48 @@ class short_nzstring {
   constexpr StrBuilder str_builder() const noexcept { return StrBuilder{*this}; }
 
  private:
-  char s_[MaxLen];
+  char s_[MaxLen + Z];
   len_t l_;
 };
 
+template <std::size_t MaxLen>
+using short_string = basic_short_string<MaxLen, true>;
+
+template <std::size_t MaxLen>
+using short_nzstring = basic_short_string<MaxLen, false>;
+
 template <std::size_t N>
   requires(N > 0)
-short_nzstring(const char (&)[N])
-->short_nzstring<N - 1>;
+basic_short_string(const char (&)[N]) -> basic_short_string<N - 1, true>;
+
+template <std::size_t N>
+  requires(N > 0)
+basic_short_string(const char (&)[N]) -> basic_short_string<N - 1, false>;
 
 template <BuilderForShortString<> Builder>
-short_nzstring(const Builder&) -> short_nzstring<Builder::static_max_size()>;
+basic_short_string(const Builder&)
+    -> basic_short_string<Builder::static_max_size(), true>;
 
-template <std::size_t M, size_t N>
-constexpr bool operator==(const short_string<M>& a,
-                          const short_string<N>& b) noexcept {
+template <BuilderForShortString<> Builder>
+basic_short_string(const Builder&)
+    -> basic_short_string<Builder::static_max_size(), false>;
+
+template <std::size_t M, bool Z1, std::size_t N, bool Z2>
+constexpr bool operator==(const basic_short_string<M, Z1>& a,
+                          const basic_short_string<N, Z2>& b) noexcept {
   return a.string_view() == b.string_view();
 }
 
-template <std::size_t M, size_t N>
-constexpr auto operator<=>(const short_string<M>& a,
-                           const short_string<N>& b) noexcept {
-  return a.string_view() <=> b.string_view();
-}
-
-template <std::size_t M, size_t N>
-constexpr bool operator==(const short_nzstring<M>& a,
-                          const short_nzstring<N>& b) noexcept {
-  return a.string_view() == b.string_view();
-}
-
-template <std::size_t M, size_t N>
-constexpr auto operator<=>(const short_nzstring<M>& a,
-                           const short_nzstring<N>& b) noexcept {
+template <std::size_t M, bool Z1, std::size_t N, bool Z2>
+constexpr auto operator<=>(const basic_short_string<M, Z1>& a,
+                           const basic_short_string<N, Z2>& b) noexcept {
   return a.string_view() <=> b.string_view();
 }
 
 // for libfmt 10+
-template <std::size_t N>
-constexpr std::string_view format_as(const short_string<N>& s) noexcept {
-  return std::string_view(s);
-}
-
-template <std::size_t N>
-constexpr std::string_view format_as(const short_nzstring<N>& s) noexcept {
+template <std::size_t N, bool Z>
+constexpr std::string_view format_as(
+    const basic_short_string<N, Z>& s) noexcept {
   return std::string_view(s);
 }
 
