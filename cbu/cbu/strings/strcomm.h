@@ -161,6 +161,11 @@ constexpr int string_view_lt(const T& va, const U& vb) noexcept {
 template <typename T, typename U>
   requires Any_to_string_view_compat_2<T, U>
 inline constexpr int strcmp_length_first(const T& a, const U& b) noexcept {
+  if constexpr (requires() {
+                  { strcmp_length_first_impl(a, b) };
+                }) {
+    return strcmp_length_first_impl(a, b);
+  }
   auto sv_a = any_to_string_view(a);
   auto sv_b = any_to_string_view(b);
   if (sv_a.length() < sv_b.length()) {

@@ -28,6 +28,10 @@
 
 #pragma once
 
+#ifdef __AVX2__
+#include <x86intrin.h>
+#endif
+
 #include <algorithm>
 #include <compare>
 #include <cstddef>
@@ -201,5 +205,42 @@ constexpr std::string_view format_as(
     const basic_short_string<N, Z>& s) noexcept {
   return std::string_view(s);
 }
+
+// Selected specializations
+#ifdef __AVX2__
+constexpr bool operator==(const short_nzstring<31>& a,
+                          const short_nzstring<31>& b) noexcept {
+  if consteval {
+    return a.string_view() == b.string_view();
+  } else {
+    uint8_t l = a.size();
+    __m256i va = *(const __m256i_u*)a.data();
+    __m256i vb = *(const __m256i_u*)b.data();
+    uint32_t ne = ~_mm256_movemask_epi8(_mm256_cmpeq_epi8(va, vb)) &
+                  (0x80000000u | ((1u << l) - 1));
+    return ne == 0;
+  }
+}
+
+constexpr int strcmp_length_first_impl(const short_nzstring<31>& a,
+                                       const short_nzstring<31>& b) noexcept {
+  if (a.size() < b.size()) {
+    return -1;
+  } else if (a.size() > b.size()) {
+    return 1;
+  } else if consteval {
+    return std::char_traits<char>::compare(a.data(), b.data(), a.size());
+  } else {
+    uint8_t l = a.size();
+    __m256i va = *(const __m256i_u*)a.data();
+    __m256i vb = *(const __m256i_u*)b.data();
+    uint32_t mask = (1u << l) - 1;
+    uint32_t ne = ~_mm256_movemask_epi8(_mm256_cmpeq_epi8(va, vb)) & mask;
+    uint32_t lt = _mm256_movemask_epi8(__m256i(__v32qu(va) < __v32qu(vb)));
+    uint32_t bit = ne & -ne;  // First different position
+    return (lt & bit) ? -1 : bit ? 1 : 0;
+  }
+}
+#endif
 
 }  // namespace cbu
