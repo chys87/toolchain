@@ -194,6 +194,10 @@ class ByteSize {
   U bytes_;
 };
 
+template <typename T, typename U>
+  requires std::is_same_v<std::remove_cv_t<T>, std::remove_cv_t<U>>
+ByteSize(T*, U*) -> ByteSize<std::remove_cv_t<T>>;
+
 // Comparisons
 
 template <typename T, typename TU, typename U, typename UU>
