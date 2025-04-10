@@ -257,6 +257,26 @@ struct Char {
   CBU_STR_BUILDER_MIXIN
 };
 
+template <std::size_t MaxLen = std::size_t(-1), std::size_t MinLen = 0>
+  requires(MaxLen >= MinLen)
+struct Chars {
+  std::size_t n;
+  char c;
+  static constexpr std::size_t static_min_size() noexcept { return MinLen; }
+  static constexpr std::size_t static_max_size() noexcept
+    requires(MaxLen < 0xffffffff)
+  {
+    return MaxLen;
+  }
+  constexpr std::size_t min_size() const noexcept { return n; }
+  constexpr std::size_t size() const noexcept { return n; }
+  constexpr char* write(char* w) const noexcept {
+    for (std::size_t i = 0; i != n; ++i) *w++ = c;
+    return w;
+  }
+  CBU_STR_BUILDER_MIXIN
+};
+
 // For types customized str builders
 template <typename Type>
 concept TypeWithCustomizedStrBuilder = requires(const Type& v) {
