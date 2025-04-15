@@ -62,6 +62,7 @@ struct length_prefixed_string {
   constexpr std::string_view view() const noexcept {
     return {p + 1, static_cast<unsigned char>(*p)};
   }
+  constexpr const char* raw_data() const noexcept { return p; }
   constexpr const char* data() const noexcept { return p + 1; }
   constexpr unsigned char size() const noexcept {
     return static_cast<unsigned char>(*p);
