@@ -277,6 +277,23 @@ struct Chars {
   CBU_STR_BUILDER_MIXIN
 };
 
+template <BaseBuilder Builder>
+struct RepeatedImpl {
+  std::size_t n;
+  Builder builder;
+
+  static constexpr std::size_t static_min_size() noexcept { return 0; }
+  constexpr std::size_t size() const noexcept { return builder.size() * n; }
+  constexpr std::size_t min_size() const noexcept {
+    return builder.min_size() * n;
+  }
+  constexpr char* write(char* w) const noexcept {
+    for (std::size_t i = n; i; --i) w = builder.write(w);
+    return w;
+  }
+  CBU_STR_BUILDER_MIXIN
+};
+
 // For types customized str builders
 template <typename Type>
 concept TypeWithCustomizedStrBuilder = requires(const Type& v) {
@@ -382,6 +399,11 @@ template <typename T>
 concept ExBuilder = requires(const T& ex) {
   { Adapt(ex) } -> BaseBuilder;
 };
+
+template <ExBuilder T>
+constexpr auto Repeated(std::size_t n, T bldr) noexcept {
+  return RepeatedImpl{n, Adapt(bldr)};
+}
 
 template <ExBuilder T>
 constexpr auto Optional(std::optional<T> bldr) noexcept {
