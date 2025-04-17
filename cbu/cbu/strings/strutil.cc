@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -624,6 +624,7 @@ size_t common_suffix_ex(const void* pa, const void* pb, size_t maxl,
 
 size_t truncate_string_utf8_impl(const void* s, size_t n) noexcept {
   const char8_t* p = static_cast<const char8_t*>(s);
+  CBU_NAIVE_LOOP
   while (n && utf8_byte_type(p[n]) == Utf8ByteType::TRAILING) --n;
   return n;
 }
