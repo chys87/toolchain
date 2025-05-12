@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -57,9 +57,13 @@ constexpr unsigned kNumCategories = kMaxCategory + 1;
 
 constexpr size_t category_to_size(unsigned n) noexcept { return (16u << n); }
 
+static_assert(kPageSize == category_to_size(kMaxCategory) * 4,
+              "kPageSize/kMaxCategory");
+constexpr size_t kSmallAllocLimit = kPageSize / 4;
+
 constexpr unsigned size_to_category(size_t m) noexcept {
   assert(m != 0);
-  assert(m <= category_to_size(kMaxCategory));
+  assert(m <= kSmallAllocLimit);
   unsigned n = (m - 1) | 15;
   unsigned cat = bsr(n);
   return (cat - 3);
@@ -72,10 +76,6 @@ constexpr size_t divide_by_category_size(size_t m, unsigned n) noexcept {
 constexpr size_t multiply_by_category_size(size_t m, unsigned n) noexcept {
   return (m << (4 + n));
 }
-
-static_assert(kPageSize == category_to_size(kMaxCategory) * 4,
-              "kPageSize/kMaxCategory");
-constexpr size_t kSmallAllocLimit = kPageSize / 4;
 
 template <typename T>
 inline constexpr T pagesize_floor(T size) noexcept {

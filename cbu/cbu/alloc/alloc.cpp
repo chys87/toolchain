@@ -99,7 +99,7 @@ void* allocate(size_t size, AllocateOptions options) noexcept {
 
   void* ptr = nullptr;
 
-  if (size > category_to_size(kMaxCategory)) {
+  if (size > kSmallAllocLimit) {
     ptr = alloc_large(size, options.zero);
     if (false_no_fail(ptr == nullptr)) return nomem();
   } else if (size != 0) {
@@ -117,7 +117,7 @@ void* allocate(size_t size, AllocateOptions options) noexcept {
 void* allocate(size_t size) noexcept {
   void* ptr = nullptr;
 
-  if (size > category_to_size(kMaxCategory)) {
+  if (size > kSmallAllocLimit) {
     ptr = alloc_large(size, false /* zero */);
     if (false_no_fail(ptr == nullptr)) return nomem();
   } else if (size != 0) {
