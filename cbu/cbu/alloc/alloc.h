@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -75,7 +75,9 @@ struct AllocateOptions {
 
 // High-level interfaces
 // Supported options: align; zero
-void* allocate(size_t size, AllocateOptions options = {}) noexcept;
+void* allocate(size_t size, AllocateOptions options) noexcept;
+// Same as allocate(size, AllocateOptions{}), but optimized for the common case
+void* allocate(size_t size) noexcept;
 // Supported options: align
 [[gnu::noinline]] void* reallocate(void* ptr, size_t new_size,
                  AllocateOptions options = {}) noexcept;

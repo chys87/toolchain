@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,7 +73,7 @@ void free_small_list(Block* ptr) {
         ;
     if (remain <= 0) {
       if (remain < 0)
-        fatal<"Memory corrupt: run->allocated < 0 at free_small_list">();
+        fatal<"Memory corrupt: run->allocated < 0 at free_small">();
       reclaim_page((Page*)run, kPageSize);
     }
   }
@@ -81,7 +81,9 @@ void free_small_list(Block* ptr) {
 
 // Use fallback_cache when thread_cache is unusable
 constinit SmallCache fallback_cache{};
+#ifndef CBU_SINGLE_THREADED
 constinit LowLevelMutex fallback_cache_lock{};
+#endif
 
 void* alloc_small_category_with_cache(SmallCache* cache, unsigned cat) {
   ThreadCategory* catp = &cache->category[cat];
@@ -113,11 +115,10 @@ void free_small_with_cache(SmallCache* cache, void* ptr) {
 
   unsigned cat = block2run(p)->cat;
   if (cat > kMaxCategory)
-    fatal<"Memory corrupt: category invalid at free_small_with_cache">();
+    fatal<"Memory corrupt: category invalid at free_small">();
 
   if (uintptr_t(p) & (category_to_size(cat) - 1))
-    fatal<
-        "Memory corrupt: pointer alignment invalid at free_small_with_cache">();
+    fatal<"Memory corrupt: alignment invalid at free_small">();
 
   ThreadCategory* catp = &cache->category[cat];
   p->count = 1;
@@ -142,12 +143,16 @@ void SmallCache::clear() noexcept {
 }
 
 void* alloc_small_category(unsigned cat) noexcept {
+#ifdef CBU_SINGLE_THREADED
+  return alloc_small_category_with_cache(&fallback_cache, cat);
+#else
   if (ThreadCache* tc = get_or_create_thread_cache()) {
     return alloc_small_category_with_cache(&tc->small_cache, cat);
   } else {
     std::lock_guard locker(fallback_cache_lock);
     return alloc_small_category_with_cache(&fallback_cache, cat);
   }
+#endif
 }
 
 void* alloc_small(size_t size) noexcept {
@@ -155,12 +160,16 @@ void* alloc_small(size_t size) noexcept {
 }
 
 void free_small(void* ptr) noexcept {
+#ifdef CBU_SINGLE_THREADED
+  free_small_with_cache(&fallback_cache, ptr);
+#else
   if (ThreadCache* tc = get_or_create_thread_cache()) {
     free_small_with_cache(&tc->small_cache, ptr);
   } else {
     std::lock_guard locker(fallback_cache_lock);
     free_small_with_cache(&fallback_cache, ptr);
   }
+#endif
 }
 
 void free_small(void* ptr, size_t size) noexcept {
@@ -180,11 +189,15 @@ size_t small_allocated_size(void* ptr) noexcept {
 }
 
 void small_trim(size_t) noexcept {
+#ifdef CBU_SINGLE_THREADED
+  fallback_cache.clear();
+#else
   if (ThreadCache* tc = get_thread_cache()) tc->small_cache.clear();
   {
     std::lock_guard locker(fallback_cache_lock);
     fallback_cache.clear();
   }
+#endif
 }
 
 }  // namespace alloc
