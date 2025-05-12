@@ -383,7 +383,8 @@ CXXFLAGS = $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) 
 BASE_LDFLAGS = -Wl,-O1 -Wl,--fatal-warnings -Wl,--as-needed \
   -Wl,-z,relro -Wl,-z,lazy -Wl,-z,noexecstack \
   -Wl,-z,start-stop-visibility=hidden \
-  -Wl,-z,nostart-stop-gc
+  -Wl,-z,nostart-stop-gc \
+  -Wl,--build-id=none
 ifneq "$(SYMBOL_SECTIONS)" "0"
 BASE_LDFLAGS += -Wl,--gc-sections
 endif
