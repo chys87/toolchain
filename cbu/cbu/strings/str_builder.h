@@ -49,7 +49,8 @@ concept HasSize = requires(const Builder& bldr) {
 
 template <typename Builder>
 concept HasMaxSize = requires(const Builder& bldr) {
-  // Add max_size() _only_ if write() may use additional space.
+  // Add max_size() _only_ if write() may use additional space, or it is
+  // expensive to derive the actual size
   { bldr.max_size() } -> std::convertible_to<std::size_t>;
 };
 

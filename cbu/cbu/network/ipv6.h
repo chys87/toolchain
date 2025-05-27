@@ -258,6 +258,24 @@ class IPv6 {
     }
   };
 
+  struct StrBuilder {
+    const cbu::IPv6& ip;
+    int flags;
+
+    static constexpr std::size_t static_max_size() noexcept {
+      return kMaxStringLen;
+    }
+    static constexpr std::size_t static_min_size() noexcept { return 2; }
+    constexpr std::size_t max_size() const noexcept { return kMaxStringLen; }
+    constexpr std::size_t min_size() const noexcept { return 2; }
+    constexpr char* write(char* w) const noexcept {
+      return ip.ToString(w, flags);
+    }
+  };
+  constexpr StrBuilder str_builder(int flags = 0) const noexcept {
+    return StrBuilder{*this, flags};
+  }
+
  private:
 #ifdef __SSE4_1__
   __m128i ToVec() const noexcept {
@@ -413,6 +431,24 @@ struct IPv6Port {
       return a.FastCompareWithExtra(b) > 0;
     }
   };
+
+  struct StrBuilder {
+    const cbu::IPv6Port& ip_port;
+    int flags;
+
+    static constexpr std::size_t static_max_size() noexcept {
+      return kMaxStringLen;
+    }
+    static constexpr std::size_t static_min_size() noexcept { return 6; }
+    constexpr std::size_t max_size() const noexcept { return kMaxStringLen; }
+    constexpr std::size_t min_size() const noexcept { return 6; }
+    constexpr char* write(char* w) const noexcept {
+      return ip_port.ToString(w, flags);
+    }
+  };
+  constexpr StrBuilder str_builder(int flags = 0) const noexcept {
+    return StrBuilder{*this, flags};
+  }
 };
 
 }  // namespace cbu

@@ -170,6 +170,21 @@ class IPv4 {
     return os;
   }
 
+  struct StrBuilder {
+    const cbu::IPv4& ip;
+
+    static constexpr std::size_t static_max_size() noexcept {
+      return kMaxStringLen;
+    }
+    static constexpr std::size_t static_min_size() noexcept { return 7; }
+    constexpr std::size_t max_size() const noexcept { return kMaxStringLen; }
+    constexpr std::size_t min_size() const noexcept { return 7; }
+    constexpr char* write(char* w) const noexcept { return ip.ToString(w); }
+  };
+  constexpr StrBuilder str_builder() const noexcept {
+    return StrBuilder{*this};
+  }
+
  private:
   void OutputTo(std::ostream& os) const;
 
