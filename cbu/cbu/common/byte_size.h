@@ -43,6 +43,9 @@ constexpr std::ptrdiff_t byte_distance(const U* p, const U* q) {
     if consteval {
       return (q - p) * std::ptrdiff_t(sizeof(U));
     }
+    if constexpr (sizeof(U) == 1) {
+      return q - p;
+    }
   }
   return (reinterpret_cast<std::intptr_t>(q) -
           reinterpret_cast<std::intptr_t>(p));
@@ -62,6 +65,9 @@ constexpr U* byte_advance(U* p, std::ptrdiff_t u) noexcept {
       if (u % std::ptrdiff_t(sizeof(U)) == 0)
         return (p + u / std::ptrdiff_t(sizeof(U)));
     }
+    if constexpr (sizeof(U) == 1) {
+      return p + u;
+    }
   }
   return reinterpret_cast<U*>(reinterpret_cast<std::intptr_t>(p) + u);
 }
@@ -72,6 +78,9 @@ constexpr U* byte_back(U* p, std::ptrdiff_t u) {
     if consteval {
       if (u % std::ptrdiff_t(sizeof(U)) == 0)
         return (p - u / std::ptrdiff_t(sizeof(U)));
+    }
+    if constexpr (sizeof(U) == 1) {
+      return p - u;
     }
   }
   return reinterpret_cast<U*>(reinterpret_cast<std::intptr_t>(p) - u);
