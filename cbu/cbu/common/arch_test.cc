@@ -30,6 +30,8 @@
 
 #include <sys/mman.h>
 
+#include <cmath>
+
 #include <gtest/gtest.h>
 
 namespace cbu {
@@ -106,17 +108,17 @@ TEST(ArchTest, byte_mask) {
   EXPECT_EQ(-1, ((__v4si)_mm_lobyte_mask<4>(3))[2]);
   EXPECT_EQ(00, ((__v4si)_mm_lobyte_mask<4>(3))[3]);
 
-  EXPECT_TRUE(isnan(_mm_lofloat_mask(3)[2]));
+  EXPECT_TRUE(std::isnan(_mm_lofloat_mask(3)[2]));
   EXPECT_EQ(0, _mm_lofloat_mask(3)[3]);
 
   EXPECT_EQ(0, _mm_lofloat_negmask(3)[2]);
-  EXPECT_TRUE(isnan(_mm_lofloat_negmask(3)[3]));
+  EXPECT_TRUE(std::isnan(_mm_lofloat_negmask(3)[3]));
 
-  EXPECT_TRUE(isnan(_mm256_lofloat_mask(5)[4]));
+  EXPECT_TRUE(std::isnan(_mm256_lofloat_mask(5)[4]));
   EXPECT_EQ(0, _mm256_lofloat_mask(5)[5]);
 
   EXPECT_EQ(0, _mm256_lofloat_negmask(5)[4]);
-  EXPECT_TRUE(isnan(_mm256_lofloat_negmask(5)[5]));
+  EXPECT_TRUE(std::isnan(_mm256_lofloat_negmask(5)[5]));
 }
 
 TEST(ArchTest, load_unaligned_si128_str) {

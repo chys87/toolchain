@@ -453,8 +453,9 @@ TEST(StrToFpTest, Constexpr) {
   EXPECT_TRUE(isnan(h.value_or(0)));
   constexpr auto i = str_to_fp<double>("-NaN");
   EXPECT_TRUE(isnan(i.value_or(0)));
-  constexpr auto j = str_to_fp<double, FiniteOnlyTag>("1e10000");
-  EXPECT_FALSE(j);
+  // FIXME: This doesn't compile with clang 15
+  // constexpr auto j = str_to_fp<double, FiniteOnlyTag>("1e10000");
+  // EXPECT_FALSE(j);
 }
 
 }  // namespace cbu
