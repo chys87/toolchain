@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -236,7 +236,8 @@ inline std::unique_ptr<T> make_unique(Args&&... args) noexcept(
 
 template <typename T>
   requires std::is_unbounded_array_v<T>
-inline sized_unique_ptr<T> make_unique(std::size_t n) noexcept(
+inline sized_unique_ptr<T>
+make_unique(ByteSize<std::remove_extent_t<T>> n) noexcept(
     kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   using V = std::remove_extent_t<T>;
   return sized_unique_ptr<T>(new_and_value_init_array<V>(n),
@@ -254,7 +255,8 @@ inline std::unique_ptr<T> make_unique_for_overwrite() noexcept(
 
 template <typename T>
   requires std::is_unbounded_array_v<T>
-inline sized_unique_ptr<T> make_unique_for_overwrite(std::size_t n) noexcept(
+inline sized_unique_ptr<T>
+make_unique_for_overwrite(ByteSize<std::remove_extent_t<T>> n) noexcept(
     kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   using V = std::remove_extent_t<T>;
   return sized_unique_ptr<T>(new_and_default_init_array<V>(n),
@@ -270,7 +272,8 @@ inline std::shared_ptr<T> make_shared(Args&&... args) noexcept(
 
 template <typename T>
   requires std::is_unbounded_array_v<T>
-inline std::shared_ptr<T> make_shared(std::size_t n) noexcept(
+inline std::shared_ptr<T>
+make_shared(ByteSize<std::remove_extent_t<T>> n) noexcept(
     kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   using V = std::remove_extent_t<T>;
   return std::shared_ptr<T>(new_and_value_init_array<V>(n),
@@ -288,7 +291,8 @@ inline std::shared_ptr<T> make_shared_for_overwrite() noexcept(
 
 template <typename T>
   requires std::is_unbounded_array_v<T>
-inline std::shared_ptr<T> make_shared_for_overwrite(std::size_t n) noexcept(
+inline std::shared_ptr<T>
+make_shared_for_overwrite(ByteSize<std::remove_extent_t<T>> n) noexcept(
     kMemoryNoExcept and std::is_nothrow_default_constructible_v<T>) {
   using V = std::remove_extent_t<T>;
   return std::shared_ptr<T>(new_and_default_init_array<V>(n),
