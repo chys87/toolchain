@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -61,6 +61,9 @@ class CBU_TRIVIAL_ABI ScopedFD {
   explicit operator bool() const = delete;
 
   int release() noexcept { return std::exchange(fd_, -1); }
+
+  void hint_open() noexcept { if (fd_ < 0) __builtin_unreachable(); }
+  void hint_closed() noexcept { if (fd_ >= 0) __builtin_unreachable(); }
 
   // Low-level interface.  Expose address of fd_.
   int* unsafe_mutable_fd() noexcept { return &fd_; }
