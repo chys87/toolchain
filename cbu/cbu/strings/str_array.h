@@ -96,6 +96,17 @@ class base_str_array {
     }
   }
 
+  base_str_array& operator=(const base_str_array&) = delete;
+  constexpr base_str_array& operator=(base_str_array&& other) noexcept {
+    swap(other);
+    return *this;
+  }
+
+  constexpr void swap(base_str_array& other) noexcept {
+    std::swap(p_, other.p_);
+    std::swap(l_, other.l_);
+  }
+
   using iterator = char*;
   using const_iterator = const char*;
   using size_type = std::size_t;
@@ -117,6 +128,8 @@ class base_str_array {
   constexpr std::size_t size() const noexcept { return l_; }
   constexpr std::size_t length() const noexcept { return l_; }
   [[nodiscard]] constexpr bool empty() const noexcept { return l_ == 0; }
+  constexpr char& operator[](std::size_t i) noexcept { return p_[i]; }
+  constexpr const char& operator[](std::size_t i) const noexcept { return p_[i]; }
 
   constexpr iterator begin() noexcept { return p_; }
   constexpr const_iterator begin() const noexcept { return p_; }
