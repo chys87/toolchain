@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2013-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2013-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -96,7 +96,21 @@ struct fsys_linux_dirent64 {
 #define fsys_errno_val(r) (-(int)(long long)(r))
 #define fsys_errno_val_long(r) (-(long)(long long)(r))
 #define fsys_errno_val_long_long(r) (-(long long)(r))
+#ifdef __cplusplus
+inline bool fsys_failure(auto r) noexcept {
+  if constexpr (sizeof(r) == sizeof(unsigned long long)) {
+    return (unsigned long long)(long long)r >= -4095ull;
+  } else if constexpr (sizeof(r) == sizeof(unsigned long)) {
+    return (unsigned long)(long)r >= -4095ul;
+  } else if constexpr (sizeof(r) == sizeof(unsigned)) {
+    return (unsigned)(int)r >= -4095u;
+  } else {
+    return (unsigned long long)(long long)(r) >= -4095ull;
+  }
+}
+#else
 #define fsys_failure(r) ((unsigned long long)(long long)(r) >= -4095ULL)
+#endif
 #define fsys_mmap_failed(r) ((unsigned long)(r) >= -4095UL)
 
 struct rusage;
