@@ -37,6 +37,7 @@
 # error "C++20 is required."
 #endif
 
+#include <cerrno>
 #include <cstddef>
 #include <type_traits>
 #include <utility>
@@ -127,4 +128,19 @@ inline auto readdir(int fd, const Callback &callback,
 }
 
 } // namespace fsys_aux_readdir
+
+template <typename Callback>
+  requires requires(const Callback& cb) {
+    { cb() } -> std::signed_integral;
+  }
+inline auto eintr(const Callback& cb) {
+  decltype(cb()) r;
+  do {
+    r = cb();
+  } while (r < 0 && fsys_errno(r, EINTR));
+  return r;
+}
+
 } // namespace fsys_aux
+
+#define fsys_eintr(...) ::fsys_aux::eintr([&]() { return __VA_ARGS__; })
