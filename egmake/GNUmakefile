@@ -1,5 +1,5 @@
 # egmake, Enhanced GNU make
-# Copyright (C) 2014-2023, chys <admin@CHYS.INFO>
+# Copyright (C) 2014-2025, chys <admin@CHYS.INFO>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@ endif
 CFLAGS := -O2 -march=native -flto -std=gnu2x -fPIC \
 	-D_GNU_SOURCE -DNDEBUG \
 	-fno-unwind-tables -fno-asynchronous-unwind-tables -fno-exceptions \
+	-fno-stack-protector -fno-stack-clash-protection \
 	-fvisibility=hidden \
 	-fmerge-all-constants -fno-common \
 	-fno-ident \
