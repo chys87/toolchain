@@ -91,8 +91,6 @@ CFLAGS := -O2 -march=native -flto -std=gnu2x -fPIC \
 
 ifneq "" "$(findstring aarch64,$(shell $(CC) -dumpmachine))"
 	CFLAGS += -mcmodel=tiny
-	# ldd doesn't support tiny model correctly when generating DSO
-	LDFLAGS := $(subst -fuse-ld=lld,-fuse-ld=ld,$(LDFLAGS))
 endif
 
 INSTNAME := ~/bin/egmake.so
