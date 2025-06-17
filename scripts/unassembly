@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (c) 2018-2024, chys <admin@CHYS.INFO>
+# Copyright (c) 2018-2025, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -277,7 +277,7 @@ def cppfilter(fi, args):
 
         # fmtlib specific
         (re.compile(br'fmt::(\w+)::basic_string_view<char>'), br'fmt::\1::string_view'),
-        (re.compile(br'fmt::(\w+)::basic_format_args<fmt::\1::basic_format_context<fmt::\1::appender, char>>'), br'fmt::\1::format_args'),
+        (re.compile(br'fmt::(\w+)::basic_format_args<fmt::\1::(context|basic_format_context<fmt::\1::appender, char>)>'), br'fmt::\1::format_args'),
         (re.compile(br'fmt::\w+::type_identity<(.*?)>::type'), br'\1'),
         (re.compile(br'fmt::(\w+)::basic_format_specs<char>'), br'fmt::\1::format_specs'),
         (re.compile(br'fmt::(\w+)::basic_format_string<char, '), br'fmt::\1::format_string<'),
