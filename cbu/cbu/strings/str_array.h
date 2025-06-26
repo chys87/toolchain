@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <compare>
 #include <string_view>
 #include <utility>
 
@@ -154,6 +155,18 @@ class base_str_array {
   char* p_;
   std::size_t l_;
 };
+
+template <bool Z1, bool Z2>
+inline constexpr bool operator==(const base_str_array<Z1>& a,
+                                 const base_str_array<Z2>& b) noexcept {
+  return std::string_view(a) == std::string_view(b);
+}
+
+template <bool Z1, bool Z2>
+inline constexpr auto operator<=>(const base_str_array<Z1>& a,
+                                  const base_str_array<Z2>& b) noexcept {
+  return std::string_view(a) <=> std::string_view(b);
+}
 
 using str_array = base_str_array<false>;
 using str_zarray = base_str_array<true>;
