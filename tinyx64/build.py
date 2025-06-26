@@ -30,7 +30,7 @@ NINJA_TEMPLATE = r'''
 {name}commonflags = -O2 -march=native -fomit-frame-pointer -fno-PIE -fno-PIC -Wall -flto -fmerge-all-constants -fdiagnostics-color=always -funsigned-char -fno-stack-protector -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables {arch_flags}
 {name}cflags = -std=gnu2x
 {name}cxxflags = -fno-rtti -std=gnu++2a
-{name}ldflags = -nostdlib -nostdlib++ -static -fuse-linker-plugin
+{name}ldflags = -nostdlib -nostdlib++ -static -fuse-linker-plugin {arch_ldflags}
 {name}libs = -lgcc
 {name}builddir = {builddir}
 {name}instdir = {instdir}
@@ -138,6 +138,13 @@ def get_arch_flags(arch):
         return ''
 
 
+def get_arch_ldflags(arch, cxx):
+    if 'clang' in cxx:
+        return '-fuse-ld=lld'
+    else:
+        return ''
+
+
 class Binary:
     __slots__ = 'name', 'srcs',
 
@@ -228,6 +235,7 @@ class BuildFile:
                 name=binary.name, cc=self.cc, cxx=self.cxx,
                 ar=self.ar, builddir=builddir,
                 arch_flags=get_arch_flags(self.arch),
+                arch_ldflags=get_arch_ldflags(self.arch, self.cxx),
                 main_objs=' '.join(sorted(main_objs)),
                 lib_objs=' '.join(sorted(lib_objs)), rules=rules)
 
