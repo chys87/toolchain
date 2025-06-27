@@ -147,21 +147,23 @@ Buffer(R&, const Builder&) -> Buffer<Builder::static_max_size()>;
 
 // We are not using "deducing this" because adding a base class means we have to
 // manually add many constructors
-#define CBU_STR_BUILDER_MIXIN                                     \
-  void append_to(std::string* dst) {                              \
-    std::size_t M = get_max_size(*this), m = get_min_size(*this); \
-    char* w = extend(dst, M);                                     \
-    w = write(w);                                                 \
-    if (m != M) truncate_unsafe(dst, w - dst->data());            \
-  }                                                               \
-  void append_to(std::string& dst) { append_to(&dst); }           \
-  std::string as_string() {                                       \
-    std::string r;                                                \
-    append_to(&r);                                                \
-    return r;                                                     \
-  }                                                               \
-  constexpr auto as_buffer(std::integral auto& rl) noexcept {     \
-    return Buffer(rl, *this);                                     \
+#define CBU_STR_BUILDER_MIXIN                                                             \
+  void append_to(std::string* dst) {                                                      \
+    std::size_t M = get_max_size(*this), m = get_min_size(*this);                         \
+    char* w = extend(dst, M);                                                             \
+    w = write(w);                                                                         \
+    if (m != M) truncate_unsafe(dst, w - dst->data());                                    \
+  }                                                                                       \
+  void append_to(std::string& dst) { append_to(&dst); }                                   \
+  std::string as_string() {                                                               \
+    std::string r;                                                                        \
+    append_to(&r);                                                                        \
+    return r;                                                                             \
+  }                                                                                       \
+  constexpr auto as_buffer(std::integral auto& rl) noexcept { return Buffer(rl, *this); } \
+  constexpr auto as_buffer() noexcept {                                                   \
+    std::size_t rl;                                                                       \
+    return Buffer(rl, *this);                                                             \
   }
 
 template <std::size_t MaxLen = std::size_t(-1), std::size_t MinLen = 0>
