@@ -192,7 +192,7 @@ struct StrLess {
 
   template <typename T, typename U>
     requires Any_to_string_view_compat_2<T, U>
-  static constexpr int operator()(const T& a, const U& b) noexcept {
+  static constexpr bool operator()(const T& a, const U& b) noexcept {
     return string_view_lt(a, b);
   }
 };
@@ -202,7 +202,7 @@ struct StrGreater {
 
   template <typename T, typename U>
     requires Any_to_string_view_compat_2<T, U>
-  static constexpr int operator()(const T& a, const U& b) noexcept {
+  static constexpr bool operator()(const T& a, const U& b) noexcept {
     return string_view_lt(b, a);
   }
 };
