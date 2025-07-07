@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -142,7 +142,7 @@ inline auto Statx(int fd, Specs... specs) {
 
 template <detail::Statx_spec... Specs>
 inline auto Statx(const char* path, Specs... specs) {
-  return Statx(AT_FDCWD, path, StatxEmptyPath(), specs...);
+  return Statx(AT_FDCWD, path, specs...);
 }
 
 }  // namespace cbu
