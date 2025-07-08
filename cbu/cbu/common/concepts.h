@@ -80,6 +80,12 @@ template <typename T>
 concept Raw_char_type = Char_type<T> && No_cv<T> && !std::is_array_v<T>;
 
 template <typename T>
+concept Char_type_or_void = Char_type<T> || std::is_void_v<T>;
+
+template <typename T>
+concept Raw_char_type_or_void = Raw_char_type<T> || std::is_void_v<T>;
+
+template <typename T>
 concept Enum = std::is_enum_v<T>;
 
 template <typename T>
