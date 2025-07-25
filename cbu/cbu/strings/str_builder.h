@@ -247,6 +247,9 @@ struct VarLen {
   CBU_STR_BUILDER_MIXIN
 };
 
+template <std::unsigned_integral T>
+VarLen(const char*, T) -> VarLen<T(-1)>;
+
 struct Char {
   char c;
   static constexpr std::size_t static_min_size() noexcept { return 1; }
