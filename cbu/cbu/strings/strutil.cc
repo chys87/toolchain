@@ -290,15 +290,15 @@ int strnumcmp(const char *a, const char *b) noexcept {
   }
 }
 
-int strnumcmp(std::string_view a, std::string_view b) noexcept {
-  const uint8_t* u = reinterpret_cast<const uint8_t*>(a.data());
-  const uint8_t* ue = u + a.size();
-  const uint8_t* v = reinterpret_cast<const uint8_t*>(b.data());
-  const uint8_t* ve = v + b.size();
+int strnumcmp(const char* a, size_t al, const char* b, size_t bl) noexcept {
+  const uint8_t* u = reinterpret_cast<const uint8_t*>(a);
+  const uint8_t* ue = u + al;
+  const uint8_t* v = reinterpret_cast<const uint8_t*>(b);
+  const uint8_t* ve = v + bl;
   unsigned U, V;
 
 #ifdef __SSE4_1__
-  for (size_t xl = std::min(a.size(), b.size()) / 16; xl; --xl) {
+  for (size_t xl = std::min(al, bl) / 16; xl; --xl) {
     __m128i uv = *(const __m128i_u*)u;
     __m128i vv = *(const __m128i_u*)v;
     __m128i diff = uv ^ vv;
@@ -313,7 +313,7 @@ int strnumcmp(std::string_view a, std::string_view b) noexcept {
     v += 16;
   }
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  for (size_t xl = std::min(a.size(), b.size()) / 16; xl; --xl) {
+  for (size_t xl = std::min(al, bl) / 16; xl; --xl) {
     uint8x8_t cmp =
         vshrn_n_u16(vreinterpretq_u16_u8(uint8x16_t(*(const uint8x16_t*)u ==
                                                     *(const uint8x16_t*)v)),

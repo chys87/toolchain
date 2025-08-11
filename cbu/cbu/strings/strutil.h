@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,8 +53,12 @@ inline std::size_t memcnt(std::string_view sv, char c) noexcept {
 int strnumcmp(const char *, const char *) noexcept
   __attribute__((__nonnull__(1, 2), __pure__));
 
-int strnumcmp(std::string_view a, std::string_view b) noexcept
+int strnumcmp(const char*, size_t, const char*, size_t) noexcept
     __attribute__((__pure__));
+
+inline int strnumcmp(std::string_view a, std::string_view b) noexcept {
+  return strnumcmp(a.data(), a.size(), b.data(), b.size());
+}
 
 // Same as std::reverse, but more optimized (at least for x86)
 char *reverse(char *, char *) noexcept;
