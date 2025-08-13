@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,8 +64,7 @@ extern template struct EscapeImpl<EscapeStyle::JSON_STRICT>;
 
 template <EscapeStyle style = EscapeStyle::C>
 char* escape_string(char* w, std::string_view src) noexcept {
-  return escape_detail::EscapeImpl<style>::raw(w, src.data(),
-                                               src.data() + src.size());
+  return escape_detail::EscapeImpl<style>::raw(w, src.data(), src.size());
 }
 
 template <EscapeStyle style = EscapeStyle::C>
