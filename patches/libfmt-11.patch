@@ -1,0 +1,26 @@
+diff --git a/include/fmt/base.h b/include/fmt/base.h
+index 81d8fc03..d8433d4e 100644
+--- a/include/fmt/base.h
++++ b/include/fmt/base.h
+@@ -1969,6 +1969,21 @@ class container_buffer : public buffer<typename Container::value_type> {
+ 
+   static FMT_CONSTEXPR void grow(buffer<value_type>& buf, size_t capacity) {
+     auto& self = static_cast<container_buffer&>(buf);
++#if defined __cpp_concepts && __cpp_concepts >= 201907L
++    if constexpr (requires(Container& c, size_t l) {
++      { c.grow_to_uninitialized(l) };
++    }) {
++      self.container.grow_to_uninitialized(capacity);
++    } else if constexpr (requires(Container& c, size_t l) {
++      { c.__resize_default_init(l) };
++    }) {
++      self.container.__resize_default_init(capacity);
++    } else if constexpr (requires(Container& c) {
++      { c.resize_and_overwrite(20zu, [](auto&&...) { return 20zu; }) };
++    }) {
++      self.container.resize_and_overwrite(capacity, [capacity](auto&&...) { return capacity; });
++    } else
++#endif
+     self.container.resize(capacity);
+     self.set(&self.container[0], capacity);
+   }
