@@ -283,6 +283,20 @@ struct Chars {
   CBU_STR_BUILDER_MIXIN
 };
 
+template <std::size_t Len>
+struct ConstLengthChars {
+  char c;
+  static constexpr std::size_t static_min_size() noexcept { return Len; }
+  static constexpr std::size_t static_max_size() noexcept { return Len; }
+  static constexpr std::size_t min_size() noexcept { return Len; }
+  static constexpr std::size_t size() noexcept { return Len; }
+  constexpr char* write(char* w) const noexcept {
+    for (std::size_t i = 0; i != Len; ++i) *w++ = c;
+    return w;
+  }
+  CBU_STR_BUILDER_MIXIN
+};
+
 template <BaseBuilder Builder>
 struct RepeatedImpl {
   std::size_t n;
