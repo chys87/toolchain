@@ -112,6 +112,17 @@ cc_library(
   visibility = ["//visibility:public"],
 )
 
+cc_library(
+  name = 'uint128',
+  srcs = [],
+  hdrs = ['uint128.h'],
+  deps = [
+    '//cbu/common:header_only',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
 cc_test(
   name = 'common-tests',
   srcs = glob(['*_test.cc', '*_test.h']),

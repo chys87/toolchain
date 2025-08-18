@@ -97,6 +97,7 @@ This one is just a hobby - a crazy one.
 * `mp.h`: Multi-precicision integer operations: full support for addition, subtraction, multiplication and limited support for division
 * `super_integer.h`: Provides class `SuperInteger` for constexpr evaluation
 * `strict_overflow.h`: Provides convenient wrappers for compiler overflow builtins
+* `uint128.h`: Provides compatibility class `uint128`
 
 ### cbu/network
 
