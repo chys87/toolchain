@@ -308,39 +308,65 @@ struct CopyUntilBackslashResult {
 
 CopyUntilBackslashResult copy_until_backslash(char* dst, const char* src,
                                               const char* end) noexcept {
-#ifdef __AVX2__
+#if defined __AVX512VL__ && defined __AVX512BW__
+  while (src + 64 <= end) {
+    __m512i val = *(const __m512i_u*)src;
+    *(__m512i_u*)dst = __m512i(val);
+    uint64_t mask = _mm512_cmpeq_epi8_mask(val, _mm512_set1_epi8('\\')) |
+                    _mm512_cmpeq_epi8_mask(val, _mm512_set1_epi8('\"'));
+    if (mask) {
+      unsigned off = std::countr_zero(mask);
+      src += off;
+      dst += off;
+      return {false, *src, dst, src};
+    }
+    src += 64;
+    dst += 64;
+  }
+  if (src != end) {
+    size_t l = end - src;
+    __m512i val = _mm512_maskz_loadu_epi8((1ull << l) - 1, src);
+    _mm512_mask_storeu_epi8(dst, (1ull << l) - 1, val);
+    uint64_t mask = _mm512_cmpeq_epi8_mask(val, _mm512_set1_epi8('\\')) |
+                    _mm512_cmpeq_epi8_mask(val, _mm512_set1_epi8('\"'));
+    if (mask) {
+      unsigned off = std::countr_zero(mask);
+      src += off;
+      dst += off;
+      return {false, *src, dst, src};
+    }
+    src += l;
+    dst += l;
+  }
+  return {true, '\0', dst, src};
+#elifdef __AVX2__
   while (src + 32 <= end) {
     __v32qu val = __v32qu(*(const __m256i_u*)src);
+    *(__m256i_u*)dst = __m256i(val);
     __m256i mask = __m256i((val == '\\') | (val == '\"'));
     if (_mm256_testz_si256(mask, mask)) {
-      *(__m256i_u*)dst = __m256i(val);
       src += 32;
       dst += 32;
     } else {
       unsigned off = ctz(_mm256_movemask_epi8(mask));
-      CBU_NAIVE_LOOP
-      for (unsigned i = off; i; --i) *dst++ = *src++;
+      src += off;
+      dst += off;
       return {false, *src, dst, src};
     }
   }
 #elifdef __ARM_NEON
   while (src + 16 <= end) {
     uint8x16_t val = *(const uint8x16_t*)src;
+    *(uint8x16_t*)dst = val;
     uint8x16_t mask = uint8x16_t((val == '\\') || (val == '"'));
     uint64_t mask4 = uint64_t(uint64x1_t(vshrn_n_u16(uint16x8_t(mask), 4)));
     if (mask4 == 0) {
-      *(uint8x16_t*)dst = val;
       src += 16;
       dst += 16;
     } else {
       unsigned off4 = std::countr_zero(mask4);
-      if (dst != src) {
-        CBU_NAIVE_LOOP
-        for (unsigned i = off4; i; i -= 4) *dst++ = *src++;
-      } else {
-        dst += off4 / 4;
-        src += off4 / 4;
-      }
+      dst += off4 / 4;
+      src += off4 / 4;
       return {false, *src, dst, src};
     }
   }

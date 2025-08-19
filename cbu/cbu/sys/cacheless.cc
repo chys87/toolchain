@@ -98,12 +98,24 @@ void* copy(void* dst, const void* src, size_t size) noexcept {
       size -= 16;
     }
 #endif
+#ifdef __AVX512F__
+    if (uintptr_t(d) & 32) {
+      __m256i A = *(const __m256i_u*)s;
+      _mm256_stream_si256((__m256i*)d, A);
+      s += 32;
+      d += 32;
+      size -= 32;
+    }
+#endif
     _mm_prefetch(s + 64, _MM_HINT_NTA);
     _mm_prefetch(s + 128, _MM_HINT_NTA);
     _mm_prefetch(s + 192, _MM_HINT_NTA);
     while (size >= 64) {
       _mm_prefetch(s + 256, _MM_HINT_NTA);
-#ifdef __AVX2__
+#ifdef __AVX512F__
+      __m512i A = *(const __m512i_u*)s;
+      _mm512_stream_si512((__m512i*)d, A);
+#elifdef __AVX2__
       __m256i A = *(const __m256i_u*)s;
       __m256i B = *(const __m256i_u*)(s + 32);
       _mm256_stream_si256((__m256i*)d, A);

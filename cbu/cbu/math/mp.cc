@@ -531,7 +531,7 @@ size_t from_bin(Word *r, const char *s, size_t n) noexcept {
   while (n > 8 * sizeof(Word)) {
     n -= 8 * sizeof(Word);
     const char *p = s + n;
-#if defined __x86_64__ && defined __AVX513BW__
+#if defined __x86_64__ && defined __AVX512BW__
     static_assert(sizeof(Word) == 8);
     __m512i swap_mask = _mm512_broadcast_i32x4(
         _mm_setr_epi8(7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8));

@@ -392,6 +392,39 @@ int strnumcmp(const char* a, size_t al, const char* b, size_t bl) noexcept {
 
 char *reverse(char *p, char *q) noexcept {
   char *ret = q;
+
+#if defined __AVX512VL__ && defined __AVX512BW__
+  {
+    if (p >= q) return ret;
+
+    const __v64qi mask = {63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48,
+                          47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32,
+                          31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16,
+                          15, 14, 13, 12, 11, 10, 9,  8,  7,  6,  5,  4,  3,  2,  1,  0};
+
+    size_t l = q - p;
+    if (l >= 64) {
+      for (;;) {
+        q -= 64;
+        __m512i u = *(const __m512i_u*)p;
+        __m512i v = *(const __m512i_u*)q;
+        *(__m512i_u*)q = __m512i(__builtin_shufflevector(__v64qi(u), mask));
+        *(__m512i_u*)p = __m512i(__builtin_shufflevector(__v64qi(v), mask));
+        p += 64;
+        if (l <= 128) {
+          return ret;
+        }
+        l -= 128;
+      }
+    } else {
+      __m512i u = _mm512_maskz_loadu_epi8((1ull << l) - 1, p);
+      u = __m512i(__builtin_shufflevector(__v64qi(u), mask));
+      _mm512_mask_storeu_epi8(q - 64, -1ull << (64 - l), u);
+    }
+    return ret;
+  }
+#endif
+
   while (p + 16 <= q) {
     uint64_t a = bswap(mempick8(p));
     uint64_t b = bswap(mempick8(q - 8));
@@ -428,27 +461,21 @@ size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl) noexcept {
   size_t k = 0;
 
 #if defined __AVX512BW__
-  for (;;) {
-    if (k + 64 <= maxl) {
-      __m512i va = *(const __m512i_u*)(a + k);
-      __m512i vb = *(const __m512i_u*)(b + k);
-      auto msk = _mm512_cmpneq_epi8_mask(va, vb);
-      if (msk) {
-        k += ctz(msk);
-        break;
-      }
-      k += 64;
-    } else if (k < maxl) {
-      uint64_t msk = (uint64_t(1) << (maxl - k)) - 1;
-      __m512i va = _mm512_maskz_loadu_epi8(msk, a + k);
-      __m512i vb = _mm512_maskz_loadu_epi8(msk, b + k);
-      msk = _mm512_cmpneq_epi8_mask(va, vb);
-      k += ctz(msk);
-      if (k >= maxl) return maxl;
-      break;
-    } else {
-      return maxl;
-    }
+  while (k + 64 <= maxl) {
+    __m512i va = *(const __m512i_u*)(a + k);
+    __m512i vb = *(const __m512i_u*)(b + k);
+    auto msk = _mm512_cmpneq_epi8_mask(va, vb);
+    if (msk) return k + std::countr_zero(msk);
+    k += 64;
+  }
+  if (k < maxl) {
+    uint64_t msk = (uint64_t(1) << (maxl - k)) - 1;
+    __m512i va = _mm512_maskz_loadu_epi8(msk, a + k);
+    __m512i vb = _mm512_maskz_loadu_epi8(msk, b + k);
+    msk = _mm512_cmpneq_epi8_mask(va, vb);
+    return std::min(k + std::countr_zero(msk), maxl);
+  } else {
+    return maxl;
   }
 
 #elif defined __AVX2__ && defined __BMI__
