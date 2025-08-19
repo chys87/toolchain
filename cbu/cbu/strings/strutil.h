@@ -63,48 +63,6 @@ inline int strnumcmp(std::string_view a, std::string_view b) noexcept {
 // Same as std::reverse, but more optimized (at least for x86)
 char *reverse(char *, char *) noexcept;
 
-
-// Return the length of common prefix.
-// If utf8 is true, always cut on UTF-8 character boundaries.
-[[gnu::pure]] size_t common_prefix_ex(const void*, const void*, size_t,
-                                      bool utf8) noexcept;
-[[gnu::pure]] size_t common_suffix_ex(const void*, const void*, size_t,
-                                      bool utf8) noexcept;
-
-inline size_t common_prefix(std::string_view sa, std::string_view sb) noexcept {
-  size_t maxl = std::min(sa.length(), sb.length());
-  return common_prefix_ex(sa.data(), sb.data(), maxl, false);
-}
-
-inline size_t common_prefix_utf8(std::string_view sa,
-                                 std::string_view sb) noexcept {
-  size_t maxl = std::min(sa.length(), sb.length());
-  return common_prefix_ex(sa.data(), sb.data(), maxl, true);
-}
-
-inline size_t common_prefix(std::u8string_view sa,
-                            std::u8string_view sb) noexcept {
-  size_t maxl = std::min(sa.length(), sb.length());
-  return common_prefix_ex(sa.data(), sb.data(), maxl, true);
-}
-
-inline size_t common_suffix(std::string_view sa, std::string_view sb) noexcept {
-  size_t maxl = std::min(sa.length(), sb.length());
-  return common_suffix_ex(sa.end(), sb.end(), maxl, false);
-}
-
-inline size_t common_suffix_utf8(std::string_view sa,
-                                 std::string_view sb) noexcept {
-  size_t maxl = std::min(sa.length(), sb.length());
-  return common_suffix_ex(sa.end(), sb.end(), maxl, true);
-}
-
-inline size_t common_suffix(std::u8string_view sa,
-                            std::u8string_view sb) noexcept {
-  size_t maxl = std::min(sa.length(), sb.length());
-  return common_suffix_ex(sa.end(), sb.end(), maxl, true);
-}
-
 // Returns the prefix of s, but always cut on UTF-8 character boundaries
 [[gnu::pure]] size_t truncate_string_utf8_impl(const void* s, size_t n) noexcept;
 inline std::string_view truncate_string_utf8(std::string_view s,
@@ -116,6 +74,53 @@ inline std::u8string_view truncate_string_utf8(std::u8string_view s,
                                                size_t n) noexcept {
   if (n >= s.size()) return s;
   return {s.data(), truncate_string_utf8_impl(s.data(), n)};
+}
+
+
+// Return the length of common prefix.
+// If utf8 is true, always cut on UTF-8 character boundaries.
+[[gnu::pure]] size_t common_prefix_ex(const void*, const void*, size_t) noexcept;
+[[gnu::pure]] size_t common_suffix_ex(const void*, const void*, size_t) noexcept;
+[[gnu::pure]] size_t common_suffix_fix_for_utf8(const void*, size_t) noexcept;
+
+inline size_t common_prefix(std::string_view sa, std::string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  return common_prefix_ex(sa.data(), sb.data(), maxl);
+}
+
+inline size_t common_prefix_utf8(std::string_view sa,
+                                 std::string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  size_t l = common_prefix_ex(sa.data(), sb.data(), maxl);
+  if (l != maxl) l = truncate_string_utf8_impl(sa.data(), l);
+  return l;
+}
+
+inline size_t common_prefix(std::u8string_view sa,
+                            std::u8string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  size_t l = common_prefix_ex(sa.data(), sb.data(), maxl);
+  if (l != maxl) l = truncate_string_utf8_impl(sa.data(), l);
+  return l;
+}
+
+inline size_t common_suffix(std::string_view sa, std::string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  return common_suffix_ex(sa.end(), sb.end(), maxl);
+}
+
+inline size_t common_suffix_utf8(std::string_view sa,
+                                 std::string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  size_t l = common_suffix_ex(sa.end(), sb.end(), maxl);
+  return common_suffix_fix_for_utf8(sa.end(), l);
+}
+
+inline size_t common_suffix(std::u8string_view sa,
+                            std::u8string_view sb) noexcept {
+  size_t maxl = std::min(sa.length(), sb.length());
+  size_t l = common_suffix_ex(sa.end(), sb.end(), maxl);
+  return common_suffix_fix_for_utf8(sa.end(), l);
 }
 
 // Return the length of prefix composed only of character c

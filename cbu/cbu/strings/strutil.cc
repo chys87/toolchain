@@ -408,8 +408,7 @@ char *reverse(char *p, char *q) noexcept {
   return ret;
 }
 
-size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl,
-                        bool utf8) noexcept {
+size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl) noexcept {
   const char* a = static_cast<const char*>(pa);
   const char* b = static_cast<const char*>(pb);
   size_t k = 0;
@@ -537,15 +536,10 @@ size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl,
   }
 #endif
 
-  if (utf8 && (k != maxl)) {
-    while (k && utf8_byte_type(a[k]) == cbu::Utf8ByteType::TRAILING) --k;
-  }
-
   return k;
 }
 
-size_t common_suffix_ex(const void* pa, const void* pb, size_t maxl,
-                        bool utf8) noexcept {
+size_t common_suffix_ex(const void* pa, const void* pb, size_t maxl) noexcept {
   const char* a = static_cast<const char*>(pa);
   const char* b = static_cast<const char*>(pb);
   const char* aend = a;
@@ -615,11 +609,17 @@ size_t common_suffix_ex(const void* pa, const void* pb, size_t maxl,
     while (a > min_a && a[-1] == (a + d)[-1]) --a;
   }
 
-  if (utf8) {
-    while (a < aend && int8_t(*a) < int8_t(0xc0)) ++a;
-  }
-
   return aend - a;
+}
+
+size_t common_suffix_fix_for_utf8(const void* pa, size_t l) noexcept {
+  if (l) {
+    const char* a = static_cast<const char*>(pa);
+    const char* p = a - l;
+    while (p < a && int8_t(*p) < int8_t(0xc0)) ++p;
+    l = a - p;
+  }
+  return l;
 }
 
 size_t truncate_string_utf8_impl(const void* s, size_t n) noexcept {
