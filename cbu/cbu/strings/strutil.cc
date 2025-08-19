@@ -297,13 +297,27 @@ int strnumcmp(const char* a, size_t al, const char* b, size_t bl) noexcept {
   const uint8_t* ve = v + bl;
   unsigned U, V;
 
-#ifdef __SSE4_1__
+#if defined __AVX512BW__ && defined __AVX512VL__
+  for (size_t xl = std::min(al, bl) / 16; xl; --xl) {
+    __m128i uv = *(const __m128i_u*)u;
+    __m128i vv = *(const __m128i_u*)v;
+    uint16_t neqmask = _mm_cmpneq_epi8_mask(uv, vv);
+    if (neqmask) {
+      long offset = std::countr_zero(neqmask);
+      u += offset;
+      v += offset;
+      break;
+    }
+    u += 16;
+    v += 16;
+  }
+#elif defined __SSE4_1__
   for (size_t xl = std::min(al, bl) / 16; xl; --xl) {
     __m128i uv = *(const __m128i_u*)u;
     __m128i vv = *(const __m128i_u*)v;
     __m128i diff = uv ^ vv;
     if (!_mm_testz_si128(diff, diff)) {
-      uint32_t mask = _mm_movemask_epi8(_mm_cmpeq_epi8(uv, vv));
+      uint32_t mask = _mm_movemask_epi8(_mm_cmpeq_epi8(diff, _mm_setzero_si128())) ^ 0xffff;
       long offset = __builtin_ctz(mask);
       u += offset;
       v += offset;
@@ -315,7 +329,7 @@ int strnumcmp(const char* a, size_t al, const char* b, size_t bl) noexcept {
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   for (size_t xl = std::min(al, bl) / 16; xl; --xl) {
     uint8x8_t cmp =
-        vshrn_n_u16(vreinterpretq_u16_u8(uint8x16_t(*(const uint8x16_t*)u ==
+        vshrn_n_u16(vreinterpretq_u16_u8(uint8x16_t(*(const uint8x16_t*)u !=
                                                     *(const uint8x16_t*)v)),
                     4);
     uint64_t mask = vget_lane_u64(vreinterpret_u64_u8(cmp), 0);

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -99,6 +99,7 @@ TEST(StrUtilTest, StrNumCmp) {
   EXPECT_GT(strnumcmp("abcd0230"sv, "abcd123"sv), 0);
   EXPECT_GT(strnumcmp("abcd123x"sv, "abcd123"sv), 0);
   EXPECT_LT(strnumcmp("abcd103x"sv, "abcd123"sv), 0);
+  EXPECT_GT(strnumcmp("2abcdefghijklmnopqrstuvwxyz1"sv, "1abcdefghijklmnopqrstuvwxyz2"sv), 0);
 
   // SIMD test
 #define LS "A long long string is here"
