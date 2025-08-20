@@ -144,7 +144,7 @@ char* IPv6::Format(char* w, const in6_addr& addr, int flags) noexcept {
       // compression.
       uint32_t two_zeros = zero_mask & (zero_mask >> 1);
       uint32_t three_zeros = two_zeros & (zero_mask >> 2);
-      uint32_t four_zeros = three_zeros & (zero_mask >> 3);
+      uint32_t four_zeros = two_zeros & (two_zeros >> 2);
 
       compress_pos = ctz(four_zeros    ? four_zeros
                          : three_zeros ? three_zeros

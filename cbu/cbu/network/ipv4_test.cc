@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,7 +49,7 @@ static_assert((IPv4(127, 0, 0, 1) & IPv4(255, 0, 0, 0)) == IPv4(127, 0, 0, 0));
 TEST(IPv4Test, ToStringTest) {
   for (int i = 0; i < 256; ++i) {
     IPv4 ip(192, 168, 1, i);
-    ASSERT_EQ("192.168.1." + std::to_string(i), ip.ToString().string());
+    ASSERT_EQ("192.168.1." + std::to_string(i), ip.ToString().string_view());
   }
 }
 

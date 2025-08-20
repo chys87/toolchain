@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,12 @@ template <std::floating_point F, std::unsigned_integral U>
   requires(std::numeric_limits<F>::radix == 2 &&
            std::numeric_limits<U>::digits > std::numeric_limits<F>::digits)
 inline F map_uint_to_float(U u) noexcept {
+  // This seems unnecessary, but if omit this line, lz will be UBITS and
+  // the shift will be undefined behavior. Though u would seemingly still be 0,
+  // clang performs some smart conversions exploiting the undefined behavior,
+  // resulting in incorrect result. This we short-circuit u == 0
+  if (u == 0) return 0;
+
   constexpr int MANTISSA_BITS = std::numeric_limits<F>::digits;
   constexpr int UBITS = std::numeric_limits<U>::digits;
 
@@ -57,9 +63,6 @@ inline F map_uint_to_float(U u) noexcept {
   // Consider u = 0x1ff
   unsigned lz = clz(u);
 
-  // If lz == UBITS, the shift has undefined behavior.
-  // However, in that case we must have u == 0.
-  // (It really should be implementatin-defined behavior.  Fuck the Standards!)
   u &= ~(~U(0) >> MANTISSA_BITS >> lz);
 
   // Now we have guarantee that both the conversion and multiplication are exact
