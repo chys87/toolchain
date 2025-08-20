@@ -28,55 +28,6 @@
 
 #include "cbu/math/common.h"
 
-#include <cmath>
-#include <limits>
-
-#include "cbu/common/bit.h"
-
 namespace cbu {
-
-namespace {
-
-float scale(float a, int n) { return std::scalbnf(a, n); }
-double scale(double a, int n) { return std::scalbn(a, n); }
-
-template <std::floating_point F, std::unsigned_integral U>
-  requires(std::numeric_limits<F>::radix == 2 &&
-           std::numeric_limits<U>::digits > std::numeric_limits<F>::digits)
-inline F map_uint_to_float(U u) noexcept {
-  // This seems unnecessary, but if omit this line, lz will be UBITS and
-  // the shift will be undefined behavior. Though u would seemingly still be 0,
-  // clang performs some smart conversions exploiting the undefined behavior,
-  // resulting in incorrect result. This we short-circuit u == 0
-  if (u == 0) return 0;
-
-  constexpr int MANTISSA_BITS = std::numeric_limits<F>::digits;
-  constexpr int UBITS = std::numeric_limits<U>::digits;
-
-  // We want F(u) * scale(F(1), -UBITS), with the multiplication rounding
-  // toward zero or minus infinity.
-  // Changing rounding mode is expensive, so we clear extra bits before
-  // proceeding
-  //
-  // NOTE: This method gives more precission (for small values) than just
-  // clearing the lowest 8 bits of u.
-  // Consider u = 0x1ff
-  unsigned lz = clz(u);
-
-  u &= ~(~U(0) >> MANTISSA_BITS >> lz);
-
-  // Now we have guarantee that both the conversion and multiplication are exact
-  return F(u) * scale(F(1), -UBITS);
-}
-
-} // namespace
-
-float map_uint32_to_float(uint32_t v) noexcept {
-  return map_uint_to_float<float, uint32_t>(v);
-}
-
-double map_uint64_to_double(uint64_t v) noexcept {
-  return map_uint_to_float<double, uint64_t>(v);
-}
 
 }  // namespace cbu

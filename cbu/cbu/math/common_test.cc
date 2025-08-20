@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,22 +55,6 @@ TEST(Math, Clamp) {
   EXPECT_FLOAT_EQ(2.5f, clamp(2.5f, 2, 3));
   EXPECT_FLOAT_EQ(1.f, clamp(1.f, NAN, 3));
   EXPECT_FLOAT_EQ(4.f, clamp(4.f, 2, NAN));
-}
-
-TEST(MapUToFloat, Float) {
-  EXPECT_FLOAT_EQ(0.0f, map_uint32_to_float(0));
-  EXPECT_FLOAT_EQ(0.5f, map_uint32_to_float(INT32_MAX));
-  EXPECT_FLOAT_EQ(1.0f, map_uint32_to_float(UINT32_MAX));
-  EXPECT_GT(1.0f, map_uint32_to_float(UINT32_MAX));
-  EXPECT_LT(0.0f, map_uint32_to_float(1));
-}
-
-TEST(MapUToFloat, Double) {
-  EXPECT_DOUBLE_EQ(0.0, map_uint64_to_double(0));
-  EXPECT_DOUBLE_EQ(0.5, map_uint64_to_double(INT64_MAX));
-  EXPECT_DOUBLE_EQ(1.0, map_uint64_to_double(UINT64_MAX));
-  EXPECT_GT(1.0, map_uint64_to_double(UINT64_MAX));
-  EXPECT_LT(0.0, map_uint64_to_double(1));
 }
 
 TEST(PowLog10, ILog10) {

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -90,10 +90,6 @@ inline constexpr T clamp(T v, std::type_identity_t<T> m,
     return std::min(std::max(v, m), M);
   }
 }
-
-// Map uint32_t or uint64_t to floating point values in [0, 1)
-float map_uint32_to_float(std::uint32_t v) noexcept;
-double map_uint64_to_double(std::uint64_t v) noexcept;
 
 inline constexpr std::uint64_t ipow10_array[20]{
     1,
