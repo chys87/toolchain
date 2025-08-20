@@ -1,6 +1,6 @@
 /*
 egmake, Enhanced GNU make
-Copyright (C) 2014-2024, chys <admin@CHYS.INFO>
+Copyright (C) 2014-2025, chys <admin@CHYS.INFO>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ gmk_func_type func_cpus;
 gmk_func_type func_expanduser;
 gmk_func_type func_hostname;
 gmk_func_type func_in_range;
+gmk_func_type func_machine;
 gmk_func_type func_mkdirp;
 gmk_func_type func_pwd;
 gmk_func_type func_readlink;
@@ -44,6 +45,7 @@ int egmake_gmk_setup(void) {
   gmk_add_function("EGM.expanduser", &func_expanduser, 1, 1, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.hostname", &func_hostname, 0, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.in_range", &func_in_range, 3, 3, GMK_FUNC_DEFAULT);
+  gmk_add_function("EGM.machine", &func_machine, 0, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.mkdirp", &func_mkdirp, 0, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.pwd", &func_pwd, 0, 0, GMK_FUNC_DEFAULT);
   gmk_add_function("EGM.readlink", &func_readlink, 1, 1, GMK_FUNC_DEFAULT);

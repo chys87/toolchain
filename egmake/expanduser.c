@@ -1,6 +1,6 @@
 /*
 egmake, Enhanced GNU make
-Copyright (C) 2014-2020, chys <admin@CHYS.INFO>
+Copyright (C) 2014-2025, chys <admin@CHYS.INFO>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <gnumake.h>
 
 #include "util.h"
+#include "fsyscall.h"
 
 #define PWBUFSIZ 8192
 
@@ -34,7 +35,7 @@ static char *expand_current_user(const char *trail, size_t trail_l) {
   if (home == NULL) {
     struct passwd *result;
     struct passwd pwd;
-    if (getpwuid_r(getuid(), &pwd, buffer, sizeof(buffer), &result) != 0)
+    if (getpwuid_r(fsys_getuid(), &pwd, buffer, sizeof(buffer), &result) != 0)
       return NULL;
     if (result == NULL)  // No error, but user is not found.
       return NULL;

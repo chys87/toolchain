@@ -1,6 +1,6 @@
 /*
 egmake, Enhanced GNU make
-Copyright (C) 2014-2024, chys <admin@CHYS.INFO>
+Copyright (C) 2014-2025, chys <admin@CHYS.INFO>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -53,10 +53,11 @@ char* func_shell(const char* nm, unsigned int argc, char** argv) {
     char* tmp_path = malloc(path_len + 16);
     strcpy(mempcpy(tmp_path, path, path_len), ".tmp");
 
-    int fdw = open(tmp_path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+    int fdw =
+        fsys_open3(tmp_path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
     if (fdw < 0) return NULL;
 
-    pid_t pid = vfork();
+    pid_t pid = fsys_vfork();
     if (pid == 0) {
       fsys_dup2(fdw, 1);
       const char* args[] = {"sh", "-c", cmdline, NULL};
@@ -76,7 +77,7 @@ char* func_shell(const char* nm, unsigned int argc, char** argv) {
           {now + cache_time, 0},
           {now + cache_time, 0},
       };
-      rc = futimens(fdw, ts);
+      rc = fsys_futimens(fdw, ts);
     }
     if (rc != 0) {
       fsys_close(fdw);

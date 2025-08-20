@@ -22,12 +22,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "fsyscall.h"
 
-// Return the hostname
-char *func_hostname(const char *nm, unsigned int argc, char **argv) {
+// Return host machine name
+char *func_machine(const char *nm, unsigned int argc, char **argv) {
   struct utsname buf;
   if (fsys_uname(&buf) != 0) return NULL;
-  char* res = gmk_alloc(sizeof(buf.nodename));
-  memcpy(res, buf.nodename, sizeof(buf.nodename));
+  char* res = gmk_alloc(sizeof(buf.machine));
+  memcpy(res, buf.machine, sizeof(buf.machine));
   return res;
 }
 
@@ -35,7 +35,7 @@ char *func_hostname(const char *nm, unsigned int argc, char **argv) {
 MAKEFILE-TEST-BEGIN
 
 test:
-	test "$(EGM.hostname )" = "`hostname`"
+	test "$(EGM.machine )" = "`uname -m`"
 
 MAKEFILE-TEST-END
 */
