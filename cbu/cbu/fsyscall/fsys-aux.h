@@ -91,10 +91,10 @@ template <> struct DeferClose<true> {
 
 
 // Inline is important for optimizing the callback, mostly likely a lambda
-template <ReadDirOpt Opt = {}, typename Callback>
+template <ReadDirOpt Opt = ReadDirOpt{}, typename Callback>
 [[gnu::always_inline]]
-inline auto readdir(int fd, const Callback &callback,
-                    const readdir_detail::ret_t<Callback> &default_value = {}) {
+inline auto readdir(int fd, const Callback& callback,
+                    const readdir_detail::ret_t<Callback>& default_value = {}) {
   using readdir_detail::DirEnt;
 
   readdir_detail::DeferClose<Opt.close> close_obj {fd};
