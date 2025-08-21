@@ -144,3 +144,73 @@ inline auto eintr(const Callback& cb) {
 } // namespace fsys_aux
 
 #define fsys_eintr(...) ::fsys_aux::eintr([&]() { return __VA_ARGS__; })
+
+#if defined __cplusplus && __cplusplus >= 201703L
+#include <tuple>
+#include <type_traits>
+
+template <unsigned n, typename... Args>
+fsys_inline const auto& fsys_nth(const Args&... args) {
+#if defined __cpp_pack_indexing && __cpp_pack_indexing >= 202311L
+  return args...[n];
+#else
+  return std::get<n>(std::tie(args...));
+#endif
+}
+
+template <typename RetType, typename... Args>
+  requires(sizeof...(Args) <= 6)
+fsys_inline RetType fsyscall(unsigned sysno, const Args&... args) {
+  constexpr int n = sizeof...(Args);
+  if constexpr (n == 0) {
+    return fsys_generic(sysno, RetType, 0);
+  } else if constexpr (n == 1) {
+    return fsys_generic(sysno, RetType, 1, fsys_nth<0>(args...));
+  } else if constexpr (n == 2) {
+    return fsys_generic(sysno, RetType, 2, fsys_nth<0>(args...), fsys_nth<1>(args...));
+  } else if constexpr (n == 3) {
+    return fsys_generic(sysno, RetType, 3, fsys_nth<0>(args...), fsys_nth<1>(args...),
+                        fsys_nth<2>(args...));
+  } else if constexpr (n == 4) {
+    return fsys_generic(sysno, RetType, 4, fsys_nth<0>(args...), fsys_nth<1>(args...),
+                        fsys_nth<2>(args...), fsys_nth<3>(args...));
+  } else if constexpr (n == 5) {
+    return fsys_generic(sysno, RetType, 5, fsys_nth<0>(args...), fsys_nth<1>(args...),
+                        fsys_nth<2>(args...), fsys_nth<3>(args...), fsys_nth<4>(args...));
+  } else if constexpr (n == 6) {
+    return fsys_generic(sysno, RetType, 6, fsys_nth<0>(args...), fsys_nth<1>(args...),
+                        fsys_nth<2>(args...), fsys_nth<3>(args...), fsys_nth<4>(args...),
+                        fsys_nth<5>(args...));
+  } else {
+    static_assert(false);
+  }
+}
+
+template <typename RetType, typename... Args>
+  requires(sizeof...(Args) <= 6)
+fsys_inline RetType fsyscall_nomem(unsigned sysno, const Args&... args) {
+  constexpr int n = sizeof...(Args);
+  if constexpr (n == 0) {
+    return fsys_generic_nomem(sysno, RetType, 0);
+  } else if constexpr (n == 1) {
+    return fsys_generic_nomem(sysno, RetType, 1, fsys_nth<0>(args...));
+  } else if constexpr (n == 2) {
+    return fsys_generic_nomem(sysno, RetType, 2, fsys_nth<0>(args...), fsys_nth<1>(args...));
+  } else if constexpr (n == 3) {
+    return fsys_generic_nomem(sysno, RetType, 3, fsys_nth<0>(args...), fsys_nth<1>(args...),
+                        fsys_nth<2>(args...));
+  } else if constexpr (n == 4) {
+    return fsys_generic_nomem(sysno, RetType, 4, fsys_nth<0>(args...), fsys_nth<1>(args...),
+                        fsys_nth<2>(args...), fsys_nth<3>(args...));
+  } else if constexpr (n == 5) {
+    return fsys_generic_nomem(sysno, RetType, 5, fsys_nth<0>(args...), fsys_nth<1>(args...),
+                        fsys_nth<2>(args...), fsys_nth<3>(args...), fsys_nth<4>(args...));
+  } else if constexpr (n == 6) {
+    return fsys_generic_nomem(sysno, RetType, 6, fsys_nth<0>(args...), fsys_nth<1>(args...),
+                        fsys_nth<2>(args...), fsys_nth<3>(args...), fsys_nth<4>(args...),
+                        fsys_nth<5>(args...));
+  } else {
+    static_assert(false);
+  }
+}
+#endif
