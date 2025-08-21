@@ -87,7 +87,7 @@ class CachelessTest : public testing::Test {
  protected:
   static constexpr size_t N = 16384;
   static constexpr size_t BUF = N + 256;
-  char dst_[BUF];
+  char dst_[BUF]{};
   char src_[BUF];
 };
 
