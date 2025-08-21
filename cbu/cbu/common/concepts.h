@@ -92,7 +92,8 @@ template <typename T>
 concept Raw_enum = Enum<T> && No_cv<T>;
 
 template <typename T>
-concept Trivial_type = std::is_trivial_v<T>;
+concept Trivial_type =
+    std::is_trivially_default_constructible_v<T> && std::is_trivially_copyable_v<T>;
 
 template <typename T>
 concept Raw_trivial_type =

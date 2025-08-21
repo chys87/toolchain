@@ -121,8 +121,9 @@ void* allocate(size_t size) noexcept {
     ptr = alloc_large(size, false /* zero */);
     if (false_no_fail(ptr == nullptr)) return nomem();
   } else if (size != 0) {
-    if (__builtin_constant_p(size) ||
-        __builtin_constant_p(size_to_category(size))) {  // For LTO
+    // For LTO. Add "!= 0" to suppress warning
+    if (__builtin_constant_p(size) != 0 ||
+        __builtin_constant_p(size_to_category(size)) != 0) {
       ptr = alloc_small_category(size_to_category(size));
     } else {
       ptr = alloc_small(size);
