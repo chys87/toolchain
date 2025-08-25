@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,13 +53,44 @@ TEST_F(MemPickDropTest, MemPick) {
   EXPECT_EQ(0x00010203, mempick_be<uint32_t>(buf_));
 }
 
+TEST_F(MemPickDropTest, MemPickVar) {
+  for (int i = 0; i < 32; ++i) {
+    EXPECT_EQ(mempick<uint32_t>(buf_ + i, 1), bswap_le<uint32_t>(uint8_t(i)));
+    EXPECT_EQ(mempick<uint32_t>(buf_ + i, 2), bswap_le<uint32_t>(i + ((i + 1) << 8)));
+    EXPECT_EQ(mempick<uint32_t>(buf_ + i, 3),
+              bswap_le<uint32_t>(i + ((i + 1) << 8) + ((i + 2) << 16)));
+    EXPECT_EQ(mempick<uint32_t>(buf_ + i, 4),
+              bswap_le<uint32_t>(i + ((i + 1) << 8) + ((i + 2) << 16) + ((i + 3) << 24)));
+
+    EXPECT_EQ(mempick<uint64_t>(buf_ + i, 1), bswap_le<uint64_t>(uint8_t(i)));
+    EXPECT_EQ(mempick<uint64_t>(buf_ + i, 2), bswap_le<uint64_t>(i + ((i + 1) << 8)));
+    EXPECT_EQ(mempick<uint64_t>(buf_ + i, 3),
+              bswap_le<uint64_t>(i + ((i + 1) << 8) + ((i + 2) << 16)));
+    EXPECT_EQ(mempick<uint64_t>(buf_ + i, 4),
+              bswap_le<uint64_t>(i + ((i + 1) << 8) + ((i + 2) << 16) + ((i + 3) << 24)));
+    EXPECT_EQ(mempick<uint64_t>(buf_ + i, 5),
+              bswap_le<uint64_t>(i + ((i + 1) << 8) + ((i + 2) << 16) + ((i + 3) << 24) +
+                                 ((i + 4L) << 32)));
+    EXPECT_EQ(mempick<uint64_t>(buf_ + i, 6),
+              bswap_le<uint64_t>(i + ((i + 1) << 8) + ((i + 2) << 16) + ((i + 3) << 24) +
+                                 ((i + 4L) << 32) + ((i + 5L) << 40)));
+    EXPECT_EQ(mempick<uint64_t>(buf_ + i, 7),
+              bswap_le<uint64_t>(i + ((i + 1) << 8) + ((i + 2) << 16) + ((i + 3) << 24) +
+                                 ((i + 4L) << 32) + ((i + 5L) << 40) + ((i + 6L) << 48)));
+    EXPECT_EQ(mempick<uint64_t>(buf_ + i, 8),
+              bswap_le<uint64_t>(i + ((i + 1) << 8) + ((i + 2) << 16) + ((i + 3) << 24) +
+                                 ((i + 4L) << 32) + ((i + 5L) << 40) + ((i + 6L) << 48) +
+                                 ((i + 7L) << 56)));
+  }
+}
+
 TEST_F(MemPickDropTest, MemDrop) {
   memdrop_le<uint32_t>(buf_, 0xaabbccdd);
   EXPECT_EQ(static_cast<char>(0xdd), buf_[0]);
   EXPECT_EQ(static_cast<char>(0xcc), buf_[1]);
 }
 
-TEST_F(MemPickDropTest, MemDropNumber) {
+TEST_F(MemPickDropTest, MemDropVar) {
   memdrop(buf_, bswap_for<std::endian::little>(0x0123456789abcdefull), 3);
   EXPECT_EQ(static_cast<char>(0xef), buf_[0]);
   EXPECT_EQ(static_cast<char>(0xcd), buf_[1]);
@@ -114,6 +145,18 @@ TEST_F(MemPickDropTest, MemDropNumber) {
 #endif
 }
 
+TEST(MemPickDropConstexprTest, MemPick) {
+  constexpr char b[] {1, 2, 3, 4, 4, 3, 2, 1};
+  static_assert(mempick_be<uint32_t>(b) == 0x01020304);
+  static_assert(mempick_le<uint32_t>(b + 4) == 0x01020304);
+}
+
+TEST(MemPickDropConstexprTest, MemPickVar) {
+  constexpr char b[]{1, 2, 3, 4, 4, 3, 2, 1};
+  static_assert(mempick<uint32_t>(b, 2) == bswap_le<uint32_t>(0x0201));
+  static_assert(mempick<uint64_t>(b + 1, 7) == bswap_le<uint64_t>(0x01020304040302));
+}
+
 TEST(MemPickDropConstexprTest, MemDrop) {
   struct A {
     constexpr A() {
@@ -138,13 +181,7 @@ TEST(MemPickDropConstexprTest, MemDrop) {
   static_assert(a.buf_[7] == 1);
 }
 
-TEST(MemPickDropConstexprTest, MemPick) {
-  constexpr char b[] {1, 2, 3, 4, 4, 3, 2, 1};
-  static_assert(mempick_be<uint32_t>(b) == 0x01020304);
-  static_assert(mempick_le<uint32_t>(b + 4) == 0x01020304);
-}
-
-TEST(MemPickDropConstexprTest, MemDropNumber) {
+TEST(MemPickDropConstexprTest, MemDropVar) {
   struct A {
     constexpr A() {
       for (size_t i = 0; i < std::size(buf_); ++i) {

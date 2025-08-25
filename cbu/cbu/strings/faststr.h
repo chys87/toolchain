@@ -291,6 +291,27 @@ inline T* mempcpy_no_builtin(T* d, const void* s, size_t n) noexcept {
 #endif
 }
 
+CBU_AARCH64_PRESERVE_ALL std::uint32_t mempick_var32(const void* s, std::size_t) noexcept;
+CBU_AARCH64_PRESERVE_ALL std::uint64_t mempick_var64(const void* s, std::size_t) noexcept;
+
+template <typename T, typename C>
+  requires(Raw_char_type_or_void<C> && Raw_integral<T> && sizeof(T) <= 8)
+inline constexpr T mempick(const C* s, std::size_t n) {
+  if (std::is_void_v<C>) {
+    return mempick<T>(static_cast<const char*>(s), n);
+  } else if consteval {
+    char buf[sizeof(T)]{};
+    for (std::size_t i = 0; i < n; ++i) buf[i] = s[i];
+    return mempick<T>(buf);
+  } else {
+    if constexpr (sizeof(T) <= 4) {
+      return mempick_var32(s, n);
+    } else {
+      return mempick_var64(s, n);
+    }
+  }
+}
+
 CBU_AARCH64_PRESERVE_ALL void* memdrop_var32(void* dst, std::uint32_t,
                                              std::size_t) noexcept;
 CBU_AARCH64_PRESERVE_ALL void* memdrop_var64(void* dst, std::uint64_t,
@@ -314,10 +335,10 @@ requires ((Raw_char_type<T> || std::is_void_v<T>) &&
            || std::is_same_v<IT, __int128>
 #endif
           ))
-inline constexpr T* memdrop(T* dst, IT v, std::size_t n) noexcept {
-  using S = std::conditional_t<std::is_void_v<T>, char, T>;
-  S* d = static_cast<S*>(dst);
-  if consteval {
+inline constexpr T* memdrop(T* d, IT v, std::size_t n) noexcept {
+  if constexpr (std::is_void_v<T>) {
+    return memdrop(static_cast<char*>(d), v, n);
+  } else if consteval {
     char buf[sizeof(v)];
     memdrop(buf, v);
     for (std::size_t i = 0; i < n; ++i) {

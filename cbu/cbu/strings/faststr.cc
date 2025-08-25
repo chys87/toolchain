@@ -35,6 +35,7 @@
 #include <bit>
 
 #include "cbu/common/stdhack.h"
+#include "cbu/compat/compilers.h"
 #include "cbu/compat/string.h"
 #include "cbu/math/common.h"
 #include "cbu/math/strict_overflow.h"
@@ -51,6 +52,58 @@ alignas(64) const char arch_linear_bytes64[64] = {
   0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37,
   0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f,
 };
+
+std::uint32_t mempick_var32(const void* src, std::size_t n) noexcept {
+#if defined __AVX512VL__ && defined __AVX512BW__
+  __m128i v = _mm_maskz_loadu_epi8((1 << n) - 1, src);
+  return __v4su(v)[0];
+#endif
+
+#ifndef CBU_ADDRESS_SANITIZER
+  if constexpr (std::endian::native == std::endian::little) {
+    const char* s = static_cast<const char*>(src);
+    if (n >= 4) {
+      return mempick4(s);
+    } else if ((uintptr_t(s) & 15) <= 12) {
+      return mempick4(s) & ((1u << (8 * n)) - 1);
+    } else {
+      return mempick4(s + n - 4) >> (8 * (4 - n));
+    }
+  }
+  #endif
+
+  {
+    char buf[4]{};
+    memcpy(buf, src, n);
+    return mempick4(buf);
+  }
+}
+
+std::uint64_t mempick_var64(const void* src, std::size_t n) noexcept {
+#if defined __AVX512VL__ && defined __AVX512BW__
+  __m128i v = _mm_maskz_loadu_epi8((1 << n) - 1, src);
+  return __v2du(v)[0];
+#endif
+
+#ifndef CBU_ADDRESS_SANITIZER
+  if constexpr (std::endian::native == std::endian::little) {
+    const char* s = static_cast<const char*>(src);
+    if (n >= 8) {
+      return mempick8(s);
+    } else if ((uintptr_t(s) & 15) <= 8) {
+      return mempick8(s) & ((uint64_t(1) << (8 * n)) - 1);
+    } else {
+      return mempick8(s + n - 8) >> (8 * (8 - n));
+    }
+  }
+  #endif
+
+  {
+    char buf[8]{};
+    memcpy(buf, src, n);
+    return mempick8(buf);
+  }
+}
 
 void* memdrop_var32(void* dst, uint32_t v, size_t n) noexcept {
 #if defined __AVX512VL__ && defined __AVX512BW__
