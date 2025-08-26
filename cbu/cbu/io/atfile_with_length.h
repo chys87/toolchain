@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 
 #include <fcntl.h>
 
+#include "cbu/common/concepts.h"
 #include "cbu/io/atfile.h"
 #include "cbu/strings/zstring_view.h"
 
@@ -38,14 +39,20 @@ namespace cbu {
 // AtFile with known length, note that the string must still be null-terminated
 class AtFileWithLength {
  public:
-  constexpr AtFileWithLength(int fd, cbu::zstring_view name) noexcept
+  template <Zstring_view_compat T>
+  constexpr AtFileWithLength(int fd, const T& name) noexcept
       : fd_(fd), l_(name.size()), name_(name.c_str()) {}
-  constexpr AtFileWithLength(cbu::zstring_view name) noexcept
-      : fd_(AT_FDCWD), l_(name.size()), name_(name.c_str()) {}
-  constexpr AtFileWithLength(AtFile af) noexcept
-      : fd_(af.fd()),
-        l_(std::string_view(af.name()).size()),
-        name_(af.name()) {}
+
+  template <Zstring_view_compat T>
+  constexpr AtFileWithLength(const T& name) noexcept : AtFileWithLength(AT_FDCWD, name) {}
+
+  constexpr AtFileWithLength(int fd, const char* name) noexcept
+      : AtFileWithLength(fd, cbu::zstring_view(name)) {}
+
+  constexpr AtFileWithLength(const char* name) noexcept : AtFileWithLength(AT_FDCWD, name) {}
+
+  constexpr AtFileWithLength(AtFile af) noexcept : AtFileWithLength(af.fd(), af.name()) {}
+
   constexpr AtFileWithLength(const AtFileWithLength&) noexcept = default;
   constexpr AtFileWithLength& operator=(const AtFileWithLength&) noexcept = default;
 
