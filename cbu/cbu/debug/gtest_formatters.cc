@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,16 +43,22 @@ void PrintTo(std::u8string_view s, std::ostream* os) {
 void PrintTo(std::u16string_view s, std::ostream* os) {
   auto buffer = cbu::make_unique_for_overwrite<char[]>(s.size() * 6);
   char* p = buffer.get();
-  for (char16_t c : s) {
-    // FIXME: This is actually incorrect -- treating char16_t as though it
-    // were char32_t
-    char* q = cbu::char32_to_utf8(p, c);
-    if (q != nullptr)
-      p = q;
-    else
+  for (size_t i = 0, n = s.size(); i < n; ++i) {
+    char16_t c = s[i];
+    if (cbu::is_in_utf16_high_surrogate_range(c)) {
+      if (i + 1 < n && cbu::is_in_utf16_low_surrogate_range(s[i + 1])) {
+        p = cbu::utf16_surrogates_to_utf8(p, c, s[i + 1]);
+        ++i;
+      } else {
+        *p++ = '?';
+      }
+    } else if (cbu::is_in_utf16_low_surrogate_range(c)) {
       *p++ = '?';
+    } else {
+      p = cbu::char16_to_utf8_unsafe(p, char16_t(c));
+    }
   }
-  *os << std::string_view(buffer.get(), p - buffer.get());
+  *os << std::string_view(buffer.get(), p);
 }
 
 void PrintTo(std::u32string_view s, std::ostream* os) {
@@ -65,7 +71,7 @@ void PrintTo(std::u32string_view s, std::ostream* os) {
     else
       *p++ = '?';
   }
-  *os << std::string_view(buffer.get(), p - buffer.get());
+  *os << std::string_view(buffer.get(), p);
 }
 
 }  // namespace std

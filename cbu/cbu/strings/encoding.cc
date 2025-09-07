@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,7 +41,7 @@ namespace cbu {
 char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
   if (u < 0x800) {
     if (u < 0x80) {
-      *w++ = u;
+      *w++ = char8_t(u);
     } else {
 #if defined __BMI2__
       w = memdrop_be<uint16_t>(w, _pdep_u32(u, 0x1f3f) | 0xc080u);
@@ -83,7 +83,7 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
 char8_t* char32_to_utf8_unsafe(char8_t* w, char32_t u) noexcept {
   if (u < 0x800) {
     if (u < 0x80) {
-      *w++ = u;
+      *w++ = char8_t(u);
     } else {
 #if defined __BMI2__
       w = memdrop_be<uint16_t>(w, _pdep_u32(u, 0x1f3f) | 0xc080u);
@@ -117,7 +117,7 @@ char8_t* char32_to_utf8_unsafe(char8_t* w, char32_t u) noexcept {
 char8_t* char16_to_utf8_unsafe(char8_t* w, char16_t u) noexcept {
   if (u < 0x800) {
     if (u < 0x80) {
-      *w++ = u;
+      *w++ = char8_t(u);
     } else {
 #if defined __BMI2__
       w = memdrop_be<uint16_t>(w, _pdep_u32(u, 0x1f3f) | 0xc080u);
