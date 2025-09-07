@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,10 +56,7 @@ template <typename... Types>
 inline constexpr bool is_same_v = is_same<Types...>::value;
 
 // bitwise_movable<T> bitwise_movable_v<T>:
-//  If true, it means type T is "bitwise movable", i.e.
-//  an instance of T can be safely bitwise moved to another address, and it
-//  is still a valid object without change in semantics.
-//  Clang calls this "trivially relocatable".
+//  Similar to C++26 "trivially relocatable".
 //
 // pass_type_t<T>: Equivalent to T or const T& depending on its "simplicity"
 // pass_type_t<T, T&&>: Equivalent to T or T&& depending on its "simplicity"
@@ -126,7 +123,9 @@ template <typename T>
 struct bitwise_movable
     : std::disjunction<
           is_trivially_copyable_and_destructible<T>,
-#if __has_builtin(__is_trivially_relocatable)  // Clang 15
+#if __has_builtin(__builtin_is_cpp_trivially_relocatable)  // Clang 21
+          std::bool_constant<__builtin_is_cpp_trivially_relocatable(T)>,
+#elif __has_builtin(__is_trivially_relocatable)  // Clang 15
           std::bool_constant<__is_trivially_relocatable(T)>,
 #endif
           type_traits_detail::extract_traits_bitwise_movable<T>>::type {};
