@@ -173,8 +173,12 @@ char* IPv4::ToString(char* p) const noexcept {
   p -= skipped_bytes[2];
   *(uint32_t*)(p + 8) = bytes[1];
   p -= skipped_bytes[1];
-  *(uint16_t*)(p + 12) = __v8hu(bytes)[0];
-  *(p + 14) = __v16qu(bytes)[2];
+#if defined __clang__ && __clang_major__ == 21
+  // Work around miscompilation in early clang 21 versions
+  asm volatile("" : "+r"(p));
+#endif
+  *(uint16_t*)(p + 12) = bytes[0];
+  *(p + 14) = bytes[0] >> 16;
   p += 15l - skipped_bytes[0];
   return p;
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -197,8 +201,12 @@ char* IPv4::ToString(char* p) const noexcept {
   p += skipped_bytes[2];
   *(uint32_t*)(p + 8) = bytes[1];
   p += skipped_bytes[1];
-  *(uint16_t*)(p + 12) = vreinterpretq_u16_u32(bytes)[0];
-  *(p + 14) = vreinterpretq_u8_u32(bytes)[2];
+#if defined __clang__ && __clang_major__ == 21
+  // Work around miscompilation in early clang 21 versions
+  asm volatile("" : "+r"(p));
+#endif
+  *(uint16_t*)(p + 12) = bytes[0];
+  *(p + 14) = bytes[0] >> 16;
   p += 15l + skipped_bytes[0];
   return p;
 #endif
