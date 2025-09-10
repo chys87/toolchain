@@ -66,7 +66,7 @@ struct EncodedVlq {
 constexpr unsigned vlq_encode_length(std::uint64_t v) noexcept {
   if (v == 0) return 1;
   unsigned k = 64 - cbu::clz(v);
-  return fastdiv<7, 70>(k + 6);
+  return fastdiv<7, 69>(k + 6);
 }
 
 constexpr EncodedVlq vlq_encode(uint64_t v) noexcept {

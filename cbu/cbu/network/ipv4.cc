@@ -59,8 +59,8 @@ inline char* uint8_to_string(char* p, std::uint8_t v) noexcept {
   }
   if (v >= 10) {
 _j:
-    *p++ = fastdiv<10, 100>(v) + '0';
-    v = fastmod<10, 100>(v);
+    *p++ = fastdiv<10, 99>(v) + '0';
+    v = fastmod<10, 99>(v);
   }
   *p++ = v + '0';
   return p;

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
 namespace cbu {
 
 TEST(FastDiv, Magics) {
-  auto p = fastdiv_detail::magic<uint32_t>(3, 32);
+  auto p = fastdiv_detail::magic<uint32_t>(3, 31);
   EXPECT_EQ(0, p.S);
   EXPECT_EQ(11, p.M);
   EXPECT_EQ(5, p.N);
@@ -43,35 +43,32 @@ TEST(FastDiv, Magics) {
   EXPECT_EQ(3, p.N);
 }
 
-template <uint64_t D, uint64_t UB>
+template <uint64_t D, uint64_t MAX>
 inline void test_div() {
-  for (uint64_t v = 0; v < UB; v = v + 1 + v / 100) {
-    ASSERT_EQ(v / D, (fastdiv<D, UB>(v)));
-    ASSERT_EQ(v % D, (fastmod<D, UB>(v)));
+  for (uint64_t v = 0; v <= MAX; v = v + 1 + v / 100) {
+    ASSERT_EQ(v / D, (fastdiv<D, MAX>(v)));
+    ASSERT_EQ(v % D, (fastmod<D, MAX>(v)));
   }
 }
 
 TEST(FastDiv, Div) {
-  test_div<2, 16384>();
-  test_div<3, 123>();
-  test_div<3, 123456789>();
-  test_div<7, 65537>();
+  test_div<2, 16383>();
+  test_div<3, 122>();
+  test_div<3, 123456788>();
   test_div<7, 65536>();
-  test_div<7, 16384>();
-  test_div<14, 65536>();
-  test_div<21, 65536>();
-  test_div<13, 0x1111111>();
-  test_div<13, 0x111>();
-  test_div<2, 0x123456789>();
+  test_div<7, 65535>();
+  test_div<7, 16383>();
+  test_div<14, 65535>();
+  test_div<21, 65535>();
+  test_div<13, 0x1111110>();
+  test_div<13, 0x110>();
+  test_div<2, 0x123456788>();
   test_div<3, 0x123456789abc>();
   test_div<7, 0x123456789abc>();
   test_div<11, 0x123456789abc>();
   test_div<13, 0x123456789abc>();
   test_div<17, 0x123456789abc>();
-#ifndef __clang__
-  // Not sure why clang++ doesn't compile this -- comment for now
-  test_div<5, 0x1'0000'0001>();
-#endif
+  test_div<5, 0x1'0000'0000>();
 }
 
 } // namespace cbu

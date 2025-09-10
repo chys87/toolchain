@@ -319,20 +319,20 @@ char *to_dec(char *r, const Word *s, size_t n) noexcept {
     // Div is not optimized for divisors larger than 65536 in 32-bit, but
     // we choose not to optimize for 32-bit these days.
     std::tie(n, rem) = Div(t, t, n, 100000000);
-    uint32_t lo = fastmod<10000, 100000000>(rem);
-    uint32_t hi = fastdiv<10000, 100000000>(rem);
-    uint32_t a = fastmod<100, 10000>(lo);
-    uint32_t b = fastdiv<100, 10000>(lo);
-    *w++ = fastmod<10, 100>(a) + '0';
-    *w++ = fastdiv<10, 100>(a) + '0';
-    *w++ = fastmod<10, 100>(b) + '0';
-    *w++ = fastdiv<10, 100>(b) + '0';
-    uint32_t c = fastmod<100, 10000>(hi);
-    uint32_t d = fastdiv<100, 10000>(hi);
-    *w++ = fastmod<10, 100>(c) + '0';
-    *w++ = fastdiv<10, 100>(c) + '0';
-    *w++ = fastmod<10, 100>(d) + '0';
-    *w++ = fastdiv<10, 100>(d) + '0';
+    uint32_t lo = fastmod<10000, 99999999>(rem);
+    uint32_t hi = fastdiv<10000, 99999999>(rem);
+    uint32_t a = fastmod<100, 9999>(lo);
+    uint32_t b = fastdiv<100, 9999>(lo);
+    *w++ = fastmod<10, 99>(a) + '0';
+    *w++ = fastdiv<10, 99>(a) + '0';
+    *w++ = fastmod<10, 99>(b) + '0';
+    *w++ = fastdiv<10, 99>(b) + '0';
+    uint32_t c = fastmod<100, 9999>(hi);
+    uint32_t d = fastdiv<100, 9999>(hi);
+    *w++ = fastmod<10, 99>(c) + '0';
+    *w++ = fastdiv<10, 99>(c) + '0';
+    *w++ = fastmod<10, 99>(d) + '0';
+    *w++ = fastdiv<10, 99>(d) + '0';
   }
 
   Word v = t[0];

@@ -57,7 +57,7 @@ ScaleUnitPrefix scale_unit_prefix_1024(float value) noexcept {
     // The value is known to be positive, so don't bother to clear sign bit
     unsigned orig_exponent = u >> 23;
     unsigned real_exponent = orig_exponent - 127;
-    unsigned prefix_idx = cbu::fastdiv<10, 64>(real_exponent);
+    unsigned prefix_idx = cbu::fastdiv<10, 63>(real_exponent);
     u -= prefix_idx * 10 << 23;
     float res = std::bit_cast<float>(u);
     return {res, prefix_idx};
@@ -80,7 +80,7 @@ ScaleUnitPrefix scale_unit_prefix_1024_u32(std::uint32_t value) noexcept {
     if (value == 0) return {};
     unsigned lz = std::countl_zero(value);
     unsigned bits = 31 - lz;
-    unsigned prefix_idx = fastdiv<10, 32>(bits);
+    unsigned prefix_idx = fastdiv<10, 31>(bits);
     std::uint32_t u = value << lz << 1 >> 9;
     u += ((bits - prefix_idx * 10) + 127) << 23;
     return {std::bit_cast<float>(u), prefix_idx};
@@ -94,7 +94,7 @@ ScaleUnitPrefix scale_unit_prefix_1024_u64(std::uint64_t value) noexcept {
     if (value == 0) return {};
     unsigned lz = std::countl_zero(value);
     unsigned bits = 63 - lz;
-    unsigned prefix_idx = fastdiv<10, 64>(bits);
+    unsigned prefix_idx = fastdiv<10, 63>(bits);
     std::uint32_t u = value << lz << 1 >> 41;
     u += ((bits - prefix_idx * 10) + 127) << 23;
     return {std::bit_cast<float>(u), prefix_idx};

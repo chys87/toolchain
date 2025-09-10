@@ -46,11 +46,10 @@ struct Magic {
 };
 
 
-// Verify that for all k, 0 <= k < UB, k / D == k * M >> N
+// Verify that for all k, 0 <= k <= MAX, k / D == k * M >> N
 template <typename Type>
-inline constexpr bool verify_magic(Type D, Type UB, Type M, Type N) noexcept {
-  if (UB == 0) return false;
-  Type t = UB - 1;
+inline constexpr bool verify_magic(Type D, Type MAX, Type M, Type N) noexcept {
+  Type t = MAX;
   if (t / D != t * M >> N) return false;
   t = t / D * D;
   if (t / D != t * M >> N) return false;
@@ -64,7 +63,7 @@ inline constexpr bool verify_magic(Type D, Type UB, Type M, Type N) noexcept {
 }
 
 template <typename Type>
-inline constexpr Magic<Type> magic_base(Type D, Type UB) noexcept {
+inline constexpr Magic<Type> magic_base(Type D, Type MAX) noexcept {
   for (unsigned int N = 1; N < 8 * sizeof(Type); ++N) {
     // Find proper M, use this:
     // (D-1) / D == ((D - 1) * M) >> N == 0
@@ -74,7 +73,7 @@ inline constexpr Magic<Type> magic_base(Type D, Type UB) noexcept {
     if (M % 2 == 0) {
       continue;
     }
-    if (verify_magic<Type>(D, UB, M, N)) {
+    if (verify_magic<Type>(D, MAX, M, N)) {
       return {0, M, N};
     }
   }
@@ -82,10 +81,10 @@ inline constexpr Magic<Type> magic_base(Type D, Type UB) noexcept {
 }
 
 template <typename Type>
-inline consteval Magic<Type> magic(Type D, Type UB) noexcept {
+inline consteval Magic<Type> magic(Type D, Type MAX) noexcept {
   for (unsigned int S = 0;
        S < 8 * sizeof(Type) && (D & ((Type(1) << S) - 1)) == 0; ++S) {
-    Magic mag = magic_base(D >> S, UB);
+    Magic mag = magic_base(D >> S, MAX);
     if (mag.M != 0) {
       mag.S = S;
       return mag;
@@ -96,36 +95,40 @@ inline consteval Magic<Type> magic(Type D, Type UB) noexcept {
 }
 
 // Work around a bug in some veresions of GCC, which insists on
-// evaluating UB / (D / 7) even if it should be short-circuited.
-template <std::uint32_t D, std::uint32_t UB> requires (D / 7 != 0)
+// evaluating MAX / (D / 7) even if it should be short-circuited.
+template <std::uint32_t D, std::uint32_t MAX>
+  requires(D / 7 != 0)
 inline constexpr bool use_div7_special_case() {
   return (D % 7 == 0 && ((D / 7) & ((D / 7) - 1)) == 0 &&
-          UB / (D / 7) <= 65536);
+          (MAX + 1) / (D / 7) <= 65536);
 }
 
-template <std::uint32_t D, std::uint32_t UB> requires (D / 7 == 0)
-inline constexpr bool use_div7_special_case() { return false; }
+template <std::uint32_t D, std::uint32_t MAX>
+  requires(D / 7 == 0)
+inline constexpr bool use_div7_special_case() {
+  return false;
+}
 
-template <std::uint64_t D, std::uint64_t UB>
+template <std::uint64_t D, std::uint64_t MAX>
 using FastDivType =
     std::conditional_t<D <= std::numeric_limits<std::uint32_t>::max() &&
-                           UB <= std::numeric_limits<std::uint32_t>::max(),
+                           MAX <= std::numeric_limits<std::uint32_t>::max(),
                        std::uint32_t, std::uint64_t>;
 
-// Compute (v / D) (where v is unknown to be < UB)
+// Compute (v / D) (where v is unknown to be <= MAX)
 // We use tricks to have the compiler generate faster and/or smaller code
-template <typename Type, Type D, Type UB, Magic<Type> Mag = magic(D, UB)>
+template <typename Type, Type D, Type MAX, Magic<Type> Mag = magic(D, MAX)>
 inline constexpr Type fastdiv(Type v) noexcept {
   constexpr auto S = Mag.S;
   constexpr auto M = Mag.M;
   constexpr auto N = Mag.N;
-  if constexpr (UB <= D) {
+  if constexpr (MAX < D) {
     // Special case
     return 0;
   } else if constexpr (sizeof(Type) == 4) {
     if constexpr (M != 0) {
       return (v >> S) * M >> N;
-    } else if constexpr (fastdiv_detail::use_div7_special_case<D, UB>()) {
+    } else if constexpr (fastdiv_detail::use_div7_special_case<D, MAX>()) {
       // Special case
       v /= D / 7;
       std::uint32_t a = 9363 * v >> 16;
@@ -134,7 +137,7 @@ inline constexpr Type fastdiv(Type v) noexcept {
       return (v / D);
     }
   } else {
-    if constexpr (UB - 1 == std::numeric_limits<std::uint32_t>::max()) {
+    if constexpr (MAX == std::numeric_limits<std::uint32_t>::max()) {
       // Special case for exact uint32_t
       return (std::uint32_t(v) / D);
     } else if constexpr (M != 0) {
@@ -147,59 +150,61 @@ inline constexpr Type fastdiv(Type v) noexcept {
 
 }  // namespace fastdiv_detail
 
-template <std::uint64_t D, std::uint64_t UB>
-inline constexpr fastdiv_detail::FastDivType<D, UB> fastdiv(
-    fastdiv_detail::FastDivType<D, UB> v) noexcept {
-  CBU_HINT_ASSUME(v < UB);
-  using Type = fastdiv_detail::FastDivType<D, UB>;
-  if constexpr (UB <= D) {
+template <std::uint64_t D, std::uint64_t MAX>
+inline constexpr fastdiv_detail::FastDivType<D, MAX> fastdiv(
+    fastdiv_detail::FastDivType<D, MAX> v) noexcept {
+  CBU_HINT_ASSUME(v <= MAX);
+  using Type = fastdiv_detail::FastDivType<D, MAX>;
+  if constexpr (MAX < D) {
     return 0;
   } else if constexpr (D == 1) {
     return v;
-  } else if constexpr (UB == 256) {
+  } else if constexpr (MAX == 255) {
     return std::uint8_t(v) / D;
-  } else if constexpr (UB == 65536) {
+  } else if constexpr (MAX == 65535) {
     return std::uint16_t(v) / D;
-  } else if constexpr (UB == 4294967296) {
+  } else if constexpr (MAX == std::uint32_t(-1)) {
     return std::uint32_t(v) / D;
+  } else if constexpr (MAX == std::uint64_t(-1)) {
+    return v / D;
   } else {
     Type r = fastdiv_detail::fastdiv<Type, static_cast<Type>(D),
-                                     static_cast<Type>(UB)>(v);
-    CBU_HINT_ASSUME(r <= (UB - 1) / D);
+                                     static_cast<Type>(MAX)>(v);
+    CBU_HINT_ASSUME(r <= MAX / D);
     return r;
   }
 }
 
-template <std::uint64_t D, std::uint64_t UB>
-inline constexpr fastdiv_detail::FastDivType<D, UB> fastmod(
-    fastdiv_detail::FastDivType<D, UB> v) noexcept {
-  CBU_HINT_ASSUME(v < UB);
-  using Type = fastdiv_detail::FastDivType<D, UB>;
-  if constexpr (UB <= 1 || D == 1) {
+template <std::uint64_t D, std::uint64_t MAX>
+inline constexpr fastdiv_detail::FastDivType<D, MAX> fastmod(
+    fastdiv_detail::FastDivType<D, MAX> v) noexcept {
+  CBU_HINT_ASSUME(v <= MAX);
+  using Type = fastdiv_detail::FastDivType<D, MAX>;
+  if constexpr (MAX == 0 || D == 1) {
     return 0;
-  } else if constexpr (UB <= D) {
+  } else if constexpr (MAX < D) {
     return v;
   } else {
-    auto r = v - Type(D) * fastdiv<D, UB>(v);
+    auto r = v - Type(D) * fastdiv<D, MAX>(v);
     CBU_HINT_ASSUME(r < D);
     return r;
   }
 }
 
-template <std::uint64_t D, std::uint64_t UB>
-inline constexpr std::pair<fastdiv_detail::FastDivType<D, UB>,
-                           fastdiv_detail::FastDivType<D, UB>>
-fastdivmod(fastdiv_detail::FastDivType<D, UB> v) noexcept {
-  CBU_HINT_ASSUME(v < UB);
-  using Type = fastdiv_detail::FastDivType<D, UB>;
-  if constexpr (UB <= 1) {
+template <std::uint64_t D, std::uint64_t MAX>
+inline constexpr std::pair<fastdiv_detail::FastDivType<D, MAX>,
+                           fastdiv_detail::FastDivType<D, MAX>>
+fastdivmod(fastdiv_detail::FastDivType<D, MAX> v) noexcept {
+  CBU_HINT_ASSUME(v <= MAX);
+  using Type = fastdiv_detail::FastDivType<D, MAX>;
+  if constexpr (MAX == 0) {
     return {0, 0};
   } else if constexpr (D == 1) {
     return {v, 0};
-  } else if constexpr (UB <= D) {
+  } else if constexpr (MAX < D) {
     return {0, Type(v)};
   } else {
-    Type quo = fastdiv<D, UB>(v);
+    Type quo = fastdiv<D, MAX>(v);
     Type rem = v - quo * Type(D);
     CBU_HINT_ASSUME(rem < D);
     return {quo, rem};

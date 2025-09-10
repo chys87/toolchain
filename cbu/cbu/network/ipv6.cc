@@ -399,13 +399,13 @@ bool IPv6::FromString(std::string_view s, in6_addr& addr) noexcept {
 }
 
 char* IPv6Port::PortToString(char* buf, uint16_t port) noexcept {
-  unsigned myriads = cbu::fastdiv<10000, 65536>(port);
+  unsigned myriads = cbu::fastdiv<10000, 65535>(port);
   unsigned rem = port - 10000 * myriads;
-  unsigned thousands = cbu::fastdiv<1000, 10000>(rem);
+  unsigned thousands = cbu::fastdiv<1000, 9999>(rem);
   rem -= thousands * 1000;
-  unsigned hundreds = cbu::fastdiv<100, 1000>(rem);
+  unsigned hundreds = cbu::fastdiv<100, 999>(rem);
   rem -= hundreds * 100;
-  unsigned tens = cbu::fastdiv<10, 100>(rem);
+  unsigned tens = cbu::fastdiv<10, 99>(rem);
   unsigned ones = rem - tens * 10;
 
   uint64_t str = myriads | (thousands << 8) | (hundreds << 16) | (tens << 24) |
