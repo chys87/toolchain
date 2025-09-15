@@ -72,6 +72,21 @@ concept Statx_spec_time = requires(T& spec) {
   } -> std::same_as<statx_timestamp>;
 };
 
+template <typename T>
+concept Statx_path =
+    std::is_convertible_v<const T&, const char*> || requires(const T& path) {
+      { path.c_str() } -> std::convertible_to<const char*>;
+    };
+
+template <Statx_path T>
+constexpr const char* statx_path(const T& path) noexcept {
+  if constexpr (std::is_convertible_v<T, const char*>) {
+    return static_cast<const char*>(path);
+  } else {
+    return path.c_str();
+  }
+}
+
 }  // namespace detail
 
 template <int flags>
@@ -126,13 +141,14 @@ struct StatxSecond : RealTimeSpec {
   }
 };
 
-template <detail::Statx_spec... Specs>
+template <detail::Statx_path Path, detail::Statx_spec... Specs>
   requires(sizeof...(Specs) > 0)
-inline auto Statx(int fd, const char* path, Specs... specs) {
+inline auto Statx(int fd, const Path& path, Specs... specs) {
   struct_statx stx;
-  int ret =
-      fsys_statx(fd, path, (... | Specs::kFlags), (... | Specs::kMask), &stx);
-  return std::tuple_cat(std::tuple(ret), detail::StatxResultAsTuple(ret, stx, specs)...);
+  int ret = fsys_statx(fd, detail::statx_path(path), (... | Specs::kFlags),
+                       (... | Specs::kMask), &stx);
+  return std::tuple_cat(std::tuple(ret),
+                        detail::StatxResultAsTuple(ret, stx, specs)...);
 }
 
 template <detail::Statx_spec... Specs>
@@ -140,8 +156,8 @@ inline auto Statx(int fd, Specs... specs) {
   return Statx(fd, "", StatxEmptyPath(), specs...);
 }
 
-template <detail::Statx_spec... Specs>
-inline auto Statx(const char* path, Specs... specs) {
+template <detail::Statx_path Path, detail::Statx_spec... Specs>
+inline auto Statx(const Path& path, Specs... specs) {
   return Statx(AT_FDCWD, path, specs...);
 }
 
