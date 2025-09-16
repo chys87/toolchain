@@ -30,6 +30,8 @@
 
 #if defined __aarch64__
 #include <arm_acle.h>
+#elif defined __SSE2__
+#include <x86intrin.h>
 #endif
 
 #include <algorithm>
@@ -138,6 +140,18 @@ constexpr std::remove_cvref_t<T> rbit(T x) noexcept {
   }
 #endif
 
+#ifdef __SSE2__
+  if !consteval {
+    if constexpr (sizeof(UT) == 8) {
+      __v16qu v = __v16qu(__v2du{__builtin_bswap64(y), 0});
+      v = (v << 4) | (v >> 4);
+      v = ((v << 2) & 0xcc) | ((v & 0xcc) >> 2);
+      v = ((v << 1) & 0xaa) | ((v & 0xaa) >> 1);
+      return __v2du(v)[0];
+    }
+  }
+#endif
+
   if constexpr (sizeof(T) == 2)
     y = __builtin_bswap16(y);
   else if constexpr (sizeof(T) == 4)
@@ -145,11 +159,11 @@ constexpr std::remove_cvref_t<T> rbit(T x) noexcept {
   else if constexpr (sizeof(T) == 8)
     y = __builtin_bswap64(y);
 
-  y = ((y & UT(0x0f0f0f0f'0f0f0f0full)) << 4) |
+  y = ((y << 4) & UT(0xf0f0f0f0'f0f0f0f0ull)) |
       ((y & UT(0xf0f0f0f0'f0f0f0f0ull)) >> 4);
-  y = ((y & UT(0x33333333'33333333ull)) << 2) |
+  y = ((y << 2) & UT(0xcccccccc'ccccccccull)) |
       ((y & UT(0xcccccccc'ccccccccull)) >> 2);
-  y = ((y & UT(0x55555555'55555555ull)) << 1) |
+  y = ((y << 1) & UT(0xaaaaaaaa'aaaaaaaaull)) |
       ((y & UT(0xaaaaaaaa'aaaaaaaaull)) >> 1);
   return y;
 }
