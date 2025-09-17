@@ -296,7 +296,7 @@ CBU_AARCH64_PRESERVE_ALL std::uint64_t mempick_var64(const void* s, std::size_t)
 
 template <typename T, typename C>
   requires(Raw_char_type_or_void<C> && Raw_integral<T> && sizeof(T) <= 8)
-inline constexpr T mempick(const C* s, std::size_t n) {
+inline constexpr T mempick(const C* s, std::size_t n) noexcept {
   if (std::is_void_v<C>) {
     return mempick<T>(static_cast<const char*>(s), n);
   } else if consteval {
@@ -309,6 +309,35 @@ inline constexpr T mempick(const C* s, std::size_t n) {
     } else {
       return mempick_var64(s, n);
     }
+  }
+}
+
+template <std::size_t N, typename C>
+  requires(N <= 8 && Raw_char_type<C>)
+inline constexpr std::conditional_t<(N <= 4), std::uint32_t, std::uint64_t>
+mempick_le(const C* s) noexcept {
+  if constexpr (N == 1) {
+    return static_cast<unsigned char>(*s);
+  } else if constexpr (N == 2) {
+    return mempick_le<std::uint16_t>(s);
+  } else if constexpr (N == 3) {
+    return mempick_le<std::uint16_t>(s) |
+           (static_cast<std::uint32_t>(static_cast<std::uint8_t>(s[2])) << 16);
+  } else if constexpr (N == 4) {
+    return mempick_le<std::uint32_t>(s);
+  } else if constexpr (N == 5) {
+    return mempick_le<std::uint32_t>(s) |
+           (static_cast<std::uint64_t>(static_cast<std::uint8_t>(s[4])) << 32);
+  } else if constexpr (N == 6) {
+    return mempick_le<std::uint32_t>(s) |
+           (static_cast<std::uint64_t>(mempick_le<std::uint16_t>(s + 4)) << 32);
+  } else if constexpr (N == 7) {
+    return mempick_le<std::uint32_t>(s) |
+           (static_cast<std::uint64_t>(mempick_le<std::uint32_t>(s + 3)) << 24);
+  } else if constexpr (N == 8) {
+    return mempick_le<std::uint64_t>(s);
+  } else {
+    return 0;
   }
 }
 
