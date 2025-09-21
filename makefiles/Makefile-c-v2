@@ -327,7 +327,9 @@ endif
 ifeq "$(IS_CLANG)" "1"
  EXTRA_CFLAGS += -flax-vector-conversions=none
  EXTRA_CXXFLAGS += -fstrict-vtable-pointers -flax-vector-conversions=none -fassume-nothrow-exception-dtor
- EXTRA_LDFLAGS += -fuse-ld=lld
+ ifeq "$(findstring -fuse-ld,$(EXTRA_LDFLAGS))" ""
+  EXTRA_LDFLAGS += -fuse-ld=lld
+ endif
  ifeq "$(IS_X86_64)" "1"
   EXTRA_CFLAGS += -fveclib=libmvec
   EXTRA_CXXFLAGS += -fveclib=libmvec
@@ -383,7 +385,6 @@ CXXFLAGS = $(OPTIMIZEFLAGS) $(CXXOPTIMIZEFLAGS) $(ARCHFLAGS) $(CXXWARNINGFLAGS) 
 BASE_LDFLAGS = -Wl,-O1 -Wl,--fatal-warnings -Wl,--as-needed \
   -Wl,-z,relro -Wl,-z,lazy -Wl,-z,noexecstack \
   -Wl,-z,start-stop-visibility=hidden \
-  -Wl,-z,nostart-stop-gc \
   -Wl,--build-id=none
 ifneq "$(SYMBOL_SECTIONS)" "0"
 BASE_LDFLAGS += -Wl,--gc-sections
