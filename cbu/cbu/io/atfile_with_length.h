@@ -49,7 +49,12 @@ class AtFileWithLength {
   constexpr AtFileWithLength(int fd, const char* name) noexcept
       : AtFileWithLength(fd, cbu::zstring_view(name)) {}
 
+  constexpr AtFileWithLength(int fd, const char* name, size_t l) noexcept
+      : fd_(fd), l_(l), name_(name) {}
+
   constexpr AtFileWithLength(const char* name) noexcept : AtFileWithLength(AT_FDCWD, name) {}
+  constexpr AtFileWithLength(const char* name, size_t l) noexcept
+      : AtFileWithLength(AT_FDCWD, name, l) {}
 
   constexpr AtFileWithLength(AtFile af) noexcept : AtFileWithLength(af.fd(), af.name()) {}
 
