@@ -107,6 +107,7 @@ class basic_short_string {
   constexpr char operator[](std::size_t n) const noexcept { return s_[n]; }
   constexpr len_t length() const noexcept { return l_; }
   constexpr len_t size() const noexcept { return l_; }
+  constexpr bool empty() const noexcept { return l_ == 0; }
   constexpr const char* begin() const noexcept { return s_; }
   constexpr const char* end() const noexcept { return s_ + l_; }
   constexpr const char* cbegin() const noexcept { return s_; }
