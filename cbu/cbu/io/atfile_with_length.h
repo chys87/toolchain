@@ -39,6 +39,9 @@ namespace cbu {
 // AtFile with known length, note that the string must still be null-terminated
 class AtFileWithLength {
  public:
+  constexpr AtFileWithLength() noexcept
+      : fd_(AT_FDCWD), l_(0), name_(nullptr) {}
+
   template <Zstring_view_compat T>
   constexpr AtFileWithLength(int fd, const T& name) noexcept
       : fd_(fd), l_(name.size()), name_(name.c_str()) {}
