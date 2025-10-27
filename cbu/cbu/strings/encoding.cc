@@ -38,6 +38,42 @@
 
 namespace cbu {
 
+char16_t* char32_to_utf16(char16_t* dst, char32_t c) noexcept {
+  if (c < 0x10000) {
+    if (is_in_utf16_surrogate_range(c)) [[unlikely]] return nullptr;
+    *dst++ = char16_t(c);
+  } else if (c < 0x110000) {
+    dst = char32_non_bmp_to_utf16_surrogates(dst, c);
+  } else [[unlikely]] {
+    return nullptr;
+  }
+  return dst;
+}
+
+char16_t* char32_to_utf16(char16_t* dst, const char32_t* s, size_t n) noexcept {
+  for(; n; --n) {
+    dst = char32_to_utf16(dst, *s++);
+    if (dst == nullptr) [[unlikely]] break;
+  }
+  return dst;
+}
+
+char16_t* char32_to_utf16_unsafe(char16_t* dst, char32_t c) noexcept {
+  if (c < 0x10000) {
+    *dst++ = char16_t(c);
+  } else {
+    dst = char32_non_bmp_to_utf16_surrogates(dst, c);
+  }
+  return dst;
+}
+
+char16_t* char32_to_utf16_unsafe(char16_t* dst, const char32_t* s, size_t n) noexcept {
+  for(; n; --n) {
+    dst = char32_to_utf16_unsafe(dst, *s++);
+  }
+  return dst;
+}
+
 char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
   if (u < 0x800) {
     if (u < 0x80) {
@@ -150,6 +186,18 @@ void encoding_detail::utf16_surrogates_to_utf8(char8_t* w, char16_t a,
   *w++ = ((u >> 6) & 0x3fu) + 0x80u;
   *w++ = (u & 0x3fu) + 0x80u;
 #endif
+}
+
+char16_t* char32_non_bmp_to_utf16_surrogates(char16_t* w, char32_t c) noexcept {
+#ifdef __BMI2__
+  uint32_t v = _pdep_u32(uint32_t(c) - 0x10000, 0x3ff03ffu) | 0xd800dc00;
+  *(uint32_t*)w = std::rotr(v, 16);
+  return w + 2;
+#else
+  *w++ = 0xd800 + (c >> 10) - (0x10000 >> 10);
+  *w++ = 0xdc00 + (c & 0x3ff);
+#endif
+  return w;
 }
 
 char* char32_to_utf8(char* dst, char32_t c) noexcept {

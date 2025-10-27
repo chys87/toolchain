@@ -30,6 +30,8 @@
 
 #include <iconv.h>
 
+#include <string_view>
+
 #include <gtest/gtest.h>
 
 #include "cbu/common/defer.h"
@@ -204,6 +206,16 @@ TEST(Utf8Test, ValidateUtf8) {
         }
       }
     }
+  }
+}
+
+TEST(Utf16Test, Char32ToUtf16) {
+  char16_t buffer[1024];
+
+  {
+    auto s = U"abcéê一二三🌍🇨🇳"sv;
+    char16_t* r = char32_to_utf16_unsafe(buffer, s.data(), s.size());
+    ASSERT_EQ(std::u16string_view(buffer, r), u"abcéê一二三🌍🇨🇳"sv);
   }
 }
 

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -149,13 +149,17 @@ inline constexpr bool validate_utf8_two_bytes(std::uint8_t a,
 }
 
 // If c is out of range (> U+10FFFF) or is a UTF-16 surrogate, return nullptr
+char16_t* char32_to_utf16(char16_t* dst, char32_t c) noexcept;
+char16_t* char32_to_utf16(char16_t* dst, const char32_t* s, size_t n) noexcept;
 char8_t* char32_to_utf8(char8_t* dst, char32_t c) noexcept;
 char* char32_to_utf8(char* dst, char32_t c) noexcept;
 
-// Same as char32_to_utf8, except that
+// Same as above, except that
 //  * behavior is undefined if c is out of range;
 //  * UTF-16 surrogates are encoded as if they were valid code points;
 //  * Never returns nullptr.
+char16_t* char32_to_utf16_unsafe(char16_t* dst, char32_t c) noexcept;
+char16_t* char32_to_utf16_unsafe(char16_t* dst, const char32_t* s, size_t n) noexcept;
 char8_t* char32_to_utf8_unsafe(char8_t* dst, char32_t c) noexcept;
 char* char32_to_utf8_unsafe(char* dst, char32_t c) noexcept;
 
@@ -177,6 +181,8 @@ char32_non_bmp_to_utf16_surrogates(char32_t c) noexcept {
   return {char16_t(0xd800 + (c >> 10) - (0x10000 >> 10)),
           char16_t(0xdc00 + (c & 0x3ff))};
 }
+
+char16_t* char32_non_bmp_to_utf16_surrogates(char16_t* w, char32_t c) noexcept;
 
 // Convert a pair of UTF-16 surrogates (a, b) to UTF-8.
 // It's the caller's responsibility to guarante that (a, b) are a valid pair of
