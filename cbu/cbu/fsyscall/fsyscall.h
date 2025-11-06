@@ -363,6 +363,7 @@ def_fsys_nomem(fdatasync,fdatasync,int,1,int)
 def_fsys(msync,msync,int,3,void *,unsigned long,int)
 def_fsys_nomem(close,close,int,1,int)
 def_fsys_nomem(ftruncate,ftruncate,int,2,int,long)
+def_fsys(truncate,truncate,int,2,const char*,long)
 def_fsys(fsetxattr,fsetxattr,int,5,int,const char *,const void *,long,int)
 def_fsys(fgetxattr,fgetxattr,long,4,int,const char *,void *,unsigned long)
 #define fsys_epoll_create(ignored) fsys_epoll_create1(0)
@@ -636,6 +637,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_msync msync
 #define fsys_close close
 #define fsys_ftruncate ftruncate
+#define fsys_truncate truncate
 #define fsys_fsetxattr fsetxattr
 #define fsys_fgetxattr fgetxattr
 #define fsys_epoll_create epoll_create
