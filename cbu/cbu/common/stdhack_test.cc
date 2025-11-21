@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -70,6 +70,13 @@ TEST(StdHackTest, TruncateUnsafer) {
   EXPECT_EQ(9, u.length());
   truncate_unsafer(&u, 4);
   EXPECT_EQ("abcd"sv, u);
+}
+
+TEST(StdHackTest, VectorTest) {
+  std::vector<char> r;
+  char* w = cbu::extend(&r, 10);
+  ASSERT_EQ(r.size(), 10);
+  ASSERT_EQ(w, r.data());
 }
 
 } // namespace cbu

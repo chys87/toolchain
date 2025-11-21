@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,8 +29,11 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
+#include <vector>
 
 #include "cbu/common/concepts.h"
+#include "cbu/compat/compilers.h"
 #include "cbu/tweak/tweak.h"
 
 // Hacks standard containers to add more functionality
@@ -162,6 +165,33 @@ constexpr void truncate(std::basic_string<T>* buf, std::size_t n) noexcept {
   if (n < buf->size()) {
     truncate_unsafe(buf, n);
   }
+}
+
+namespace stdhack_detail {
+
+template <typename T>
+class Vector : public std::vector<T> {
+ public:
+  T* extend(std::size_t n) {
+    this->reserve(this->size() + n);
+    T* r = this->_M_impl._M_finish;
+    this->_M_impl._M_finish += n;
+    return r;
+  }
+};
+
+}  // namespace stdhack_detail
+
+template <typename T>
+  requires std::is_trivially_default_constructible_v<T>
+inline T* extend(std::vector<T>* vec, std::size_t n) {
+#if defined __GLIBCXX__ && !defined CBU_ADDRESS_SANITIZER
+  static_assert(sizeof(stdhack_detail::Vector<T>) == sizeof(std::vector<T>));
+  return static_cast<stdhack_detail::Vector<T>*>(vec)->extend(n);
+#else
+  vec->resize(vec->size() + n);
+  return vec->data() + vec->size() - n;
+#endif
 }
 
 }  // namespace cbu
