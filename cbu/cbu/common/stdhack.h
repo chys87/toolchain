@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -167,6 +168,36 @@ constexpr void truncate(std::basic_string<T>* buf, std::size_t n) noexcept {
   }
 }
 
+template <Std_string_char T>
+constexpr void push_back_reserved(std::basic_string<T>* buf,
+                                  std::type_identity_t<T> c) noexcept {
+#if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
+  auto l = buf->size();
+  stdhack_detail::_M_set_length(buf, l + 1);
+  buf->data()[l] = c;
+#else
+  if (buf->size() + 1 > buf->capacity()) __builtin_unreachable();
+  buf->push_back(c);
+#endif
+}
+
+template <Std_string_char T>
+constexpr void append_reserved(std::basic_string<T>* buf, const T* p, std::size_t n) noexcept {
+#if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
+  auto l = buf->size();
+  stdhack_detail::_M_set_length(buf, l + n);
+  if consteval {
+    std::copy_n(p, n, buf->data() + l);
+  } else {
+    __builtin_memcpy(buf->data() + l, p, n * sizeof(T));
+  }
+#else
+  buf->append(p, n);
+#endif
+}
+
+#if defined __GLIBCXX__ && !defined CBU_ADDRESS_SANITIZER
+
 namespace stdhack_detail {
 
 template <typename T>
@@ -178,9 +209,15 @@ class Vector : public std::vector<T> {
     this->_M_impl._M_finish += n;
     return r;
   }
+
+  T*& finish_ptr() noexcept {
+    return this->_M_impl._M_finish;
+  }
 };
 
 }  // namespace stdhack_detail
+
+#endif
 
 template <typename T>
   requires std::is_trivially_default_constructible_v<T>
@@ -192,6 +229,41 @@ inline T* extend(std::vector<T>* vec, std::size_t n) {
   vec->resize(vec->size() + n);
   return vec->data() + vec->size() - n;
 #endif
+}
+
+template <typename T, typename... Args>
+inline T& emplace_back_reserved(std::vector<T>* vec, Args&&... args) noexcept(
+    std::is_nothrow_constructible_v<T, Args&&...>) {
+#if defined __GLIBCXX__ && !defined CBU_ADDRESS_SANITIZER
+  static_assert(sizeof(stdhack_detail::Vector<T>) == sizeof(std::vector<T>));
+  auto v = static_cast<stdhack_detail::Vector<T>*>(vec);
+  T* ptr = v->finish_ptr();
+  if constexpr (std::is_nothrow_constructible_v<T, Args&&...>) {
+    v->finish_ptr() = ptr + 1;
+    std::construct_at(ptr, std::forward<Args>(args)...);
+  } else {
+    std::construct_at(ptr, std::forward<Args>(args)...);
+    v->finish_ptr() = ptr + 1;
+  }
+  return *ptr;
+#else
+  return vec->emplace_back(std::forward<Args>(args)...);
+#endif
+}
+
+template <typename T>
+inline void push_back_reserved(
+    std::vector<T>* vec,
+    const std::type_identity_t<T>&
+        v) noexcept(std::is_nothrow_copy_constructible_v<T>) {
+  emplace_back_reserved(vec, v);
+}
+
+template <typename T>
+inline void
+push_back_reserved(std::vector<T>* vec, std::type_identity_t<T>&& v) noexcept(
+    std::is_nothrow_move_constructible_v<T>) {
+  emplace_back_reserved(vec, std::move(v));
 }
 
 }  // namespace cbu

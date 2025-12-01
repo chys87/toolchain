@@ -72,11 +72,35 @@ TEST(StdHackTest, TruncateUnsafer) {
   EXPECT_EQ("abcd"sv, u);
 }
 
-TEST(StdHackTest, VectorTest) {
+TEST(StdHackTest, AppendReservedTest) {
+  std::string u = "abc"s;
+  u.reserve(16);
+  push_back_reserved(&u, 'd');
+  append_reserved(&u, "efgh", 4);
+  ASSERT_EQ(u, "abcdefgh");
+
+  u.resize(2);
+  push_back_reserved(&u, 'c');
+  ASSERT_EQ(u, "abc");
+  ASSERT_EQ(u.data()[3], '\0');  // Sets terminator properly
+}
+
+TEST(StdHackTest, VectorExtendTest) {
   std::vector<char> r;
   char* w = cbu::extend(&r, 10);
   ASSERT_EQ(r.size(), 10);
   ASSERT_EQ(w, r.data());
+}
+
+TEST(StdHackTest, VectorReservedTest) {
+  std::vector<std::string> vec;
+  vec.reserve(16);
+  ASSERT_GE(vec.capacity(), 16);
+  emplace_back_reserved(&vec, "Hello", 5);
+  push_back_reserved(&vec, std::string("world"));
+  ASSERT_EQ(vec.size(), 2);
+  EXPECT_EQ(vec[0], "Hello");
+  EXPECT_EQ(vec[1], "world");
 }
 
 } // namespace cbu
