@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,9 +64,11 @@ concept SupportedAsStringView =
       { std::size(v) } -> std::convertible_to<std::size_t>;
     };
 
+// Exclude char types to avoid ambiguity as to whether it should be considered a
+// char or a number
 template <typename T>
-concept SupportedAsIntegral =
-    std::integral<T> && !std::is_same_v<std::remove_cvref_t<T>, bool>;
+concept SupportedAsIntegral = sizeof(T) > 1 && std::integral<T> &&
+                              !std::is_same_v<std::remove_cvref_t<T>, bool>;
 
 template <typename T>
 concept Supported = SupportedAsConstCharPtr<T> || SupportedAsStringView<T> ||
