@@ -1,0 +1,5 @@
+-xc++
+-O2
+-std=gnu++2c
+-march=native
+-I.
