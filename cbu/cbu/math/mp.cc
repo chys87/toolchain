@@ -39,7 +39,7 @@
 
 #include "cbu/common/bit.h"
 #include "cbu/common/byteorder.h"
-#include "cbu/math/common.h"
+#include "cbu/common/stdhack.h"
 #include "cbu/math/fastdiv.h"
 #include "cbu/math/strict_overflow.h"
 #include "cbu/strings/faststr.h"

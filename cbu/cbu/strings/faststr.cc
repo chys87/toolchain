@@ -34,11 +34,8 @@
 
 #include <bit>
 
-#include "cbu/common/stdhack.h"
 #include "cbu/compat/compilers.h"
 #include "cbu/compat/string.h"
-#include "cbu/math/common.h"
-#include "cbu/math/strict_overflow.h"
 
 namespace cbu {
 

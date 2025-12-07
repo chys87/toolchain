@@ -36,7 +36,6 @@
 #include <string.h>
 #include <netinet/in.h>
 
-#include <algorithm>
 #include <compare>
 #include <ostream>
 #include <string_view>

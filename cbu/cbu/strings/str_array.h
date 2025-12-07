@@ -163,8 +163,8 @@ inline constexpr bool operator==(const base_str_array<Z1>& a,
 }
 
 template <bool Z1, bool Z2>
-inline constexpr auto operator<=>(const base_str_array<Z1>& a,
-                                  const base_str_array<Z2>& b) noexcept {
+inline constexpr std::weak_ordering operator<=>(
+    const base_str_array<Z1>& a, const base_str_array<Z2>& b) noexcept {
   return std::string_view(a) <=> std::string_view(b);
 }
 

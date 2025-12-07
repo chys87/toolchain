@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,6 @@
 #include <algorithm>
 #include <concepts>
 #include <cstdint>
-#include <initializer_list>
 #include <numeric>
 #include <ranges>
 #include <string_view>

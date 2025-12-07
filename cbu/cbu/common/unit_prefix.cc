@@ -28,10 +28,8 @@
 
 #include "cbu/common/unit_prefix.h"
 
-#include <cstring>
 #include <limits>
 
-#include "cbu/common/bit.h"
 #include "cbu/math/fastdiv.h"
 
 namespace cbu {

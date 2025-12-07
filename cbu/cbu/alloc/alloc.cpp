@@ -34,7 +34,6 @@
 
 #include "cbu/alloc/pagesize.h"
 #include "cbu/alloc/private/common.h"
-#include "cbu/common/procutil.h"
 #include "cbu/strings/faststr.h"
 
 namespace cbu {

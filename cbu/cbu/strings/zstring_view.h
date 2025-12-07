@@ -28,7 +28,6 @@
 
 #pragma once
 
-#include <algorithm>
 #include <string_view>  // IWYU pragma: export
 
 #include "cbu/common/concepts.h"

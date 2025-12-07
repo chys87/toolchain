@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,12 +30,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include <memory>
-
-#include "cbu/alloc/alloc.h"
 #include "cbu/alloc/private/common.h"
 #include "cbu/alloc/private/permanent.h"
-#include "cbu/common/bit.h"
 
 namespace cbu {
 namespace alloc {

@@ -36,19 +36,13 @@
 #endif
 
 #include <bit>
-#include <cstdarg>
 #include <cstdint>
 #include <cstring>
-#include <initializer_list>
-#include <optional>
-#include <span>
-#include <string>
+#include <memory>
 #include <type_traits>
-#include <utility>
 
 #include "cbu/common/byteorder.h"
 #include "cbu/common/concepts.h"
-#include "cbu/common/stdhack.h"
 #include "cbu/compat/compilers.h"
 #include "cbu/compat/string.h"
 

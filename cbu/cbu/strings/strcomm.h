@@ -32,7 +32,6 @@
 #include <string_view>
 
 #include "cbu/common/concepts.h"
-#include "cbu/compat/compilers.h"
 
 namespace cbu {
 namespace strcomm_detail {

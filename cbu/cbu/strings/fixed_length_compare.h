@@ -38,7 +38,6 @@
 #include <array>
 #include <concepts>
 #include <cstdint>
-#include <utility>
 
 namespace cbu {
 namespace is_all_zero_detail {

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -143,8 +143,8 @@ class ImmutableBasicString {
                                     const ImmutableBasicString& b) noexcept {
     return a.view() > b.view();
   }
-  friend constexpr auto operator <=> (const ImmutableBasicString& a,
-                                      const ImmutableBasicString& b) noexcept {
+  friend constexpr std::weak_ordering operator<=>(
+      const ImmutableBasicString& a, const ImmutableBasicString& b) noexcept {
     return a.view() <=> b.view();
   }
 

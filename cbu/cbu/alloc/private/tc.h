@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,15 +31,11 @@
 #include <pthread.h>
 #include <sched.h>
 
-#include <mutex>
 #include <type_traits>
 
 #include "cbu/alloc/pagesize.h"
-#include "cbu/alloc/private/common.h"
 #include "cbu/alloc/private/page.h"
 #include "cbu/alloc/private/small.h"
-#include "cbu/fsyscall/fsyscall.h"
-#include "cbu/sys/low_level_mutex.h"
 
 namespace cbu {
 namespace alloc {

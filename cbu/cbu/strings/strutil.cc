@@ -42,7 +42,6 @@
 #include "cbu/common/bit.h"
 #include "cbu/common/byteorder.h"
 #include "cbu/compat/compilers.h"
-#include "cbu/math/common.h"
 #include "cbu/math/strict_overflow.h"
 #include "cbu/strings/encoding.h"
 #include "cbu/strings/faststr.h"

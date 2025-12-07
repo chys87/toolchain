@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,14 +28,11 @@
 
 #include "cbu/alloc/private/page.h"
 
-#include <errno.h>
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/mman.h>
 
-#include <atomic>
-#include <compare>
 #include <mutex>
 #include <optional>
 
@@ -832,4 +829,3 @@ void large_trim(size_t pad) noexcept {
 
 }  // namespace alloc
 }  // namespace cbu
-// vim: fdm=marker:

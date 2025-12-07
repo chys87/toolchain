@@ -29,7 +29,6 @@
 #pragma once
 
 #include <compare>
-#include <ranges>
 #include <utility>
 
 namespace cbu {

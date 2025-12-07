@@ -30,7 +30,6 @@
 
 #include <compare>
 #include <cstdint>
-#include <type_traits>
 
 namespace cbu {
 
@@ -70,7 +69,8 @@ class uint128 {
     return a.l_ == b.l_ && a.h_ == b.h_;
 #endif
   }
-  friend constexpr auto operator<=>(const uint128& a, const uint128& b) noexcept {
+  friend constexpr std::strong_ordering operator<=>(const uint128& a,
+                                                    const uint128& b) noexcept {
 #ifdef CBU_HAS_NATIVE_INT128
     return uint128_t(a) <=> uint128_t(b);
 #else

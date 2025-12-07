@@ -37,7 +37,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <span>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -195,8 +194,9 @@ constexpr bool operator==(const basic_short_string<M, Z1>& a,
 }
 
 template <std::size_t M, bool Z1, std::size_t N, bool Z2>
-constexpr auto operator<=>(const basic_short_string<M, Z1>& a,
-                           const basic_short_string<N, Z2>& b) noexcept {
+constexpr std::strong_ordering operator<=>(
+    const basic_short_string<M, Z1>& a,
+    const basic_short_string<N, Z2>& b) noexcept {
   return a.string_view() <=> b.string_view();
 }
 

@@ -38,6 +38,7 @@
 #include <bit>
 #include <concepts>
 #include <cstdint>
+#include <optional>
 
 #include "cbu/compat/compilers.h"
 #include "cbu/strings/faststr.h"

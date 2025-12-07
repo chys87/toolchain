@@ -28,7 +28,6 @@
 
 #include "cbu/alloc/private/small.h"
 
-#include <algorithm>
 #include <atomic>
 #include <mutex>
 

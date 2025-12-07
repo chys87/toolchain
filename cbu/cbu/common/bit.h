@@ -34,14 +34,12 @@
 #include <x86intrin.h>
 #endif
 
-#include <algorithm>
 #include <bit>
 #include <concepts>
 #include <cstdint>
 #include <iterator>
 #include <ranges>
 #include <type_traits>
-#include <utility>
 
 namespace cbu {
 

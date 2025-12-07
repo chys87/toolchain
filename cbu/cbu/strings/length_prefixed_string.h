@@ -28,7 +28,6 @@
 
 #pragma once
 
-#include <concepts>
 #include <cstddef>
 #include <string_view>
 
