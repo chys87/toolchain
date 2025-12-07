@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -59,7 +59,7 @@ std::uint32_t mempick_var32(const void* src, std::size_t n) noexcept {
   return __v4su(v)[0];
 #endif
 
-#ifndef CBU_ADDRESS_SANITIZER
+#if !CBU_ADDRESS_SANITIZER
   if constexpr (std::endian::native == std::endian::little) {
     const char* s = static_cast<const char*>(src);
     if (n >= 4) {
@@ -85,7 +85,7 @@ std::uint64_t mempick_var64(const void* src, std::size_t n) noexcept {
   return __v2du(v)[0];
 #endif
 
-#ifndef CBU_ADDRESS_SANITIZER
+#if !CBU_ADDRESS_SANITIZER
   if constexpr (std::endian::native == std::endian::little) {
     const char* s = static_cast<const char*>(src);
     if (n >= 8) {

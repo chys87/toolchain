@@ -188,7 +188,7 @@ template <EscapeStyle style>
 
 template <EscapeStyle style>
 char* EscapeImpl<style>::raw(char* w, const char* s, std::size_t n) noexcept {
-#if defined __AVX2__ && !defined CBU_ADDRESS_SANITIZER
+#if defined __AVX2__ && !CBU_ADDRESS_SANITIZER
   if (n == 0) {
     return w;
   }
@@ -232,7 +232,7 @@ char* EscapeImpl<style>::raw(char* w, const char* s, std::size_t n) noexcept {
   }
   return w;
 #endif // __AVX2__
-#if defined __ARM_NEON && !defined CBU_ADDRESS_SANITIZER
+#if defined __ARM_NEON && !CBU_ADDRESS_SANITIZER
   if (n == 0) return w;
 
   std::size_t misalign = std::uintptr_t(s) & 15;

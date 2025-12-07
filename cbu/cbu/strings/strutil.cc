@@ -61,7 +61,7 @@ std::size_t strcnt(const char *s, char c) noexcept {
     return 0;
   }
   size_t r = 0;
-#if defined __AVX2__ && !defined CBU_ADDRESS_SANITIZER
+#if defined __AVX2__ && !CBU_ADDRESS_SANITIZER
   size_t misalign = (uintptr_t)s & 31;
   __m256i ref = _mm256_set1_epi8(c);
   __m256i zero = _mm256_setzero_si256();
@@ -106,7 +106,7 @@ std::size_t strcnt(const char *s, char c) noexcept {
 
 size_t memcnt(const char *s, char c, size_t n) noexcept {
   size_t r = 0;
-#if defined __AVX512BW__ && !defined CBU_ADDRESS_SANITIZER
+#if defined __AVX512BW__ && !CBU_ADDRESS_SANITIZER
   if (n == 0) return 0;
 
   __m512i ref = _mm512_set1_epi8(c);
@@ -128,7 +128,7 @@ size_t memcnt(const char *s, char c, size_t n) noexcept {
   if (tail)
     r += _mm_popcnt_u64(_bzhi_u64(_mm512_cmpeq_epi8_mask(ref, *p++), tail));
 
-#elif defined __AVX2__ && defined __BMI2__ && !defined CBU_ADDRESS_SANITIZER
+#elif defined __AVX2__ && defined __BMI2__ && !CBU_ADDRESS_SANITIZER
   if (n == 0) {
     return 0;
   }
@@ -157,7 +157,7 @@ size_t memcnt(const char *s, char c, size_t n) noexcept {
     r += uint32_t(_mm_popcnt_u32(_bzhi_u32(_mm256_movemask_epi8(
         _mm256_cmpeq_epi8(ref, *p++)), tail)));
   }
-#elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ && !defined CBU_ADDRESS_SANITIZER
+#elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ && !CBU_ADDRESS_SANITIZER
   if (n == 0) return 0;
 
   uint8x16_t ref = vdupq_n_u8(c);
@@ -227,7 +227,7 @@ int strnumcmp(const char *a, const char *b) noexcept {
   const uint8_t *v = (const uint8_t *)b;
   unsigned U, V;
 
-#if defined __AVX2__ && !defined CBU_ADDRESS_SANITIZER
+#if defined __AVX2__ && !CBU_ADDRESS_SANITIZER
   if ((uint32_t(uintptr_t(a)) | uint32_t(uintptr_t(b))) % 32 == 0) {
     // Both are aligned to 32-byte boundaries
     for (;;) {
@@ -558,7 +558,7 @@ size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl) noexcept {
   } else {
     auto load = [maxl](const char* p) {
       uint64_t v = 0;
-#ifdef CBU_ADDRESS_SANITIZER
+#if CBU_ADDRESS_SANITIZER
       for (size_t i = 0; i < maxl; ++i) v |= uint64_t(uint8_t(p[i])) << (8 * i);
 #else
       if ((uintptr_t(p) & 15) <= 8)
@@ -730,7 +730,7 @@ size_t char_span_length(const void* buffer, size_t len, char c) noexcept {
     return i + std::countr_zero(va) / 8u;
   } else {
     uint64_t v = 0;
-#ifdef CBU_ADDRESS_SANITIZER
+#if CBU_ADDRESS_SANITIZER
     for (size_t i = 0; i < len; ++i) v |= uint64_t(uint8_t(p[i])) << (8 * i);
 #else
     if ((uintptr_t(p) & 15) <= 8)

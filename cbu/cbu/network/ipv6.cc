@@ -237,7 +237,7 @@ struct ParseResult {
 ParseResult<uint16_t> parse_hex_uint16(const char* s, const char* e) noexcept {
   if (s >= e) [[unlikely]]
     return {false};
-#if defined __SSE2__ && defined __BMI2__ && !defined CBU_ADDRESS_SANITIZER
+#if defined __SSE2__ && defined __BMI2__ && !CBU_ADDRESS_SANITIZER
   {
     size_t l = e - s;
     uint32_t vchrs;
@@ -262,7 +262,7 @@ ParseResult<uint16_t> parse_hex_uint16(const char* s, const char* e) noexcept {
     return {true, v, s + valid_bits / 8};
   }
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ && \
-    !defined CBU_ADDRESS_SANITIZER
+    !CBU_ADDRESS_SANITIZER
   {
     size_t l = e - s;
     uint32_t vchrs;

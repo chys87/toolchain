@@ -196,7 +196,7 @@ constexpr void append_reserved(std::basic_string<T>* buf, const T* p, std::size_
 #endif
 }
 
-#if defined __GLIBCXX__ && !defined CBU_ADDRESS_SANITIZER
+#if defined __GLIBCXX__ && !CBU_ADDRESS_SANITIZER
 
 namespace stdhack_detail {
 
@@ -222,7 +222,7 @@ class Vector : public std::vector<T> {
 template <typename T>
   requires std::is_trivially_default_constructible_v<T>
 inline T* extend(std::vector<T>* vec, std::size_t n) {
-#if defined __GLIBCXX__ && !defined CBU_ADDRESS_SANITIZER
+#if defined __GLIBCXX__ && !CBU_ADDRESS_SANITIZER
   static_assert(sizeof(stdhack_detail::Vector<T>) == sizeof(std::vector<T>));
   return static_cast<stdhack_detail::Vector<T>*>(vec)->extend(n);
 #else
@@ -234,7 +234,7 @@ inline T* extend(std::vector<T>* vec, std::size_t n) {
 template <typename T, typename... Args>
 inline T& emplace_back_reserved(std::vector<T>* vec, Args&&... args) noexcept(
     std::is_nothrow_constructible_v<T, Args&&...>) {
-#if defined __GLIBCXX__ && !defined CBU_ADDRESS_SANITIZER
+#if defined __GLIBCXX__ && !CBU_ADDRESS_SANITIZER
   static_assert(sizeof(stdhack_detail::Vector<T>) == sizeof(std::vector<T>));
   auto v = static_cast<stdhack_detail::Vector<T>*>(vec);
   T* ptr = v->finish_ptr();
