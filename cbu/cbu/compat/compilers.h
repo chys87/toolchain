@@ -101,3 +101,19 @@
 #else
 #define CBU_NO_BUILTIN __attribute__((optimize("-fno-builtin")))
 #endif
+
+
+#define CBU_NO_DESTROY
+#define CBU_LIFETIME_BOUND
+
+#ifdef __has_cpp_attribute
+#if __has_cpp_attribute(clang::no_destroy)
+#  undef CBU_NO_DESTROY
+#  define CBU_NO_DESTROY [[clang::no_destroy]]
+#endif
+
+#if __has_cpp_attribute(clang::lifetimebound)
+#  undef CBU_LIFETIME_BOUND
+#  define CBU_LIFETIME_BOUND [[clang::lifetimebound]]
+#endif
+#endif
