@@ -53,7 +53,7 @@ class uint128 {
   constexpr uint128& operator=(const uint128&) noexcept = default;
 
   constexpr std::uint64_t lo() const noexcept { return l_; }
-  constexpr std::uint64_t hi() const noexcept { return l_; }
+  constexpr std::uint64_t hi() const noexcept { return h_; }
   constexpr void set_lo(std::uint64_t l) noexcept { l_ = l; }
   constexpr void set_hi(std::uint64_t h) noexcept { h_ = h; }
 
