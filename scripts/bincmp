@@ -1,7 +1,7 @@
 #!/usr/bin/python3 -O
 
 #
-# Copyright (c) 2018-2023, chys <admin@CHYS.INFO>
+# Copyright (c) 2018-2025, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -222,6 +222,7 @@ def do_diff(file1, file2):
 
     # It's very important to close all dups of fw1 and fw2 in time.
     # Otherwise we easily deadlock.
+    multiprocessing.set_start_method('fork')
     dump1 = multiprocessing.Process(target=do_dump, args=(file1, fw1, fw2))
     dump1.start()
     do_dump(file2, fw2, fw1)  # dump2. Just do it in the main process.
