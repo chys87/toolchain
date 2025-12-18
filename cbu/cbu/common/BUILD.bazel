@@ -63,6 +63,7 @@ cc_library(
     'hint.h',
     'iterator.h',
     'memory.h',
+    'multi_alloc.h',
     'once.h',
     'ref_cnt.h',
     'shared_instance.h',
