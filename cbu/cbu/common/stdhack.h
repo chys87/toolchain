@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -104,7 +105,9 @@ template <Std_string_char T>
 constexpr T* extend(std::basic_string<T>* buf,
                     std::size_t n) CBU_MEMORY_NOEXCEPT {
 #if defined __GLIBCXX__ && defined _GLIBCXX_USE_CXX11_ABI
-  buf->reserve(buf->size() + n);
+  if (buf->capacity() < buf->size() + n) {
+    buf->reserve(std::max(buf->size() * 2, buf->size() + n));
+  }
   T* w = buf->data() + buf->size();
   stdhack_detail::_M_set_length(buf, buf->size() + n);
   return w;
@@ -204,7 +207,9 @@ template <typename T>
 class Vector : public std::vector<T> {
  public:
   T* extend(std::size_t n) {
-    this->reserve(this->size() + n);
+    if (this->capacity() < this->size() + n) {
+      this->reserve(std::max(this->size() * 2, this->size() + n));
+    }
     T* r = this->_M_impl._M_finish;
     this->_M_impl._M_finish += n;
     return r;
@@ -226,7 +231,9 @@ inline T* extend(std::vector<T>* vec, std::size_t n) {
   static_assert(sizeof(stdhack_detail::Vector<T>) == sizeof(std::vector<T>));
   return static_cast<stdhack_detail::Vector<T>*>(vec)->extend(n);
 #else
-  vec->resize(vec->size() + n);
+  if (vec->capacity() < vec->size() + n) {
+    vec->resize(std::max(vec->size() * 2, vec->size() + n));
+  }
   return vec->data() + vec->size() - n;
 #endif
 }
