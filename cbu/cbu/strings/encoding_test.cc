@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -104,6 +104,13 @@ TEST(Utf8Test, Char32ToUtf8) {
 
   EXPECT_EQ(char32_to_utf8_unsafe(buffer, U'\U00012345') - buffer, 4);
   EXPECT_EQ(std::string(buffer, 4), std::string((const char*)u8"\U00012345"));
+
+  EXPECT_EQ(latin1_to_utf8(buffer, 'X') - buffer, 1);
+  EXPECT_EQ(buffer[0], 'X');
+  EXPECT_EQ(latin1_to_utf8(buffer, 0x90) - buffer, 2);
+  EXPECT_EQ(std::string(buffer, 2), std::string((const char*)u8"\u0090"));
+  EXPECT_EQ(latin1_to_utf8(buffer, u'ç') - buffer, 2);
+  EXPECT_EQ(std::string(buffer, 2), std::string((const char*)u8"ç"));
 }
 
 TEST(Utf8Test, Utf16SurrogatesTest) {

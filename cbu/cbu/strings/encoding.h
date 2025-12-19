@@ -168,6 +168,9 @@ char* char32_to_utf8_unsafe(char* dst, char32_t c) noexcept;
 char8_t* char16_to_utf8_unsafe(char8_t* dst, char16_t c) noexcept;
 char* char16_to_utf8_unsafe(char* dst, char16_t c) noexcept;
 
+char8_t* latin1_to_utf8(char8_t* dst, uint8_t) noexcept;
+char* latin1_to_utf8(char* dst, uint8_t) noexcept;
+
 // It's the caller's responsibility to guarante that (a, b) are a valid pair of
 // UTF-16 surrogates.
 inline constexpr char32_t utf16_surrogates_to_char32(char16_t a,

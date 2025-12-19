@@ -175,6 +175,15 @@ char8_t* char16_to_utf8_unsafe(char8_t* w, char16_t u) noexcept {
   return w;
 }
 
+char8_t* latin1_to_utf8(char8_t* dst, uint8_t c) noexcept {
+  if (c < 0x80) {
+    *dst++ = c;
+  } else {
+    dst = cbu::memdrop_le<uint16_t>(dst, (c >> 6) | 0xc0 | ((c & 0xbf) << 8));
+  }
+  return dst;
+}
+
 void encoding_detail::utf16_surrogates_to_utf8(char8_t* w, char16_t a,
                                                char16_t b) noexcept {
   char32_t u = (a << 10) - (0xd800 << 10) + (b - 0xdc00) + 0x10000;
@@ -213,6 +222,11 @@ char* char32_to_utf8_unsafe(char* dst, char32_t c) noexcept {
 char* char16_to_utf8_unsafe(char* dst, char16_t c) noexcept {
   return reinterpret_cast<char*>(
       char16_to_utf8_unsafe(reinterpret_cast<char8_t*>(dst), c));
+}
+
+char* latin1_to_utf8(char* dst, uint8_t c) noexcept {
+  return reinterpret_cast<char*>(
+      latin1_to_utf8(reinterpret_cast<char8_t*>(dst), c));
 }
 
 namespace {
