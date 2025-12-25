@@ -110,7 +110,7 @@ def cppfilter(fi, args):
         ctype = m.group(1)
 
         res = b''
-        numbers = [int(x) for x in _digits_re.findall(m.group(0))]
+        numbers = [int(x) for x in _digits_re.findall(m.group(0).replace(b'(' + ctype + b')', b''))]
 
         try:
             if ctype in (b'char', b'char8_t'):
