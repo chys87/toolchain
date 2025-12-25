@@ -33,68 +33,93 @@
 #include <span>
 #include <string_view>
 
+#include "cbu/common/concepts.h"
 #include "cbu/common/tags.h"
 #include "cbu/strings/zstring_view.h"
 
 namespace cbu {
 
+template <std::size_t Len>
+struct StrBuilder4FixedString {
+  const char* s;
+
+  static constexpr std::size_t static_max_size() noexcept { return Len; }
+  static constexpr std::size_t static_min_size() noexcept { return Len; }
+  constexpr std::size_t min_size() const noexcept { return Len; }
+  constexpr std::size_t size() const noexcept { return Len; }
+  constexpr char* write(char* w) const noexcept {
+    if consteval {
+      std::copy_n(s, Len, w);
+    } else {
+      std::memcpy(w, s, Len);
+    }
+    return w + Len;
+  }
+};
+
 // The intended use of fixed_string is as template argument, see P0732R2
 // (https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0732r2.pdf), part
 // of C++20.
 // It can also be used to hold a run-time fixed-length string
-template <std::size_t Len, bool HasTerminator = false>
+template <std::size_t Len, bool HasTerminator = false, Std_string_char C = char>
 class basic_fixed_string {
  public:
   explicit basic_fixed_string(UninitializedTag) noexcept {}
 
   constexpr basic_fixed_string() noexcept : s_{} {}
 
-  consteval basic_fixed_string(const char (&s)[Len + 1]) noexcept : s_{} {
+  consteval basic_fixed_string(const C (&s)[Len + 1]) noexcept : s_{} {
     assign(s);
   }
 
-  constexpr basic_fixed_string(std::span<const char, Len> s) noexcept : s_{} {
+  constexpr basic_fixed_string(std::span<const C, Len> s) noexcept : s_{} {
     assign(s);
   }
 
-  constexpr basic_fixed_string(UnsafeTag, std::string_view src) noexcept
+  constexpr basic_fixed_string(UnsafeTag,
+                               std::basic_string_view<C> src) noexcept
       : s_{} {
     assign_unsafe(src);
   }
 
-  constexpr char* data() noexcept { return s_; }
-  constexpr const char* data() const noexcept { return s_; }
-  constexpr const char* c_str() const noexcept requires HasTerminator {
+  constexpr C* data() noexcept { return s_; }
+  constexpr const C* data() const noexcept { return s_; }
+  constexpr const C* c_str() const noexcept
+    requires HasTerminator
+  {
     return s_;
   }
-  constexpr char& operator[](std::size_t k) noexcept { return s_[k]; }
-  constexpr const char& operator[](std::size_t k) const noexcept {
-    return s_[k];
-  }
+  constexpr C& operator[](std::size_t k) noexcept { return s_[k]; }
+  constexpr const C& operator[](std::size_t k) const noexcept { return s_[k]; }
   static constexpr size_t length() noexcept { return Len; }
   static constexpr size_t size() noexcept { return Len; }
-  constexpr char* begin() noexcept { return s_; }
-  constexpr char* end() noexcept { return s_ + Len; }
-  constexpr const char* begin() const noexcept { return s_; }
-  constexpr const char* end() const noexcept { return s_ + Len; }
-  constexpr const char* cbegin() const noexcept { return s_; }
-  constexpr const char* cend() const noexcept { return s_ + Len; }
-  constexpr operator std::string_view() const noexcept { return {s_, Len}; }
-  constexpr operator zstring_view() const noexcept requires HasTerminator {
+  constexpr C* begin() noexcept { return s_; }
+  constexpr C* end() noexcept { return s_ + Len; }
+  constexpr const C* begin() const noexcept { return s_; }
+  constexpr const C* end() const noexcept { return s_ + Len; }
+  constexpr const C* cbegin() const noexcept { return s_; }
+  constexpr const C* cend() const noexcept { return s_ + Len; }
+  constexpr operator std::basic_string_view<C>() const noexcept {
+    return {s_, Len};
+  }
+  constexpr operator basic_zstring_view<C>() const noexcept
+    requires HasTerminator
+  {
     return {s_, Len};
   }
 
-  constexpr void assign(std::span<const char, Len> src) noexcept {
-    assign_unsafe(std::string_view(src.data(), src.size()));
+  constexpr void assign(std::span<const C, Len> src) noexcept {
+    assign_unsafe(std::basic_string_view<C>(src.data(), src.size()));
   }
-  constexpr void assign(const char (&s)[Len+1]) noexcept {
+  constexpr void assign(const C (&s)[Len + 1]) noexcept {
     assign_unsafe({s, Len});
   }
 
-  constexpr void assign_unsafe(std::string_view src) noexcept {
+  constexpr void assign_unsafe(std::basic_string_view<C> src) noexcept {
     std::size_t copy_len = std::min(Len, src.size());
     std::copy_n(src.data(), copy_len, s_);
-    std::fill_n(s_ + copy_len, sizeof(s_) - copy_len, 0);
+    // Don't use std::size(s_), which doesn't accept s_[0]
+    std::fill_n(s_ + copy_len, sizeof(s_) / sizeof(C) - copy_len, 0);
   }
 
   // For some third-party type traits
@@ -115,36 +140,23 @@ class basic_fixed_string {
       const noexcept {
     return {UnsafeTag(), std::string_view(s_ + Offset, std::min(SubLen, Len - Offset))};
   }
-
-  struct StrBuilder {
-    const char* s;
-
-    static constexpr std::size_t static_max_size() noexcept { return Len; }
-    static constexpr std::size_t static_min_size() noexcept { return Len; }
-    constexpr std::size_t min_size() const noexcept { return Len; }
-    constexpr std::size_t size() const noexcept { return Len; }
-    constexpr char* write(char* w) const noexcept {
-      if consteval {
-        std::copy_n(s, Len, w);
-      } else {
-        std::memcpy(w, s, Len);
-      }
-      return w + Len;
-    }
-  };
-  constexpr StrBuilder str_builder() const noexcept { return StrBuilder{s_}; }
+  constexpr StrBuilder4FixedString<Len> str_builder() const noexcept
+    requires std::is_same_v<C, char>
+  {
+    return {s_};
+  }
 
   // Has to be public for basic_fixed_string to be used a s template argument
-  char s_[Len + HasTerminator];
+  C s_[Len + HasTerminator];
 };
 
-template <std::size_t N>
+template <Std_string_char C, std::size_t N>
   requires(N > 0)
-basic_fixed_string(const char (&)[N]) -> basic_fixed_string<N - 1, true>;
+basic_fixed_string(const C (&)[N]) -> basic_fixed_string<N - 1, true, C>;
 
-template <std::size_t N>
+template <Std_string_char C, std::size_t N>
   requires(N > 0)
-basic_fixed_string(const char (&)[N]) -> basic_fixed_string<N - 1, false>;
+basic_fixed_string(const C (&)[N]) -> basic_fixed_string<N - 1, false, C>;
 
 template <std::size_t N>
 using fixed_string = basic_fixed_string<N, true>;
@@ -152,31 +164,61 @@ using fixed_string = basic_fixed_string<N, true>;
 template <std::size_t N>
 using fixed_nzstring = basic_fixed_string<N, false>;
 
-template <std::size_t M, bool BM, std::size_t N, bool BN>
-constexpr basic_fixed_string<M + N, BM || BN> operator+(
-    basic_fixed_string<M, BM> a, basic_fixed_string<N, BN> b) noexcept {
+template <std::size_t N>
+using fixed_wstring = basic_fixed_string<N, true, wchar_t>;
+
+template <std::size_t N>
+using fixed_nzwstring = basic_fixed_string<N, false, wchar_t>;
+
+template <std::size_t N>
+using fixed_u8string = basic_fixed_string<N, true, char8_t>;
+
+template <std::size_t N>
+using fixed_nzu8string = basic_fixed_string<N, false, char8_t>;
+
+template <std::size_t N>
+using fixed_u16string = basic_fixed_string<N, true, char16_t>;
+
+template <std::size_t N>
+using fixed_nzu16string = basic_fixed_string<N, false, char16_t>;
+
+template <std::size_t N>
+using fixed_u32string = basic_fixed_string<N, true, char32_t>;
+
+template <std::size_t N>
+using fixed_nzu32string = basic_fixed_string<N, false, char32_t>;
+
+template <std::size_t N, Std_string_char C>
+using fixed_anystring = basic_fixed_string<N, true, C>;
+
+template <std::size_t N, Std_string_char C>
+using fixed_nzanystring = basic_fixed_string<N, false, C>;
+
+template <Std_string_char C, std::size_t M, bool BM, std::size_t N, bool BN>
+constexpr basic_fixed_string<M + N, BM || BN, C> operator+(
+    basic_fixed_string<M, BM, C> a, basic_fixed_string<N, BN, C> b) noexcept {
   basic_fixed_string<M + N, BM || BN> res;
   for (std::size_t i = 0; i < M; ++i) res[i] = a[i];
   for (std::size_t i = 0; i < N; ++i) res[M + i] = b[i];
-  if constexpr (BM || BN) res[M + N] = '\0';
+  if constexpr (BM || BN) res[M + N] = C();
   return res;
 }
 
-template <std::size_t M, std::size_t N, bool B>
+template <Std_string_char C, std::size_t M, std::size_t N, bool B>
   requires(M > 0)
-constexpr auto operator+(const char (&a)[M],
-                         basic_fixed_string<N, B> b) noexcept {
-  return basic_fixed_string<M - 1, B>(a) + b;
+constexpr auto operator+(const C (&a)[M],
+                         basic_fixed_string<N, B, C> b) noexcept {
+  return basic_fixed_string<M - 1, B, C>(a) + b;
 }
 
-template <std::size_t M, bool B, std::size_t N>
+template <Std_string_char C, std::size_t M, bool B, std::size_t N>
   requires(N > 0)
-constexpr auto operator+(basic_fixed_string<M, B> a,
-                         const char (&b)[N]) noexcept {
-  return a + basic_fixed_string<N - 1, B>(b);
+constexpr auto operator+(basic_fixed_string<M, B, C> a,
+                         const C (&b)[N]) noexcept {
+  return a + basic_fixed_string<N - 1, B, C>(b);
 }
 
-template <auto Value, bool HasTerminator = false>
+template <auto Value, bool HasTerminator = false, Std_string_char C = char>
   requires(Value >= 0)
 consteval auto NumberToFixedString() noexcept {
   constexpr unsigned DIGITS = []() constexpr noexcept {
@@ -187,8 +229,8 @@ consteval auto NumberToFixedString() noexcept {
     return r;
   }
   ();
-  basic_fixed_string<DIGITS, HasTerminator> res;
-  char* p = res.data() + DIGITS;
+  basic_fixed_string<DIGITS, HasTerminator, C> res;
+  C* p = res.data() + DIGITS;
   auto v = Value;
   do *--p = '0' + (v % 10);
   while (v /= 10);
