@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2013-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2013-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -360,6 +360,7 @@ def_fsys(recvmmsg,recvmmsg,int,5,int,struct mmsghdr*,unsigned,int,struct timespe
 #define fsys_recv(a,b,c,d) fsys_recvfrom(a,b,c,d,0,0)
 def_fsys_nomem(fsync,fsync,int,1,int)
 def_fsys_nomem(fdatasync,fdatasync,int,1,int)
+def_fsys_nomem(sync_file_range,sync_file_range,int,4,int,long,long,unsigned)
 def_fsys(msync,msync,int,3,void *,unsigned long,int)
 def_fsys_nomem(close,close,int,1,int)
 def_fsys_nomem(ftruncate,ftruncate,int,2,int,long)
@@ -634,6 +635,7 @@ fsys_inline int fsys_posix_fadvise(int fd, __OFF64_T_TYPE off,
 #define fsys_recv recv
 #define fsys_fsync fsync
 #define fsys_fdatasync fdatasync
+#define fsys_sync_file_range sync_file_range
 #define fsys_msync msync
 #define fsys_close close
 #define fsys_ftruncate ftruncate
