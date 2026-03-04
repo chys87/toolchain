@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@
 #pragma once
 
 #include <algorithm>
+#include <concepts>
 #include <optional>
 #include <string_view>
 #include <variant>
@@ -263,10 +264,11 @@ struct Char {
   CBU_STR_BUILDER_MIXIN
 };
 
-template <std::size_t MaxLen = std::size_t(-1), std::size_t MinLen = 0>
+template <std::size_t MaxLen = std::size_t(-1), std::size_t MinLen = 0,
+          std::unsigned_integral S = std::size_t>
   requires(MaxLen >= MinLen)
 struct Chars {
-  std::size_t n;
+  S n;
   char c;
   static constexpr std::size_t static_min_size() noexcept { return MinLen; }
   static constexpr std::size_t static_max_size() noexcept
@@ -277,7 +279,7 @@ struct Chars {
   constexpr std::size_t min_size() const noexcept { return n; }
   constexpr std::size_t size() const noexcept { return n; }
   constexpr char* write(char* w) const noexcept {
-    for (std::size_t i = 0; i != n; ++i) *w++ = c;
+    for (S i = n; i; --i) *w++ = c;
     return w;
   }
   CBU_STR_BUILDER_MIXIN
@@ -297,9 +299,9 @@ struct ConstLengthChars {
   CBU_STR_BUILDER_MIXIN
 };
 
-template <BaseBuilder Builder>
+template <std::unsigned_integral S, BaseBuilder Builder>
 struct RepeatedImpl {
-  std::size_t n;
+  S n;
   Builder builder;
 
   static constexpr std::size_t static_min_size() noexcept { return 0; }
@@ -308,7 +310,7 @@ struct RepeatedImpl {
     return builder.min_size() * n;
   }
   constexpr char* write(char* w) const noexcept {
-    for (std::size_t i = n; i; --i) w = builder.write(w);
+    for (S i = n; i; --i) w = builder.write(w);
     return w;
   }
   CBU_STR_BUILDER_MIXIN
@@ -420,8 +422,8 @@ concept ExBuilder = requires(const T& ex) {
   { Adapt(ex) } -> BaseBuilder;
 };
 
-template <ExBuilder T>
-constexpr auto Repeated(std::size_t n, T bldr) noexcept {
+template <std::unsigned_integral S, ExBuilder T>
+constexpr auto Repeated(S n, T bldr) noexcept {
   return RepeatedImpl{n, Adapt(bldr)};
 }
 
