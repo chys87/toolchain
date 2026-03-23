@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -199,8 +199,8 @@ char* IPv4::ToString(char* p) const noexcept {
   p += skipped_bytes[2];
   *(uint32_t*)(p + 8) = bytes[1];
   p += skipped_bytes[1];
-#if defined __clang__ && __clang_major__ == 21
-  // Work around miscompilation in early clang 21 versions
+#if defined __clang__ && (__clang_major__ >= 21 && __clang_major__ <= 22)
+  // Work around miscompilation in clang 21 & 22
   asm volatile("" : "+r"(p));
 #endif
   *(uint16_t*)(p + 12) = bytes[0];
