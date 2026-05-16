@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (c) 2014-2024 chys <admin@CHYS.INFO>
+# Copyright (c) 2014-2026 chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -37,20 +37,22 @@ import argparse
 import os
 import re
 import sys
+import sysconfig
+from typing import Any, cast
 
 
-def _check_python_version(args):
+def _check_switch_interpreter_by_shebang(args) -> list[str] | None:
     with open(args.filename) as f:
         line = f.readline()
 
     # No she-bang.  Consider version OK.
     if not line.startswith('#!'):
-        return True, None
+        return None
 
     shebang = line[2:].split()
 
     if not shebang or not shebang[0].startswith('/'):
-        return True, None
+        return None
 
     interpreter = shebang[0]
     if interpreter == '/usr/bin/env' and len(shebang) > 1:
@@ -63,9 +65,45 @@ def _check_python_version(args):
         full_interpreter = interpreter
 
     if full_interpreter == sys.executable:
-        return True, None
+        return None
 
-    return False, shebang + sys.argv
+    return shebang
+
+
+class _FileFilter:
+    __slots__ = 'skip_builtin', 'builtin_dirs', 'exclude_builtin_dirs'
+
+    def __init__(self, skip_builtin: bool):
+        self.skip_builtin = skip_builtin
+        paths = sysconfig.get_paths()
+        self.builtin_dirs = sorted({
+            paths['stdlib'] + os.path.sep,
+            paths['platstdlib'] + os.path.sep,
+        })
+        self.exclude_builtin_dirs = sorted({
+            paths['purelib'] + os.path.sep,
+            paths['platlib'] + os.path.sep,
+        })
+
+    def __call__(self, path: str) -> bool:
+        if ' ' in path:
+            # Not supported
+            return False
+        if self.skip_builtin and self._is_builtin(path):
+            return False
+        return True
+
+    def _is_builtin(self, path: str) -> bool:
+        '''Test whether path belongs to the Python installation itself, including
+        standard libraries.
+        '''
+        for p in self.exclude_builtin_dirs:
+            if path.startswith(p):
+                return False
+        for p in self.builtin_dirs:
+            if path.startswith(p):
+                return True
+        return False
 
 
 class _Formatter:
@@ -122,10 +160,11 @@ def _print_dependency(args):
     else:
         formatter = _MakeFormatter()
 
-    files = []
+    file_filter = _FileFilter(args.skip_builtin)
+    files = [os.path.realpath(sys.executable)]
     for mod in finder.modules.values():
         # ' ' not in path: Kill "setuptools/script template.py"
-        if (path := mod.__file__) and ' ' not in path:
+        if (path := cast(Any, mod).__file__) and file_filter(path):
             files.append(path)
 
     with open(args.filename, 'rb') as f:
@@ -156,20 +195,24 @@ def main():
     parser.add_argument('-t', '--target', help='Target name', required=True)
     parser.add_argument('-f', '--format', help='format (default is make)',
                         choices=('make', 'ninja_dyndep'))
+    parser.add_argument('-S', '--skip-builtin',
+                        help='Skip builtin Python module',
+                        action='store_true', default=False)
     parser.add_argument('--no-dummy', help='Don\'t add dummy rules',
                         dest='dummy', default=True, action='store_false')
     parser.add_argument('--no-shebang',
+                        action='store_false', dest='shebang', default=True,
                         help='Don\'t examine the she-bang line. '
                              'Instead, assume we\'re running the right '
-                             'interpreter.',
-                        action='store_true', default=False)
+                             'interpreter.')
     parser.add_argument('filename', help='Python filename')
     args = parser.parse_args()
 
-    if not args.no_shebang:
-        version_ok, cmdline = _check_python_version(args)
-        if not version_ok:
-            cmdline.append('--no-shebang')
+    if args.shebang and not os.environ.get('PYTHONDEP_NO_SHEBANG'):
+        shebang_cmds = _check_switch_interpreter_by_shebang(args)
+        if shebang_cmds:
+            os.environ['PYTHONDEP_NO_SHEBANG'] = '1'
+            cmdline = shebang_cmds + sys.argv
             import subprocess
             sys.exit(subprocess.call(cmdline))
 

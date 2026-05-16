@@ -489,7 +489,7 @@ $(AUTO_GENERATED_PYTHON): $(BUILDDIR)/%:$(DIR)/%.py
 # Add extra dependency of Python generators introduced by "import"
 $(AUTO_GENERATED_PYTHON_DEPS): private NAME := PYDEP
 $(AUTO_GENERATED_PYTHON_DEPS): $(BUILDDIR)/%.py.P: $(DIR)/%.py
-	$(Q)env PYTHONPATH="$(<D):$(@D):$$PYTHONPATH" $(PYTHONDEP) -t '$@ $(@:%.py.P=%)' $< > $@
+	$(Q)env PYTHONPATH="$(<D):$(@D):$$PYTHONPATH" $(PYTHONDEP) -S -t '$@ $(@:%.py.P=%)' $< > $@
 
 $(AUTO_GENERATED_PYTHON): $(BUILDDIR)/%: | $(BUILDDIR)/%.py.P
 
