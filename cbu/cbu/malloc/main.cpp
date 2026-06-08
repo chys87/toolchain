@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -88,6 +88,15 @@ extern "C" void cbu_free(void* ptr) noexcept { alloc::reclaim(ptr); }
 
 extern "C" void cbu_cfree(void* ) noexcept __attribute__((alias("cbu_free")));
 
+extern "C" void cbu_free_sized(void* ptr, size_t size) noexcept {
+  alloc::reclaim(ptr, size);
+}
+
+extern "C" void cbu_free_aligned_sized(void* ptr, size_t alignment,
+                                       size_t size) noexcept {
+  alloc::reclaim(ptr, size);
+}
+
 extern "C" int cbu_posix_memalign(void** pret, size_t boundary,
                                   size_t n) noexcept {
   if (!alloc::is_alignment_valid_posix(boundary)) [[unlikely]]
@@ -120,12 +129,18 @@ void* malloc(size_t) noexcept
   __attribute__((alias("cbu_malloc"), malloc)) cbu_malloc_visibility_default;
 void free(void*) noexcept
   __attribute__((alias("cbu_free"))) cbu_malloc_visibility_default;
-void cfree(void*) noexcept
-  __attribute__((alias("cbu_cfree"))) cbu_malloc_visibility_default;
 void* calloc(size_t, size_t) noexcept
   __attribute__((alias("cbu_calloc"))) cbu_malloc_visibility_default;
 void* realloc(void*, size_t) noexcept
   __attribute__((alias("cbu_realloc"))) cbu_malloc_visibility_default;
+void free_sized(void*, size_t) noexcept
+  __attribute__((alias("cbu_free_sized"))) cbu_malloc_visibility_default;
+void free_aligned_sized(void*, size_t, size_t) noexcept
+  __attribute__((alias("cbu_free_aligned_sized")))
+  cbu_malloc_visibility_default;
+
+void cfree(void*) noexcept
+  __attribute__((alias("cbu_cfree"))) cbu_malloc_visibility_default;
 void* reallocarray(void*, size_t, size_t) noexcept
   __attribute__((alias("cbu_reallocarray"))) cbu_malloc_visibility_default;
 void* aligned_alloc(size_t, size_t) noexcept
