@@ -167,7 +167,7 @@ inline T* new_and_value_init_array(
     std::align_val_t align = std::align_val_t(
         alignof(T))) noexcept(kMemoryNoExcept and
                                   std::is_nothrow_default_constructible_v<T>) {
-  T* p = raw_array_new<T>(n);
+  T* p = raw_array_new<T>(n, align);
   try {
     std::uninitialized_value_construct_n(p, n);
   } catch (...) {
@@ -182,9 +182,10 @@ inline T* new_and_value_init_array(
 // are different pointers.
 template <typename T>
 constexpr void uninitialized_move_and_destroy(T* old_obj, T* new_obj) noexcept {
-  static_assert(std::is_nothrow_destructible_v<T>,
+  static_assert(std::is_nothrow_move_constructible_v<T> &&
+                    std::is_nothrow_destructible_v<T>,
                 "uninitialized_move_and_destroy is safe only if the type's "
-                "destructor never throws.");
+                "move constructor and destructor never throw.");
   if constexpr (bitwise_movable_v<T>) {
     if !consteval {
       __builtin_memcpy(static_cast<void*>(new_obj),

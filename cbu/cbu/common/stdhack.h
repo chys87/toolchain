@@ -225,7 +225,8 @@ class Vector : public std::vector<T> {
 #endif
 
 template <typename T>
-  requires std::is_trivially_default_constructible_v<T>
+  requires std::is_trivially_default_constructible_v<T> &&
+           std::is_trivially_destructible_v<T>
 inline T* extend(std::vector<T>* vec, std::size_t n) {
 #if defined __GLIBCXX__ && !CBU_ADDRESS_SANITIZER
   static_assert(sizeof(stdhack_detail::Vector<T>) == sizeof(std::vector<T>));
