@@ -343,14 +343,16 @@ class OutlinableArray {
       OutlinableArrayBuffer<T, N>* buffer, std::size_t n,
       ForOverwriteTag) noexcept(kMemoryNoExcept and
                                     std::is_nothrow_default_constructible_v<T>)
-      : ptr_(new(get_pointer(buffer, n)) T[n]), allocated_(n <= N ? 0 : n) {}
+      : ptr_(new(get_pointer(buffer, n)) T[n]),
+        size_(n),
+        allocated_(n <= N ? 0 : n) {}
 
   OutlinableArray(const OutlinableArray&) = delete;
   OutlinableArray& operator=(const OutlinableArray&) = delete;
 
   constexpr ~OutlinableArray() noexcept {
     if constexpr (!std::is_trivially_destructible_v<T>)
-      destuct_n(ptr_, size_);
+      destroy_backward_n(ptr_, size_);
     if (allocated_) raw_array_delete(ptr_, size_);
   }
 

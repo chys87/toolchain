@@ -231,10 +231,12 @@ inline T* extend(std::vector<T>* vec, std::size_t n) {
   static_assert(sizeof(stdhack_detail::Vector<T>) == sizeof(std::vector<T>));
   return static_cast<stdhack_detail::Vector<T>*>(vec)->extend(n);
 #else
-  if (vec->capacity() < vec->size() + n) {
-    vec->resize(std::max(vec->size() * 2, vec->size() + n));
+  std::size_t size = vec->size();
+  if (vec->capacity() < size + n) {
+    vec->reserve(std::max(size * 2, size + n));
   }
-  return vec->data() + vec->size() - n;
+  vec->resize(size + n);
+  return vec->data() + size;
 #endif
 }
 

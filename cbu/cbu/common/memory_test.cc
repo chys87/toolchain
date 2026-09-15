@@ -162,4 +162,38 @@ TEST(MemoryTest, OutlinableArray) {
   }
 }
 
+TEST(MemoryTest, OutlinableArrayForOverwrite) {
+  OutlinableArrayBuffer<int, 5> buf;
+  OutlinableArray<int> arr(&buf, 3,
+                           OutlinableArray<int>::for_overwrite);
+  ASSERT_EQ(3, arr.size());
+  ASSERT_EQ(arr.get(), static_cast<void*>(buf.buffer));
+  for (int k = 0; k < 3; ++k) arr[k] = k;
+  EXPECT_EQ(2, arr[2]);
+}
+
+TEST(MemoryTest, OutlinableArrayNonTrivial) {
+  NonTrivialType::constructors_ = 0;
+  NonTrivialType::destructors_ = 0;
+
+  {
+    OutlinableArrayBuffer<NonTrivialType, 5> buf;
+    OutlinableArray<NonTrivialType> arr(
+        &buf, 3, OutlinableArray<NonTrivialType>::for_overwrite);
+    ASSERT_EQ(3, arr.size());
+    EXPECT_EQ(3, NonTrivialType::constructors_);
+  }
+  EXPECT_EQ(3, NonTrivialType::destructors_);
+
+  {
+    // Heap allocation path
+    OutlinableArrayBuffer<NonTrivialType, 2> buf;
+    OutlinableArray<NonTrivialType> arr(
+        &buf, 5, OutlinableArray<NonTrivialType>::for_overwrite);
+    ASSERT_EQ(5, arr.size());
+    EXPECT_EQ(8, NonTrivialType::constructors_);
+  }
+  EXPECT_EQ(8, NonTrivialType::destructors_);
+}
+
 }  // namespace cbu

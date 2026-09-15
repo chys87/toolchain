@@ -90,6 +90,19 @@ TEST(StdHackTest, VectorExtendTest) {
   char* w = cbu::extend(&r, 10);
   ASSERT_EQ(r.size(), 10);
   ASSERT_EQ(w, r.data());
+
+  // Sufficient capacity must resize as well
+  std::vector<int> v;
+  v.reserve(100);
+  int* wv = cbu::extend(&v, 10);
+  ASSERT_EQ(v.size(), 10);
+  ASSERT_EQ(wv, v.data());
+
+  // n smaller than the current size
+  std::vector<int> u(100);
+  int* wu = cbu::extend(&u, 1);
+  ASSERT_EQ(u.size(), 101);
+  ASSERT_EQ(wu, u.data() + 100);
 }
 
 TEST(StdHackTest, VectorReservedTest) {
