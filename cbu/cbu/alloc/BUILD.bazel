@@ -31,6 +31,7 @@ cc_library(
   hdrs = glob(['*.h']),
   deps = [
     '//cbu/common:common',
+    '//cbu/common:header_only',
     '//cbu/common:procutil',
     '//cbu/compat:compat',
     '//cbu/fsyscall:fsyscall',
@@ -50,10 +51,12 @@ cc_library(
   hdrs = glob(['*.h']),
   deps = [
     '//cbu/common:common',
+    '//cbu/common:header_only',
     '//cbu/common:procutil',
     '//cbu/compat:compat',
     '//cbu/fsyscall:fsyscall',
     '//cbu/sys:sys',
+    '//cbu/strings:faststr',
   ],
   copts = [
     '-DCBU_NO_BRK=1',

@@ -84,6 +84,9 @@ cc_library(
   deps = [
     ':header_only',
     ':faststr',
+    '//cbu/common:common',
+    '//cbu/common:header_only',
+    '//cbu/compat:compat',
     '//cbu/math:common',
     '//cbu/math:strict_overflow',
     '//cbu/tweak:tweak',
@@ -97,6 +100,7 @@ cc_library(
   srcs = ['faststr.cc', 'faststr-wrap.cc'],
   hdrs = ['faststr.h'],
   deps = [
+    '//cbu/common:concepts',
     '//cbu/common:header_only',
     '//cbu/compat:compat',
     '//cbu/math:common',
