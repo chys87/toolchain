@@ -44,6 +44,10 @@ enum class TcStatus : unsigned {
   kInitial = 0,
   kReady = 1,
   kSettingUp = 2,
+  // Set by TcDestroy: this thread is exiting. Further allocations (from other
+  // destructors that run after ours) must bypass the caches, because nothing
+  // will ever clean them again once the thread is gone.
+  kDestroyed = 3,
 };
 
 struct ThreadCache {

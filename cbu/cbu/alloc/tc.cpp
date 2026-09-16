@@ -49,6 +49,14 @@ void TcDestroy(void* arg) {
   ThreadCache* tc = static_cast<ThreadCache*>(arg);
   if (!tc || tc->status != TcStatus::kReady) return;
 
+  // Disable the cache right away, so that allocations made by other
+  // destructors running after this one (this thread is exiting) do not
+  // repopulate the caches - ThreadCache is trivially destructible and this
+  // destructor never runs again, so anything cached here would be stranded
+  // (bounded by the cache capacity, but stranded nonetheless). Those
+  // allocations use fallback_cache / the arenas directly instead.
+  tc->status = TcStatus::kDestroyed;
+
   tc->small_cache.clear();
 
 #ifndef CBU_NO_BRK
@@ -105,6 +113,7 @@ ThreadCache* get_or_create_thread_cache() noexcept {
     case TcStatus::kSettingUp:
     default:
       // In case pthread_setspecific calls malloc (it happens!)
+      // Also kDestroyed (after TcDestroy, during thread exit).
       return nullptr;
     case TcStatus::kReady:
       break;
