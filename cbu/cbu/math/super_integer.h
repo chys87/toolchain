@@ -76,7 +76,9 @@ struct SuperInteger {
 
   template <Raw_integral U>
   constexpr U cast() const noexcept {
-    return pos ? U(abs) : -U(abs);
+    // Negate in the unsigned domain: -U(abs) would be signed overflow UB
+    // for the most negative value (e.g. abs == 2^63 for int64_t)
+    return pos ? U(abs) : U(-std::make_unsigned_t<U>(abs));
   }
 
   template <Raw_integral U>
@@ -133,7 +135,7 @@ struct SuperInteger {
   }
 
   constexpr void normalize() noexcept {
-    if (pos == 0) abs = true;
+    if (abs == 0) pos = true;
   }
 
   constexpr SuperInteger operator-() const noexcept {

@@ -44,10 +44,36 @@ TEST(FastDiv, Magics) {
 }
 
 template <uint64_t D, uint64_t MAX>
+inline void test_div_one(uint64_t v) {
+  ASSERT_EQ(v / D, (fastdiv<D, MAX>(v))) << "v = " << v;
+  ASSERT_EQ(v % D, (fastmod<D, MAX>(v))) << "v = " << v;
+}
+
+template <uint64_t D, uint64_t MAX>
 inline void test_div() {
-  for (uint64_t v = 0; v <= MAX; v = v + 1 + v / 100) {
-    ASSERT_EQ(v / D, (fastdiv<D, MAX>(v)));
-    ASSERT_EQ(v % D, (fastmod<D, MAX>(v)));
+  // The correctness of fastdiv concentrates on these boundary values
+  // (mirroring fastdiv_detail::verify_magic)
+  constexpr uint64_t qd = MAX / D * D;
+  test_div_one<D, MAX>(0);
+  test_div_one<D, MAX>(1);
+  if (D > 1) test_div_one<D, MAX>(D - 1);
+  test_div_one<D, MAX>(D);
+  test_div_one<D, MAX>(D + 1);
+  if (qd > 0) test_div_one<D, MAX>(qd - 1);
+  test_div_one<D, MAX>(qd);
+  if (qd < MAX) test_div_one<D, MAX>(qd + 1);
+  if (qd >= D) test_div_one<D, MAX>(qd - D);
+  if (qd >= D + 1) test_div_one<D, MAX>(qd - D - 1);
+  if (MAX > 0) test_div_one<D, MAX>(MAX - 1);
+  test_div_one<D, MAX>(MAX);
+
+  // Sparse sampling of the rest, stopping before the step would wrap
+  // (v + 1 + v / 100 overflows when MAX is 0xffff...f)
+  for (uint64_t v = 0; v <= MAX;) {
+    test_div_one<D, MAX>(v);
+    uint64_t step = 1 + v / 100;
+    if (v > MAX - step) break;
+    v += step;
   }
 }
 
@@ -69,6 +95,9 @@ TEST(FastDiv, Div) {
   test_div<13, 0x123456789abc>();
   test_div<17, 0x123456789abc>();
   test_div<5, 0x1'0000'0000>();
+  test_div<7, 0xffffffffffffffff>();
+  test_div<10, 0xffffffffffffffff>();
+  test_div<3, 0xfffffffffffffffe>();
 }
 
 } // namespace cbu

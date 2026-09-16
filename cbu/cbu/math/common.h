@@ -51,11 +51,15 @@ inline constexpr T fast_powu(T a, unsigned t,
 
 template <Raw_floating_point T>
 inline constexpr T fast_powi(T a, int n, std::type_identity_t<T> r = T(1)) {
+  unsigned t;
   if (n < 0) {
-    n = -n;
+    // Negate in the unsigned domain to avoid UB for n == INT_MIN
+    t = 0U - unsigned(n);
     a = 1 / a;
+  } else {
+    t = unsigned(n);
   }
-  return fast_powu(a, n, r);
+  return fast_powu(a, t, r);
 }
 
 // Equal without incurring warning

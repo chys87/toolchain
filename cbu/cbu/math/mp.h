@@ -156,7 +156,7 @@ class BasicRef {
   using W = std::conditional_t<CONST, const Word, Word>;
 
   constexpr BasicRef() noexcept : w_(nullptr), n_(0) {}
-  constexpr BasicRef(Word* w, std::size_t n) noexcept :
+  constexpr BasicRef(W* w, std::size_t n) noexcept :
     w_(w), n_(may_minimize<MINIMIZED>(w, n)) {}
   template <Radix radix> BasicRef(Word* w, Radixed<radix> rs) noexcept :
     BasicRef(w, StringConversion<radix>::from_str(w, rs.s)) {}

@@ -253,7 +253,7 @@ bool ge(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
 }
 
 bool le(const Word *a, size_t na, const Word *b, size_t nb) noexcept {
-  return compare(a, na, b, nb) < 0;
+  return compare(a, na, b, nb) <= 0;
 }
 
 size_t from_dec(Word *r, const char *s, size_t n) noexcept {

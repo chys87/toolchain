@@ -29,6 +29,7 @@
 #include "cbu/math/common.h"
 
 #include <cmath>
+#include <limits>
 
 #include <gtest/gtest.h>
 
@@ -46,6 +47,11 @@ TEST(FastPowTest, Signed) {
   EXPECT_NEAR(1e100, fast_powi(10., 100), 1e90);
   EXPECT_NEAR(1.0, fast_powi(10., 0), 1e-10);
   EXPECT_NEAR(1e-100, fast_powi(10., -100), 1e-110);
+
+  // n == INT_MIN used to be signed overflow UB (n = -n)
+  EXPECT_EQ(0.0, fast_powi(2., std::numeric_limits<int>::min()));
+  EXPECT_EQ(1.0, fast_powi(1., std::numeric_limits<int>::min()));
+  EXPECT_NEAR(0.125, fast_powi(2., -3), 1e-12);
 }
 
 TEST(Math, Clamp) {

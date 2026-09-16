@@ -138,6 +138,10 @@ TEST_F(MpTest, RefTest) {
   static_assert(std::is_constructible_v<Ref, MinRef>);
   static_assert(std::is_constructible_v<MinRef, MinRef>);
   static_assert(std::is_constructible_v<MinRef, Ref>);
+  // ConstRef used not to be constructible from const Word*
+  static_assert(std::is_constructible_v<ConstRef, const Word*, std::size_t>);
+  ConstRef ca(a_, na_);
+  EXPECT_EQ(na_, ca.size());
 }
 
 TEST_F(MpTest, Compare) {
@@ -145,6 +149,25 @@ TEST_F(MpTest, Compare) {
   EXPECT_GT(0, compare(a_, na_, b_, na_));
   EXPECT_FALSE(eq(a_, na_, b_, nb_));
   EXPECT_FALSE(eq(a_, na_, b_, na_));
+
+  // The whole family, including the equal cases (le used to be lt)
+  EXPECT_TRUE(eq(a_, na_, a_, na_));
+  EXPECT_FALSE(ne(a_, na_, a_, na_));
+  EXPECT_TRUE(le(a_, na_, a_, na_));
+  EXPECT_TRUE(ge(a_, na_, a_, na_));
+  EXPECT_FALSE(lt(a_, na_, a_, na_));
+  EXPECT_FALSE(gt(a_, na_, a_, na_));
+
+  EXPECT_TRUE(lt(a_, na_, b_, nb_));
+  EXPECT_TRUE(le(a_, na_, b_, nb_));
+  EXPECT_FALSE(gt(a_, na_, b_, nb_));
+  EXPECT_FALSE(ge(a_, na_, b_, nb_));
+  EXPECT_TRUE(ne(a_, na_, b_, nb_));
+
+  EXPECT_TRUE(gt(b_, nb_, a_, na_));
+  EXPECT_TRUE(ge(b_, nb_, a_, na_));
+  EXPECT_FALSE(lt(b_, nb_, a_, na_));
+  EXPECT_FALSE(le(b_, nb_, a_, na_));
 }
 
 } // namespace mp

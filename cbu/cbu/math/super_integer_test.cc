@@ -59,6 +59,36 @@ TEST(SuperIntegerTest, ConversionAndCompare) {
   EXPECT_FALSE((-SuperInteger<uint8_t>(uint8_t(255))).fits_in<int8_t>());
 }
 
+TEST(SuperIntegerTest, Normalize) {
+  // normalize() is for values that violate the no-negative-zero invariant
+  // (e.g. directly assigned members); the condition and the assignment used
+  // to be swapped, turning any negative value into -1
+  SuperInteger<uint64_t> a(false, 5);
+  a.normalize();
+  EXPECT_TRUE(a == SuperInteger<uint64_t>(-5));
+
+  SuperInteger<uint64_t> nz(true, 0);
+  nz.pos = false;  // Create negative zero
+  EXPECT_TRUE(nz < SuperInteger<uint64_t>(0));
+  nz.normalize();
+  EXPECT_TRUE(nz == SuperInteger<uint64_t>(0));
+}
+
+TEST(SuperIntegerTest, Cast) {
+  // Casting the most negative value used to be signed overflow UB
+  static_assert(SuperInteger<uint64_t>(false, uint64_t(1) << 63)
+                    .cast<int64_t>() == std::numeric_limits<int64_t>::min());
+  static_assert(SuperInteger<uint64_t>(std::numeric_limits<int64_t>::min())
+                    .cast<int64_t>() == std::numeric_limits<int64_t>::min());
+  static_assert(
+      SuperInteger<uint64_t>(std::numeric_limits<int64_t>::min())
+          .cast<uint64_t>() == uint64_t(1) << 63);
+
+  EXPECT_EQ(-5, SuperInteger<uint64_t>(-5).cast<int>());
+  EXPECT_EQ(5u, SuperInteger<uint64_t>(5).cast<unsigned>());
+  EXPECT_EQ(-5, SuperInteger<int>(-5).cast<int8_t>());
+}
+
 TEST(SuperIntegerTest, AddOverflow) {
   using S = SuperInteger<uint8_t>;
 
