@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
+#include <algorithm>
 #include <mutex>
 #include <optional>
 
@@ -609,11 +610,13 @@ Page* allocate_page_uncached(size_t size, AllocateOptions options) {
 void PageCategoryCache::clear(Arena* arena) noexcept {
   std::lock_guard locker_b(arena->lock_);
   for (unsigned i = 0; i < kPageCategories; ++i) {
+    size_t size = page_category_to_size(i);
     Page* page = std::exchange(page_list[i], nullptr);
     page_count[i] = 0;
     while (page) {
       Page* next = page->next;
-      arena->reclaim_unlocked(page, page_category_to_size(i));
+      arena->total_bytes_allocated_ -= size;
+      arena->reclaim_unlocked(page, size);
       page = next;
     }
   }

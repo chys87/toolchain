@@ -66,7 +66,7 @@ void free_small_list(Block* ptr) {
         (run->allocated -= count)
 #else
         std::atomic_ref(run->allocated)
-            .fetch_sub(count, std::memory_order_release) -
+            .fetch_sub(count, std::memory_order_acq_rel) -
         count
 #endif
         ;

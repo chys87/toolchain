@@ -103,7 +103,7 @@ template <unsigned TotalBits, typename ValueType>
 requires (TotalBits >= 8 and TotalBits <= sizeof(uintptr_t) * 8 and
           (sizeof(ValueType) & (sizeof(ValueType) - 1)) == 0)
 ValueType* Trie<TotalBits, ValueType>::lookup_fail_crash(uintptr_t v) {
-  assert(v < ((uintptr_t(1) << TotalBits) - 1));
+  assert(v < (uintptr_t(1) << TotalBits));
   uintptr_t levelmask = (uintptr_t(1) << LevelBits) - 1;
   Node* node = reinterpret_cast<Node *>(
       head_[TopBits ? (v >> (Levels * LevelBits + LeafBits)) : 0]);
@@ -119,7 +119,7 @@ template <unsigned TotalBits, typename ValueType>
 requires (TotalBits >= 8 and TotalBits <= sizeof(uintptr_t) * 8 and
           (sizeof(ValueType) & (sizeof(ValueType) - 1)) == 0)
 ValueType* Trie<TotalBits, ValueType>::lookup(uintptr_t v) {
-  assert(v < ((uintptr_t(1) << TotalBits) - 1));
+  assert(v < (uintptr_t(1) << TotalBits));
   uintptr_t levelmask = (uintptr_t(1) << LevelBits) - 1;
 
   Node** pnode = &head_[TopBits ? (v >> (Levels * LevelBits + LeafBits)) : 0];
