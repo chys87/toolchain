@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -116,16 +116,16 @@ void touch_file(AtFile atfile) noexcept {
 void touch_file(int fd) noexcept { fsys_futimens(fd, nullptr); }
 
 bool ensure_file(AtFile atfile, mode_t mode) noexcept {
-  if (fsys_faccessat(atfile.fd(), atfile.name(), F_OK, 0) == 0)
-    return true;
+  // Simply try to create it with O_EXCL: if it already exists (including
+  // the race case where someone else creates it concurrently), EEXIST
+  // means success for "ensure" semantics.
   int fd = fsys_openat4(atfile.fd(), atfile.name(),
                         O_CREAT | O_WRONLY | O_EXCL | O_CLOEXEC, mode);
   if (fd >= 0) {
     fsys_close(fd);
     return true;
-  } else {
-    return false;
   }
+  return fsys_errno(fd, EEXIST);
 }
 
 }  // namespace cbu

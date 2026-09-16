@@ -1,7 +1,7 @@
 
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2021, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -115,6 +115,18 @@ TEST(StringPackTest, CommonPrefixSuffixCodecTest) {
                 "012345678901234567890123456789abcd",
                 "!012345678901234567890123456789abcd"),
             7);
+
+  // Mismatch inside the last 8 bytes with a short (<= 3) common suffix:
+  // the SSE4.1 path used to return 8 - suffix instead of the suffix
+  EXPECT_EQ(CommonPrefixSuffixCodec::common_suffix_max_7(
+                "abcdefghijklmnopqrstuvwxyz", "abcdefghijXXXXXXVWUSxyz"),
+            3);
+  EXPECT_EQ(CommonPrefixSuffixCodec::common_suffix_max_7("zzzabcdefgh",
+                                                         "zzzabcdefgx"),
+            0);
+  EXPECT_EQ(CommonPrefixSuffixCodec::common_suffix_max_7("zzzabcdefghij",
+                                                         "zzzabcdefghij"),
+            7);
 }
 
 TEST(StringPackTest, Compact) {
@@ -160,6 +172,21 @@ TEST(StringPackTest, Compact) {
         encoder.serialize(), [&](const std::string& s) { vec.push_back(s); }));
     ASSERT_EQ(vec, std::vector<std::string>(
                        {std::string(64, 'a'), std::string(32, 'a')}));
+  }
+
+  {
+    // Round-trip with a mismatch inside the last 8 bytes and a short
+    // common suffix (the SSE4.1 path used to corrupt these)
+    StringPackCompactEncoder encoder;
+    encoder << "abcdefghijklmnopqrstuvwxyz"
+            << "abcdefghijXXXXXXVWUSxyz";
+
+    std::vector<std::string> vec;
+    ASSERT_TRUE(string_pack_compact_decode(
+        encoder.serialize(), [&](const std::string& s) { vec.push_back(s); }));
+    ASSERT_EQ(vec, std::vector<std::string>(
+                       {"abcdefghijklmnopqrstuvwxyz",
+                        "abcdefghijXXXXXXVWUSxyz"}));
   }
 }
 

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,8 @@ TEST(IPv6Test, FormatTest) {
   test("0::a3f", "::a3f");
   test("0::9a3f", "::9a3f");
   test("ff::0", "ff::");
-  test("a:0:b:0:c:0:d:e", "a::b:0:c:0:d:e");
+  // A single zero field is not compressed (RFC 5952 4.2.2)
+  test("a:0:b:0:c:0:d:e", "a:0:b:0:c:0:d:e");
   test("a:0:b:0:0:c:0:e", "a:0:b::c:0:e");
   test("a:0:0:b:0:0:0:e", "a:0:0:b::e");
   test("a:0:0:0:c:0:0:0", "a::c:0:0:0");

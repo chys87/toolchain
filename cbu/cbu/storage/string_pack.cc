@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,7 @@
 #endif
 
 #include "cbu/common/bit.h"
+#include "cbu/common/stdhack.h"
 #include "cbu/storage/vlq.h"
 #include "cbu/strings/faststr.h"
 #include "cbu/strings/str_cat.h"
@@ -177,7 +178,9 @@ std::size_t CommonPrefixSuffixCodec::common_suffix_max_7(std::string_view a,
                                 _mm_cvtsi64_si128(mempick8(pb - 7)));
     std::uint32_t mask = std::uint16_t(~_mm_movemask_epi8(eq));
     if (mask == 0) return 7;
-    return 32 - clz(mask);
+    // Bit i of mask means byte i of the last 8 differs; the suffix is
+    // 7 - highest set bit, i.e. clz(mask) - 24
+    return clz(mask) - 24;
   }
 #endif
 

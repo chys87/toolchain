@@ -416,7 +416,9 @@ def_fsys_nomem(inotify_init1,inotify_init1,int,1,int)
 def_fsys(inotify_add_watch,inotify_add_watch,int,3,int,const char *,unsigned)
 def_fsys_nomem(inotify_rm_watch,inotify_rm_watch,int,2,int,int)
 def_fsys(nanosleep_raw,nanosleep,int,2,const struct timespec *,struct timespec *)
-#define fsys_nanosleep(a,b) fsys_clock_nanosleep(0,0,a,b)
+// Linux's nananosleep is equivalent to clock_nanosleep(CLOCK_MONOTONIC, ...)
+// (not CLOCK_REALTIME): it's unaffected by clock jumps
+#define fsys_nanosleep(a,b) fsys_clock_nanosleep(CLOCK_MONOTONIC,0,a,b)
 def_fsys(clock_nanosleep,clock_nanosleep,int,4,int,int,const struct timespec*, struct timespec*)
 def_fsys(clock_gettime_raw,clock_gettime,int,2,int,struct timespec*)
 // It's important to note that the caller cannot reliably determine the
@@ -457,7 +459,8 @@ def_fsys(mount,mount,int,5,const char *,const char *,const char *,
 def_fsys(umount2,umount2,int,2,const char *,int)
 def_fsys(pivot_root,pivot_root,int,2,const char *,const char *)
 def_fsys(memfd_create,memfd_create,int,2,const char *,unsigned)
-def_fsys_nomem(copy_file_range,copy_file_range,long,6,int,long*,int,long*,unsigned long,unsigned)
+// off_in/off_out are written by the kernel, so it must not be _nomem
+def_fsys(copy_file_range,copy_file_range,long,6,int,long*,int,long*,unsigned long,unsigned)
 
 // vsyscall is nowadays deprecated; We should use vDSO instead,
 // of which modern glibc takes good care.

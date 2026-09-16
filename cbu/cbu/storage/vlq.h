@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,6 +25,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#pragma once
 
 // Implements VLQ (variable-length quantity).
 // VLQ is the big-endian equivalent of LEB128.
@@ -65,7 +67,8 @@ struct EncodedVlq {
 constexpr unsigned vlq_encode_length(std::uint64_t v) noexcept {
   if (v == 0) return 1;
   unsigned k = 64 - cbu::clz(v);
-  return fastdiv<7, 69>(k + 6);
+  // k is at most 64, so k + 6 can be 70
+  return fastdiv<7, 70>(k + 6);
 }
 
 constexpr EncodedVlq vlq_encode(uint64_t v) noexcept {

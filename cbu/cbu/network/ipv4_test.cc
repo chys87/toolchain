@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,8 @@
 #include "cbu/network/ipv4.h"
 
 #include <arpa/inet.h>
+
+#include <string>
 
 #include <gtest/gtest.h>
 
@@ -107,6 +109,11 @@ TEST(IPv4Test, FromStringTest) {
   EXPECT_FALSE(IPv4::FromString(" 192.168.1.105").has_value());
   EXPECT_FALSE(IPv4::FromString("192.168.1..105").has_value());
   EXPECT_FALSE(IPv4::FromString("0xx7f.0.0.1").has_value());
+
+  // Non-NUL-terminated buffers (used to read 1 byte past "0x"/"0X" endings)
+  EXPECT_FALSE(IPv4::FromString(std::string_view(std::string("192.0x"))));
+  EXPECT_FALSE(IPv4::FromString(std::string_view(std::string("192.0X"))));
+  EXPECT_FALSE(IPv4::FromString(std::string_view(std::string("0x"))));
 }
 
 TEST(IPv4Test, InAddrTest) {

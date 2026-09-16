@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -79,7 +79,7 @@ bool Lock(std::uint32_t* guard, std::uint32_t v) noexcept {
     while (v == Values::NEW || v == Values::ABORTED) {
       if (std::atomic_ref(*guard).compare_exchange_weak(
               v, (v == Values::NEW) ? Values::RUNNING : Values::RUNNING_WAITING,
-              std::memory_order_acquire, std::memory_order_relaxed)) {
+              std::memory_order_acquire, std::memory_order_acquire)) {
         return true;
       }
     }
@@ -89,13 +89,13 @@ bool Lock(std::uint32_t* guard, std::uint32_t v) noexcept {
     if (v != Values::RUNNING_WAITING) {
       if (!std::atomic_ref(*guard).compare_exchange_strong(
               v, Values::RUNNING_WAITING, std::memory_order_acquire,
-              std::memory_order_relaxed) &&
+              std::memory_order_acquire) &&
           v != Values::RUNNING_WAITING) {
         continue;
       }
     }
     FutexWait(guard, v);
-    v = std::atomic_ref(*guard).load(std::memory_order_relaxed);
+    v = std::atomic_ref(*guard).load(std::memory_order_acquire);
   }
 }
 #endif
@@ -133,7 +133,7 @@ inline bool InitImpl(std::uint32_t* guard, Foo&& foo, Args&&... args) noexcept(
     return Values::IsInited(done_value);
   }
 #else
-  std::uint32_t v = std::atomic_ref(*guard).load(std::memory_order_relaxed);
+  std::uint32_t v = std::atomic_ref(*guard).load(std::memory_order_acquire);
   if (!Values::IsInited(v) && Lock<Values>(guard, v)) {
     std::uint32_t done_value = Values::ABORTED;
     CBU_DEFER {

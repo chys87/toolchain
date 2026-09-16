@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,11 +43,11 @@
 # include <x86intrin.h>
 #endif
 
-// Define a week "cbu_sized_free"
+// Define a weak "cbu_free_sized"
 // If we're not linking to cbu_malloc, use standard free
 extern "C" {
-void cbu_sized_free(void *, size_t) __attribute__((__weak__));
-void cbu_sized_free(void *p, size_t) { free(p); }
+void cbu_free_sized(void *, size_t) __attribute__((__weak__));
+void cbu_free_sized(void *p, size_t) { free(p); }
 } // extern "C"
 
 namespace {
@@ -277,7 +277,7 @@ void performance_test() {
     size_t k = rand_r (&seed) % N;
     if (p[k]) {
       if (SIZED_FREE)
-        cbu_sized_free(p[k], sz[k]);
+        cbu_free_sized(p[k], sz[k]);
       else
         free(p[k]);
       p[k] = NULL;
@@ -286,7 +286,7 @@ void performance_test() {
   }
   for (size_t k=0; k<N; ++k) {
     if (SIZED_FREE)
-      cbu_sized_free(p[k], sz[k]);
+      cbu_free_sized(p[k], sz[k]);
     else
       free(p[k]);
   }

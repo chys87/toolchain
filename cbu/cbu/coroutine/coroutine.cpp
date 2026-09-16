@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2022, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,8 @@ void Stack::Allocate(size_t sentinel_size, size_t stack_size) {
       nullptr, total_size,
       PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
       -1, 0);
-  if (sentinel_ == nullptr) {
+  if (sentinel_ == MAP_FAILED) {
+    sentinel_ = nullptr;
     throw std::bad_alloc();
   }
   if (sentinel_size) {

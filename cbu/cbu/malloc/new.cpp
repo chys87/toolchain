@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -90,7 +90,7 @@ extern "C" void delete_sized(void* p, size_t size) noexcept {
 
 }  // namespace
 
-#if defined __GCC__ && !defined __clang__
+#if defined __GNUC__ && !defined __clang__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wattribute-alias"
 #endif
@@ -163,7 +163,7 @@ cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void oper
 cbu_malloc_visibility_default __attribute__((alias("delete_regular"))) void operator delete[](
     void* p, std::align_val_t, const std::nothrow_t&) noexcept ;
 
-#if defined __GCC__ && !defined __clang__
+#if defined __GNUC__ && !defined __clang__
 #pragma GCC diagnostic pop
 #endif
 

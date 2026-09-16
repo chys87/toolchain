@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <utility>
 #include <type_traits>
 
@@ -52,7 +53,7 @@ class CBU_TRIVIAL_ABI ScopedMMap {
   explicit constexpr ScopedMMap(T* p, std::size_t l) noexcept : p_(p), l_(l) {}
   ScopedMMap(const ScopedMMap&) = delete;
   ScopedMMap(ScopedMMap&& other) noexcept
-      : p_(std::exchange(other.p_)), l_(std::exchange(other.l_, 0)) {}
+      : p_(std::exchange(other.p_, nullptr)), l_(std::exchange(other.l_, 0)) {}
   [[gnu::always_inline]] ~ScopedMMap() noexcept {
     if (l_ > 0) detail::do_munmap(p_, l_);
   }

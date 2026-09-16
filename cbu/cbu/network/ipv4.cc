@@ -124,6 +124,7 @@ ParseResult<std::uint32_t> parse_any_uint32(const char* s,
     if (*s == 'x' || *s == 'X') {
       // Hexadecimal
       ++s;
+      if (s >= e) return {false};
       auto first_digit_opt = parse_hex_digit(*s);
       if (!first_digit_opt) return {false};
       std::uint32_t r = *first_digit_opt;
