@@ -394,7 +394,7 @@ inline consteval std::array<char, kUnescapeMapSize> make_unescape_fast_map() noe
   res['/' - kMinUnescapeChar] = '/';  // For JSON
   res['a' - kMinUnescapeChar] = '\a';
   res['b' - kMinUnescapeChar] = '\b';
-  res['e' - kMinUnescapeChar] = '\x1f';
+  res['e' - kMinUnescapeChar] = '\x1b';
   res['f' - kMinUnescapeChar] = '\f';
   res['n' - kMinUnescapeChar] = '\n';
   res['r' - kMinUnescapeChar] = '\r';

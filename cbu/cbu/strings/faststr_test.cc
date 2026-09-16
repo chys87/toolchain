@@ -103,15 +103,14 @@ TEST_F(MemPickDropTest, MemDropVar) {
       ((unsigned __int128)UINT64_C(0x0102030405060708) << 64) |
       UINT64_C(0x090a0b0c0d0e0f);
 
-    memset(buf_, 0, sizeof(buf_));
-    memdrop(buf_, v, 7);
-    EXPECT_EQ(std::string(buf_, 7), std::string((char*)&v, 7));
-    EXPECT_EQ(buf_[7], 0);
-
-    memset(buf_, 0, sizeof(buf_));
-    memdrop(buf_, v, 14);
-    EXPECT_EQ(std::string(buf_, 14), std::string((char*)&v, 14));
-    EXPECT_EQ(buf_[14], 0);
+    // Test all lengths 0..16 (n == 16 used to write the wrong bytes)
+    for (unsigned n = 0; n <= 16; ++n) {
+      SCOPED_TRACE("n = " + std::to_string(n));
+      memset(buf_, 0, sizeof(buf_));
+      ASSERT_EQ(buf_ + n, memdrop(buf_, v, n));
+      EXPECT_EQ(std::string(buf_, n), std::string((char*)&v, n));
+      EXPECT_EQ(buf_[n], 0);
+    }
   }
 #endif
 

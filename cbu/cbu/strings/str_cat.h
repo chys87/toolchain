@@ -104,7 +104,7 @@ constexpr std::string_view Prepare(TempBuffer<T>* buffer, T v) noexcept {
 
   U u = v;
   if (v < 0) {
-    u = -v;
+    u = U(0) - U(v);  // Avoid UB for v == numeric_limits<T>::min()
     *p++ = '-';
   }
 

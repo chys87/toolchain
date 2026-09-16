@@ -157,6 +157,11 @@ TEST(EscapeTest, UnEscape) {
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
   ASSERT_EQ(unescape(R"(abcdefghijklmnopqrstuvwxyz\vABCDEFGHIJKLMNOPQRSTUVW)"),
             "abcdefghijklmnopqrstuvwxyz\vABCDEFGHIJKLMNOPQRSTUVW");
+
+  // \e is ESC (0x1b), as in GCC/Clang/Python (used to unescape to 0x1f)
+  ASSERT_EQ(unescape(R"(\e)"), "\x1b");
+  ASSERT_EQ(unescape(R"(a\eb)"), "a\x1b"
+                                 "b");
 }
 
 TEST(EscapeTest, UnEscapeInPlace) {

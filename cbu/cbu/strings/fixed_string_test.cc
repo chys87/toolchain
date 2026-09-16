@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -16,19 +16,15 @@
  *
  * THIS SOFTWARE IS PROVIDED BY chys <admin@CHYS.INFO> ''AS IS'' AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS IN A PARTICULAR PURPOSE ARE
  * DISCLAIMED. IN NO EVENT SHALL chys <admin@CHYS.INFO> BE LIABLE FOR ANY
  * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "cbu/strings/str_cat.h"
+#include "cbu/strings/fixed_string.h"
 
-#include <limits>
 #include <string_view>
 
 #include <gtest/gtest.h>
@@ -36,33 +32,29 @@
 namespace cbu {
 namespace {
 
-using std::operator""sv;
-
-TEST(StrAppendTest, AppendTest) {
-  std::string r;
-  StrAppend(&r, "A");
-  ASSERT_EQ(r, "A");
-  StrAppend(&r, 3);
-  ASSERT_EQ(r, "A3");
-  StrAppend(&r, "B"sv, 54, "C", 25);
-  ASSERT_EQ(r, "A3B54C25");
-  StrAppend(&r, -54, -2554);
-  ASSERT_EQ(r, "A3B54C25-54-2554");
+TEST(FixedStringTest, OperatorPlus) {
+  constexpr auto a = basic_fixed_string<2>("ab");
+  constexpr auto b = basic_fixed_string<3>("cde");
+  constexpr auto c = a + b;
+  static_assert(c.size() == 5);
+  static_assert(std::string_view(c) == "abcde");
 }
 
-TEST(StrCatTest, CatTest) {
-  ASSERT_EQ(StrCat(78), "78");
-  ASSERT_EQ(StrCat(250, 54), "25054");
-  ASSERT_EQ(StrCat(250, "x", 54), "250x54");
-  ASSERT_EQ(StrCat(250, "x", "y"sv, 54), "250xy54");
-  ASSERT_EQ(StrCat(250, "x", "y"sv, -54), "250xy-54");
-}
+TEST(FixedStringTest, OperatorPlusNonChar) {
+  // Used to fail to compile: the local variable in operator+ missed the
+  // character type template argument
+  constexpr auto wa = basic_fixed_string<2, false, wchar_t>(L"ab");
+  constexpr auto wb = basic_fixed_string<3, false, wchar_t>(L"cde");
+  constexpr auto wc = wa + wb;
+  static_assert(wc.size() == 5);
+  static_assert(std::wstring_view(wc) == std::wstring_view(L"abcde", 5));
 
-TEST(StrCatTest, MostNegativeValues) {
-  // Negating the most negative value used to be signed overflow UB
-  ASSERT_EQ(StrCat(std::numeric_limits<int64_t>::min()),
-            "-9223372036854775808");
-  ASSERT_EQ(StrCat(std::numeric_limits<int32_t>::min()), "-2147483648");
+  constexpr auto ua = basic_fixed_string<2, false, char16_t>(u"ab");
+  constexpr auto ub = basic_fixed_string<3, false, char16_t>(u"cde");
+  constexpr auto uc = ua + ub;
+  static_assert(uc.size() == 5);
+  static_assert(std::u16string_view(uc) ==
+                std::u16string_view(u"abcde", 5));
 }
 
 }  // namespace

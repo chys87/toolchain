@@ -91,5 +91,23 @@ TEST(FixedLengthCompareTest, DefaultTest) {
   test_all(std::make_index_sequence<kLengthCount>());
 }
 
+TEST(FixedLengthCompareTest, MultiByteElementType) {
+  // IsAllZero<N>(T*) with sizeof(T) > 1 used to fail to compile because of
+  // misaligned template arguments
+  constexpr int zeros[10]{};
+  static_assert(IsAllZero<10>(zeros));
+
+  int i[10]{};
+  ASSERT_TRUE(IsAllZero<10>(i));
+  ASSERT_TRUE((IsAllZero<10, IsAllZeroOptions{.right_align = true}>(i)));
+  i[3] = 1;
+  ASSERT_FALSE(IsAllZero<10>(i));
+  ASSERT_FALSE((IsAllZero<10, IsAllZeroOptions{.right_align = true}>(i)));
+  i[3] = 0;
+  i[9] = 1;
+  ASSERT_FALSE(IsAllZero<10>(i));
+  ASSERT_FALSE((IsAllZero<10, IsAllZeroOptions{.right_align = true}>(i)));
+}
+
 }  // namespace
 }  // namespace cbu

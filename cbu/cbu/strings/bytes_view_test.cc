@@ -27,6 +27,8 @@
  */
 
 #include "bytes_view.h"
+// Include twice to verify the include guard
+#include "bytes_view.h"
 #if __has_include(<span>)
 # include <span>
 #endif

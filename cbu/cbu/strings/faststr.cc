@@ -203,8 +203,11 @@ void* memdrop_var128(void* dst, unsigned __int128 v, std::size_t n) noexcept {
       return memdrop_var64(dst, uint64_t(v), n);
     } else {
       memdrop8(static_cast<char*>(dst), uint64_t(v));
+      // The second qword is v >> 64 if n == 16, or the last 8 bytes of v
+      // (v >> ((n - 8) * 8)) if 9 <= n <= 15.
       memdrop8(static_cast<char*>(dst) + n - 8,
-               uint64_t(v >> ((n - 8) * 8 % 64)));
+               n == 16 ? uint64_t(v >> 64)
+                       : uint64_t(v >> ((n - 8) * 8)));
       return static_cast<char*>(dst) + n;
     }
   } else {

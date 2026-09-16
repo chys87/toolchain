@@ -172,7 +172,8 @@ inline constexpr bool IsAllZero(const T* p) {
     if constexpr (N == 0) {
       return true;
     } else if constexpr (sizeof(T) > 1) {
-      return IsAllZero<N * sizeof(T), char>(reinterpret_cast<const char*>(p));
+      return IsAllZero<N * sizeof(T), Opts>(
+          reinterpret_cast<const char*>(p));
     } else if constexpr (N == 1) {
       return (*p == 0);
     } else if constexpr (N == 2 || N == 4 || N == 8) {

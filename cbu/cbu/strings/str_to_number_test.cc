@@ -121,6 +121,23 @@ TEST(StrToIntegerTest, Partial) {
   EXPECT_EQ(str_to_integer_partial<int>("-123", CStringSentinel())
                 .value_opt.value_or(0),
             -123);
+
+  // Small signed types (used to fail to compile)
+  EXPECT_EQ(str_to_integer_partial<int16_t>("123 abc").value_opt.value_or(0),
+            123);
+  EXPECT_EQ(str_to_integer_partial<int16_t>("300 abc").value_opt.value_or(0),
+            300);
+  EXPECT_EQ(str_to_integer_partial<int16_t>("-123 abc").value_opt.value_or(0),
+            -123);
+  EXPECT_EQ(str_to_integer_partial<int16_t>("32767").value_opt.value_or(0),
+            32767);
+  EXPECT_EQ(str_to_integer_partial<int16_t>("-32768").value_opt.value_or(0),
+            -32768);
+  EXPECT_EQ(str_to_integer_partial<int16_t>("32768").value_opt.value_or(0), 0);
+  EXPECT_EQ(str_to_integer_partial<int16_t>("40000 abc").value_opt.value_or(0),
+            0);
+  EXPECT_EQ(str_to_integer_partial<int16_t>("-40000 abc").value_opt.value_or(0),
+            0);
 }
 
 TEST(StrToIntegerTest, Constexpr) {

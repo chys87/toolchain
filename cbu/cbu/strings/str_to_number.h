@@ -101,8 +101,8 @@ constexpr auto str_to_integer_partial(const char* s, S e) noexcept
   // Unsigned case is completely covered by OverflowThreshold
   if constexpr (OPT.check_overflow && sizeof(T) < sizeof(CT) &&
                 std::is_signed_v<T>) {
-    if (res.first && T(*res.first) != CT(*res.first))
-      return {std::nullopt, res.second};
+    if (res.value_opt && T(*res.value_opt) != CT(*res.value_opt))
+      return {std::nullopt, res.endptr};
   }
   return {std::optional<T>(res.value_opt), res.endptr};
 }

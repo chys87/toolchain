@@ -26,6 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include <concepts>  // std::convertible_to
 #include <cstddef>  // std::byte
 #include <iterator>  // std::data, std::size

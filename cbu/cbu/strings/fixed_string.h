@@ -197,7 +197,7 @@ using fixed_nzanystring = basic_fixed_string<N, false, C>;
 template <Std_string_char C, std::size_t M, bool BM, std::size_t N, bool BN>
 constexpr basic_fixed_string<M + N, BM || BN, C> operator+(
     basic_fixed_string<M, BM, C> a, basic_fixed_string<N, BN, C> b) noexcept {
-  basic_fixed_string<M + N, BM || BN> res;
+  basic_fixed_string<M + N, BM || BN, C> res;
   for (std::size_t i = 0; i < M; ++i) res[i] = a[i];
   for (std::size_t i = 0; i < N; ++i) res[M + i] = b[i];
   if constexpr (BM || BN) res[M + N] = C();
