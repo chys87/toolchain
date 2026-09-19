@@ -37,6 +37,7 @@ If you use anything else, you have to take care of it yourself.
 
 [`cbu/common`](cbu/common): Common utilities
 
+* `arena.h`: A simple arena allocator, including typed deleters for objects that are not trivially destructible
 * `arch.h`: Architecture-specific helper functions
 * `bit.h`: Bit manipulation code
   - `ctz`, `clz`, `bsr`, `popcnt`: type-generic bit manipulation functions

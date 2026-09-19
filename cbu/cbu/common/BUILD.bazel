@@ -92,6 +92,20 @@ cc_library(
 )
 
 cc_library(
+  name = 'arena',
+  srcs = ['arena.cpp'],
+  hdrs = ['arena.h'],
+  deps = [
+    ':header_only',
+    '//cbu/alloc:pagesize',
+    '//cbu/strings:header_only',
+    '//cbu/strings:str_builder',
+  ],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
   name = 'procutil',
   srcs = [
     'procutil.cc',
@@ -113,6 +127,7 @@ cc_test(
   srcs = glob(['*_test.cc', '*_test.h']),
   deps = [
     ':common',
+    ':arena',
     '@com_google_googletest//:gtest_main',
     '//cbu/debug:gtest_formatters',
   ],

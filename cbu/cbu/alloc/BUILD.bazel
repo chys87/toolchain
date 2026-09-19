@@ -25,6 +25,15 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 cc_library(
+  name = 'pagesize',
+  srcs = [],
+  hdrs = ['pagesize.h'],
+  deps = [],
+  linkstatic=True,
+  visibility = ["//visibility:public"],
+)
+
+cc_library(
   name = 'alloc',
   srcs = glob(['*.cpp', 'private/*.cpp', 'private/*.h'],
               exclude=['*_test.*']),
