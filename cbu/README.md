@@ -51,6 +51,7 @@ If you use anything else, you have to take care of it yourself.
 * `fifo_list.h`: Provides `fifo_list<T>`, a first-in-first-out singly-linked container type with fast access to both ends
 * `heapq.h`: Heap operations
 * `immutable_string.h`: An "immutable" string class that holds either a `string_view` or a real `string` object.
+* `intrusive_ptr.h`: Provides `intrusive_ptr`, an intrusive reference-counted smart pointer; the `CBU_DECLARE_INTRUSIVE_PTR_*` macros declare its required member functions
 * `memory.h`: Provides memory operation utilities, including some C++20 memory functions that are missing from GCC 9
 * `once.h`: Provides macro `CBU_ONCE`, somewhat like but easier to use than [`pthread_once`](https://linux.die.net/man/3/pthread_once)
 * `ref_cnt.h`: Reference-counting operations

@@ -61,6 +61,7 @@ cc_library(
     'functional.h',
     'heapq.h',
     'hint.h',
+    'intrusive_ptr.h',
     'iterator.h',
     'memory.h',
     'multi_alloc.h',
