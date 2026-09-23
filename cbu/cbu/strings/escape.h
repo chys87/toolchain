@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -77,6 +77,39 @@ template <EscapeStyle style = EscapeStyle::C>
 std::string escape_string(std::string_view src) CBU_MEMORY_NOEXCEPT {
   return escape_detail::EscapeImpl<style>::escape(src.data(), src.size());
 }
+
+// A cbu::sb-compatible builder for escape_string.
+//
+// max_size() is intentionally only a cheap upper bound.  Computing the exact
+// escaped length would require scanning the string twice.
+template <EscapeStyle style = EscapeStyle::C, bool quotes = false>
+struct EscapeStringBuilder {
+  std::string_view src;
+
+  static constexpr std::size_t static_min_size() noexcept {
+    return quotes ? 2 : 0;
+  }
+
+  constexpr std::size_t min_size() const noexcept {
+    return src.size() + static_min_size();
+  }
+
+  constexpr std::size_t max_size() const noexcept {
+    constexpr std::size_t factor = (style == EscapeStyle::C) ? 4 : 6;
+    return src.size() * factor + static_min_size();
+  }
+
+  char* write(char* w) const noexcept {
+    if constexpr (quotes) *w++ = '"';
+    w = escape_string<style>(w, src);
+    if constexpr (quotes) *w++ = '"';
+    return w;
+  }
+};
+
+using JsonStringBuilder = EscapeStringBuilder<EscapeStyle::JSON, true>;
+using StrictJsonStringBuilder =
+    EscapeStringBuilder<EscapeStyle::JSON_STRICT, true>;
 
 // unescape_string supports both C and JSON styles
 // Unescaping terminates either by encoutering unescaped '\"' or end-of-string

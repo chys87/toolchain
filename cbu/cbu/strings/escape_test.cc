@@ -29,6 +29,8 @@
 #include "escape.h"
 #include <gtest/gtest.h>
 
+#include "cbu/strings/str_builder.h"
+
 namespace cbu {
 namespace {
 
@@ -54,6 +56,19 @@ TEST(EscapeTest, EscapeJSON) {
       R"(\u0001\u0002\u0007\b\u000b\f\\\"Hello world一二三四五六七八九\\\/)");
 
   EXPECT_EQ(escape_string<EscapeStyle::JSON>("\1\2😍"), R"(\u0001\u0002😍)");
+}
+
+TEST(EscapeTest, StringBuilder) {
+  EXPECT_EQ(
+      sb::Concat("{\"message\":", JsonStringBuilder{"hello\"world\n"}, '}')
+          .as_string(),
+      R"({"message":"hello\"world\n"})");
+  EXPECT_EQ(sb::Concat("strict: ", StrictJsonStringBuilder{"a/b"}).as_string(),
+            R"(strict: "a\/b")");
+  EXPECT_EQ(
+      sb::Concat("unquoted: ", EscapeStringBuilder<EscapeStyle::C>{"a\nb"})
+          .as_string(),
+      R"(unquoted: a\nb)");
 }
 
 TEST(EscapeTest, AlignmentTest) {
