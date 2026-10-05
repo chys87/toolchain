@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,10 +36,12 @@
 
 namespace std {
 
+template <typename>
 void PrintTo(std::u8string_view s, std::ostream* os) {
   *os << std::string_view(reinterpret_cast<const char*>(s.data()), s.size());
 }
 
+template <typename>
 void PrintTo(std::u16string_view s, std::ostream* os) {
   auto buffer = cbu::make_unique_for_overwrite<char[]>(s.size() * 6);
   char* p = buffer.get();
@@ -61,6 +63,7 @@ void PrintTo(std::u16string_view s, std::ostream* os) {
   *os << std::string_view(buffer.get(), p);
 }
 
+template <typename>
 void PrintTo(std::u32string_view s, std::ostream* os) {
   auto buffer = cbu::make_unique_for_overwrite<char[]>(s.size() * 6);
   char* p = buffer.get();
@@ -73,6 +76,12 @@ void PrintTo(std::u32string_view s, std::ostream* os) {
   }
   *os << std::string_view(buffer.get(), p);
 }
+
+// Explicit instantiation; the header declares these templates without
+// definitions.
+template void PrintTo(std::u8string_view s, std::ostream* os);
+template void PrintTo(std::u16string_view s, std::ostream* os);
+template void PrintTo(std::u32string_view s, std::ostream* os);
 
 }  // namespace std
 

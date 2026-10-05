@@ -39,9 +39,20 @@ using std::operator""sv;
 namespace std {
 
 // STL doesn't provide proper operator<< overload for char8_t, char16_t or
-// char32_t
+// char32_t, and old gtest (< 1.14) has no PrintTo for them either.
+//
+// gtest 1.14+ declares its own non-template PrintTo overloads for these types.
+// Making ours function templates keeps them a *worse* match than gtest's, so
+// overload resolution stays unambiguous on both versions: gtest's are
+// preferred where available, and ours are still selected on old gtest that
+// has none. The dummy template parameter is never deduced; it exists only to
+// lower our overloads' priority (same trick as `ExplicitArgumentBarrier` in
+// gtest-printers.h).
+template <typename = void>
 void PrintTo(std::u8string_view s, std::ostream* os);
+template <typename = void>
 void PrintTo(std::u16string_view s, std::ostream* os);
+template <typename = void>
 void PrintTo(std::u32string_view s, std::ostream* os);
 
 }  // namespace std
