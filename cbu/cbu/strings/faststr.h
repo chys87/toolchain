@@ -291,7 +291,7 @@ CBU_AARCH64_PRESERVE_ALL std::uint64_t mempick_var64(const void* s, std::size_t)
 template <typename T, typename C>
   requires(Raw_char_type_or_void<C> && Raw_integral<T> && sizeof(T) <= 8)
 inline constexpr T mempick(const C* s, std::size_t n) noexcept {
-  if (std::is_void_v<C>) {
+  if constexpr (std::is_void_v<C>) {
     return mempick<T>(static_cast<const char*>(s), n);
   } else if consteval {
     char buf[sizeof(T)]{};
