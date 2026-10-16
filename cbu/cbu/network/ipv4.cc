@@ -39,6 +39,7 @@
 
 #include "cbu/math/fastdiv.h"
 #include "cbu/math/strict_overflow.h"
+#include "cbu/strings/faststr.h"
 #include "cbu/strings/short_string.h"
 
 namespace cbu {
@@ -166,17 +167,13 @@ char* IPv4::ToString(char* p) const noexcept {
 
   __v4su bytes = __v4su(_mm_srlv_epi32(__m128i(combined | 0x2e303030),
                                        __m128i(skipped_bytes * 8)));
-  *(uint32_t*)p = bytes[3];
+  memdrop(p, bytes[3]);
   p -= skipped_bytes[3];
-  *(uint32_t*)(p + 4) = bytes[2];
+  memdrop(p + 4, bytes[2]);
   p -= skipped_bytes[2];
-  *(uint32_t*)(p + 8) = bytes[1];
+  memdrop(p + 8, bytes[1]);
   p -= skipped_bytes[1];
-#if defined __clang__ && __clang_major__ == 21
-  // Work around miscompilation in early clang 21 versions
-  asm volatile("" : "+r"(p));
-#endif
-  *(uint16_t*)(p + 12) = bytes[0];
+  memdrop(p + 12, uint16_t(bytes[0]));
   *(p + 14) = bytes[0] >> 16;
   p += 15l - skipped_bytes[0];
   return p;
@@ -194,17 +191,13 @@ char* IPv4::ToString(char* p) const noexcept {
   uint32x4_t bytes =
       vshlq_u32(combined | vdupq_n_u32(0x2e303030), skipped_bytes * 8);
 
-  *(uint32_t*)p = bytes[3];
+  memdrop(p, bytes[3]);
   p += skipped_bytes[3];
-  *(uint32_t*)(p + 4) = bytes[2];
+  memdrop(p + 4, bytes[2]);
   p += skipped_bytes[2];
-  *(uint32_t*)(p + 8) = bytes[1];
+  memdrop(p + 8, bytes[1]);
   p += skipped_bytes[1];
-#if defined __clang__ && (__clang_major__ >= 21 && __clang_major__ <= 22)
-  // Work around miscompilation in clang 21 & 22
-  asm volatile("" : "+r"(p));
-#endif
-  *(uint16_t*)(p + 12) = bytes[0];
+  memdrop(p + 12, uint16_t(bytes[0]));
   *(p + 14) = bytes[0] >> 16;
   p += 15l + skipped_bytes[0];
   return p;
