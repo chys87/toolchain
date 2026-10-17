@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2023-2024, chys <admin@CHYS.INFO>
+ * Copyright (c) 2023-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,8 @@ using std::operator""sv;
 TEST(HexTest, ToHexTest) {
   char buf[32];
 
+  ByteToHex(buf, uint8_t(0xab));
+  ASSERT_EQ(std::string_view(buf, 2), "ab"sv);
   ToHex(buf, uint8_t(0xab));
   ASSERT_EQ(std::string_view(buf, 2), "ab"sv);
 
@@ -57,6 +59,30 @@ TEST(HexTest, ToHexTest) {
   ASSERT_EQ(std::string_view(buf, 16), "efcdab9078563412"sv);
   ToHex(buf, uint64_t(0x1234567890abcdef));
   ASSERT_EQ(std::string_view(buf, 16), "1234567890abcdef"sv);
+}
+
+TEST(HexTest, ToHexUpperStyleTest) {
+  char buf[32];
+
+  ByteToHex<ToHexStyle::UPPER>(buf, uint8_t(0xab));
+  ASSERT_EQ(std::string_view(buf, 2), "AB"sv);
+  ToHex<ToHexStyle::UPPER>(buf, uint8_t(0xab));
+  ASSERT_EQ(std::string_view(buf, 2), "AB"sv);
+
+  LittleEndian16ToHex<ToHexStyle::UPPER>(buf, 0xabcd);
+  ASSERT_EQ(std::string_view(buf, 4), "CDAB"sv);
+  ToHex<ToHexStyle::UPPER>(buf, uint16_t(0xabcd));
+  ASSERT_EQ(std::string_view(buf, 4), "ABCD"sv);
+
+  LittleEndian32ToHex<ToHexStyle::UPPER>(buf, 0x90abcdef);
+  ASSERT_EQ(std::string_view(buf, 8), "EFCDAB90"sv);
+  ToHex<ToHexStyle::UPPER>(buf, 0x90abcdefu);
+  ASSERT_EQ(std::string_view(buf, 8), "90ABCDEF"sv);
+
+  LittleEndian64ToHex<ToHexStyle::UPPER>(buf, 0x1234567890abcdef);
+  ASSERT_EQ(std::string_view(buf, 16), "EFCDAB9078563412"sv);
+  ToHex<ToHexStyle::UPPER>(buf, uint64_t(0x1234567890abcdef));
+  ASSERT_EQ(std::string_view(buf, 16), "1234567890ABCDEF"sv);
 }
 
 }  // namespace

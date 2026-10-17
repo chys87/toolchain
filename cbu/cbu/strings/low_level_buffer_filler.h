@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -326,7 +326,7 @@ template <typename T>
 FillDec(T) -> FillDec<std::make_unsigned_t<T>(-1)>;
 
 // Write a string in hexadecimal form.  Currently only supports full width
-template <Raw_unsigned_integral T>
+template <Raw_unsigned_integral T, ToHexStyle style = ToHexStyle::LOWER>
 struct FillHex {
   T value;
 
@@ -338,11 +338,22 @@ struct FillHex {
   }
   static constexpr std::size_t min_size() noexcept { return 2 * sizeof(T); }
   static constexpr std::size_t size() noexcept { return 2 * sizeof(T); }
-  constexpr char* write(char* w) const noexcept { return ToHex(w, value); }
+  constexpr char* write(char* w) const noexcept {
+    return ToHex<style>(w, value);
+  }
 };
 
 template <Raw_unsigned_integral T>
-FillHex(T) -> FillHex<T>;
+FillHex(T) -> FillHex<T, ToHexStyle::LOWER>;
+
+template <Raw_unsigned_integral T>
+struct FillUpperHex : FillHex<T, ToHexStyle::UPPER> {
+  explicit constexpr FillUpperHex(T value) noexcept
+      : FillHex<T, ToHexStyle::UPPER>{value} {}
+};
+
+template <Raw_unsigned_integral T>
+FillUpperHex(T) -> FillUpperHex<T>;
 
 template <std::ptrdiff_t diff>
 struct FillSkipImpl {

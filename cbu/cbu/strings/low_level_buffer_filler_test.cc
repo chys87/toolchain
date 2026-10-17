@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -252,6 +252,72 @@ TEST(LowLevelBufferFillerTest, FillHex) {
     filler << FillHex(uint64_t(0xab25cd540123));
     ASSERT_EQ(filler.pointer() - buffer, 16);
     ASSERT_STREQ(buffer, "0000ab25cd540123");
+  }
+}
+
+TEST(LowLevelBufferFillerTest, FillHexUpperStyle) {
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillHex<uint8_t, ToHexStyle::UPPER>(uint8_t(0x54));
+    ASSERT_EQ(filler.pointer() - buffer, 2);
+    ASSERT_STREQ(buffer, "54");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillHex<uint16_t, ToHexStyle::UPPER>(uint16_t(0x25ab));
+    ASSERT_EQ(filler.pointer() - buffer, 4);
+    ASSERT_STREQ(buffer, "25AB");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillHex<uint32_t, ToHexStyle::UPPER>(uint32_t(0xab25cd54));
+    ASSERT_EQ(filler.pointer() - buffer, 8);
+    ASSERT_STREQ(buffer, "AB25CD54");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillHex<uint64_t, ToHexStyle::UPPER>(uint64_t(0xab25cd540123));
+    ASSERT_EQ(filler.pointer() - buffer, 16);
+    ASSERT_STREQ(buffer, "0000AB25CD540123");
+  }
+}
+
+TEST(LowLevelBufferFillerTest, FillUpperHex) {
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillUpperHex(uint8_t(0xab));
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 2);
+    ASSERT_STREQ(buffer, "AB");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillUpperHex(uint16_t(0x25ab));
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 4);
+    ASSERT_STREQ(buffer, "25AB");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillUpperHex(uint32_t(0xab25cd54));
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 8);
+    ASSERT_STREQ(buffer, "AB25CD54");
+  }
+  {
+    char buffer[64] = {};
+    LowLevelBufferFiller filler{buffer};
+    filler << FillUpperHex(uint64_t(0xab25cd540123));
+    char* p = filler.pointer();
+    ASSERT_EQ(p - buffer, 16);
+    ASSERT_STREQ(buffer, "0000AB25CD540123");
   }
 }
 

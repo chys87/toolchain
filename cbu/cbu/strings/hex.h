@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2023-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2023-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,18 +45,27 @@
 
 namespace cbu {
 
+enum class ToHexStyle { LOWER, UPPER };
+
+template <ToHexStyle style>
+constexpr const char* kHexDigits =
+    style == ToHexStyle::LOWER ? "0123456789abcdef" : "0123456789ABCDEF";
+
+template <ToHexStyle style = ToHexStyle::LOWER>
 constexpr char* ByteToHex(char* dst, std::uint8_t x) noexcept {
-  *dst++ = "0123456789abcdef"[x >> 4];
-  *dst++ = "0123456789abcdef"[x & 15];
+  *dst++ = kHexDigits<style>[x >> 4];
+  *dst++ = kHexDigits<style>[x & 15];
   return dst;
 }
 
+template <ToHexStyle style = ToHexStyle::LOWER>
 constexpr char* LittleEndian16ToHex(char* dst, std::uint16_t x) noexcept {
-  dst = ByteToHex(dst, std::uint8_t(x));
-  dst = ByteToHex(dst, std::uint8_t(x >> 8));
+  dst = ByteToHex<style>(dst, std::uint8_t(x));
+  dst = ByteToHex<style>(dst, std::uint8_t(x >> 8));
   return dst;
 }
 
+template <ToHexStyle style = ToHexStyle::LOWER>
 constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
 #if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   if !consteval {
@@ -64,7 +73,7 @@ constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
     auto b = uint8x8_t(uint32x2_t{x, 0});
     auto vx = vzip1_u8(a, b);
     *(uint8x8_t*)dst =
-        vqtbl1_u8(*(const uint8x16_t*)"0123456789abcdef", vx & 0xf);
+        vqtbl1_u8(*(const uint8x16_t*)kHexDigits<style>, vx & 0xf);
     return dst + 8;
   }
 #elif defined __SSSE3__
@@ -72,17 +81,18 @@ constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
     __m128i vx =
         _mm_unpacklo_epi8(_mm_cvtsi32_si128(x >> 4), _mm_cvtsi32_si128(x));
     *(uint64_t*)dst = _mm_cvtsi128_si64(_mm_shuffle_epi8(
-        *(const __m128i_u*)"0123456789abcdef", vx & _mm_set1_epi8(0x0f)));
+        *(const __m128i_u*)kHexDigits<style>, vx & _mm_set1_epi8(0x0f)));
     return dst + 8;
   }
 #endif
   for (int i = 0; i < 4; ++i) {
-    dst = ByteToHex(dst, std::uint8_t(x));
+    dst = ByteToHex<style>(dst, std::uint8_t(x));
     x >>= 8;
   }
   return dst;
 }
 
+template <ToHexStyle style = ToHexStyle::LOWER>
 constexpr char* LittleEndian64ToHex(char* dst, std::uint64_t x) noexcept {
 #if defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   if !consteval {
@@ -90,41 +100,42 @@ constexpr char* LittleEndian64ToHex(char* dst, std::uint64_t x) noexcept {
     auto b = uint8x16_t(uint64x2_t{x, 0});
     auto vx = vzip1q_u8(a, b);
     *(uint8x16_t*)dst =
-        vqtbl1q_u8(*(const uint8x16_t*)"0123456789abcdef", vx & 0xf);
+        vqtbl1q_u8(*(const uint8x16_t*)kHexDigits<style>, vx & 0xf);
     return dst + 16;
   }
 #elif defined __SSSE3__
   if !consteval {
     __m128i vx =
         _mm_unpacklo_epi8(_mm_cvtsi64_si128(x >> 4), _mm_cvtsi64_si128(x));
-    *(__m128i_u*)dst = _mm_shuffle_epi8(*(const __m128i_u*)"0123456789abcdef",
+    *(__m128i_u*)dst = _mm_shuffle_epi8(*(const __m128i_u*)kHexDigits<style>,
                                         vx & _mm_set1_epi8(0x0f));
     return dst + 16;
   }
 #endif
 
   for (int i = 0; i < 8; ++i) {
-    dst = ByteToHex(dst, std::uint8_t(x));
+    dst = ByteToHex<style>(dst, std::uint8_t(x));
     x >>= 8;
   }
   return dst;
 }
 
+template <ToHexStyle style = ToHexStyle::LOWER>
 constexpr char* ToHex(char* dst, std::unsigned_integral auto x) noexcept {
   if !consteval {
     if constexpr (sizeof(x) == 8) {
-      return LittleEndian64ToHex(dst, std::byteswap(x));
+      return LittleEndian64ToHex<style>(dst, std::byteswap(x));
     } else if constexpr (sizeof(x) == 4) {
-      return LittleEndian32ToHex(dst, std::byteswap(x));
+      return LittleEndian32ToHex<style>(dst, std::byteswap(x));
     } else if constexpr (sizeof(x) == 2) {
-      return LittleEndian16ToHex(dst, std::byteswap(x));
+      return LittleEndian16ToHex<style>(dst, std::byteswap(x));
     } else if constexpr (sizeof(x) == 1) {
-      return ByteToHex(dst, x);
+      return ByteToHex<style>(dst, x);
     }
   }
 
   for (std::size_t i = 0; i < 2 * sizeof(x); ++i) {
-    *dst++ = "0123456789abcdef"[(x >> ((2 * sizeof(x) - i - 1) * 4)) & 15];
+    *dst++ = kHexDigits<style>[(x >> ((2 * sizeof(x) - i - 1) * 4)) & 15];
   }
   return dst;
 }
