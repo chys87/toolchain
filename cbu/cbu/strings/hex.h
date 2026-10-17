@@ -184,12 +184,21 @@ convert_2xdigit(const char* s) noexcept {
 }
 
 // Convert 4 hexadecimal digits
-template <bool assume_valid = false>
+template <bool assume_valid = false, std::endian byte_order = std::endian::big>
 CBU_AARCH64_PRESERVE_ALL constexpr hex_detail::ConvertXDigit<assume_valid>
 convert_4xdigit(const char* s) noexcept {
 #if defined __SSE4_1__ && defined __BMI2__
   if !consteval {
-    __v16qu v = __v16qu(__v4su{mempick_be<uint32_t>(s), 0, 0, 0});
+    __v16qu v;
+    if constexpr (byte_order == std::endian::little) {
+      __m128i raw = _mm_cvtsi32_si128(mempick_le<uint32_t>(s));
+      v = __v16qu(_mm_shuffle_epi8(
+          raw,
+          _mm_setr_epi8(1, 0, 3, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+                        -1, -1)));
+    } else {
+      v = __v16qu(__v4su{mempick_be<uint32_t>(s), 0, 0, 0});
+    }
     __v16qu digits = __v16qu(v - '0' <= 9);
     __v16qu v_alpha = (v | 0x20) - 'a';
     __v16qu alpha = __v16qu(v_alpha < 6);
@@ -206,7 +215,12 @@ convert_4xdigit(const char* s) noexcept {
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   if !consteval {
     uint32_t vc = mempick_le<uint32_t>(s);
-    uint8x8_t v = vrev32_u8(uint8x8_t(uint32x2_t{vc, 0}));
+    uint8x8_t v;
+    if constexpr (byte_order == std::endian::little) {
+      v = vrev16_u8(uint8x8_t(uint32x2_t{vc, 0}));
+    } else {
+      v = vrev32_u8(uint8x8_t(uint32x2_t{vc, 0}));
+    }
     uint8x8_t v_digits = uint8x8_t(v - '0');
     uint8x8_t digits = uint8x8_t(v_digits < 10);
     uint8x8_t v_alpha = (v | 0x20) - 'a';
@@ -232,18 +246,35 @@ convert_4xdigit(const char* s) noexcept {
   auto d = convert_xdigit<assume_valid>(*s++);
   if constexpr (!assume_valid)
     if (!d) return d;
-  return ((hex_detail::v(a) * 16 + hex_detail::v(b)) * 16 + hex_detail::v(c)) *
-             16 +
-         hex_detail::v(d);
+  if constexpr (byte_order == std::endian::little) {
+    return (((hex_detail::v(c) * 16 + hex_detail::v(d)) * 16 +
+             hex_detail::v(a)) *
+            16) +
+           hex_detail::v(b);
+  } else {
+    return (((hex_detail::v(a) * 16 + hex_detail::v(b)) * 16 +
+             hex_detail::v(c)) *
+            16) +
+           hex_detail::v(d);
+  }
 }
 
 // Convert 8 hexadecimal digits
-template <bool assume_valid = false>
+template <bool assume_valid = false, std::endian byte_order = std::endian::big>
 CBU_AARCH64_PRESERVE_ALL constexpr hex_detail::ConvertXDigit<assume_valid>
 convert_8xdigit(const char* s) noexcept {
 #if defined __x86_64__ && defined __SSE4_1__ && defined __BMI2__
   if !consteval {
-    __v16qu v = __v16qu(__v2du{mempick_be<uint64_t>(s), 0});
+    __v16qu v;
+    if constexpr (byte_order == std::endian::little) {
+      __m128i raw = _mm_cvtsi64_si128(mempick_le<uint64_t>(s));
+      v = __v16qu(_mm_shuffle_epi8(
+          raw,
+          _mm_setr_epi8(1, 0, 3, 2, 5, 4, 7, 6, -1, -1, -1, -1, -1, -1, -1,
+                        -1)));
+    } else {
+      v = __v16qu(__v2du{mempick_be<uint64_t>(s), 0});
+    }
     __v16qu digits = __v16qu(v - '0' <= 9);
     __v16qu v_alpha = (v | 0x20) - 'a';
     __v16qu alpha = __v16qu(v_alpha < 6);
@@ -259,7 +290,12 @@ convert_8xdigit(const char* s) noexcept {
   }
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   if !consteval {
-    uint8x8_t v = vrev64_u8(uint8x8_t(uint64x1_t{mempick_le<uint64_t>(s)}));
+    uint8x8_t v;
+    if constexpr (byte_order == std::endian::little) {
+      v = vrev16_u8(uint8x8_t(uint64x1_t{mempick_le<uint64_t>(s)}));
+    } else {
+      v = vrev64_u8(uint8x8_t(uint64x1_t{mempick_le<uint64_t>(s)}));
+    }
     uint8x8_t v_digits = uint8x8_t(v - '0');
     uint8x8_t digits = uint8x8_t(v_digits < 10);
     uint8x8_t v_alpha = (v | 0x20) - 'a';
@@ -273,24 +309,35 @@ convert_8xdigit(const char* s) noexcept {
     return uint32x2_t(u)[0];
   }
 #endif
-  auto a = convert_4xdigit<assume_valid>(s);
-  auto b = convert_4xdigit<assume_valid>(s + 4);
+  auto a = convert_4xdigit<assume_valid, byte_order>(s);
+  auto b = convert_4xdigit<assume_valid, byte_order>(s + 4);
   if constexpr (!assume_valid) {
     if (!a || !b) return std::nullopt;
   }
-  return (hex_detail::v(a) << 16) + hex_detail::v(b);
+  if constexpr (byte_order == std::endian::little) {
+    return hex_detail::v(a) | (hex_detail::v(b) << 16);
+  } else {
+    return (hex_detail::v(a) << 16) | hex_detail::v(b);
+  }
 }
 
 // Convert 16 hexadecimal digits
-template <bool assume_valid = false>
+template <bool assume_valid = false, std::endian byte_order = std::endian::big>
 CBU_AARCH64_PRESERVE_ALL constexpr hex_detail::ConvertXDigit<assume_valid,
                                                              std::uint64_t>
 convert_16xdigit(const char* s) noexcept {
 #if defined __x86_64__ && defined __SSE4_1__ && defined __BMI2__
   if !consteval {
+    __m128i shuffle;
+    if constexpr (byte_order == std::endian::little) {
+      shuffle = _mm_setr_epi8(1, 0, 3, 2, 5, 4, 7, 6,
+                              9, 8, 11, 10, 13, 12, 15, 14);
+    } else {
+      shuffle = _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8,
+                              7, 6, 5, 4, 3, 2, 1, 0);
+    }
     __v16qu v = __v16qu(_mm_shuffle_epi8(
-          *(const __m128i_u*)s,
-          _mm_setr_epi8(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)));
+          *(const __m128i_u*)s, shuffle));
     __v16qu digits = __v16qu(v - '0' <= 9);
     __v16qu v_alpha = (v | 0x20) - 'a';
     __v16qu alpha = __v16qu(v_alpha < 6);
@@ -306,8 +353,14 @@ convert_16xdigit(const char* s) noexcept {
   }
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   if !consteval {
-    uint8x16_t v = vrev64q_u8(uint8x16_t(
-        uint64x2_t{mempick_le<uint64_t>(s + 8), mempick_le<uint64_t>(s)}));
+    uint8x16_t v;
+    if constexpr (byte_order == std::endian::little) {
+      v = vrev16q_u8(uint8x16_t(uint64x2_t{
+          mempick_le<uint64_t>(s), mempick_le<uint64_t>(s + 8)}));
+    } else {
+      v = vrev64q_u8(uint8x16_t(
+          uint64x2_t{mempick_le<uint64_t>(s + 8), mempick_le<uint64_t>(s)}));
+    }
     uint8x16_t v_digits = uint8x16_t(v - '0');
     uint8x16_t digits = uint8x16_t(v_digits < 10);
     uint8x16_t v_alpha = (v | 0x20) - 'a';
@@ -321,12 +374,17 @@ convert_16xdigit(const char* s) noexcept {
     return uint64x2_t(u)[0];
   }
 #endif
-  auto a = convert_8xdigit<assume_valid>(s);
-  auto b = convert_8xdigit<assume_valid>(s + 8);
+  auto a = convert_8xdigit<assume_valid, byte_order>(s);
+  auto b = convert_8xdigit<assume_valid, byte_order>(s + 8);
   if constexpr (!assume_valid) {
     if (!a || !b) return std::nullopt;
   }
-  return (std::uint64_t(hex_detail::v(a)) << 32) | hex_detail::v(b);
+  if constexpr (byte_order == std::endian::little) {
+    return hex_detail::v(a) |
+           (std::uint64_t(hex_detail::v(b)) << 32);
+  } else {
+    return (std::uint64_t(hex_detail::v(a)) << 32) | hex_detail::v(b);
+  }
 }
 
 }  // namespace cbu

@@ -37,6 +37,39 @@ namespace {
 
 using std::operator""sv;
 
+static_assert(convert_4xdigit("abcd") == 0xabcd);
+static_assert(convert_8xdigit("01234567") == 0x01234567u);
+static_assert(convert_16xdigit("0123456789abcdef") == 0x0123456789abcdefull);
+static_assert(
+    convert_16xdigit<false, std::endian::native>("0123456789abcdef") ==
+    (std::endian::native == std::endian::big ? 0x0123456789abcdefull
+                                             : 0xefcdab8967452301ull));
+
+TEST(HexTest, ConvertXDigitEndianTest) {
+  EXPECT_EQ(convert_4xdigit("abcd"), 0xabcd);
+  EXPECT_EQ((convert_4xdigit<false, std::endian::big>("abcd")), 0xabcd);
+  EXPECT_EQ((convert_4xdigit<false, std::endian::little>("abcd")), 0xcdab);
+
+  EXPECT_EQ(convert_8xdigit("01234567"), 0x01234567u);
+  EXPECT_EQ((convert_8xdigit<false, std::endian::big>("01234567")),
+            0x01234567u);
+  EXPECT_EQ((convert_8xdigit<false, std::endian::little>("01234567")),
+            0x67452301u);
+
+  EXPECT_EQ(convert_16xdigit("0123456789abcdef"), 0x0123456789abcdefull);
+  EXPECT_EQ((convert_16xdigit<false, std::endian::big>("0123456789abcdef")),
+            0x0123456789abcdefull);
+  EXPECT_EQ((convert_16xdigit<false, std::endian::little>("0123456789abcdef")),
+            0xefcdab8967452301ull);
+
+  EXPECT_FALSE((convert_4xdigit<false, std::endian::little>("00g0")));
+  EXPECT_FALSE(
+      (convert_8xdigit<false, std::endian::little>("000g0000")));
+  EXPECT_FALSE(
+      (convert_16xdigit<false, std::endian::little>(
+          "000000000000000g0000000000000000")));
+}
+
 TEST(HexTest, ToHexTest) {
   char buf[32];
 
