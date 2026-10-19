@@ -44,8 +44,18 @@ static_assert(
     convert_16xdigit<false, std::endian::native>("0123456789abcdef") ==
     (std::endian::native == std::endian::big ? 0x0123456789abcdefull
                                              : 0xefcdab8967452301ull));
+static_assert(convert_2xdigit("4f") == 0x4f);
+static_assert(convert_2xdigit<true>("4f") == 0x4f);
+static_assert(convert_2xdigit<true>("00") == 0);
 
 TEST(HexTest, ConvertXDigitEndianTest) {
+  // Regression test: convert_2xdigit<true> used not to compile
+  EXPECT_EQ(convert_2xdigit("4f"), 0x4f);
+  EXPECT_EQ(convert_2xdigit<true>("4f"), 0x4f);
+  EXPECT_EQ(convert_2xdigit<true>("00"), 0);
+  EXPECT_FALSE(convert_2xdigit("g0").has_value());
+  EXPECT_FALSE(convert_2xdigit("4g").has_value());
+
   EXPECT_EQ(convert_4xdigit("abcd"), 0xabcd);
   EXPECT_EQ((convert_4xdigit<false, std::endian::big>("abcd")), 0xabcd);
   EXPECT_EQ((convert_4xdigit<false, std::endian::little>("abcd")), 0xcdab);

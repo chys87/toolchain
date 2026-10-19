@@ -181,10 +181,12 @@ template <bool assume_valid = false>
 CBU_AARCH64_PRESERVE_ALL constexpr hex_detail::ConvertXDigit<assume_valid>
 convert_2xdigit(const char* s) noexcept {
   auto a = convert_xdigit<assume_valid>(*s++);
-  if (!a) return a;
+  if constexpr (!assume_valid)
+    if (!a) return a;
   auto b = convert_xdigit<assume_valid>(*s++);
-  if (!b) return b;
-  return *a * 16 + *b;
+  if constexpr (!assume_valid)
+    if (!b) return b;
+  return hex_detail::v(a) * 16 + hex_detail::v(b);
 }
 
 // Convert 4 hexadecimal digits

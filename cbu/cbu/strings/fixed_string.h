@@ -128,11 +128,11 @@ class basic_fixed_string {
   }
 
   constexpr basic_fixed_string<Len, true> with_z() const noexcept {
-    return basic_fixed_string<Len, true>(std::span(s_, Len));
+    return basic_fixed_string<Len, true>(std::span<const C, Len>(s_, Len));
   }
 
-  constexpr basic_fixed_string<Len, true> without_z() const noexcept {
-    return basic_fixed_string<Len, false>(std::span(s_, Len));
+  constexpr basic_fixed_string<Len, false> without_z() const noexcept {
+    return basic_fixed_string<Len, false>(std::span<const C, Len>(s_, Len));
   }
 
   template <std::size_t Offset, std::size_t SubLen = Len - Offset>

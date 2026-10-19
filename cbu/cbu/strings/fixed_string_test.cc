@@ -26,6 +26,7 @@
 #include "cbu/strings/fixed_string.h"
 
 #include <string_view>
+#include <type_traits>
 
 #include <gtest/gtest.h>
 
@@ -38,6 +39,20 @@ TEST(FixedStringTest, OperatorPlus) {
   constexpr auto c = a + b;
   static_assert(c.size() == 5);
   static_assert(std::string_view(c) == "abcde");
+}
+
+TEST(FixedStringTest, WithOrWithoutZ) {
+  constexpr fixed_string<3> s("abc");
+  static_assert(
+      std::is_same_v<decltype(s.with_z()), basic_fixed_string<3, true>>);
+  static_assert(
+      std::is_same_v<decltype(s.without_z()), basic_fixed_string<3, false>>);
+  static_assert(std::is_same_v<decltype(s.without_z().with_z()),
+                               basic_fixed_string<3, true>>);
+  static_assert(std::is_same_v<decltype(s.without_z().without_z()),
+                               basic_fixed_string<3, false>>);
+  static_assert(std::string_view(s.without_z().with_z()) == "abc");
+  static_assert(s.without_z().size() == 3);
 }
 
 TEST(FixedStringTest, OperatorPlusNonChar) {
