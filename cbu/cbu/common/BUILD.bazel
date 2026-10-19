@@ -74,6 +74,7 @@ cc_library(
     'tags.h',
     'type_traits.h',
     'utility.h',
+    'union_wrapper.h',
   ],
   deps = [
     ':concepts',
