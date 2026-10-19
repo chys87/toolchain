@@ -30,6 +30,8 @@
 
 #include <arpa/inet.h>
 
+#include <cstring>
+#include <string>
 #include <string_view>
 
 #include <gtest/gtest.h>
@@ -136,11 +138,50 @@ TEST(IPv6Test, FromStringTest) {
   test_invalid("::abcd:");
   test_invalid("abcd:");
   test_invalid("abcd::3::4");
+  // RFC 4291: "::" must omit at least one 16-bit field
+  test_invalid("::1:2:3:4:5:6:7:8");
+  test_invalid("1::2:3:4:5:6:7:8");
+  test_invalid("1:2::3:4:5:6:7:8");
+  test_invalid("1:2:3:4:5:6:7::8");
+  test_invalid("1:2:3:4:5:6:7:8::");
+  test_invalid("::1:2:3:4:5:6:1.2.3.4");
+  test_invalid("1::2:3:4:5:6:7.8.9.10");
   test_valid("64:ff9b::", "64:ff9b::0.0.0.0");
   test_valid("64:ff9b::1.2.3.4", "64:ff9b::1.2.3.4");
 
   ASSERT_EQ(IPv6::FromString("2554::1987").value_or(IPv6()),
             IPv6(0x2554, 0, 0, 0, 0, 0, 0, 0x1987));
+}
+
+TEST(IPv6Test, FromStringInetPtonCompat) {
+  // Table-driven comparison against inet_pton, especially for addresses
+  // where "::" omits no field (RFC 4291 requires at least one).
+  for (std::string_view src : {
+           // "::" must omit at least one field
+           "::1:2:3:4:5:6:7:8",
+           "1::2:3:4:5:6:7:8",
+           "1:2::3:4:5:6:7:8",
+           "1:2:3:4:5:6:7::8",
+           "1:2:3:4:5:6:7:8::",
+           "::1:2:3:4:5:6:1.2.3.4",
+           "1::2:3:4:5:6:7.8.9.10",
+           // Valid counterparts
+           "::",
+           "::1",
+           "1::",
+           "abcd::1:dead:beef",
+           "1:2:3:4:5::7.8.9.10",
+           "64:ff9b::1.2.3.4",
+           "::ffff:192.168.1.5",
+       }) {
+    SCOPED_TRACE(src);
+    in6_addr ref{};
+    int rc = inet_pton(AF_INET6, std::string(src).c_str(), &ref);
+    auto parsed = IPv6::FromString(src);
+    EXPECT_EQ(parsed.has_value(), rc == 1);
+    if (parsed && rc == 1)
+      EXPECT_EQ(std::memcmp(&parsed->Get(), &ref, sizeof(ref)), 0);
+  }
 }
 
 TEST(IPv6Test, LocalhostTest) {

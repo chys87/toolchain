@@ -395,6 +395,9 @@ bool IPv6::FromString(std::string_view s, in6_addr& addr) noexcept {
     CBU_NAIVE_LOOP
     for (unsigned i = k; i != 8; ++i) *dst-- = 0;
 #endif
+  } else if (omit_pos >= 0) [[unlikely]] {
+    // RFC 4291: "::" must omit at least one 16-bit field
+    return false;
   }
   return true;
 }
