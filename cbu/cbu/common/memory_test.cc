@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019, 2020, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,8 @@
  */
 
 #include "memory.h"
+
+#include <new>
 
 #include <gtest/gtest.h>
 
@@ -99,6 +101,44 @@ class NonTrivialType {
   static inline int constructors_ = 0;
   static inline int destructors_ = 0;
 };
+
+struct ThrowingCtorException {};
+
+// Over-aligned so that OutlinableArray's heap path goes through the aligned
+// array new/delete operators, which we count below.
+struct alignas(256) ThrowingCtorType {
+  ThrowingCtorType() {
+    if (constructors_ == throw_at_) throw ThrowingCtorException{};
+    ++constructors_;
+  }
+  ~ThrowingCtorType() { ++destructors_; }
+
+  static inline int constructors_ = 0;
+  static inline int destructors_ = 0;
+  static inline int throw_at_ = -1;
+};
+
+int g_aligned_array_news = 0;
+int g_aligned_array_deletes = 0;
+
+}  // namespace cbu
+
+void* operator new[](std::size_t n, std::align_val_t a) {
+  ++cbu::g_aligned_array_news;
+  return ::operator new(n, a);
+}
+
+void operator delete[](void* p, std::align_val_t a) noexcept {
+  ++cbu::g_aligned_array_deletes;
+  ::operator delete(p, a);
+}
+
+void operator delete[](void* p, std::size_t n, std::align_val_t a) noexcept {
+  ++cbu::g_aligned_array_deletes;
+  ::operator delete(p, n, a);
+}
+
+namespace cbu {
 
 TEST(MemoryTest, MakeUniqueDestructorTest) {
   NonTrivialType::constructors_ = 0;
@@ -194,6 +234,48 @@ TEST(MemoryTest, OutlinableArrayNonTrivial) {
     EXPECT_EQ(8, NonTrivialType::constructors_);
   }
   EXPECT_EQ(8, NonTrivialType::destructors_);
+}
+
+TEST(MemoryTest, OutlinableArrayConstructorThrows) {
+  ThrowingCtorType::constructors_ = 0;
+  ThrowingCtorType::destructors_ = 0;
+  ThrowingCtorType::throw_at_ = 2;
+
+  // Heap path: the raw memory must be freed if a constructor throws
+  OutlinableArrayBuffer<ThrowingCtorType, 2> buf;
+  int old_news = g_aligned_array_news;
+  int old_deletes = g_aligned_array_deletes;
+  bool caught = false;
+  try {
+    OutlinableArray<ThrowingCtorType> arr(&buf, 5);
+  } catch (const ThrowingCtorException&) {
+    caught = true;
+  }
+  EXPECT_TRUE(caught);
+  EXPECT_EQ(2, ThrowingCtorType::constructors_);
+  EXPECT_EQ(2, ThrowingCtorType::destructors_);
+  EXPECT_EQ(old_news + 1, g_aligned_array_news);
+  EXPECT_EQ(old_deletes + 1, g_aligned_array_deletes);
+
+  // Stack path: no allocation, constructed elements are destroyed
+  OutlinableArrayBuffer<ThrowingCtorType, 5> buf2;
+  ThrowingCtorType::constructors_ = 0;
+  ThrowingCtorType::destructors_ = 0;
+  ThrowingCtorType::throw_at_ = 1;
+  old_news = g_aligned_array_news;
+  old_deletes = g_aligned_array_deletes;
+  caught = false;
+  try {
+    OutlinableArray<ThrowingCtorType> arr(
+        &buf2, 3, OutlinableArray<ThrowingCtorType>::for_overwrite);
+  } catch (const ThrowingCtorException&) {
+    caught = true;
+  }
+  EXPECT_TRUE(caught);
+  EXPECT_EQ(1, ThrowingCtorType::constructors_);
+  EXPECT_EQ(1, ThrowingCtorType::destructors_);
+  EXPECT_EQ(old_news, g_aligned_array_news);
+  EXPECT_EQ(old_deletes, g_aligned_array_deletes);
 }
 
 }  // namespace cbu

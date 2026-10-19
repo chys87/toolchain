@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -335,7 +335,7 @@ class OutlinableArray {
       OutlinableArrayBuffer<T, N>* buffer,
       std::size_t n) noexcept(kMemoryNoExcept and
                                   std::is_nothrow_default_constructible_v<T>)
-      : ptr_(new(get_pointer(buffer, n)) T[n]()),
+      : ptr_(allocate_and_construct<false>(buffer, n)),
         size_(n),
         allocated_(n <= N ? 0 : n) {}
 
@@ -344,7 +344,7 @@ class OutlinableArray {
       OutlinableArrayBuffer<T, N>* buffer, std::size_t n,
       ForOverwriteTag) noexcept(kMemoryNoExcept and
                                     std::is_nothrow_default_constructible_v<T>)
-      : ptr_(new(get_pointer(buffer, n)) T[n]),
+      : ptr_(allocate_and_construct<true>(buffer, n)),
         size_(n),
         allocated_(n <= N ? 0 : n) {}
 
@@ -367,13 +367,32 @@ class OutlinableArray {
   constexpr T& operator[](std::size_t k) const noexcept { return ptr_[k]; }
 
  private:
-  template <std::size_t N>
-  constexpr void* get_pointer(OutlinableArrayBuffer<T, N>* buffer,
-                              std::size_t n) CBU_MEMORY_NOEXCEPT {
-    if (n <= N)
-      return buffer->buffer;
-    else
-      return raw_array_new<T>(n);
+  // Allocates memory for n elements, from buffer if n <= N, or from the
+  // heap otherwise, and constructs the elements there.
+  // If an element constructor throws, the already constructed elements are
+  // destroyed by the placement new expression itself; the raw memory is
+  // freed here if it was heap allocated.
+  template <bool ForOverwrite, std::size_t N>
+  static constexpr T* allocate_and_construct(
+      OutlinableArrayBuffer<T, N>* buffer,
+      std::size_t n) noexcept(kMemoryNoExcept and
+                                  std::is_nothrow_default_constructible_v<T>) {
+    if (n <= N) {
+      if constexpr (ForOverwrite)
+        return new (buffer->buffer) T[n];
+      else
+        return new (buffer->buffer) T[n]();
+    }
+    T* p = raw_array_new<T>(n);
+    try {
+      if constexpr (ForOverwrite)
+        return new (p) T[n];
+      else
+        return new (p) T[n]();
+    } catch (...) {
+      raw_array_delete(p, n);
+      throw;
+    }
   }
 
  private:
