@@ -229,8 +229,14 @@ void* align_check(void* = 0) {
       fprintf (stderr, "Misalign %p on %zu boundary.\n", q, boundary);
       return (void *)1;
     }
+    // POSIX requires success for size 0 (NULL or a unique pointer)
+    q = (void *) 1;
+    if (posix_memalign (&q, boundary, 0) != 0) {
+      fprintf (stderr, "posix_memalign (%zu, 0) failed.\n", boundary);
+      return (void *)1;
+    }
+    free (q);
     free(p);
-    free(q);
   }
   void* p = valloc(rand_r(&seed) % 8192 + 1);
   if ((uintptr_t)p % 4096)

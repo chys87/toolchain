@@ -101,6 +101,12 @@ extern "C" int cbu_posix_memalign(void** pret, size_t boundary,
                                   size_t n) noexcept {
   if (!alloc::is_alignment_valid_posix(boundary)) [[unlikely]]
     return EINVAL;
+  // POSIX allows n == 0, in which case the returned pointer may be
+  // NULL or a unique pointer; we choose NULL.
+  if (n == 0) [[unlikely]] {
+    *pret = nullptr;
+    return 0;
+  }
   void* ptr = alloc::allocate(n, alloc::AllocateOptions().with_align(boundary));
   *pret = ptr;
 #ifdef CBU_ASSUME_MEMORY_ALLOCATION_NEVER_FAILS
