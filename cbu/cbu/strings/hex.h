@@ -72,8 +72,10 @@ constexpr char* LittleEndian32ToHex(char* dst, std::uint32_t x) noexcept {
     auto a = uint8x8_t(uint32x2_t{x >> 4, 0});
     auto b = uint8x8_t(uint32x2_t{x, 0});
     auto vx = vzip1_u8(a, b);
-    *(uint8x8_t*)dst =
-        vqtbl1_u8(*(const uint8x16_t*)kHexDigits<style>, vx & 0xf);
+    vst1_u8(reinterpret_cast<uint8_t*>(dst),
+            vqtbl1_u8(vld1q_u8(reinterpret_cast<const uint8_t*>(
+                          kHexDigits<style>)),
+                      vx & 0xf));
     return dst + 8;
   }
 #elif defined __SSSE3__
@@ -99,8 +101,10 @@ constexpr char* LittleEndian64ToHex(char* dst, std::uint64_t x) noexcept {
     auto a = uint8x16_t(uint64x2_t{x >> 4, 0});
     auto b = uint8x16_t(uint64x2_t{x, 0});
     auto vx = vzip1q_u8(a, b);
-    *(uint8x16_t*)dst =
-        vqtbl1q_u8(*(const uint8x16_t*)kHexDigits<style>, vx & 0xf);
+    vst1q_u8(reinterpret_cast<uint8_t*>(dst),
+             vqtbl1q_u8(vld1q_u8(reinterpret_cast<const uint8_t*>(
+                           kHexDigits<style>)),
+                        vx & 0xf));
     return dst + 16;
   }
 #elif defined __SSSE3__

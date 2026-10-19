@@ -83,7 +83,8 @@ inline char* FormatField(char* w, uint16_t v) noexcept {
   uint32_t vext = ((v & 0xff) << 16) | (v >> 8);
   vext = ((vext << 8) | (vext >> 4)) & 0x0f0f0f0fu;
   uint8x8_t chars_v =
-      vqtbl1_u8(*(const uint8x16_t*)"0123456789abcdef",
+      vqtbl1_u8(vld1q_u8(reinterpret_cast<const uint8_t*>(
+                    "0123456789abcdef")),
                 vreinterpret_u8_u32(vmov_n_u32(vext >> (skip_bytes * 8))));
   memdrop(w, vreinterpret_u32_u8(chars_v)[0]);
   return w + 4 - skip_bytes;
@@ -108,7 +109,7 @@ char* IPv6::Format(char* w, const in6_addr& addr, int flags) noexcept {
     __m128i v6 =
         _mm_loadu_si128(reinterpret_cast<const __m128i*>(addr.s6_addr));
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    uint16x8_t v6 = *reinterpret_cast<const uint16x8_t*>(addr.s6_addr);
+    uint16x8_t v6 = vreinterpretq_u16_u8(vld1q_u8(addr.s6_addr));
 #endif
 
     uint32_t zero_mask = 0;

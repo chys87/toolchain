@@ -220,8 +220,9 @@ TEST(IPv6Test, FromStringInetPtonCompat) {
     int rc = inet_pton(AF_INET6, std::string(src).c_str(), &ref);
     auto parsed = IPv6::FromString(src);
     EXPECT_EQ(parsed.has_value(), rc == 1);
-    if (parsed && rc == 1)
+    if (parsed && rc == 1) {
       EXPECT_EQ(std::memcmp(&parsed->Get(), &ref, sizeof(ref)), 0);
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2021-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2021-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -350,14 +350,22 @@ void* copy(void* dst, const void* src, size_t size) noexcept {
   }
 
   while (size >= 128) {
-    uint64x2_t x0 = *(const uint64x2_t*)(s + 16 * 0);
-    uint64x2_t x1 = *(const uint64x2_t*)(s + 16 * 1);
-    uint64x2_t x2 = *(const uint64x2_t*)(s + 16 * 2);
-    uint64x2_t x3 = *(const uint64x2_t*)(s + 16 * 3);
-    uint64x2_t x4 = *(const uint64x2_t*)(s + 16 * 4);
-    uint64x2_t x5 = *(const uint64x2_t*)(s + 16 * 5);
-    uint64x2_t x6 = *(const uint64x2_t*)(s + 16 * 6);
-    uint64x2_t x7 = *(const uint64x2_t*)(s + 16 * 7);
+    uint64x2_t x0 = vreinterpretq_u64_u8(
+        vld1q_u8(reinterpret_cast<const uint8_t*>(s + 16 * 0)));
+    uint64x2_t x1 = vreinterpretq_u64_u8(
+        vld1q_u8(reinterpret_cast<const uint8_t*>(s + 16 * 1)));
+    uint64x2_t x2 = vreinterpretq_u64_u8(
+        vld1q_u8(reinterpret_cast<const uint8_t*>(s + 16 * 2)));
+    uint64x2_t x3 = vreinterpretq_u64_u8(
+        vld1q_u8(reinterpret_cast<const uint8_t*>(s + 16 * 3)));
+    uint64x2_t x4 = vreinterpretq_u64_u8(
+        vld1q_u8(reinterpret_cast<const uint8_t*>(s + 16 * 4)));
+    uint64x2_t x5 = vreinterpretq_u64_u8(
+        vld1q_u8(reinterpret_cast<const uint8_t*>(s + 16 * 5)));
+    uint64x2_t x6 = vreinterpretq_u64_u8(
+        vld1q_u8(reinterpret_cast<const uint8_t*>(s + 16 * 6)));
+    uint64x2_t x7 = vreinterpretq_u64_u8(
+        vld1q_u8(reinterpret_cast<const uint8_t*>(s + 16 * 7)));
     s += 128;
     asm("stnp %q[x0], %q[x1], [%[d], 0]\n"
         "stnp %q[x2], %q[x3], [%[d], 32]\n"

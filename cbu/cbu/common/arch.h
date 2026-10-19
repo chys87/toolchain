@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -282,16 +282,18 @@ inline uint8x16_t neon_lobyte_mask(unsigned n) noexcept {
   // mask + (15 ^ n) - 14   (mul == 2)
   // mask + (7 ^ n) - 12    (mul == 4)
   // (assuming >> and << has higher precedence)
-  return *(const uint8x16_t*)(arch_detail::arch_mask_16_ff_16_0 +
-                              ((31 >> s) ^ n) * long(mul) - (16 - mul));
+  return vld1q_u8(reinterpret_cast<const uint8_t*>(
+      arch_detail::arch_mask_16_ff_16_0 +
+      ((31 >> s) ^ n) * long(mul) - (16 - mul)));
 }
 
 template <unsigned mul = 1>
   requires(arch_detail::mul_to_shift<mul> >= 0)
 inline uint8x16_t neon_lobyte_negmask(unsigned n) noexcept {
   int s = arch_detail::mul_to_shift<mul>;
-  return *(const uint8x16_t*)(arch_detail::arch_mask_16_0_16_ff +
-                              ((31 >> s) ^ n) * long(mul) - (16 - mul));
+  return vld1q_u8(reinterpret_cast<const uint8_t*>(
+      arch_detail::arch_mask_16_0_16_ff +
+      ((31 >> s) ^ n) * long(mul) - (16 - mul)));
 }
 
 // Code inspired by sysdeps/x86_64/multiarch/varshift.[hc] in glibc
@@ -300,7 +302,8 @@ inline uint8x16_t neon_rshift_u8(uint8x16_t value, size_t bytes) noexcept {
       0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15,
       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
   };
-  return vqtbl1q_u8(value, *(const uint8x16_t*)(mask + bytes));
+  return vqtbl1q_u8(
+      value, vld1q_u8(reinterpret_cast<const uint8_t*>(mask + bytes)));
 }
 
 inline uint8x16_t neon_load_unaligned_u8(const char* s,
@@ -308,7 +311,7 @@ inline uint8x16_t neon_load_unaligned_u8(const char* s,
 #if CBU_ADDRESS_SANITIZER
   alignas(16) char buffer[16] = {};
   __builtin_memcpy(buffer, s, length);
-  return *(const uint8x16_t*)buffer;
+  return vld1q_u8(reinterpret_cast<const uint8_t*>(buffer));
 #else
   using uintptr_t = unsigned long;
   static_assert(sizeof(uintptr_t) == sizeof(void*), "");
@@ -319,10 +322,11 @@ inline uint8x16_t neon_load_unaligned_u8(const char* s,
   if (((us + ul - 1) ^ (us + 15)) & 4096) {
     // Only do this if movdqu would cross page boundary, but the real range do
     // not.
-    uint8x16_t v = *(const uint8x16_t*)(uintptr_t(s) & ~15);
+    uint8x16_t v = vld1q_u8(
+        reinterpret_cast<const uint8_t*>(uintptr_t(s) & ~15));
     return neon_rshift_u8(v, uintptr_t(s) & 15);
   } else {
-    return *(const uint8x16_t*)s;
+    return vld1q_u8(reinterpret_cast<const uint8_t*>(s));
   }
 #endif
 }

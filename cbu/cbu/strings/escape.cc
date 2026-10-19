@@ -238,7 +238,7 @@ char* EscapeImpl<style>::raw(char* w, const char* s, std::size_t n) noexcept {
   s = (const char*)(std::uintptr_t(s) & -16);
   n += misalign;
   {
-    uint8x16_t chars = *(const uint8x16_t*)s;
+    uint8x16_t chars = vld1q_u8(reinterpret_cast<const uint8_t*>(s));
     uint8x16_t msk = get_encoding_mask<style>(chars);
     std::uint64_t bmsk = uint64x1_t(vshrn_n_u16(uint16x8_t(msk), 4))[0];
     w = encode_by_mask<style>(w, s, bmsk, misalign,
@@ -249,11 +249,11 @@ char* EscapeImpl<style>::raw(char* w, const char* s, std::size_t n) noexcept {
   n -= 16;
 
   while (n >= 16) {
-    uint8x16_t chars = *(const uint8x16_t*)s;
+    uint8x16_t chars = vld1q_u8(reinterpret_cast<const uint8_t*>(s));
     uint8x16_t msk = get_encoding_mask<style>(chars);
     std::uint64_t bmsk = uint64x1_t(vshrn_n_u16(uint16x8_t(msk), 4))[0];
     if (bmsk == 0) {
-      *(uint8x16_t*)w = chars;
+      vst1q_u8(reinterpret_cast<uint8_t*>(w), chars);
       w += 16;
     } else {
       CBU_HINT_ASSUME((bmsk & 0x1111'1111'1111'1111ull) != 0);
@@ -264,7 +264,7 @@ char* EscapeImpl<style>::raw(char* w, const char* s, std::size_t n) noexcept {
   }
 
   if (n) {
-    uint8x16_t chars = *(const uint8x16_t*)s;
+    uint8x16_t chars = vld1q_u8(reinterpret_cast<const uint8_t*>(s));
     uint8x16_t msk = get_encoding_mask<style>(chars);
     std::uint64_t bmsk = uint64x1_t(vshrn_n_u16(uint16x8_t(msk), 4))[0];
     w = encode_by_mask<style>(w, s, bmsk, 0, n);
@@ -357,11 +357,11 @@ CopyUntilBackslashResult copy_until_backslash(char* dst, const char* src,
   }
 #elifdef __ARM_NEON
   while (src + 16 <= end) {
-    uint8x16_t val = *(const uint8x16_t*)src;
+    uint8x16_t val = vld1q_u8(reinterpret_cast<const uint8_t*>(src));
     uint8x16_t mask = uint8x16_t((val == '\\') || (val == '"'));
     uint64_t mask4 = uint64_t(uint64x1_t(vshrn_n_u16(uint16x8_t(mask), 4)));
     if (mask4 == 0) {
-      *(uint8x16_t*)dst = val;
+      vst1q_u8(reinterpret_cast<uint8_t*>(dst), val);
       src += 16;
       dst += 16;
     } else {

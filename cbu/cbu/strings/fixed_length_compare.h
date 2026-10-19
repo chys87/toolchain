@@ -235,13 +235,15 @@ inline constexpr bool IsAllZero(const T* p) {
     } else if constexpr (N > 24) {
       uint8x16_t u = {};
       if constexpr (Opts.right_align) {
-        if constexpr (N % 16) u = *(const uint8x16_t*)p;
+        if constexpr (N % 16)
+          u = vld1q_u8(reinterpret_cast<const uint8_t*>(p));
         for (std::size_t i = N % 16; i < N; i += 16)
-          u |= *(const uint8x16_t*)(p + i);
+          u |= vld1q_u8(reinterpret_cast<const uint8_t*>(p + i));
       } else {
-        if constexpr (N % 16) u = *(const uint8x16_t*)(p + N - 16);
+        if constexpr (N % 16)
+          u = vld1q_u8(reinterpret_cast<const uint8_t*>(p + N - 16));
         for (std::size_t i = N / 16 * 16; i; i -= 16)
-          u |= *(const uint8x16_t*)(p + i - 16);
+          u |= vld1q_u8(reinterpret_cast<const uint8_t*>(p + i - 16));
       }
       u = vpmaxq_u8(u, u);
       return vgetq_lane_u64(vreinterpretq_u64_u8(u), 0) == 0;

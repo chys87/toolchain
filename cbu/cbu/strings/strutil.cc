@@ -162,12 +162,14 @@ size_t memcnt(const char *s, char c, size_t n) noexcept {
   uint8x16_t ref = vdupq_n_u8(c);
 
   size_t misalign = (uintptr_t)s & 15;
-  const uint8x16_t* p = (const uint8x16_t*)((uintptr_t)s & -16);
+  const uint8_t* p = (const uint8_t*)((uintptr_t)s & -16);
 
   uint64_t mask =
       vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(
-                        vreinterpretq_u16_u8(uint8x16_t(ref == *p++)), 4)),
+                        vreinterpretq_u16_u8(uint8x16_t(ref == vld1q_u8(p))),
+                        4)),
                     0);
+  p += 16;
   mask &= 0x1111'1111'1111'1111ull;
   mask >>= misalign * 4;
 
@@ -182,8 +184,8 @@ size_t memcnt(const char *s, char c, size_t n) noexcept {
 
   while (l >= 128) {
     l -= 128;
-    uint8x16x4_t x = vld1q_u8_x4((const uint8_t*)p);
-    uint8x16x4_t y = vld1q_u8_x4((const uint8_t*)p + 64);
+    uint8x16x4_t x = vld1q_u8_x4(p);
+    uint8x16x4_t y = vld1q_u8_x4(p + 64);
     uint8x16_t va = uint8x16_t(ref == x.val[0]);
     uint8x16_t vb = uint8x16_t(ref == x.val[1]);
     uint8x16_t vc = uint8x16_t(ref == x.val[2]);
@@ -194,19 +196,21 @@ size_t memcnt(const char *s, char c, size_t n) noexcept {
     uint8x16_t vh = uint8x16_t(ref == y.val[3]);
     uint8x16_t sum = va + vb + vc + vd + ve + vf + vg + vh;
     r -= int8_t(vaddvq_u8(sum));
-    p += 8;
+    p += 128;
   }
 
   while (l >= 16) {
     l -= 16;
-    uint8x16_t a = uint8x16_t(ref == *p++);
+    uint8x16_t a = uint8x16_t(ref == vld1q_u8(p));
     uint8_t cnt = -vaddvq_u8(a);
     r += cnt;
+    p += 16;
   }
 
   if (l) {
     mask = vget_lane_u64(vreinterpret_u64_u8(vshrn_n_u16(
-                             vreinterpretq_u16_u8(uint8x16_t(ref == *p++)), 4)),
+                             vreinterpretq_u16_u8(uint8x16_t(ref == vld1q_u8(p))),
+                             4)),
                          0);
     r += std::uint32_t(std::popcount(bzhi(mask, l* 4))) / 4;
   }
@@ -328,8 +332,8 @@ int strnumcmp(const char* a, size_t al, const char* b, size_t bl) noexcept {
 #elif defined __ARM_NEON && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   for (size_t xl = std::min(al, bl) / 16; xl; --xl) {
     uint8x8_t cmp =
-        vshrn_n_u16(vreinterpretq_u16_u8(uint8x16_t(*(const uint8x16_t*)u !=
-                                                    *(const uint8x16_t*)v)),
+        vshrn_n_u16(vreinterpretq_u16_u8(
+                        uint8x16_t(vld1q_u8(u) != vld1q_u8(v))),
                     4);
     uint64_t mask = vget_lane_u64(vreinterpret_u64_u8(cmp), 0);
     if (mask != 0) {
