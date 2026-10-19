@@ -126,6 +126,7 @@ ValueType* Trie<TotalBits, ValueType>::lookup(uintptr_t v) {
   Node* node = *pnode;
   for (int i = Levels * LevelBits; ;) {
     node = ensure_node(pnode, allocator_);
+    if (false_no_fail(node == nullptr)) return nullptr;
     i -= LevelBits;
     if (i < 0)
       break;

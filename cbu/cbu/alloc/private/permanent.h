@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -105,7 +105,7 @@ T* PermaAlloc<T>::alloc() {
 template <PermaAllocable T>
 T* PermaAlloc<T>::alloc_list(unsigned preferred_count) {
   unsigned count = 0;
-  T* ret;
+  T* ret = nullptr;
   T** tail = &ret;
 
   for (std::lock_guard locker(lock_); list_ && (count < preferred_count);) {
