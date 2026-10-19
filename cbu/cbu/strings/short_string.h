@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2020-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2020-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -58,6 +58,8 @@ concept BuilderForShortString = requires(const Builder& bldr) {
   { bldr.write(std::declval<char*>()) } -> std::same_as<char*>;
 };
 
+// The caller must guarantee that the length never exceeds MaxLen:
+// constructors, set_length and assign perform no bounds checking.
 template <std::size_t MaxLen, bool Z>
 class basic_short_string {
  public:
