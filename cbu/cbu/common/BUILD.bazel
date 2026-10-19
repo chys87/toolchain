@@ -65,6 +65,7 @@ cc_library(
     'iterator.h',
     'memory.h',
     'multi_alloc.h',
+    'no_destroy.h',
     'once.h',
     'ref_cnt.h',
     'shared_instance.h',

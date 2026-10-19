@@ -117,6 +117,7 @@
 #endif
 
 
+#undef CBU_COMPILER_HAS_NO_DESTROY
 #define CBU_NO_DESTROY
 #define CBU_LIFETIME_BOUND
 
@@ -124,6 +125,7 @@
 #if __has_cpp_attribute(clang::no_destroy)
 #  undef CBU_NO_DESTROY
 #  define CBU_NO_DESTROY [[clang::no_destroy]]
+#  define CBU_COMPILER_HAS_NO_DESTROY
 #endif
 
 #if __has_cpp_attribute(clang::lifetimebound)
