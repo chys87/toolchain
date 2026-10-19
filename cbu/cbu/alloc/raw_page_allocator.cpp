@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 #include <sys/mman.h>
 
 #include <algorithm>
+#include <atomic>
 #include <mutex>
 #include <utility>
 
@@ -45,8 +46,10 @@ namespace alloc {
 namespace {
 
 LowLevelMutex brk_mutex;
-void* brk_initial = nullptr;
-void* brk_cur = nullptr;
+// The brk region is [brk_initial, brk_cur); brk_cur only grows.
+// brk_initial is always published before brk_cur's first non-zero value.
+std::atomic<uintptr_t> brk_initial{0};
+std::atomic<uintptr_t> brk_cur{0};
 
 #if FSYSCALL_USE
 inline void* linux_brk(void* ptr) {
@@ -60,16 +63,21 @@ inline void* linux_brk(void* ptr) {
 
 void* raw_brk_pages(size_t size, size_t* alloc_size) noexcept {
   std::lock_guard locker(brk_mutex);
-  if (brk_cur == nullptr)
-    brk_initial = brk_cur = cbu::pow2_ceil(linux_brk(nullptr), kPageSize);
+  uintptr_t cur = brk_cur.load(std::memory_order_relaxed);
+  if (cur == 0) {
+    cur = uintptr_t(cbu::pow2_ceil(linux_brk(nullptr), kPageSize));
+    brk_initial.store(cur, std::memory_order_relaxed);
+    brk_cur.store(cur, std::memory_order_release);
+  }
   size_t preferred_size =
       std::max<size_t>(size, kTHPSize ? kTHPSize : 32 * kPageSize);
-  void* brk_target = byte_advance(brk_cur, preferred_size);
-  if constexpr (kTHPSize > 0) brk_target = cbu::pow2_ceil(brk_target, kTHPSize);
-  *alloc_size = byte_distance(brk_cur, brk_target);
-  void* brk_new = linux_brk(brk_target);
-  if (brk_new != brk_target) return nullptr;
-  return CBU_HINT_NONNULL(std::exchange(brk_cur, brk_new));
+  uintptr_t target = cur + preferred_size;
+  if constexpr (kTHPSize > 0) target = cbu::pow2_ceil(target, kTHPSize);
+  *alloc_size = target - cur;
+  void* brk_new = linux_brk(reinterpret_cast<void*>(target));
+  if (uintptr_t(brk_new) != target) return nullptr;
+  brk_cur.store(target, std::memory_order_release);
+  return CBU_HINT_NONNULL(reinterpret_cast<void*>(cur));
 }
 
 void* raw_mmap_pages(size_t size, bool allow_thp) noexcept {
@@ -151,7 +159,13 @@ bool RawPageAllocator::is_from_brk(void* ptr) noexcept {
 #ifdef CBU_NO_BRK
   return false;
 #else
-  return ptr >= brk_initial && ptr < brk_cur;
+  // Load the end first: whenever it is non-zero, the initial value must
+  // already have been published before it, so the pair is consistent.
+  // If it is still zero, the comparison below is false anyway.
+  uintptr_t end = brk_cur.load(std::memory_order_acquire);
+  uintptr_t begin = brk_initial.load(std::memory_order_acquire);
+  uintptr_t p = uintptr_t(ptr);
+  return p >= begin && p < end;
 #endif
 }
 
