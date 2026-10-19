@@ -56,5 +56,22 @@ static_assert(std::is_same_v<S1::ref_t, S1::ref_regular_t>);
 static_assert(sizeof(S::ref_t) == 1);
 static_assert(std::is_same_v<S::ref_t, S::ref_packed_t>);
 
+// Regression test: long strings (> 255 bytes) with a small offset range make
+// offset_type (std::uint8_t) narrower than len_type (std::uint16_t).
+consteval fixed_string<261> make_long_string() {
+  fixed_string<261> s{};
+  for (std::size_t i = 0; i < 261; ++i) s[i] = char('0' + i % 10);
+  return s;
+}
+constexpr auto kLong = make_long_string();
+constexpr auto kLongSub = kLong.substr<5>();  // 256 bytes, at offset 5
+
+using S2 = string_collection<kLong, kLongSub>;
+static_assert(std::is_same_v<S2::ref_t, S2::ref_packed_t>);
+static_assert(std::is_same_v<S2::offset_type, std::uint8_t>);
+static_assert(std::is_same_v<S2::len_type, std::uint16_t>);
+static_assert(S2::ref<kLongSub> == std::string_view(kLongSub));
+static_assert(S2::ref<kLongSub>.data() == S2::ref<kLong>.data() + 5);
+
 }  // namespace
 }  // namespace cbu

@@ -219,7 +219,7 @@ struct string_collection {
     type svalue = 0;
 
     constexpr ref_packed_t() noexcept = default;
-    constexpr ref_packed_t(offset_type offset, offset_type len) noexcept
+    constexpr ref_packed_t(offset_type offset, len_type len) noexcept
         : svalue(offsets_params.r2s(offset) |
                  (type(lens_params.r2s(len)) << kOffsetBits)) {}
     constexpr std::string_view view() const noexcept { return {data(), size()}; }
