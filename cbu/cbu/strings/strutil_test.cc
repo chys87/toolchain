@@ -184,7 +184,11 @@ TEST(StrUtilTest, CommonPrefix_Utf8) {
 
 inline size_t naive_common_suffix(std::string_view a, std::string_view b) {
   size_t k = 0;
-  while (k < a.length() && k < b.length() && a.end()[-k - 1] == b.end()[-k - 1])
+  // Use indexing instead of reverse iterators/end()-relative access:
+  // clang 22 on aarch64 miscompiles the latter when libc++ headers are in
+  // play, turning a computed address into a hardcoded -1.
+  while (k < a.length() && k < b.length() &&
+         a[a.length() - 1 - k] == b[b.length() - 1 - k])
     ++k;
   return k;
 }

@@ -29,6 +29,7 @@
 #pragma once
 
 #include <compare>
+#include <memory>
 #include <utility>
 
 namespace cbu {

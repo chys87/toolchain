@@ -26,6 +26,7 @@
 
 #include "arena.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <exception>
 #include <utility>
@@ -274,6 +275,9 @@ TEST(ArenaTest, ArrayCopyDestroysConstructedElementsOnException) {
                  std::exception);
     source.clear();
   }
+  // std::vector::clear() destroys elements in unspecified order
+  // (libstdc++: forward, libc++: reverse).
+  std::ranges::sort(log);
   EXPECT_EQ((std::vector{10, 10, 20}), log);
 }
 
