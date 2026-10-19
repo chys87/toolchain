@@ -44,10 +44,26 @@ void FutexWakeAll(std::uint32_t* guard) noexcept;
 void FutexWakeOne(std::uint32_t* guard) noexcept;
 void FutexWait(std::uint32_t* guard, std::uint32_t value) noexcept;
 
+template <typename Values>
+inline constexpr bool ValuesAreValid =
+    Values::NEW != Values::ABORTED &&
+    Values::NEW != Values::RUNNING &&
+    Values::NEW != Values::RUNNING_WAITING &&
+    Values::ABORTED != Values::RUNNING &&
+    Values::ABORTED != Values::RUNNING_WAITING &&
+    Values::RUNNING != Values::RUNNING_WAITING &&
+    !Values::IsInited(Values::NEW) &&
+    !Values::IsInited(Values::ABORTED) &&
+    !Values::IsInited(Values::RUNNING) &&
+    !Values::IsInited(Values::RUNNING_WAITING);
+
 // After uninit, the status is modified to ABORTED
 // (It's unsafe to reset it to NEW)
 template <typename Values>
 bool UninitNoRace(std::uint32_t* guard) noexcept {
+  static_assert(ValuesAreValid<Values>,
+                "init_guard control states must be distinct and uninitialized");
+
   if (Values::IsInited(*guard)) {
     *guard = Values::ABORTED;
     return true;
@@ -58,6 +74,9 @@ bool UninitNoRace(std::uint32_t* guard) noexcept {
 
 template <typename Values>
 bool Uninit(std::uint32_t* guard) noexcept {
+  static_assert(ValuesAreValid<Values>,
+                "init_guard control states must be distinct and uninitialized");
+
 #ifdef CBU_SINGLE_THREADED
   return UninitNoRace<Values>(guard);
 #else
@@ -75,6 +94,9 @@ bool Uninit(std::uint32_t* guard) noexcept {
 #ifndef CBU_SINGLE_THREADED
 template <typename Values>
 bool Lock(std::uint32_t* guard, std::uint32_t v) noexcept {
+  static_assert(ValuesAreValid<Values>,
+                "init_guard control states must be distinct and uninitialized");
+
   for (;;) {
     while (v == Values::NEW || v == Values::ABORTED) {
       if (std::atomic_ref(*guard).compare_exchange_weak(
@@ -87,10 +109,11 @@ bool Lock(std::uint32_t* guard, std::uint32_t v) noexcept {
     if (Values::IsInited(v)) return false;
 
     if (v != Values::RUNNING_WAITING) {
-      if (!std::atomic_ref(*guard).compare_exchange_strong(
+      if (std::atomic_ref(*guard).compare_exchange_strong(
               v, Values::RUNNING_WAITING, std::memory_order_acquire,
-              std::memory_order_acquire) &&
-          v != Values::RUNNING_WAITING) {
+              std::memory_order_acquire)) {
+        v = Values::RUNNING_WAITING;
+      } else if (v != Values::RUNNING_WAITING) {
         continue;
       }
     }
@@ -107,17 +130,26 @@ void Abort(std::uint32_t* guard, std::uint32_t aborted_value) noexcept;
 
 template <typename Values>
 void Release(std::uint32_t* guard, std::uint32_t value) noexcept {
+  static_assert(ValuesAreValid<Values>,
+                "init_guard control states must be distinct and uninitialized");
+
   Release(guard, value, Values::RUNNING_WAITING);
 }
 
 template <typename Values>
 void Abort(std::uint32_t* guard) noexcept {
+  static_assert(ValuesAreValid<Values>,
+                "init_guard control states must be distinct and uninitialized");
+
   Abort(guard, Values::ABORTED);
 }
 
 template <typename Values, typename Foo, typename... Args>
 inline bool InitImpl(std::uint32_t* guard, Foo&& foo, Args&&... args) noexcept(
     noexcept(std::forward<Foo>(foo)(std::forward<Args>(args)...))) {
+  static_assert(ValuesAreValid<Values>,
+                "init_guard control states must be distinct and uninitialized");
+
 #ifdef CBU_SINGLE_THREADED
   if (Values::IsInited(*guard)) {
     return false;
