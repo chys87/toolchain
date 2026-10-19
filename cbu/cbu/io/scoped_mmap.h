@@ -81,7 +81,9 @@ class CBU_TRIVIAL_ABI ScopedMMap {
       detail::do_munmap(std::exchange(p_, nullptr), std::exchange(l_, 0));
   }
   void reset(T* p, std::size_t l) noexcept {
-    if (l_ > 0) detail::do_munmap(std::exchange(p_, p), std::exchange(l_, l));
+    void* old_p = std::exchange(p_, p);
+    std::size_t old_l = std::exchange(l_, l);
+    if (old_l > 0) detail::do_munmap(old_p, old_l);
   }
 
   constexpr void reset_unsafe(T* p, std::size_t l) noexcept {
