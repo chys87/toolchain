@@ -27,6 +27,7 @@
  */
 
 #include <malloc.h>
+#include <errno.h>
 #include <math.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -245,6 +246,55 @@ void* align_check(void* = 0) {
   return nullptr;
 }
 
+void* oversize_check(void* = 0) {
+  // Requests beyond the hard maximum must fail cleanly, without any
+  // round-up overflow
+  // Call through volatile function pointers: the compiler would otherwise
+  // constant-fold the comparisons against nullptr (it assumes that calls to
+  // malloc-like functions cannot fail)
+  void* (*volatile my_malloc)(size_t) = malloc;
+  void* (*volatile my_realloc)(void*, size_t) = realloc;
+  int (*volatile my_posix_memalign)(void**, size_t, size_t) =
+      posix_memalign;
+
+  if (my_malloc(SIZE_MAX) != nullptr) {
+    fprintf(stderr, "malloc(SIZE_MAX) succeeded.\n");
+    return (void *)1;
+  }
+  if (my_malloc(SIZE_MAX - 4096 + 1) != nullptr) {
+    fprintf(stderr, "malloc(SIZE_MAX - 4096 + 1) succeeded.\n");
+    return (void *)1;
+  }
+
+  void* p = my_malloc(4096);
+  if (p == nullptr) return (void *)1;
+  // These used to wrap around to 0 during page alignment, freeing p and
+  // returning the dangling pointer as success
+  const size_t newszs[] = {SIZE_MAX, SIZE_MAX - 4094, SIZE_MAX - 4096 + 1};
+  for (size_t newsz : newszs) {
+    void* q = my_realloc(p, newsz);
+    if (q != nullptr) {
+      fprintf(stderr, "realloc(p, huge size) succeeded.\n");
+      free(q);
+      return (void *)1;
+    }
+  }
+  if (malloc_usable_size(p) < 4096) {
+    fprintf(stderr, "Original block damaged by failed realloc.\n");
+    free(p);
+    return (void *)1;
+  }
+  free(p);
+
+  void* q = (void *) 1;
+  if (my_posix_memalign(&q, 64, SIZE_MAX) != ENOMEM) {
+    fprintf(stderr, "posix_memalign(64, SIZE_MAX) did not fail.\n");
+    free(q);
+    return (void *)1;
+  }
+  return nullptr;
+}
+
 double diff(const timespec &a, const timespec &b) {
   return (b.tv_sec - a.tv_sec) + 1.e-9 * (b.tv_nsec - a.tv_nsec);
 }
@@ -401,6 +451,8 @@ int main (int argc, char **argv) {
     if (realloc_check<128,1024*1024> ()) return 1;
     puts ("Testing alignment...");
     if (align_check ()) return 1;
+    puts ("Testing oversized allocations...");
+    if (oversize_check ()) return 1;
 #if 0
     puts("Testing sized free...");
     if (sized_delete_check()) return 1;

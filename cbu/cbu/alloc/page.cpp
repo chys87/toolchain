@@ -737,12 +737,10 @@ Page* allocate_page(size_t size, AllocateOptions options) noexcept {
 }
 
 void* alloc_large(size_t n, bool zero) noexcept {
+  // Check before the round-up below
+  if (n > kHardMaxAllocSize) [[unlikely]] return nomem();
+
   n = pagesize_ceil(n);
-  if constexpr (sizeof(void*) > 4) {
-    // We don't support allocating more than 4 gigabytes at one time
-    if (n != uint32_t(n)) return nomem();
-    n = uint32_t(n);
-  }
   Page* page = allocate_page(n, alloc::AllocateOptions().with_zero(zero));
   if (false_no_fail(!page)) return nullptr;
   if (!set_large_block_size(page, n)) {
@@ -766,6 +764,9 @@ void free_large(void* ptr, size_t size) noexcept {
 
 void* realloc_large(void* ptr, size_t newsize) noexcept {
   // Caller guarantees newsize is not 0
+  // Fail (with the original allocation preserved) before the round-up below
+  if (newsize > kHardMaxAllocSize) [[unlikely]] return nullptr;
+
   newsize = pagesize_ceil(newsize);
   Page* page = (Page*)ptr;
   uint32_t* desc = lookup_large_block_fail_crash((Page*)ptr);

@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -90,6 +90,9 @@ bool is_alignment_valid_posix(size_t align) noexcept {
 }
 
 void* allocate(size_t size, AllocateOptions options) noexcept {
+  // Check before the alignment round-up below
+  if (size > kHardMaxAllocSize) [[unlikely]] return nomem();
+
   if (size_t boundary = options.align) {
     size = (size + boundary - 1) & ~(boundary - 1);
     // Once size is properly adjusted, our allocation design guarantees proper
@@ -114,6 +117,8 @@ void* allocate(size_t size, AllocateOptions options) noexcept {
 }
 
 void* allocate(size_t size) noexcept {
+  if (size > kHardMaxAllocSize) [[unlikely]] return nomem();
+
   void* ptr = nullptr;
 
   if (size > kSmallAllocLimit) {
@@ -133,6 +138,10 @@ void* allocate(size_t size) noexcept {
 }
 
 void* reallocate(void* ptr, size_t new_size, AllocateOptions options) noexcept {
+  // Fail (with the original allocation preserved) before the alignment
+  // round-up below
+  if (new_size > kHardMaxAllocSize) [[unlikely]] return nullptr;
+
   if (size_t boundary = options.align) {
     new_size = (new_size + boundary - 1) & ~(boundary - 1);
   }

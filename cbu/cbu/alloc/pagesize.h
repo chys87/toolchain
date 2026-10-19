@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2023, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,9 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 #if __has_include(<sys/user.h>)
 # include <sys/user.h>
 #endif
@@ -43,6 +46,17 @@ constexpr unsigned kPageSizeBits = 12;
 constexpr unsigned kPageSize = 1 << kPageSizeBits;
 static_assert(kPageSize == 4096);
 #endif
+
+// Hard maximum supported allocation size.
+// Large block sizes are recorded as page counts in uint32_t's, so the limit
+// is (2**32-1) pages; use 2 GiB on 32-bit platforms.
+// It is checked at allocation entry points before any round-up, so that page
+// or alignment arithmetic can never overflow.
+constexpr size_t kHardMaxAllocSize =
+    (sizeof(size_t) > 4) ? (size_t(0xffff'ffff) << kPageSizeBits)
+                         : (size_t(2) << 30);
+static_assert(kHardMaxAllocSize % kPageSize == 0);
+static_assert(kHardMaxAllocSize <= SIZE_MAX - kPageSize + 1);
 
 // Transparent Huge Page size
 #if (defined __x86_64__ || defined __i386__ || defined __aarch64__) && \
