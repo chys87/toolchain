@@ -113,6 +113,38 @@ TEST(Utf8Test, Char32ToUtf8) {
   EXPECT_EQ(std::string(buffer, 2), std::string((const char*)u8"ç"));
 }
 
+TEST(Utf8Test, Char32ToUtf8ExactThreeByteBuffer) {
+  // Regression test: char32_to_utf8's 3-byte sequences must not write a
+  // fourth byte.  The byte right after the exact-size output holds a
+  // sentinel which must survive, even without sanitizers.
+  // The _unsafe variants require 4 bytes of space and may write all of them,
+  // so they are only checked with a full 4-byte buffer.
+  constexpr char kSentinel = '\xa5';
+  char buffer[4];
+
+  buffer[3] = kSentinel;
+  EXPECT_EQ(char32_to_utf8(buffer, U'\u0800') - buffer, 3);
+  EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"\u0800"));
+  EXPECT_EQ(buffer[3], kSentinel);
+
+  buffer[3] = kSentinel;
+  EXPECT_EQ(char32_to_utf8(buffer, U'\uffff') - buffer, 3);
+  EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"\uffff"));
+  EXPECT_EQ(buffer[3], kSentinel);
+
+  EXPECT_EQ(char32_to_utf8_unsafe(buffer, U'一') - buffer, 3);
+  EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"一"));
+
+  EXPECT_EQ(char16_to_utf8_unsafe(buffer, u'\u0800') - buffer, 3);
+  EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"\u0800"));
+
+  EXPECT_EQ(char32_to_utf8_unsafe(buffer, U'\uffff') - buffer, 3);
+  EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"\uffff"));
+
+  EXPECT_EQ(char16_to_utf8_unsafe(buffer, u'\ufffd') - buffer, 3);
+  EXPECT_EQ(std::string(buffer, 3), std::string((const char*)u8"\ufffd"));
+}
+
 TEST(Utf8Test, Utf16SurrogatesTest) {
   EXPECT_EQ(char32_non_bmp_to_utf16_surrogates(U'🀄'),
             std::pair(u"🀄"[0], u"🀄"[1]));

@@ -158,6 +158,8 @@ char* char32_to_utf8(char* dst, char32_t c) noexcept;
 //  * behavior is undefined if c is out of range;
 //  * UTF-16 surrogates are encoded as if they were valid code points;
 //  * Never returns nullptr.
+// For the UTF-8 variants: dst must always have room for 4 bytes, since a
+// 3-byte sequence may be written with a 4-byte store.
 char16_t* char32_to_utf16_unsafe(char16_t* dst, char32_t c) noexcept;
 char16_t* char32_to_utf16_unsafe(char16_t* dst, const char32_t* s, size_t n) noexcept;
 char8_t* char32_to_utf8_unsafe(char8_t* dst, char32_t c) noexcept;
@@ -165,6 +167,8 @@ char* char32_to_utf8_unsafe(char* dst, char32_t c) noexcept;
 
 // Encode c in UTF-8, without checking whether c is a valid code point (i.e. not
 // a UTF-16 surrogate).  Never returns nullptr.
+// dst must always have room for 4 bytes, since a 3-byte sequence may be
+// written with a 4-byte store.
 char8_t* char16_to_utf8_unsafe(char8_t* dst, char16_t c) noexcept;
 char* char16_to_utf8_unsafe(char* dst, char16_t c) noexcept;
 

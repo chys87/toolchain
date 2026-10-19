@@ -92,13 +92,15 @@ char8_t* char32_to_utf8(char8_t* w, char32_t u) noexcept {
       return nullptr;
     } else {
 #if defined __BMI2__
-      memdrop_be<uint32_t>(w, _pdep_u32(u, 0x0f3f3f00) | 0xe0808000);
+      uint32_t v = _pdep_u32(u, 0x0f3f3f00) | 0xe0808000;
+      *w++ = char8_t(v >> 24);
+      w = memdrop_be<uint16_t>(w, uint16_t(v >> 8));
 #else
       u = (u >> 12) | ((u & 0b111111'000000) << 2) | ((u & 0b111111) << 16) |
           0x8080e0;
-      memdrop_le<uint32_t>(w, u);
+      w = memdrop_le<uint16_t>(w, u);
+      *w++ = char8_t(u >> 16);
 #endif
-      w += 3;
     }
   } else {
     if (u < 0x110000) {
