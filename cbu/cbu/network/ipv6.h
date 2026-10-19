@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -309,13 +309,21 @@ struct IPv6Port {
   }
 
   // This cannot be constexpr
-  static IPv6Port FromSockAddr(const sockaddr* s, socklen_t l) {
-    if (s->sa_family == AF_INET6)
-      return FromSockAddr(*reinterpret_cast<const sockaddr_in6*>(s));
-    else if (s->sa_family == AF_INET)
-      return FromSockAddr(*reinterpret_cast<const sockaddr_in*>(s));
-    else
-      return {};
+  // Returns a zero-initialized value if the address family is unsupported
+  // or the supplied length is too short for the claimed family
+  static IPv6Port FromSockAddr(const sockaddr* s, socklen_t l) noexcept {
+    if (l < sizeof(sa_family_t)) [[unlikely]] return {};
+    switch (s->sa_family) {
+      case AF_INET6:
+        if (l >= sizeof(sockaddr_in6))
+          return FromSockAddr(*reinterpret_cast<const sockaddr_in6*>(s));
+        break;
+      case AF_INET:
+        if (l >= sizeof(sockaddr_in))
+          return FromSockAddr(*reinterpret_cast<const sockaddr_in*>(s));
+        break;
+    }
+    return {};
   }
 
   constexpr void ToSockAddr(sockaddr_in6* s) const noexcept {

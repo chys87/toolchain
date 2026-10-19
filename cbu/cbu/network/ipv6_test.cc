@@ -29,6 +29,7 @@
 #include "cbu/network/ipv6.h"
 
 #include <arpa/inet.h>
+#include <sys/un.h>
 
 #include <cstring>
 #include <string>
@@ -105,6 +106,46 @@ TEST(IPv6Test, IPv6PortTest) {
   EXPECT_EQ(
       std::string_view(IPv6Port{IPv6{IPv4{127, 0, 0, 1}}, 11111}.ToString()),
       "[::ffff:127.0.0.1]:11111");
+}
+
+TEST(IPv6Test, FromSockAddrLengthCheck) {
+  sockaddr_in sin4{};
+  sin4.sin_family = AF_INET;
+  sin4.sin_port = htons(5179);
+  sin4.sin_addr.s_addr = htonl(0xc0a81936);
+
+  sockaddr_in6 sin6{};
+  sin6.sin6_family = AF_INET6;
+  sin6.sin6_port = htons(79);
+  sin6.sin6_addr = in6addr_loopback;
+
+  EXPECT_EQ(IPv6Port::FromSockAddr(reinterpret_cast<const sockaddr*>(&sin4),
+                                    sizeof(sin4)),
+            (IPv6Port{IPv6(IPv4(192, 168, 25, 54)), 5179}));
+
+  EXPECT_EQ(IPv6Port::FromSockAddr(reinterpret_cast<const sockaddr*>(&sin6),
+                                    sizeof(sin6)),
+            (IPv6Port{IPv6::Localhost(), 79}));
+
+  // The buffers below are fully allocated; only the claimed lengths are
+  // short, so these cases must be rejected without reading beyond l
+  EXPECT_EQ(IPv6Port::FromSockAddr(reinterpret_cast<const sockaddr*>(&sin6), 0),
+            IPv6Port{});
+  EXPECT_EQ(IPv6Port::FromSockAddr(reinterpret_cast<const sockaddr*>(&sin6),
+                                    sizeof(sa_family_t)),
+            IPv6Port{});
+  EXPECT_EQ(IPv6Port::FromSockAddr(reinterpret_cast<const sockaddr*>(&sin6),
+                                    sizeof(sockaddr_in6) - 1),
+            IPv6Port{});
+  EXPECT_EQ(IPv6Port::FromSockAddr(reinterpret_cast<const sockaddr*>(&sin4),
+                                    sizeof(sockaddr_in) - 1),
+            IPv6Port{});
+
+  sockaddr_un sun{};
+  sun.sun_family = AF_UNIX;
+  EXPECT_EQ(IPv6Port::FromSockAddr(
+                reinterpret_cast<const sockaddr*>(&sun), sizeof(sa_family_t)),
+            IPv6Port{});
 }
 
 TEST(IPv6Test, FromStringTest) {

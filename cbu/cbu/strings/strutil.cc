@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -453,6 +453,8 @@ char *reverse(char *p, char *q) noexcept {
 }
 
 size_t common_prefix_ex(const void* pa, const void* pb, size_t maxl) noexcept {
+  if (maxl == 0) [[unlikely]] return 0;
+
   const char* a = static_cast<const char*>(pa);
   const char* b = static_cast<const char*>(pb);
   size_t k = 0;
@@ -668,6 +670,8 @@ size_t truncate_string_utf8_impl(const void* s, size_t n) noexcept {
 }
 
 size_t char_span_length(const void* buffer, size_t len, char c) noexcept {
+  if (len == 0) [[unlikely]] return 0;
+
   const char* p = static_cast<const char*>(buffer);
   size_t i = 0;
 

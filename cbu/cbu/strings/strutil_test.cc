@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -182,6 +182,15 @@ TEST(StrUtilTest, CommonPrefix_Utf8) {
   EXPECT_EQ(common_prefix((const char*)u8"一不", (const char*)u8"一一"), 5);
 }
 
+TEST(StrUtilTest, CommonPrefix_EmptyInput) {
+  // Default-constructed string_views have null data()
+  std::string_view empty;
+  EXPECT_EQ(common_prefix(empty, empty), 0);
+  EXPECT_EQ(common_prefix(empty, "abc"sv), 0);
+  EXPECT_EQ(common_prefix("abc"sv, empty), 0);
+  EXPECT_EQ(common_prefix_utf8(empty, empty), 0);
+}
+
 inline size_t naive_common_suffix(std::string_view a, std::string_view b) {
   size_t k = 0;
   // Use indexing instead of reverse iterators/end()-relative access:
@@ -245,6 +254,13 @@ TEST(StrUtilTest, CharSpanLength) {
     }
     bytes[m] = 'a';
   }
+}
+
+TEST(StrUtilTest, CharSpanLength_EmptyInput) {
+  // Default-constructed string_view has null data()
+  std::string_view empty;
+  EXPECT_EQ(char_span_length(empty, 'a'), 0);
+  EXPECT_EQ(char_span_length(empty, '\0'), 0);
 }
 
 }  // namespace cbu
