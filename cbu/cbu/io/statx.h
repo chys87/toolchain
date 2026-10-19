@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2019-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2019-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 #include <tuple>
 #include <type_traits>
 
+#include "cbu/compat/compilers.h"
 #include "cbu/fsyscall/fsyscall.h"
 
 namespace cbu {
@@ -144,7 +145,16 @@ struct StatxSecond : RealTimeSpec {
 template <detail::Statx_path Path, detail::Statx_spec... Specs>
   requires(sizeof...(Specs) > 0)
 inline auto Statx(int fd, const Path& path, Specs... specs) {
+  // Contract: the caller must check the returned ret (the first tuple
+  // element); on failure all the other elements are unspecified.
+  // Zero-initialize under MSan/UBSan to avoid uninitialized-value reports.
+  // This has no effect on optimization in normal builds: fsys_statx is an
+  // opaque syscall, so the compiler cannot assume that stx is left
+  // uninitialized when it fails.
   struct_statx stx;
+#if CBU_MEMORY_SANITIZER || CBU_UNDEFINED_SANITIZER
+  stx = {};
+#endif
   int ret = fsys_statx(fd, detail::statx_path(path), (... | Specs::kFlags),
                        (... | Specs::kMask), &stx);
   return std::tuple_cat(std::tuple(ret),

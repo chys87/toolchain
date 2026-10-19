@@ -1,6 +1,6 @@
 /*
  * cbu - chys's basic utilities
- * Copyright (c) 2022-2025, chys <admin@CHYS.INFO>
+ * Copyright (c) 2022-2026, chys <admin@CHYS.INFO>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -60,6 +60,20 @@
 
 #ifndef CBU_ADDRESS_SANITIZER
 #  define CBU_ADDRESS_SANITIZER 0
+#endif
+
+#if defined __SANITIZE_MEMORY__ || \
+    (defined __has_feature && __has_feature(memory_sanitizer))
+#  define CBU_MEMORY_SANITIZER 1
+#else
+#  define CBU_MEMORY_SANITIZER 0
+#endif
+
+#if defined __SANITIZE_UNDEFINED__ || \
+    (defined __has_feature && __has_feature(undefined_behavior_sanitizer))
+#  define CBU_UNDEFINED_SANITIZER 1
+#else
+#  define CBU_UNDEFINED_SANITIZER 0
 #endif
 
 // Some early clang versions recognize them but segfaults
