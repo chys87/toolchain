@@ -75,11 +75,13 @@ cc_library(
     'encoding.cc',
     'escape.cc',
     'strutil.cc',
+    'urlencode.cpp',
   ],
   hdrs = [
     'encoding.h',
     'escape.h',
     'strutil.h',
+    'urlencode.h',
   ],
   deps = [
     ':header_only',
