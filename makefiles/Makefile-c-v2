@@ -4,7 +4,6 @@ load ~/bin/egmake.so
 export GCC_COLORS=1
 
 SELF_MAKEFILE := $(realpath $(lastword $(MAKEFILE_LIST)))
-MULTIPLE_OUTPUT_HELPER := $(dir $(SELF_MAKEFILE))/multiple-output-helper.py
 PYTHONDEP := $(dir $(SELF_MAKEFILE))/../scripts/pythondep
 UT_RUNNER := $(dir $(SELF_MAKEFILE))/../scripts/fast_gtest
 BINCMP := $(dir $(SELF_MAKEFILE))/../scripts/bincmp
@@ -497,21 +496,24 @@ ifneq "" "$(AUTO_GENERATED_PROTOBUF_SRCS)"
  PROTOC ?= $(EGM.which protoc)
 endif
 
-$(AUTO_GENERATED_PROTOBUF_SRCS): private NAME := PROTOC
-$(AUTO_GENERATED_PROTOBUF_SRCS): $(BUILDDIR)/%.pb.cc:$(DIR)/%.proto $(PROTOC)
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(PROTOC) $(PROTOCFLAGS) --dependency_out=$(@:%.pb.cc=%.proto.P) --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
+# $(1): Proto file path relative to $(DIR), without the .proto suffix
+define define_protobuf_target
+$(BUILDDIR)/$(1).pb.cc \
+$(BUILDDIR)/$(1).pb.h \
+$(BUILDDIR)/$(1).proto.P \
+$(BUILDDIR)/$(1)_pb2.py: private NAME := PROTOC
+$(BUILDDIR)/$(1).pb.cc \
+$(BUILDDIR)/$(1).pb.h \
+$(BUILDDIR)/$(1).proto.P \
+$(BUILDDIR)/$(1)_pb2.py &: $(DIR)/$(1).proto $(PROTOC)
+	$$(Q)$$(PROTOC) $$(PROTOCFLAGS) \
+		--dependency_out=$(BUILDDIR)/$(1).proto.P \
+		--cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) \
+		--proto_path=$(DIR) $$<
+endef
 
-$(AUTO_GENERATED_PROTOBUF_HEADERS): private NAME := PROTOC
-$(AUTO_GENERATED_PROTOBUF_HEADERS): $(BUILDDIR)/%.pb.h:$(DIR)/%.proto $(PROTOC)
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(PROTOC) $(PROTOCFLAGS) --dependency_out=$(@:%.pb.h=%.proto.P) --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
-
-$(AUTO_GENERATED_PROTOBUF_DEPS): private NAME := PROTOC
-$(AUTO_GENERATED_PROTOBUF_DEPS): $(BUILDDIR)/%.proto.P:$(DIR)/%.proto $(PROTOC)
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(PROTOC) $(PROTOCFLAGS) --dependency_out=$@ --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
-
-$(AUTO_GENERATED_PROTOBUF_PYTHON): private NAME := PROTOC
-$(AUTO_GENERATED_PROTOBUF_PYTHON): $(BUILDDIR)/%_pb2.py:$(DIR)/%.proto $(PROTOC)
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(PROTOC) $(PROTOCFLAGS) --dependency_out=$(@:%_pb2.py=%.proto.P) --cpp_out=$(BUILDDIR) --python_out=$(BUILDDIR) --proto_path=$(DIR) $<
+$(foreach x,$(sort $(AUTO_GENERATOR_PROTOBUF)),\
+	$(eval $(call define_protobuf_target,$(basename $(call strip_src,$(x))))))
 
 ifneq "" "$(AUTO_GENERATED_FLATBUF_HEADERS)"
  FLATC := $(EGM.which flatc)
@@ -524,7 +526,7 @@ $(AUTO_GENERATED_FLATBUF_DEPS): $(BUILDDIR)/%.fbs.P:$(DIR)/%.fbs $(FLATC)
 
 $(AUTO_GENERATED_FLATBUF_HEADERS): private NAME := FLATC
 $(AUTO_GENERATED_FLATBUF_HEADERS): $(BUILDDIR)/%_generated.h:$(DIR)/%.fbs $(FLATC)
-	$(Q)$(MULTIPLE_OUTPUT_HELPER) $< $(FLATC) -o $(@D) $(FLATCFLAGS) $(FLAGS-$(<F)) --python --cpp $<
+	$(Q)$(FLATC) -o $(@D) $(FLATCFLAGS) $(FLAGS-$(<F)) --python --cpp $<
 
 ifeq "$(filter $(MAKECMDGOALS),clean purge size clobber)" ""
  -include $(AUTO_GENERATED_PROTOBUF_DEPS)
