@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 #
-# Copyright (c) 2018-2025, chys <admin@CHYS.INFO>
+# Copyright (c) 2018-2026, chys <admin@CHYS.INFO>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -569,8 +569,9 @@ def syscall_replace_x86_64(fi, data):
         data = pattern_syscall_instruction.sub(sub, data)
         data = pattern_syscall_function.sub(sub, data)
 
-        # Yield all lines except the last 6
-        yield_data, data = split_tail_lines(data, 6)
+        # The pattern may look ahead up to 5 setup lines plus the syscall
+        # line.  Keep the prospective syscall-number assignment as well.
+        yield_data, data = split_tail_lines(data, 7)
         if yield_data:
             yield yield_data
 
@@ -586,7 +587,7 @@ def syscall_replace_aarch64(fi, data):
     table = read_syscall_table('aarch64')
 
     pattern_svc_instruction = re.compile(
-            br'mov\s+[wx]8,\s*#(\d+|0x[a-f\d]+)\s*(?:\/\/\s*#\d+)?(?=\n([\da-f:\s]*\n|.+(adrp?|bfi|movk?|ld[rp]|ldr[bh]|ldur|ldrsw|st[rp]|str[bh]|stur|nop|tst|csel|add|sub|mul|sxt[whb]|asr|sbf[mx]|sbfiz)(\s.*)?\n){,8}.*\ssvc\s+#(0|0x0)(\s|\n))')
+            br'mov\s+[wx]8,\s*#(\d+|0x[a-f\d]+)\s*(?:\/\/\s*#\d+)?(?=\n([\da-f:\s]*\n|(?![ \t]*(?:adrp?|bfi|movk?|ld[rp]|ldr[bh]|ldur|ldrsw|csel|add|sub|mul|sxt[whb]|asr|sbf[mx]|sbfiz)[ \t]+[wx]8\b).+(adrp?|bfi|movk?|ld[rp]|ldr[bh]|ldur|ldrsw|st[rp]|str[bh]|stur|nop|tst|csel|add|sub|mul|sxt[whb]|asr|sbf[mx]|sbfiz)(\s.*)?\n){,8}.*\ssvc\s+#(0|0x0)(\s|\n))')
 
     def sub(match):
         no_str = match.group(1)
@@ -607,8 +608,9 @@ def syscall_replace_aarch64(fi, data):
         data += newdata
         data = pattern_svc_instruction.sub(sub, data)
 
-        # Yield all lines except the last 6
-        yield_data, data = split_tail_lines(data, 6)
+        # The pattern may look ahead up to 8 setup lines plus the svc line.
+        # Keep the prospective syscall-number assignment as well.
+        yield_data, data = split_tail_lines(data, 10)
         if yield_data:
             yield yield_data
 
