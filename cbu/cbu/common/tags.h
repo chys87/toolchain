@@ -42,6 +42,16 @@ inline constexpr UnsafeTag kUnsafe;
 struct RefTag {};
 inline constexpr RefTag kRef;
 
+// Wraps a value, requesting that its generated representation be
+// null-terminated.  The wrapped type does not need to know about this tag.
+template <typename T>
+struct NullTerminated {
+  const T& value;
+};
+
+template <typename T>
+NullTerminated(const T&) -> NullTerminated<T>;
+
 // specifying radix
 template <int>
 struct RadixTag {};

@@ -32,10 +32,13 @@
 #include <new>
 #include <span>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
 #include "cbu/common/byte_size.h"
+#include "cbu/common/concepts.h"
+#include "cbu/common/tags.h"
 #include "cbu/strings/str_builder.h"
 #include "cbu/strings/zstring_view.h"
 #include "cbu/tweak/tweak.h"
@@ -65,7 +68,78 @@ struct ArenaDeleterArrayNode {
   std::size_t size;
 };
 
+template <typename Arg>
+constexpr bool is_null_terminated = false;
+
+template <typename Builder>
+constexpr bool is_null_terminated<NullTerminated<Builder>> = true;
+
+template <typename T>
+concept Arena_string_source =
+    cbu::sb::BaseBuilder<T> || cbu::String_view_compat<T>;
+
+template <cbu::sb::BaseBuilder Builder>
+constexpr const Builder& get_push_string_builder(
+    const Builder& builder) noexcept {
+  return builder;
+}
+
+template <cbu::String_view_compat StringView>
+  requires(!cbu::sb::BaseBuilder<StringView>)
+constexpr auto get_push_string_builder(const StringView& string_view) noexcept {
+  return cbu::sb::View{
+      std::string_view(string_view.data(), string_view.size())};
+}
+
+template <Arena_string_source Source>
+constexpr decltype(auto) get_push_string_builder(
+    const NullTerminated<Source>& arg) noexcept {
+  return get_push_string_builder(arg.value);
+}
+
+template <typename Arg>
+using PushStringResult =
+    std::conditional_t<is_null_terminated<std::remove_cvref_t<Arg>>,
+                       cbu::zstring_view, std::string_view>;
+
+template <typename Arg>
+constexpr bool push_string_has_size =
+    cbu::sb::HasSize<std::remove_cvref_t<decltype(get_push_string_builder(
+        std::declval<const Arg&>()))>>;
+
+template <typename Arg>
+constexpr std::size_t push_string_reserved_size(const Arg& arg) noexcept {
+  const auto& builder = get_push_string_builder(arg);
+  using Builder = std::remove_cvref_t<decltype(builder)>;
+  std::size_t size;
+  if constexpr (cbu::sb::HasSize<Builder>) {
+    size = builder.size();
+  } else {
+    size = builder.max_size();
+  }
+  if constexpr (is_null_terminated<std::remove_cvref_t<Arg>>) {
+    return size + 1;
+  }
+  return size;
+}
+
+template <typename Arg>
+PushStringResult<Arg> write_push_string(const Arg& arg, char*& w) noexcept {
+  char* begin = w;
+  w = get_push_string_builder(arg).write(w);
+  if constexpr (is_null_terminated<std::remove_cvref_t<Arg>>) {
+    *w++ = '\0';
+    return {begin, static_cast<std::size_t>(w - begin - 1)};
+  } else {
+    return {begin, static_cast<std::size_t>(w - begin)};
+  }
+}
+
 }  // namespace arena_detail
+
+template <typename Arg>
+concept Arena_push_string_arg =
+    requires(const Arg& arg) { arena_detail::get_push_string_builder(arg); };
 
 // Destructs the non-trivially destructible objects allocated from one arena.
 //
@@ -359,36 +433,44 @@ class Arena {
     return PushZString(sv.data(), sv.size());
   }
 
-  // For use with cbu::sb
-  template <cbu::sb::BaseBuilder Builder>
-  std::string_view PushString(const Builder& builder) CBU_MEMORY_NOEXCEPT {
-    if constexpr (cbu::sb::HasSize<Builder>) {
-      size_t l = builder.size();
-      char* p = Create<char[]>(l);
-      builder.write(p);
-      return {p, l};
-    } else {
-      size_t l = builder.max_size();
-      char* p = Create<char[]>(l);
-      char* e = builder.write(p);
-      return {p, e};
+  // For builders and NullTerminated arguments.  Plain String_view_compat
+  // types use the overload above.
+  template <Arena_push_string_arg Arg>
+    requires(!cbu::String_view_compat<Arg>)
+  arena_detail::PushStringResult<Arg> PushString(const Arg& arg)
+      CBU_MEMORY_NOEXCEPT {
+    return std::get<0>(PushStrings(arg));
+  }
+
+  // Push all strings with one actual allocation.  Each argument must be a
+  // string builder or string-view-compatible type, optionally wrapped in
+  // NullTerminated.
+  template <Arena_push_string_arg... Args>
+    requires(sizeof...(Args) != 0)
+  std::tuple<arena_detail::PushStringResult<Args>...> PushStrings(
+      const Args&... args) CBU_MEMORY_NOEXCEPT {
+    using Result = std::tuple<arena_detail::PushStringResult<Args>...>;
+
+    std::size_t total = (... + arena_detail::push_string_reserved_size(args));
+    char* p = Create<char[]>(total);
+
+    Result result;
+    char* w = p;
+    std::apply(
+        [&](auto&... fields) {
+          ((fields = arena_detail::write_push_string(args, w)), ...);
+        },
+        result);
+
+    if constexpr (!(... && arena_detail::push_string_has_size<Args>)) {
+      Return(w, total - static_cast<std::size_t>(w - p));
     }
+    return result;
   }
 
   template <cbu::sb::BaseBuilder Builder>
   cbu::zstring_view PushZString(const Builder& builder) CBU_MEMORY_NOEXCEPT {
-    if constexpr (cbu::sb::HasSize<Builder>) {
-      size_t l = builder.size();
-      char* p = Create<char[]>(l + 1);
-      *builder.write(p) = '\0';
-      return {p, l};
-    } else {
-      size_t l = builder.max_size();
-      char* p = Create<char[]>(l + 1);
-      char* e = builder.write(p);
-      *e = '\0';
-      return {p, e};
-    }
+    return PushString(NullTerminated{builder});
   }
 
  private:

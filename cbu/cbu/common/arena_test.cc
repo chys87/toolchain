@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <exception>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -56,6 +57,25 @@ struct ThrowOnSecondCopy {
   }
 
   ~ThrowOnSecondCopy() noexcept { log->push_back(id); }
+};
+
+struct StringViewCompat {
+  const char* data() const noexcept { return "custom"; }
+  std::size_t size() const noexcept { return 6; }
+
+  operator std::string_view() const noexcept { return {data(), size()}; }
+};
+
+struct StringViewCompatBuilder {
+  const char* data() const noexcept { return "view!"; }
+  std::size_t size() const noexcept { return 5; }
+
+  operator std::string_view() const noexcept { return {data(), size()}; }
+
+  char* write(char* w) const noexcept {
+    for (const char* p = "write"; *p != '\0'; ++p) *w++ = *p;
+    return w;
+  }
 };
 
 struct alignas(kArenaMaxAlign) MaxAlignedDestructor {
@@ -127,13 +147,66 @@ TEST(ArenaTest, BasicAllocation) {
   std::string_view sv = arena.PushString("arena");
   EXPECT_EQ("arena", sv);
 
-  zstring_view zs = arena.PushZString("zstring");
+  zstring_view zs = arena.PushString(NullTerminated(sb::View{"zstring"}));
   EXPECT_STREQ("zstring", zs.c_str());
 
+  EXPECT_STREQ("rawz", arena.PushZString("rawz", 4).c_str());
+  EXPECT_STREQ("svz", arena.PushZString(std::string_view{"svz"}).c_str());
+
+  EXPECT_EQ("view!", arena.PushString(StringViewCompatBuilder{}));
+
   EXPECT_EQ("builder", arena.PushString(sb::View{"builder"}));
-  EXPECT_STREQ("zbuilder", arena.PushZString(sb::View{"zbuilder"}).c_str());
+  EXPECT_STREQ("zbuilder",
+               arena.PushString(NullTerminated(sb::View{"zbuilder"})).c_str());
   EXPECT_EQ("xy", arena.PushString(sb::FromBuffer<3>{"xyz", 2}));
-  EXPECT_STREQ("xy", arena.PushZString(sb::FromBuffer<3>{"xyz", 2}).c_str());
+  EXPECT_STREQ(
+      "xy",
+      arena.PushString(NullTerminated(sb::FromBuffer<3>{"xyz", 2})).c_str());
+}
+
+TEST(ArenaTest, PushStrings) {
+  Arena arena;
+  auto result =
+      arena.PushStrings(sb::View{"abc"}, NullTerminated(sb::View{"def"}),
+                        sb::FromBuffer<4>{"ghij", 2},
+                        NullTerminated(sb::FromBuffer<4>{"klmn", 3}));
+
+  static_assert(std::is_same_v<decltype(result),
+                               std::tuple<std::string_view, zstring_view,
+                                          std::string_view, zstring_view>>);
+
+  auto& [abc, def, gh, klm] = result;
+  EXPECT_EQ("abc", abc);
+  EXPECT_STREQ("def", def.c_str());
+  EXPECT_EQ("gh", gh);
+  EXPECT_STREQ("klm", klm.c_str());
+
+  EXPECT_EQ(abc.data() + abc.size(), def.data());
+  EXPECT_EQ(def.data() + def.size() + 1, gh.data());
+  EXPECT_EQ(gh.data() + gh.size(), klm.data());
+
+  auto empty = arena.PushStrings(sb::View{""}, NullTerminated(sb::View{""}));
+  auto& [empty_string, empty_zstring] = empty;
+  EXPECT_TRUE(empty_string.empty());
+  EXPECT_STREQ("", empty_zstring.c_str());
+
+  auto string_view_result = arena.PushStrings(
+      std::string_view{"sv"}, NullTerminated(std::string_view{"zsv"}));
+  static_assert(std::is_same_v<decltype(string_view_result),
+                               std::tuple<std::string_view, zstring_view>>);
+  auto& [sv, zsv] = string_view_result;
+  EXPECT_EQ("sv", sv);
+  EXPECT_STREQ("zsv", zsv.c_str());
+
+  auto custom_result =
+      arena.PushStrings(StringViewCompat{}, NullTerminated(StringViewCompat{}));
+  auto& [custom, custom_z] = custom_result;
+  EXPECT_EQ("custom", custom);
+  EXPECT_STREQ("custom", custom_z.c_str());
+
+  Arena zero_size_arena;
+  auto [zero_size_string] = zero_size_arena.PushStrings(sb::View{""});
+  EXPECT_TRUE(zero_size_string.empty());
 }
 
 TEST(ArenaTest, MoveTransfersOwnership) {

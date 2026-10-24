@@ -73,7 +73,8 @@ concept HasStaticMinSize = requires() {
 template <typename Builder>
 concept BaseBuilder = requires(const Builder& bldr) {
   requires (HasMaxSize<Builder> || HasSize<Builder>);
-  { bldr.write(std::declval<char*>()) } -> std::convertible_to<char*>;
+  { bldr.write(std::declval<char*>()) } noexcept
+      -> std::convertible_to<char*>;
 };
 
 template <typename Builder>
